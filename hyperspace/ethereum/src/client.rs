@@ -5,7 +5,7 @@ use crate::{
 	ibc_provider::{u256_to_bytes, ERC20TOKENABI_ABI},
 	jwt::{JwtAuth, JwtKey},
 	mock::utils::mock::ClientState,
-	utils::{handle_gas_usage, DeployYuiIbc, ProviderImpl},
+	utils::{handle_gas_usage, send_retrying, DeployYuiIbc, ProviderImpl},
 };
 use anyhow::Error;
 use async_trait::async_trait;
@@ -32,6 +32,7 @@ use ibc::{
 	Height,
 };
 use ibc_primitives::Timeout;
+use log::info;
 use once_cell::sync::Lazy;
 use pallet_ibc::light_clients::{AnyClientState, AnyConsensusState, HostFunctionsManager};
 use primitives::{CommonClientState, IbcProvider};
@@ -47,9 +48,11 @@ use std::{
 	pin::Pin,
 	str::FromStr,
 	sync::{Arc, Mutex},
+	time::Duration,
 };
 use sync_committee_prover::SyncCommitteeProver;
 use thiserror::Error;
+use tokio::time::sleep;
 
 pub type EthRpcClient = SignerMiddleware<Provider<Http>, Wallet<k256::ecdsa::SigningKey>>;
 pub(crate) type WsEth = Provider<Ws>;
@@ -305,20 +308,6 @@ impl EthereumClient {
 		Ok((latest_client_state, latest_height))
 	}
 
-	pub async fn get_latest_consensus_state_encoded_abi_token(
-		&self,
-		client_id: ClientId,
-		consensus_height: Height,
-	) -> Result<Token, ClientError> {
-		// return Ok(vec![]);
-		let latest_height = self.latest_height_and_timestamp().await?.0;
-		//TODO what is the height here?
-		let latest_consensus_state = self
-			.query_client_consensus_exact_token(latest_height, client_id.clone(), consensus_height)
-			.await?;
-		Ok(latest_consensus_state)
-	}
-
 	pub async fn generated_channel_identifiers(
 		&self,
 		from_block: BlockNumber,
@@ -379,16 +368,16 @@ impl EthereumClient {
 		let logs = self.client().get_logs(&filter).await.unwrap();
 		unimplemented!();
 
-		// logs.into_iter()
-		// 	.map(|log| {
-		// 		ethers::abi::decode(&[ParamType::String], &log.data.0)
-		// 			.unwrap()
-		// 			.into_iter()
-		// 			.next()
-		// 			.unwrap()
-		// 			.to_string()
-		// 	})
-		// 	.collect()
+		logs.into_iter()
+			.map(|log| {
+				ethers::abi::decode(&[ParamType::String], &log.data.0)
+					.unwrap()
+					.into_iter()
+					.next()
+					.unwrap()
+					.to_string()
+			})
+			.collect()
 	}
 
 	pub async fn acknowledge_packets(&self, from_block: BlockNumber) -> Vec<AckPacket> {
@@ -774,9 +763,7 @@ impl primitives::TestProvider for EthereumClient {
 			.unwrap();
 
 		let _ = method.call().await.unwrap_contract_error();
-		let receipt = method.send().await.unwrap().await.unwrap().unwrap();
-		log::info!("Sent approval transfer. Tx hash: {:?}", receipt.transaction_hash);
-		assert_eq!(receipt.status, Some(1.into()));
+		send_retrying(&method).await.unwrap();
 
 		// let method = contract
 		// 	.method::<_, ()>(
@@ -787,10 +774,6 @@ impl primitives::TestProvider for EthereumClient {
 		// 		),
 		// 	)
 		// 	.unwrap();
-
-		let _ = method.call().await.unwrap_contract_error();
-		let receipt = method.send().await.unwrap().await.unwrap().unwrap();
-		assert_eq!(receipt.status, Some(1.into()));
 
 		let params = (
 			params.token.denom.to_string(),
@@ -809,7 +792,7 @@ impl primitives::TestProvider for EthereumClient {
 			.expect("expected bank module")
 			.method::<_, ()>("sendTransfer", params)?;
 		let _ = method.call().await.unwrap_contract_error();
-		let receipt = method.send().await.unwrap().await.unwrap().unwrap();
+		let receipt = send_retrying(&method).await.unwrap();
 		handle_gas_usage(&receipt);
 		assert_eq!(receipt.status, Some(1.into()));
 		log::info!("Sent transfer. Tx hash: {:?}", receipt.transaction_hash);
@@ -871,7 +854,7 @@ async fn send_native_eth(
 
 	let method = method.value(amount);
 	let _ = method.call().await.unwrap_contract_error();
-	let receipt = method.send().await.unwrap().await.unwrap().unwrap();
+	let receipt = send_retrying(&method).await.unwrap();
 	assert_eq!(receipt.status, Some(1.into()));
 	log::info!("Sent ETH transfer. Tx hash: {:?}", receipt.transaction_hash);
 	Ok(())

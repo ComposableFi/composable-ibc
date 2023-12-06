@@ -12,8 +12,8 @@ use ethers::{
 	contract::{ContractFactory, ContractInstance, FunctionCall},
 	core::types::Bytes,
 	prelude::{
-		Block, EthEvent, Event, Filter, Http, LocalWallet, Middleware, Provider,
-		TransactionReceipt, H256, U256,
+		Block, ContractError, EthEvent, Event, Filter, Http, LocalWallet, Middleware, Provider,
+		TransactionReceipt, TransactionRequest, H256, U256,
 	},
 	types::{BlockNumber, Bloom, H160, H64, U64},
 	utils::{rlp, rlp::RlpStream},
@@ -44,7 +44,9 @@ use std::{
 	path::{Path, PathBuf},
 	str::FromStr,
 	sync::{Arc, Mutex},
+	time::Duration,
 };
+use tokio::time::sleep;
 
 pub type ProviderImpl = ethers::prelude::SignerMiddleware<Provider<Http>, LocalWallet>;
 
@@ -1167,4 +1169,32 @@ pub fn clear_proof_value(
 	}
 	let new_raw_proof = RawMerkleProof::from(merkle_proof.clone());
 	Ok(CommitmentProofBytes::try_from(new_raw_proof).unwrap())
+}
+
+pub async fn send_retrying<B, M, D>(
+	method: &FunctionCall<B, M, D>,
+) -> Result<TransactionReceipt, ContractError<M>>
+where
+	B: Clone + Borrow<M>,
+	M: Middleware,
+	D: Detokenize,
+{
+	loop {
+		let result = method.send().await;
+		match result {
+			Ok(v) => {
+				let receipt = v.await.unwrap().unwrap();
+				info!("Sent approval transfer. Tx hash: {:?}", receipt.transaction_hash);
+				assert_eq!(receipt.status, Some(1.into()));
+				return Ok(receipt);
+			},
+			Err(e) =>
+				if e.to_string().contains("replacement transaction underpriced") {
+					sleep(Duration::from_secs(1)).await;
+					continue;
+				} else {
+					return Err(e);
+				},
+		}
+	}
 }

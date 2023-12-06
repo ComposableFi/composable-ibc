@@ -200,33 +200,12 @@ impl<H> TryFrom<RawClientState> for ClientState<H> {
 	type Error = Error;
 
 	fn try_from(raw: RawClientState) -> Result<Self, Self::Error> {
-		// let inner = raw
-		// 	.inner
-		// 	.ok_or(Error::Custom("missing inner client state".to_string()))?
-		// 	.try_into()?;
-		// let height = raw.frozen_height_revision_height.zip(raw.frozen_height_revision_number);
-		// Ok(ClientState {
-		// 	inner,
-		// 	frozen_height: height.map(|x| Height::new(x.0, x.1)),
-		// 	latest_height: raw.latest_height,
-		// 	_phantom: Default::default(),
-		// })
 		ClientState::abi_decode(&raw.abi_data)
 	}
 }
 
 impl<H> From<ClientState<H>> for RawClientState {
 	fn from(client_state: ClientState<H>) -> Self {
-		// let (frozen_height_revision_height, frozen_height_revision_number) = client_state
-		// 	.frozen_height
-		// 	.map(|x| (x.revision_number, x.revision_height))
-		// 	.unzip();
-		// RawClientState {
-		// 	inner: Some(client_state.clone().inner.into()),
-		// 	frozen_height_revision_height,
-		// 	frozen_height_revision_number,
-		// 	latest_height: client_state.latest_height,
-		// }
 		let abi_data = client_state.clone().abi_encode();
 		RawClientState { abi_data }
 	}
@@ -236,12 +215,10 @@ fn skip_field(ptr: &[u8], wire_type: u8) -> usize {
 	match wire_type {
 		2 => {
 			let (len, offset) = decode_varint(ptr);
-			// *ptr = &ptr[len..];
 			return offset + len as usize
 		},
 		0 => {
-			let (value, offset) = decode_varint(ptr);
-			// println!("Value = {}", value);
+			let (_value, offset) = decode_varint(ptr);
 			return offset
 		},
 		n => panic!("unknown wire type {}", n),
@@ -251,11 +228,9 @@ fn skip_field(ptr: &[u8], wire_type: u8) -> usize {
 fn decode_len_field<'a>(mut ptr: &'a [u8], index: u8) -> &'a [u8] {
 	loop {
 		let (field_number, wire_type, offset) = decode_tag(ptr);
-		// println!("Got field {} of type {}", field_number, wire_type);
 		ptr = &ptr[offset..];
 
 		if wire_type != 2 || field_number != index {
-			// println!("Skipping field {} of type {}", field_number, wire_type);
 			let offset = skip_field(ptr, wire_type);
 			ptr = &ptr[offset..];
 			continue
@@ -268,15 +243,7 @@ fn decode_len_field<'a>(mut ptr: &'a [u8], index: u8) -> &'a [u8] {
 }
 
 fn decode_any<'a>(ptr: &'a [u8]) -> &'a [u8] {
-	// println!("Decoding any ptr.len() = {}", ptr.len());
-	let type_url = decode_len_field(&ptr, 1);
 	let value = decode_len_field(&ptr, 2);
-	// if let Ok(str) = String::from_utf8(type_url.to_vec()) {
-	// 	println!("Any.type_url = {}", str);
-	// } else {
-	// 	println!("Any.type_url = {}", hex::encode(type_url));
-	// }
-	// println!("Any.value = {}", hex::encode(value));
 	value
 }
 
@@ -311,6 +278,6 @@ fn test_proto() {
 	let wasm_any = decode_any(&mut ptr);
 	let wasm_data = decode_len_field(wasm_any, 1);
 	let client_state_any = decode_any(wasm_data);
-	let abi_data = decode_len_field(client_state_any, 1);
+	let _abi_data = decode_len_field(client_state_any, 1);
 	// println!("abi_data = {}", hex::encode(abi_data));
 }

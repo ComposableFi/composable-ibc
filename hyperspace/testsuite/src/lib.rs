@@ -267,8 +267,8 @@ async fn send_packet_and_assert_height_timeout<A, B>(
 	let (.., msg) = send_transfer(
 		chain_a,
 		chain_b,
-		asset_a,
-		channel_id,
+		asset_a.clone(),
+		channel_id.clone(),
 		Some(Timeout::Offset { timestamp: Some(60 * 60), height: Some(20) }),
 	)
 	.await;

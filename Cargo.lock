@@ -6426,6 +6426,7 @@ dependencies = [
  "async-trait",
  "ethers 2.0.8 (registry+https://github.com/rust-lang/crates.io-index)",
  "ethers-solc 2.0.9",
+ "evm-indexer",
  "finality-grandpa",
  "futures",
  "grandpa-light-client-primitives",

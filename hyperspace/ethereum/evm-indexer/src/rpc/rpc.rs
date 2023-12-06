@@ -33,7 +33,7 @@ impl Rpc {
 	pub async fn new(config: &EVMIndexerConfig) -> Result<Self> {
 		info!("Starting EVM rpc service");
 
-		let timeout = Duration::from_secs(60);
+		let timeout = Duration::from_secs(5);
 
 		let mut clients = Vec::new();
 

@@ -78,6 +78,7 @@ use tendermint_rpc::{
 use tokio::{task::JoinSet, time::sleep};
 
 pub const NUMBER_OF_BLOCKS_TO_PROCESS_PER_ITER: u64 = 250;
+pub const MANDATORY_UPDATES_PERIOD: usize = 25;
 
 #[derive(Clone, Debug)]
 pub enum FinalityEvent {
@@ -181,7 +182,7 @@ where
 			.enumerate()
 		{
 			let height = update_header.height();
-			if len >= 25 && mandatory_updates_num < 2 && i >= len - 2 {
+			if len >= MANDATORY_UPDATES_PERIOD && mandatory_updates_num < 2 && i >= len - 2 {
 				update_type = UpdateType::Mandatory;
 				mandatory_updates_num += 1;
 			}

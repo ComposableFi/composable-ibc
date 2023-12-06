@@ -12,6 +12,8 @@ pub mod ibc_provider;
 pub mod jwt;
 pub mod key_provider;
 pub mod light_client_sync;
+#[cfg(feature = "no_indexer")]
+mod no_indexer;
 pub mod prove;
 pub mod query;
 pub mod utils;

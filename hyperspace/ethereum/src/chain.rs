@@ -1301,16 +1301,6 @@ impl Chain for EthereumClient {
 						ClientError::Other("conn_open_ack: failed to decode_vec".into())
 					})?;
 
-				let client_id = (*self.counterparty_client_id.lock().unwrap()).clone().unwrap();
-				let proof_height = msg.proofs.height();
-				// let (height, _) = self
-				// 	.query_client_update_time_and_height(client_id.clone(), proof_height)
-				// 	.await?;
-				// let latest_client_state =
-				// 	self.query_client_state_exact_token(height, client_id.clone()).await?;
-				// let latest_consensus_state = self
-				// 	.query_client_consensus_exact_token(height, client_id.clone(), proof_height)
-				// 	.await?;
 				let mut proof = msg.proofs.consensus_proof().ok_or_else(|| {
 					ClientError::Other("conn_open_ack: consensus_proof not found".into())
 				})?;
@@ -1372,13 +1362,6 @@ impl Chain for EthereumClient {
 					return Err(ClientError::Other(format!("Token should be tuple")))
 				};
 
-				let client_id = (*self.counterparty_client_id.lock().unwrap()).clone().unwrap();
-				// let (latest_client_state, latest_height) =
-				// 	self.get_latest_client_state_exact_token(client_id.clone()).await?;
-				// let latest_consensus_state = self
-				// 	.get_latest_consensus_state_encoded_abi_token(client_id.clone(), latest_height)
-				// 	.await?;
-
 				calls.push(self.yui.connection_open_try_calldata(token).await);
 			} else if msg.type_url == ibc::core::ics03_connection::msgs::conn_open_confirm::TYPE_URL
 			{
@@ -1389,13 +1372,6 @@ impl Chain for EthereumClient {
 				let Token::Tuple(ref mut tokens) = token else {
 					return Err(ClientError::Other(format!("Token should be tuple")))
 				};
-
-				let client_id = (*self.counterparty_client_id.lock().unwrap()).clone().unwrap();
-				// let (latest_client_state, latest_height) =
-				// 	self.get_latest_client_state_exact_token(client_id.clone()).await?;
-				// let latest_consensus_state = self
-				// 	.get_latest_consensus_state_encoded_abi_token(client_id.clone(), latest_height)
-				// 	.await?;
 
 				calls.push(self.yui.connection_open_confirm_calldata(token).await);
 			} else if msg.type_url == channel_msgs::chan_open_init::TYPE_URL {
@@ -1415,13 +1391,6 @@ impl Chain for EthereumClient {
 					return Err(ClientError::Other(format!("Token should be tuple")))
 				};
 
-				let client_id = (*self.counterparty_client_id.lock().unwrap()).clone().unwrap();
-				// let (latest_client_state, latest_height) =
-				// 	self.get_latest_client_state_exact_token(client_id.clone()).await?;
-				// let latest_consensus_state = self
-				// 	.get_latest_consensus_state_encoded_abi_token(client_id.clone(), latest_height)
-				// 	.await?;
-
 				calls.push(self.yui.channel_open_try_calldata(token).await);
 			} else if msg.type_url == channel_msgs::chan_open_ack::TYPE_URL {
 				let msg = MsgChannelOpenAck::decode_vec(&msg.value).map_err(|e| {
@@ -1433,12 +1402,6 @@ impl Chain for EthereumClient {
 					return Err(ClientError::Other(format!("Token should be tuple")))
 				};
 
-				let client_id = (*self.counterparty_client_id.lock().unwrap()).clone().unwrap();
-				// let (latest_client_state, latest_height) =
-				// 	self.get_latest_client_state_exact_token(client_id.clone()).await?;
-				// let latest_consensus_state = self
-				// 	.get_latest_consensus_state_encoded_abi_token(client_id.clone(), latest_height)
-				// 	.await?;
 				calls.push(self.yui.send_and_get_tuple_calldata(token, "channelOpenAck").await);
 			} else if msg.type_url == channel_msgs::chan_open_confirm::TYPE_URL {
 				let msg = MsgChannelOpenConfirm::decode_vec(&msg.value).map_err(|e| {
@@ -1452,13 +1415,6 @@ impl Chain for EthereumClient {
 				let Token::Tuple(ref mut tokens) = token else {
 					return Err(ClientError::Other(format!("Token should be tuple")))
 				};
-
-				let client_id = (*self.counterparty_client_id.lock().unwrap()).clone().unwrap();
-				// let (latest_client_state, latest_height) =
-				// 	self.get_latest_client_state_exact_token(client_id.clone()).await?;
-				// let latest_consensus_state = self
-				// 	.get_latest_consensus_state_encoded_abi_token(client_id.clone(), latest_height)
-				// 	.await?;
 
 				calls.push(self.yui.send_and_get_tuple_calldata(token, "channelOpenConfirm").await);
 			} else if msg.type_url == channel_msgs::chan_close_init::TYPE_URL {

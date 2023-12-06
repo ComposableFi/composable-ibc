@@ -58,7 +58,6 @@ pub async fn prove_fast(
 		block_id = format!("{block_number:?}");
 	};
 	let block_header = sync_committee_prover.fetch_header(&block_id).await?;
-	// let state = sync_committee_prover.fetch_beacon_state(&block_header.slot.to_string()).await?;
 
 	let from = client_state.finalized_header.slot + 1;
 	let to = block_header.slot;
@@ -77,7 +76,6 @@ pub async fn prove_fast(
 				match sync_committee_prover.fetch_beacon_state(i.to_string().as_str()).await {
 					Ok(mut header_state) => {
 						let execution_payload_proof = prove_execution_payload(&mut header_state)?;
-						// execution_payload_proof.block_number
 						if header_state.latest_execution_payload_header.block_number > up_to {
 							return Ok(None)
 						}
@@ -123,10 +121,6 @@ pub async fn prove_fast(
 	ancestor_blocks.sort_by_key(|ancestor_block| ancestor_block.header.slot);
 
 	let ep = block.body.execution_payload;
-	ancestor_blocks.iter().for_each(|e| {
-		info!("ADD block {}", e.execution_payload.block_number);
-	});
-	info!("ADD block {}", ep.block_number);
 	let execution_payload_proof = ExecutionPayloadProof {
 		state_root: H256::from_slice(&ep.state_root.to_vec()),
 		block_number: ep.block_number,
@@ -163,13 +157,11 @@ pub async fn prove_fast(
 		.map_err(|e| ClientError::Other(format!("failed to get block number: {:?}", e)))?
 		.as_u64();
 	let from_block = eth_client_state.latest_height as u64 + 1;
-	// let ep = block.body.execution_payload;
 	let latest_block = client
 		.get_block(to_block)
 		.await
 		.map_err(|e| ClientError::Other(format!("failed to get block {}: {:?}", to_block, e)))?
 		.expect("block not found");
-	// let block_header = latest_block.header;
 	let execution_payload_proof = ExecutionPayloadProof {
 		state_root: latest_block.state_root,
 		block_number: latest_block.number.unwrap().as_u64(),
