@@ -877,23 +877,10 @@ impl IbcProvider for EthereumClient {
 	}
 
 	async fn query_proof(&self, at: Height, keys: Vec<Vec<u8>>) -> Result<Vec<u8>, Self::Error> {
-		// let key = String::from_utf8(keys[0].clone()).unwrap();
-		//
-		// let proof_result = self
-		// 	.eth_query_proof(&key, Some(at.revision_height), COMMITMENTS_STORAGE_INDEX)
-		// 	.await?;
-		//
-		// let bytes = proof_result
-		// 	.storage_proof
-		// 	.first()
-		// 	.map(|p| p.proof.first())
-		// 	.flatten()
-		// 	.map(|b| b.to_vec())
-		// 	.unwrap_or_default();
-
-		// Ok(bytes)
-		// todo!("query-proof: redo")
-		Ok(vec![0])
+		assert_eq!(keys.len(), 1);
+		let key = String::from_utf8(keys[0].clone()).unwrap();
+		let (bytes, _) = self.query_proof_with_value(&key, at).await?;
+		Ok(bytes)
 	}
 
 	async fn query_packet_commitment(
