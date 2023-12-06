@@ -20,7 +20,7 @@ use crate::{
 		check_substitute_and_update_state, prune_oldest_consensus_state, verify_delay_passed,
 		verify_upgrade_and_update_state,
 	},
-	ics23::{FakeInner, ReadonlyProcessedStates},
+	ics23::ReadonlyProcessedStates,
 	msg::{
 		CheckForMisbehaviourMsg, ContractResult, ExportMetadataMsg, QueryMsg,
 		QueryResponse, StatusMsg, SudoMsg, UpdateStateMsg, UpdateStateOnMisbehaviourMsg,
@@ -130,16 +130,16 @@ impl CommitValidator for HostFunctions {}
 impl HostFunctionsProvider for HostFunctions {}
 
 fn process_instantiate_msg(
-	msg: InstantiateMessage<FakeInner, FakeInner, FakeInner>,
+	msg: InstantiateMessage,
 	ctx: &mut Context<HostFunctions>,
 	client_id: ClientId,
 ) -> Result<Binary, ContractError> {
-	let any = Any::decode(&mut msg.client_state.data.as_slice())?;
+	let any = Any::decode(&mut msg.client_state.as_slice())?;
 	let client_state = ClientState::decode_vec(&any.value)?;
-	let any = Any::decode(&mut msg.consensus_state.data.as_slice())?;
+	let any = Any::decode(&mut msg.consensus_state.as_slice())?;
 	let consensus_state = ConsensusState::decode_vec(&any.value)?;
 
-	ctx.checksum = Some(msg.client_state.checksum);
+	ctx.checksum = Some(msg.checksum);
 	let height = client_state.latest_height();
 	ctx.store_client_state(client_id.clone(), client_state)
 		.map_err(|e| ContractError::Tendermint(e.to_string()))?;
@@ -159,7 +159,7 @@ pub fn instantiate(
 	deps: DepsMut,
 	env: Env,
 	_info: MessageInfo,
-	msg: InstantiateMessage<FakeInner, FakeInner, FakeInner>,
+	msg: InstantiateMessage,
 ) -> Result<Response, ContractError> {
 	let client_id = ClientId::from_str(env.contract.address.as_str()).expect("client id is valid");
 	let mut ctx = Context::<HostFunctions>::new(deps, env);
@@ -294,7 +294,7 @@ fn process_message(
 			let old_client_state = ctx
 				.client_state(&client_id)
 				.map_err(|e| ContractError::Tendermint(e.to_string()))?;
-			let msg: VerifyUpgradeAndUpdateStateMsg =
+			let msg: VerifyUpgradeAndUpdateStateMsg<HostFunctions> =
 				VerifyUpgradeAndUpdateStateMsg::try_from(msg)?;
 			verify_upgrade_and_update_state::<HostFunctions>(
 				ctx,

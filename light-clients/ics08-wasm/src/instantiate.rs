@@ -1,16 +1,19 @@
-use super::client_state::ClientState;
-use crate::consensus_state::ConsensusState;
+use crate::Bytes;
+use crate::msg::Base64;
 #[cfg(feature = "cosmwasm")]
 use cosmwasm_schema::cw_serde;
 
 #[cfg_attr(feature = "cosmwasm", cw_serde)]
 #[cfg_attr(not(feature = "cosmwasm"), derive(Clone, Debug, PartialEq))]
 #[derive(Eq)]
-pub struct InstantiateMessage<
-	AnyClient: Default,
-	AnyClientState: Default,
-	AnyConsensusState: Default,
-> {
-	pub client_state: ClientState<AnyClient, AnyClientState, AnyConsensusState>,
-	pub consensus_state: ConsensusState<AnyConsensusState>,
+pub struct InstantiateMessage {
+	#[schemars(with = "String")]
+	#[serde(with = "Base64", default)]
+	pub client_state: Bytes,
+	#[schemars(with = "String")]
+	#[serde(with = "Base64", default)]
+	pub consensus_state: Bytes,
+	#[schemars(with = "String")]
+	#[serde(with = "Base64", default)]
+	pub checksum: Bytes
 }
