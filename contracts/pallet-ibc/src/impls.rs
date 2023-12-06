@@ -22,7 +22,7 @@ use ibc::{
 	},
 	core::{
 		ics02_client::{
-			client_consensus::ConsensusState, client_state::ClientState, context::ClientReader,
+			client_consensus::ConsensusState, context::ClientReader,
 		},
 		ics03_connection::context::ConnectionReader,
 		ics04_channel::{

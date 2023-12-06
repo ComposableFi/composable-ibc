@@ -290,6 +290,17 @@ impl AnyClientState {
 			},
 		))
 	}
+
+	pub fn latest_height(&self) -> Height {
+		match self {
+			AnyClientState::Grandpa(client_state) => client_state.latest_height(),
+			AnyClientState::Beefy(client_state) => client_state.latest_height(),
+			AnyClientState::Tendermint(client_state) => client_state.latest_height(),
+			AnyClientState::Wasm(client_state) => client_state.latest_height(),
+			#[cfg(test)]
+			AnyClientState::Mock(client_state) => client_state.latest_height(),
+		}
+	}
 }
 
 #[derive(Clone, Debug, PartialEq, Eq, ConsensusState, Protobuf)]

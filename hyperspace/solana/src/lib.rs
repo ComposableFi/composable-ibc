@@ -4,6 +4,7 @@ extern crate alloc;
 use alloc::rc::Rc;
 use anchor_spl::associated_token::get_associated_token_address;
 use base64::Engine;
+use tendermint::Hash;
 use core::{pin::Pin, str::FromStr, time::Duration};
 use ibc_new::core::handler::types::msgs::MsgEnvelope;
 use solana_transaction_status::UiTransactionEncoding;
@@ -30,13 +31,9 @@ use error::Error;
 use ibc::{
 	applications::transfer::{Amount, BaseDenom, PrefixedCoin, PrefixedDenom, TracePath},
 	core::{
-		ics02_client::{
-			client_state::ClientType,
-			events::
-				UpdateClient,
-		},
-		ics23_commitment::commitment::CommitmentPrefix,
-		ics24_host::identifier::{ChannelId, ClientId, ConnectionId, PortId},
+		ics02_client::{client_state::ClientType, events::UpdateClient, trust_threshold::TrustThreshold},
+		ics23_commitment::{commitment::{CommitmentPrefix, CommitmentRoot}, specs::ProofSpecs},
+		ics24_host::identifier::{ChannelId, ClientId, ConnectionId, PortId, ChainId},
 	},
 	events::IbcEvent,
 	timestamp::Timestamp,
@@ -57,7 +54,7 @@ use ibc_proto::{
 		},
 	},
 };
-use pallet_ibc::light_clients::AnyClientMessage;
+use pallet_ibc::light_clients::{AnyClientMessage, AnyConsensusState, AnyClientState};
 use primitives::{
 	Chain, CommonClientConfig, CommonClientState, IbcProvider, KeyProvider, LightClientSync,
 	MisbehaviourHandler, UndeliveredType,
@@ -72,8 +69,6 @@ use tokio_stream::Stream;
 
 // use crate::ibc_storage::{AnyConsensusState, Serialised};
 use solana_ibc::{
-	client_state::AnyClientState,
-	consensus_state::AnyConsensusState,
 	instruction,
 	storage::{
 		// ids::{ClientIdx, ConnectionIdx, PortChannelPK},
@@ -352,9 +347,23 @@ deserialize consensus state"
 				)
 			})
 			.unwrap();
-		let any_consensus_state = Any::from(consensus_state);
+		let cs_state = match consensus_state {
+			solana_ibc::consensus_state::AnyConsensusState::Tendermint(cs) => {
+				let timestamp_in_secs = cs.timestamp().unix_timestamp();
+				let remaining_timestamp_in_nano = (cs.timestamp().unix_timestamp_nanos() % 1_000_000_000) as u32;
+				AnyConsensusState::Tendermint(ics07_tendermint::consensus_state::ConsensusState {
+					timestamp: tendermint::time::Time::from_unix_timestamp(
+						timestamp_in_secs,
+						remaining_timestamp_in_nano,
+					).unwrap(),
+					root: CommitmentRoot { bytes: cs.inner().root.as_bytes().to_vec() },
+					next_validators_hash: Hash::try_from(cs.next_validators_hash().as_bytes().to_vec()).unwrap(),
+				})
+			}
+			solana_ibc::consensus_state::AnyConsensusState::Mock(_) => panic!("Mocks are not supported"),
+		};
 		Ok(QueryConsensusStateResponse {
-			consensus_state: Some(any_consensus_state),
+			consensus_state: Some(cs_state.into()),
 			proof: borsh::to_vec(&consensus_state_proof).unwrap(),
 			proof_height: increment_proof_height(Some(at.into())),
 		})
@@ -392,9 +401,26 @@ deserialize client state"
 				)
 			})
 			.unwrap();
-		let any_client_state = Any::from(client_state);
+		let any_client_state = match client_state {
+			solana_ibc::client_state::AnyClientState::Tendermint(client) => {
+				let inner_client = client.inner();
+				AnyClientState::Tendermint(ics07_tendermint::client_state::ClientState {
+        chain_id: ChainId::from_str(inner_client.chain_id.as_str()).unwrap(),
+        trust_level: TrustThreshold::new(inner_client.trust_level.numerator(), inner_client.trust_level.denominator()).unwrap(),
+        trusting_period: inner_client.trusting_period,
+        unbonding_period: inner_client.unbonding_period,
+        max_clock_drift: inner_client.max_clock_drift,
+        latest_height: Height::new(inner_client.latest_height.revision_number(), inner_client.latest_height.revision_height()),
+        proof_specs: ProofSpecs::cosmos(), // Not sure about this
+        upgrade_path: inner_client.upgrade_path,
+        frozen_height: inner_client.frozen_height.and_then(|height| Some(Height::new(height.revision_number(), height.revision_height()))) ,
+        _phantom: std::marker::PhantomData,
+				})
+			}
+			solana_ibc::client_state::AnyClientState::Mock(_) => panic!("Mocks are not supported"),
+		};
 		Ok(QueryClientStateResponse {
-			client_state: Some(any_client_state),
+			client_state: Some(any_client_state.into()),
 			proof: borsh::to_vec(&client_state_proof).unwrap(),
 			proof_height: increment_proof_height(Some(at.into())),
 		})
@@ -898,7 +924,14 @@ deserialize client state"
 			ibc_new::core::host::types::identifiers::ClientId::from_str(client_id.as_str())
 				.unwrap();
 		let client_idx = ClientIdx::try_from(new_client_id).unwrap();
-		let consensus_state_trie_key = TrieKey::for_consensus_state(client_idx, height);
+		let consensus_state_trie_key = TrieKey::for_consensus_state(
+			client_idx,
+			ibc_new::core::client::types::Height::new(
+				height.revision_number,
+				height.revision_height,
+			)
+			.unwrap(),
+		);
 		let (_, host_consensus_state_proof) = trie
 			.prove(&consensus_state_trie_key)
 			.map_err(|_| Error::Custom("value is sealed and cannot be fetched".to_owned()))?;
@@ -1369,8 +1402,6 @@ fn get_events_from_logs(logs: Vec<String>) -> Vec<ibc_new::core::handler::types:
 		.collect();
 	events
 }
-
-
 
 #[test]
 pub fn test_storage_deserialization() {
