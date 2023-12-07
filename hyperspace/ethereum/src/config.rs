@@ -190,7 +190,7 @@ pub enum ContractName {
 	ICS20Bank,
 	ICS20TransferBank,
 	OwnershipFacet,
-	TendermintLightClientSimple,
+	TendermintLightClientZK,
 	ERC20Token,
 }
 
@@ -214,7 +214,7 @@ impl ContractName {
 			ContractName::ICS20TransferBank => ICS20TRANSFERBANKABI_ABI.clone(),
 			ContractName::ICS20Bank => ICS20BANKABI_ABI.clone(),
 			ContractName::OwnershipFacet => OWNERSHIPFACETABI_ABI.clone(),
-			ContractName::TendermintLightClientSimple => TENDERMINTCLIENTABI_ABI.clone(),
+			ContractName::TendermintLightClientZK => TENDERMINTCLIENTABI_ABI.clone(),
 			ContractName::ERC20Token => ERC20TOKENABI_ABI.clone(),
 		}
 	}

@@ -50,7 +50,7 @@ use std::{
 };
 use tokio::{task::JoinHandle, time::sleep};
 
-const USE_CONFIG: bool = true;
+const USE_CONFIG: bool = false;
 const SAVE_TO_CONFIG: bool = true;
 
 #[derive(Debug, Clone)]
@@ -121,7 +121,7 @@ pub async fn deploy_yui_ibc_and_tendermint_client_fixture() -> DeployYuiIbcTende
 		deploy_contract("DelegateTendermintUpdate", &[&project_output1], (), client.clone()).await;
 
 	let tendermint_light_client = deploy_contract(
-		"TendermintLightClientSimple",
+		"TendermintLightClientZK",
 		&[&project_output1],
 		(
 			Token::Address(yui_ibc.diamond.address()),

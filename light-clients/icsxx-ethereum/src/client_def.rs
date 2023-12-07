@@ -219,7 +219,7 @@ where
 		_proof_upgrade_client: Vec<u8>,
 		_proof_upgrade_consensus_state: Vec<u8>,
 	) -> Result<(Self::ClientState, ConsensusUpdateResult<Ctx>), Ics02Error> {
-		unimplemented!()
+		unimplemented!("verify_upgrade_and_update_state")
 	}
 
 	fn check_substitute_and_update_state<Ctx: ReaderContext>(
@@ -273,7 +273,7 @@ where
 		// let value = expected_connection_end.encode_vec().map_err(Ics02Error::encode)?;
 		// verify_membership::<H::BlakeTwo256, _>(prefix, proof, root, path, value)
 		// 	.map_err(Error::Anyhow)?;
-		Ok(())
+		unimplemented!("verify_connection_state")
 	}
 
 	fn verify_channel_state<Ctx: ReaderContext>(
@@ -294,7 +294,7 @@ where
 		// let value = expected_channel_end.encode_vec().map_err(Ics02Error::encode)?;
 		// verify_membership::<H::BlakeTwo256, _>(prefix, proof, root, path, value)
 		// 	.map_err(Error::Anyhow)?;
-		Ok(())
+		unimplemented!("verify_channel_state")
 	}
 
 	fn verify_client_full_state<Ctx: ReaderContext>(
@@ -313,7 +313,7 @@ where
 		// let value = expected_client_state.encode_to_vec().map_err(Ics02Error::encode)?;
 		// verify_membership::<H::BlakeTwo256, _>(prefix, proof, root, path, value)
 		// 	.map_err(Error::Anyhow)?;
-		Ok(())
+		unimplemented!("verify_client_full_state")
 	}
 
 	fn verify_packet_data<Ctx: ReaderContext>(
@@ -344,7 +344,7 @@ where
 		// 	commitment.into_vec(),
 		// )
 		// .map_err(Error::Anyhow)?;
-		Ok(())
+		unimplemented!("verify_packet_data")
 	}
 
 	fn verify_packet_acknowledgement<Ctx: ReaderContext>(
@@ -373,7 +373,7 @@ where
 		// 	ack.into_vec(),
 		// )
 		// .map_err(Error::Anyhow)?;
-		Ok(())
+		unimplemented!("verify_packet_acknowledgement")
 	}
 
 	fn verify_next_sequence_recv<Ctx: ReaderContext>(
@@ -403,7 +403,7 @@ where
 		// 	seq_bytes,
 		// )
 		// .map_err(Error::Anyhow)?;
-		Ok(())
+		unimplemented!("verify_next_sequence_recv")
 	}
 
 	fn verify_packet_receipt_absence<Ctx: ReaderContext>(
@@ -431,6 +431,6 @@ where
 		// 	receipt_path,
 		// )
 		// .map_err(Error::Anyhow)?;
-		Ok(())
+		unimplemented!("verify_packet_receipt_absence")
 	}
 }

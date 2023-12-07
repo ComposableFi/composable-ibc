@@ -272,7 +272,7 @@ async fn test_deploy_yui_ibc_and_create_eth_client() {
 	let factory = ContractFactory::new(abi.unwrap(), bytecode.unwrap(), client.clone());
 	let update_client_delegate_contract = factory.deploy(()).unwrap().send().await.unwrap();
 
-	let contract = project_output1.find_first("TendermintLightClientSimple").unwrap();
+	let contract = project_output1.find_first("TendermintLightClientZK").unwrap();
 	// dbg!(&contract);
 	let r = contract.clone();
 	let (abi, bytecode, _) = r.into_parts();

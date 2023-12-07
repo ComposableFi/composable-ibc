@@ -699,7 +699,6 @@ impl EthereumClient {
 				.method("hasAcknowledgement", (port_id, channel_id, sequence))
 				.expect("contract is missing hasAcknowledgement");
 
-			// let receipt_fut = ;
 			let receipt: bool = binding
 				.block(BlockId::Number(BlockNumber::Number(at.revision_height.into())))
 				.call()
@@ -719,6 +718,8 @@ impl EthereumClient {
 		let proof = self
 			.eth_query_proof(&path, Some(at.revision_height), COMMITMENTS_STORAGE_INDEX)
 			.await?;
+		// FIXME: verify account proof
+
 		let storage = proof
 			.storage_proof
 			.first()
