@@ -4,10 +4,12 @@ extern crate alloc;
 use alloc::rc::Rc;
 use anchor_spl::associated_token::get_associated_token_address;
 use base64::Engine;
-use tendermint::Hash;
+use client_state::convert_new_client_state_to_old;
+use consensus_state::convert_new_consensus_state_to_old;
 use core::{pin::Pin, str::FromStr, time::Duration};
-use ibc_new::core::handler::types::msgs::MsgEnvelope;
+use msgs::convert_old_msgs_to_new;
 use solana_transaction_status::UiTransactionEncoding;
+use tendermint::Hash;
 use tokio::sync::mpsc::unbounded_channel;
 
 use anchor_client::{
@@ -31,9 +33,10 @@ use error::Error;
 use ibc::{
 	applications::transfer::{Amount, BaseDenom, PrefixedCoin, PrefixedDenom, TracePath},
 	core::{
-		ics02_client::{client_state::ClientType, events::UpdateClient, trust_threshold::TrustThreshold},
-		ics23_commitment::{commitment::{CommitmentPrefix, CommitmentRoot}, specs::ProofSpecs},
-		ics24_host::identifier::{ChannelId, ClientId, ConnectionId, PortId, ChainId},
+		ics02_client::{client_state::ClientType, events::UpdateClient},
+		ics23_commitment::commitment::{CommitmentPrefix, CommitmentRoot},
+		ics24_host::identifier::{ChannelId, ClientId, ConnectionId, PortId},
+		ics26_routing::msgs::Ics26Envelope,
 	},
 	events::IbcEvent,
 	timestamp::Timestamp,
@@ -54,10 +57,10 @@ use ibc_proto::{
 		},
 	},
 };
-use pallet_ibc::light_clients::{AnyClientMessage, AnyConsensusState, AnyClientState};
+use pallet_ibc::light_clients::{AnyClientMessage, AnyConsensusState};
 use primitives::{
-	Chain, CommonClientConfig, CommonClientState, IbcProvider, KeyProvider, LightClientSync,
-	MisbehaviourHandler, UndeliveredType,
+	mock::LocalClientTypes, Chain, CommonClientConfig, CommonClientState, IbcProvider, KeyProvider,
+	LightClientSync, MisbehaviourHandler, UndeliveredType,
 };
 use std::{
 	collections::{BTreeMap, HashSet},
@@ -68,24 +71,16 @@ use tendermint_rpc::Url;
 use tokio_stream::Stream;
 
 // use crate::ibc_storage::{AnyConsensusState, Serialised};
-use solana_ibc::{
-	instruction,
-	storage::{
-		// ids::{ClientIdx, ConnectionIdx, PortChannelPK},
-		// trie_key::{SequencePath, TrieKey},
-		// IbcPackets,
-		PrivateStorage,
-		SequenceTripleIdx,
-		Serialised,
-	},
-	Deliver,
-};
+use solana_ibc::storage::{PrivateStorage, SequenceTripleIdx, Serialised};
 use solana_trie::trie;
 use trie_ids::{ClientIdx, ConnectionIdx, PortChannelPK, TrieKey};
 
 // mod accounts;
+mod client_state;
+mod consensus_state;
 mod error;
 mod events;
+mod msgs;
 // mod ibc_storage;
 // mod ids;
 // mod instructions;
@@ -347,21 +342,7 @@ deserialize consensus state"
 				)
 			})
 			.unwrap();
-		let cs_state = match consensus_state {
-			solana_ibc::consensus_state::AnyConsensusState::Tendermint(cs) => {
-				let timestamp_in_secs = cs.timestamp().unix_timestamp();
-				let remaining_timestamp_in_nano = (cs.timestamp().unix_timestamp_nanos() % 1_000_000_000) as u32;
-				AnyConsensusState::Tendermint(ics07_tendermint::consensus_state::ConsensusState {
-					timestamp: tendermint::time::Time::from_unix_timestamp(
-						timestamp_in_secs,
-						remaining_timestamp_in_nano,
-					).unwrap(),
-					root: CommitmentRoot { bytes: cs.inner().root.as_bytes().to_vec() },
-					next_validators_hash: Hash::try_from(cs.next_validators_hash().as_bytes().to_vec()).unwrap(),
-				})
-			}
-			solana_ibc::consensus_state::AnyConsensusState::Mock(_) => panic!("Mocks are not supported"),
-		};
+		let cs_state = convert_new_consensus_state_to_old(consensus_state);
 		Ok(QueryConsensusStateResponse {
 			consensus_state: Some(cs_state.into()),
 			proof: borsh::to_vec(&consensus_state_proof).unwrap(),
@@ -401,24 +382,7 @@ deserialize client state"
 				)
 			})
 			.unwrap();
-		let any_client_state = match client_state {
-			solana_ibc::client_state::AnyClientState::Tendermint(client) => {
-				let inner_client = client.inner();
-				AnyClientState::Tendermint(ics07_tendermint::client_state::ClientState {
-        chain_id: ChainId::from_str(inner_client.chain_id.as_str()).unwrap(),
-        trust_level: TrustThreshold::new(inner_client.trust_level.numerator(), inner_client.trust_level.denominator()).unwrap(),
-        trusting_period: inner_client.trusting_period,
-        unbonding_period: inner_client.unbonding_period,
-        max_clock_drift: inner_client.max_clock_drift,
-        latest_height: Height::new(inner_client.latest_height.revision_number(), inner_client.latest_height.revision_height()),
-        proof_specs: ProofSpecs::cosmos(), // Not sure about this
-        upgrade_path: inner_client.upgrade_path,
-        frozen_height: inner_client.frozen_height.and_then(|height| Some(Height::new(height.revision_number(), height.revision_height()))) ,
-        _phantom: std::marker::PhantomData,
-				})
-			}
-			solana_ibc::client_state::AnyClientState::Mock(_) => panic!("Mocks are not supported"),
-		};
+		let any_client_state = convert_new_client_state_to_old(client_state);
 		Ok(QueryClientStateResponse {
 			client_state: Some(any_client_state.into()),
 			proof: borsh::to_vec(&client_state_proof).unwrap(),
@@ -1292,7 +1256,10 @@ impl Chain for Client {
 			"/ibc.core.connection.v1.MsgConnectionOpenConfirm" => println!("hello"),
 		};
 
-		let all_messages = MsgEnvelope::try_from(messages[0].clone()).unwrap();
+		let my_message = Ics26Envelope::<LocalClientTypes>::try_from(messages[0]).unwrap();
+		let messages = convert_old_msgs_to_new(vec![my_message]);
+
+		// let all_messages = MsgEnvelope::try_from(messages[0].clone()).unwrap();
 		// .into_iter()
 
 		let sig: Signature = program
@@ -1304,7 +1271,7 @@ impl Chain for Client {
 				chain: chain_key,
 				system_program: system_program::ID,
 			})
-			.args(solana_ibc::instruction::Deliver { message: all_messages })
+			.args(solana_ibc::instruction::Deliver { message: messages[0] })
 			.payer(authority.clone())
 			.signer(&*authority)
 			.send_with_spinner_and_config(RpcSendTransactionConfig {
