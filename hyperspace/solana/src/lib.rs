@@ -75,6 +75,8 @@ use solana_ibc::storage::{PrivateStorage, SequenceTripleIdx, Serialised};
 use solana_trie::trie;
 use trie_ids::{ClientIdx, ConnectionIdx, PortChannelPK, TrieKey};
 
+use crate::events::convert_new_event_to_old;
+
 // mod accounts;
 mod client_state;
 mod consensus_state;
@@ -641,7 +643,12 @@ deserialize client state"
 	async fn latest_height_and_timestamp(
 		&self,
 	) -> Result<(Height, ibc::timestamp::Timestamp), Self::Error> {
-		todo!();
+		let rpc_client = self.rpc_client();
+		let height = rpc_client.get_block_height().await.map_err(|e| Error::RpcError(serde_json::to_string(&e.kind.get_transaction_error().unwrap()).unwrap()))?;
+		let epoch = rpc_client.get_epoch_info().await.map_err(|e| Error::RpcError(serde_json::to_string(&e.kind.get_transaction_error().unwrap()).unwrap()))?.epoch;
+		let slot = rpc_client.get_slot().await.map_err(|e| Error::RpcError(serde_json::to_string(&e.kind.get_transaction_error().unwrap()).unwrap()))?;
+		let timestamp = rpc_client.get_block_time(slot).await.map_err(|e| Error::RpcError(serde_json::to_string(&e.kind.get_transaction_error().unwrap()).unwrap()))?;
+		Ok((Height::new(epoch, height), Timestamp::from_nanoseconds((timestamp * 10_i64.pow(9)).try_into().unwrap()).unwrap()))
 	}
 
 	async fn query_packet_commitments(
@@ -967,7 +974,9 @@ deserialize client state"
 	}
 
 	async fn query_timestamp_at(&self, block_number: u64) -> Result<u64, Self::Error> {
-		todo!()
+		let rpc_client = self.rpc_client();
+		let timestamp = rpc_client.get_block_time(block_number.into()).await.map_err(|e| Error::RpcError(serde_json::to_string(&e.kind.get_transaction_error().unwrap()).unwrap()))?;
+		Ok(timestamp as u64)
 	}
 
 	async fn query_clients(&self) -> Result<Vec<ClientId>, Self::Error> {
@@ -1043,7 +1052,7 @@ deserialize client state"
 								.connection_id()
 								.map_or_else(|| "".to_string(), |v| v.as_str().to_string()),
 							prefix: Some(ibc_proto::ibc::core::commitment::v1::MerklePrefix {
-								key_prefix: counterparty.prefix.into_vec(),
+								key_prefix: counterparty.prefix.clone().into_vec(),
 							}),
 						}),
 						delay_period: connection.delay_period().as_secs(),
@@ -1251,12 +1260,7 @@ impl Chain for Client {
 		let trie_key = self.get_trie_key();
 		let chain_key = self.get_chain_key();
 
-		let value = messages[0].type_url.as_str();
-		let value = match value {
-			"/ibc.core.connection.v1.MsgConnectionOpenConfirm" => println!("hello"),
-		};
-
-		let my_message = Ics26Envelope::<LocalClientTypes>::try_from(messages[0]).unwrap();
+		let my_message = Ics26Envelope::<LocalClientTypes>::try_from(messages[0].clone()).unwrap();
 		let messages = convert_old_msgs_to_new(vec![my_message]);
 
 		// let all_messages = MsgEnvelope::try_from(messages[0].clone()).unwrap();
@@ -1271,7 +1275,7 @@ impl Chain for Client {
 				chain: chain_key,
 				system_program: system_program::ID,
 			})
-			.args(solana_ibc::instruction::Deliver { message: messages[0] })
+			.args(solana_ibc::instruction::Deliver { message: messages[0].clone() })
 			.payer(authority.clone())
 			.signer(&*authority)
 			.send_with_spinner_and_config(RpcSendTransactionConfig {
@@ -1294,7 +1298,23 @@ impl Chain for Client {
 	}
 
 	async fn handle_error(&mut self, error: &anyhow::Error) -> Result<(), anyhow::Error> {
-		todo!()
+		let err_str = if let Some(rpc_err) = error.downcast_ref::<Error>() {
+			match rpc_err {
+				Error::RpcError(s) => s.clone(),
+				_ => "".to_string(),
+			}
+		} else {
+			error.to_string()
+		};
+		log::debug!(target: "hyperspace_solana", "Handling error: {err_str}");
+		if err_str.contains("dispatch task is gone") ||
+			err_str.contains("failed to send message to internal channel")
+		{
+			self.reconnect().await?;
+			self.common_state.rpc_call_delay *= 2;
+		}
+
+		Ok(())
 	}
 
 	fn common_state(&self) -> &CommonClientState {
@@ -1382,9 +1402,9 @@ pub fn test_storage_deserialization() {
 	let program = client.program(ID).unwrap();
 
 	let storage = Pubkey::find_program_address(&[SOLANA_IBC_STORAGE_SEED], &ID).0;
-	println!("THis is the sotrage key {} {}", storage, ID);
+	// println!("THis is the sotrage key {} {}", storage, ID);
 	let solana_ibc_storage_account: PrivateStorage = program.account(storage).unwrap();
-	println!("This is the storage account {:?} {}", solana_ibc_storage_account, ID);
+	// println!("This is the storage account {:?} {}", solana_ibc_storage_account, ID);
 	let serialized_consensus_state = solana_ibc_storage_account.clients[0]
 		.consensus_states
 		.get(&ibc_new::core::client::types::Height::new(0, 1).unwrap())
@@ -1393,5 +1413,19 @@ pub fn test_storage_deserialization() {
 	let serialized_connection_end = &solana_ibc_storage_account.connections[0];
 	let connection_end = Serialised::get(serialized_connection_end).unwrap();
 	let in_vec = serialized_consensus_state.try_to_vec().unwrap();
-	println!("This is invec {:?}", in_vec);
+	// println!("This is invec {:?}", in_vec);
+
+	let rpc_client = program.rpc();
+
+	let signature = Signature::from_str("3dAyQEVTz7RpousUXWGfdunb8vxJgeehXLwQRB3gX7ngovQswhFZJuvjq49YLPpg53k5tLHG44vgK32BRBhesJJh").unwrap();
+	let tx = rpc_client.get_transaction(&signature, UiTransactionEncoding::Json).unwrap();
+	let logs = match tx.transaction.meta.unwrap().log_messages {
+    solana_transaction_status::option_serializer::OptionSerializer::Some(e) => e,
+		_ => panic!(),
+	};
+	let events = get_events_from_logs(logs);
+	println!("THis is new 1 event {:?}", events[1].clone());
+	let old_event = convert_new_event_to_old(events[1].clone());
+	println!("THis is old 1 event {:?}", old_event);
+
 }

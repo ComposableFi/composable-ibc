@@ -341,12 +341,12 @@ pub fn convert_new_event_to_old(
 			};
 			IbcEvent::TimeoutPacket(eve)
 		},
-		ibc_new::core::handler::types::events::IbcEvent::ChannelClosed(e) => panic!(),
+		ibc_new::core::handler::types::events::IbcEvent::ChannelClosed(_) => panic!(),
 		ibc_new::core::handler::types::events::IbcEvent::Module(e) => {
 			let attributes: Vec<ModuleEventAttribute> = e
 				.attributes
 				.iter()
-				.map(|attr| ModuleEventAttribute { key: attr.key, value: attr.value })
+				.map(|attr| ModuleEventAttribute { key: attr.clone().key, value: attr.clone().value })
 				.collect();
 			let eve = ModuleEvent {
 				kind: e.kind,
@@ -355,6 +355,6 @@ pub fn convert_new_event_to_old(
 			};
 			IbcEvent::AppModule(eve)
 		},
-		ibc_new::core::handler::types::events::IbcEvent::Message(e) => panic!(),
+		ibc_new::core::handler::types::events::IbcEvent::Message(_) => panic!(),
 	}
 }

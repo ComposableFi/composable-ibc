@@ -31,7 +31,7 @@ pub fn convert_new_client_state_to_old(
 					inner_client.latest_height.revision_height(),
 				),
 				proof_specs: ProofSpecs::cosmos(), // Not sure about this
-				upgrade_path: inner_client.upgrade_path,
+				upgrade_path: inner_client.upgrade_path.clone(),
 				frozen_height: inner_client.frozen_height.and_then(|height| {
 					Some(Height::new(height.revision_number(), height.revision_height()))
 				}),
