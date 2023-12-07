@@ -1,79 +1,4 @@
-pub fn encode_compact_u32(value: u32) -> Vec<u8> {
-	if value <= (1 << 6) - 1 {
-		return vec![(value << 2) as u8]
-	} else if value <= (1 << 14) - 1 {
-		let byte1 = ((value << 2) & 0xFF) as u8;
-		let byte2 = ((value << 2) >> 8) as u8;
-		// println!("{:0b}", value << 2);
-		let max = (1 << 14) - 1;
-		let diff = max - value;
-		println!("{}", diff);
-		// println!("{}", hex::encode(&[byte1 | 0b01, byte2]));
-		return vec![byte1 | 0b01, byte2]
-	} else if value <= (1 << 30) - 1 {
-		panic!();
-		let byte1 = ((value << 2) & 0xFF) as u8;
-		let byte2 = ((value << 2) >> 8) as u8;
-		let byte3 = ((value << 2) >> 16) as u8;
-		let byte4 = ((value << 2) >> 24) as u8;
-		return vec![byte1 | 0b10, byte2, byte3, byte4]
-	} else {
-		panic!();
-		let byte1 = (value & 0xFF) as u8;
-		let byte2 = (value >> 8) as u8;
-		let byte3 = (value >> 16) as u8;
-		let byte4 = (value >> 24) as u8;
-		return vec![byte1 | 0b11, byte2, byte3, byte4]
-	}
-}
-
-pub fn decode_compact_u32(data: &mut &[u8]) -> Option<u32> {
-	let prefix = data[0];
-	// *data = &data[1..];
-	let mut result = 0;
-	match prefix % 4 {
-		0 => {
-			result = u32::from(prefix) >> 2;
-			*data = &data[1..];
-		},
-		1 => {
-			let x = u16::from_le_bytes([prefix, data[1]]) >> 2;
-			if x > 0b0011_1111 && x <= 0b0011_1111_1111_1111 {
-				result = u32::from(x);
-				*data = &data[2..];
-			} else {
-				return None
-			}
-		},
-		2 => {
-			let x = u32::from_le_bytes([prefix, data[1], data[2], data[3]]) >> 2;
-			if x > 0b0011_1111_1111_1111 && x <= u32::MAX >> 2 {
-				result = x;
-				*data = &data[4..];
-			} else {
-				return None
-			}
-		},
-		3 | _ => {
-			if prefix >> 2 == 0 {
-				// just 4 bytes. ok.
-				let x = u32::from_le_bytes([data[1], data[2], data[3], data[4]]);
-				if x > u32::MAX >> 2 {
-					result = x;
-					*data = &data[5..];
-				} else {
-					return None
-				}
-				println!("needed 3");
-			} else {
-				// Out of range for a 32-bit quantity.
-				return None
-			}
-		},
-	}
-	Some(result)
-}
-
+#[allow(unused)]
 pub fn compress_rle(data: &[u8]) -> Vec<u8> {
 	let mut compressed = Vec::with_capacity(data.len() * 2); // max size
 
@@ -97,6 +22,7 @@ pub fn compress_rle(data: &[u8]) -> Vec<u8> {
 	compressed
 }
 
+#[allow(unused)]
 pub fn decompress_rle(data: &[u8]) -> Vec<u8> {
 	assert!(data.len() % 2 == 0, "Invalid compressed data");
 

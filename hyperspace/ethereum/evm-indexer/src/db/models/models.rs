@@ -1,5 +1,3 @@
-use std::collections::HashMap;
-
 use ethers::types::{Block, Log, Transaction, TransactionReceipt, H160};
 use field_count::FieldCount;
 

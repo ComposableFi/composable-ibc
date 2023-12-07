@@ -22,24 +22,19 @@ use hyperspace_core::{
 };
 use hyperspace_cosmos::client::{CosmosClient, CosmosClientConfig};
 use hyperspace_ethereum::{
-	client::EthereumClient,
-	config::EthereumClientConfig,
-	ibc_provider::{Ics20BankAbi, SendPacketFilter},
 	mock::{
 		utils,
 		utils::{hyperspace_ethereum_client_fixture, ETH_NODE_PORT, USE_GETH},
 	},
 	utils::{check_code_size, deploy_contract, DeployYuiIbc, ProviderImpl},
 };
-use hyperspace_parachain::{finality_protocol::FinalityProtocol, ParachainClientConfig};
-use hyperspace_primitives::{utils::create_clients, Chain, CommonClientConfig, IbcProvider};
+use hyperspace_primitives::{utils::create_clients, CommonClientConfig, IbcProvider};
 use hyperspace_testsuite::{
 	ibc_channel_close, ibc_messaging_packet_height_timeout_with_connection_delay,
 	ibc_messaging_packet_timeout_on_channel_close,
-	ibc_messaging_packet_timestamp_timeout_with_connection_delay,
-	ibc_messaging_with_connection_delay, setup_connection_and_channel,
+	ibc_messaging_packet_timestamp_timeout_with_connection_delay, setup_connection_and_channel,
 };
-use ibc::core::{ics23_commitment::specs::ProofSpecs, ics24_host::identifier::PortId};
+use ibc::core::ics24_host::identifier::PortId;
 use log::info;
 use sp_core::hashing::sha2_256;
 use std::{
@@ -316,8 +311,8 @@ async fn ethereum_to_cosmos_ibc_messaging_full_integration_test() {
 	logging::setup_logging();
 	let asset_str = "pica".to_string();
 	let asset_native_str = "ETH".to_string();
-	let asset_id_a = AnyAssetId::Ethereum(asset_str.clone());
-	let asset_id_native_a = AnyAssetId::Ethereum(asset_native_str.clone());
+	let _asset_id_a = AnyAssetId::Ethereum(asset_str.clone());
+	let _asset_id_native_a = AnyAssetId::Ethereum(asset_native_str.clone());
 	let (mut chain_a, mut chain_b, _indexer_handle) = setup_clients().await;
 	sleep(Duration::from_secs(60)).await;
 	let (handle, channel_a, channel_b, connection_id_a, connection_id_b) =
@@ -338,7 +333,7 @@ async fn ethereum_to_cosmos_ibc_messaging_full_integration_test() {
 		.to_uppercase()
 	));
 
-	let asset_id_native_b: AnyAssetId = AnyAssetId::Cosmos(format!(
+	let _asset_id_native_b: AnyAssetId = AnyAssetId::Cosmos(format!(
 		"ibc/{}",
 		hex::encode(&sha2_256(
 			format!("{}/{channel_b}/{asset_native_str}", PortId::transfer()).as_bytes()
@@ -795,15 +790,13 @@ mod xx {
  */
 mod indexer {
 	use evm_indexer::{
-		chains::chains::{Chain, ETHEREUM_DEVNET},
-		configs::indexer_config::EVMIndexerConfig,
-		db::db::Database,
-		rpc::rpc::Rpc,
+		chains::chains::ETHEREUM_DEVNET, configs::indexer_config::EVMIndexerConfig,
+		db::db::Database, rpc::rpc::Rpc,
 	};
 	use log::info;
 
 	pub async fn run_indexer(db_url: String, redis_url: String) {
-		let mut config = EVMIndexerConfig {
+		let config = EVMIndexerConfig {
 			start_block: 0,
 			db_url,
 			redis_url,
@@ -818,7 +811,7 @@ mod indexer {
 		};
 
 		info!("Starting EVM Indexer.");
-		info!("Syncing chain {}.", config.chain.name.clone());
+		info!("Syncing chain {}.", config.chain.name);
 
 		let rpc = Rpc::new(&config).await.expect("Unable to start RPC client.");
 
@@ -836,15 +829,11 @@ mod indexer {
 }
 mod xx {
 	use super::*;
-	use ethers::prelude::{Address, Middleware, TransactionRequest, H160, U256};
+	use ethers::prelude::{Address, Middleware, TransactionRequest};
+	use hyperspace_core::relay;
 	use hyperspace_ethereum::{
 		client::EthereumClient, config::EthereumClientConfig, ibc_provider::Ics20BankAbi,
 	};
-	// use hyperspace_testsuite::send_transfer_to;
-	use hyperspace_core::relay;
-	use ibc::signer::Signer;
-	use log::error;
-	use std::fmt::Debug;
 
 	#[tokio::test(flavor = "multi_thread", worker_threads = 2)]
 	async fn devnet() -> anyhow::Result<()> {
@@ -859,20 +848,20 @@ mod xx {
 		))
 		.unwrap();
 
-		let (mut client_a, mut client_b) = (
+		let (client_a, client_b) = (
 			EthereumClient::new(config_a).await.unwrap(),
 			CosmosClient::<()>::new(config_b).await.unwrap(),
 		);
 		// let id = client_a.client_id();
 		// client_a.set_client_id(client_b.client_id());
 		// client_b.set_client_id(id);
-		let client = client_a.client();
+		let _client = client_a.client();
 		let asset_str = "ppica".to_string();
-		let asset_id_a = AnyAssetId::Ethereum(asset_str.clone());
-		let asset_id_b_atom = AnyAssetId::Cosmos("uatom".to_string());
+		let _asset_id_a = AnyAssetId::Ethereum(asset_str.clone());
+		let _asset_id_b_atom = AnyAssetId::Cosmos("uatom".to_string());
 		let asset_id_b_pica = AnyAssetId::Cosmos("ppica".to_string());
 		// let channel_id = ChannelId::new(0);
-		let port_id = PortId::transfer();
+		let _port_id = PortId::transfer();
 
 		let users = [
 			"0xF66605eDE7BfCCc460097CAFD34B4924f1C6969D",
@@ -880,7 +869,7 @@ mod xx {
 			"0xD36554eF26E9B2ad72f2b53986469A8180522E5F",
 		];
 		let pica_amt = 10000000000000000000000u128;
-		let atom_amt = 10000000000000000u128;
+		let _atom_amt = 10000000000000000u128;
 		// let pica_amt = 100_000000000000u128;
 		// let atom_amt = 10000000000u128;
 		// let a = &mut AnyChain::Cosmos(client_b);
@@ -942,8 +931,8 @@ mod xx {
 		// );
 
 		// 70000000000000000ppica
-		for user in users {
-			let x = [
+		for _user in users {
+			let _x = [
 				(pica_amt, asset_id_b_pica.clone()),
 				// (atom_amt, asset_id_b_atom.clone())
 			];
@@ -1066,7 +1055,7 @@ mod xx {
 			&std::fs::read_to_string("../../config/ethereum-testnet.toml").unwrap(),
 		)
 		.unwrap();
-		let mut client = EthereumClient::new(config).await.unwrap();
+		let client = EthereumClient::new(config).await.unwrap();
 		let abi = Ics20BankAbi::new(
 			Address::from_str("0x0486ee42d89d569c4d8143e47a82c4b14545ae43").unwrap(),
 			client.client(),

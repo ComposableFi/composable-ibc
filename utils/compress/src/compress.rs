@@ -63,8 +63,6 @@ pub fn decompress(compressed: &mut &[u8], chunk_size: usize) -> Vec<u8> {
 }
 
 mod tests {
-	use super::*;
-
 	#[test]
 	fn compression() {
 		const CHUNK_SIZE: usize = 16;

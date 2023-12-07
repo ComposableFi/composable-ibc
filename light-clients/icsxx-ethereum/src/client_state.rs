@@ -18,7 +18,7 @@ use crate::{
 	error::Error, proto::ClientState as RawClientState,
 };
 use alloc::{format, string::ToString, vec::Vec};
-use alloy_sol_types::{private::SolTypeValue, SolValue};
+use alloy_sol_types::SolValue;
 use compress::{compress, decompress};
 use core::{fmt::Debug, marker::PhantomData, time::Duration};
 use ibc::{
@@ -26,9 +26,6 @@ use ibc::{
 	Height,
 };
 use ibc_proto::google::protobuf::Any;
-use log::info;
-use parity_scale_codec::Encode;
-use prost::Message;
 use serde::{Deserialize, Serialize};
 use sync_committee_verifier::LightClientState;
 use tendermint_proto::Protobuf;
@@ -211,73 +208,77 @@ impl<H> From<ClientState<H>> for RawClientState {
 	}
 }
 
-fn skip_field(ptr: &[u8], wire_type: u8) -> usize {
-	match wire_type {
-		2 => {
-			let (len, offset) = decode_varint(ptr);
-			return offset + len as usize
-		},
-		0 => {
-			let (_value, offset) = decode_varint(ptr);
-			return offset
-		},
-		n => panic!("unknown wire type {}", n),
+#[cfg(test)]
+mod test_proto {
+	fn skip_field(ptr: &[u8], wire_type: u8) -> usize {
+		match wire_type {
+			2 => {
+				let (len, offset) = decode_varint(ptr);
+				return offset + len as usize
+			},
+			0 => {
+				let (_value, offset) = decode_varint(ptr);
+				return offset
+			},
+			n => panic!("unknown wire type {}", n),
+		}
 	}
-}
 
-fn decode_len_field<'a>(mut ptr: &'a [u8], index: u8) -> &'a [u8] {
-	loop {
-		let (field_number, wire_type, offset) = decode_tag(ptr);
-		ptr = &ptr[offset..];
-
-		if wire_type != 2 || field_number != index {
-			let offset = skip_field(ptr, wire_type);
+	fn decode_len_field<'a>(mut ptr: &'a [u8], index: u8) -> &'a [u8] {
+		loop {
+			let (field_number, wire_type, offset) = decode_tag(ptr);
 			ptr = &ptr[offset..];
-			continue
-		}
-		let (len, offset) = decode_varint(ptr);
-		ptr = &ptr[offset..];
-		let value = &ptr[..len as usize];
-		return value
-	}
-}
 
-fn decode_any<'a>(ptr: &'a [u8]) -> &'a [u8] {
-	let value = decode_len_field(&ptr, 2);
-	value
-}
-
-fn decode_tag(ptr: &[u8]) -> (u8, u8, usize) {
-	let tag = ptr[0];
-	let wire_type = tag & 0b111;
-	let field_number = tag >> 3;
-	(field_number, wire_type, 1)
-}
-
-fn decode_varint(ptr: &[u8]) -> (u64, usize) {
-	let mut value = 0u64;
-	let mut shift = 0;
-	let mut bytes_read = 0;
-	for i in 0.. {
-		let byte = ptr[i];
-		value |= ((byte & 0b0111_1111) as u64) << shift;
-		shift += 7;
-		bytes_read += 1;
-		if byte & 0b1000_0000 == 0 {
-			break
+			if wire_type != 2 || field_number != index {
+				let offset = skip_field(ptr, wire_type);
+				ptr = &ptr[offset..];
+				continue
+			}
+			let (len, offset) = decode_varint(ptr);
+			ptr = &ptr[offset..];
+			let value = &ptr[..len as usize];
+			return value
 		}
 	}
-	(value, bytes_read)
-}
 
-#[test]
-fn test_proto() {
-	let data = hex::decode(include_bytes!("/Users/vmark/work/centauri-private/proto.txt")).unwrap();
-	let mut ptr = &mut &data[..];
+	fn decode_any<'a>(ptr: &'a [u8]) -> &'a [u8] {
+		let value = decode_len_field(&ptr, 2);
+		value
+	}
 
-	let wasm_any = decode_any(&mut ptr);
-	let wasm_data = decode_len_field(wasm_any, 1);
-	let client_state_any = decode_any(wasm_data);
-	let _abi_data = decode_len_field(client_state_any, 1);
-	// println!("abi_data = {}", hex::encode(abi_data));
+	fn decode_tag(ptr: &[u8]) -> (u8, u8, usize) {
+		let tag = ptr[0];
+		let wire_type = tag & 0b111;
+		let field_number = tag >> 3;
+		(field_number, wire_type, 1)
+	}
+
+	fn decode_varint(ptr: &[u8]) -> (u64, usize) {
+		let mut value = 0u64;
+		let mut shift = 0;
+		let mut bytes_read = 0;
+		for i in 0.. {
+			let byte = ptr[i];
+			value |= ((byte & 0b0111_1111) as u64) << shift;
+			shift += 7;
+			bytes_read += 1;
+			if byte & 0b1000_0000 == 0 {
+				break
+			}
+		}
+		(value, bytes_read)
+	}
+
+	#[test]
+	fn test_proto() {
+		let data =
+			hex::decode(include_bytes!("/Users/vmark/work/centauri-private/proto.txt")).unwrap();
+		let mut ptr = &mut &data[..];
+
+		let wasm_any = decode_any(&mut ptr);
+		let wasm_data = decode_len_field(wasm_any, 1);
+		let client_state_any = decode_any(wasm_data);
+		let _abi_data = decode_len_field(client_state_any, 1);
+		// println!("abi_data = {}", hex::encode(abi_data));
+	}
 }

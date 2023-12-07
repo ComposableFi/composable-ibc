@@ -55,7 +55,7 @@ impl Database {
 		let mut blocks: HashSet<i64> = HashSet::new();
 
 		let mut rows = sqlx::query("SELECT number FROM blocks WHERE chain = $1")
-			.bind(self.chain.name.clone())
+			.bind(self.chain.name)
 			.fetch(connection);
 
 		while let Some(row) = rows.try_next().await.unwrap() {
@@ -158,7 +158,7 @@ impl Database {
 
 		let chunks = get_chunks(blocks.len(), DatabaseBlock::field_count());
 
-		for (start, mut end) in chunks {
+		for (start, end) in chunks {
 			let mut query_builder = QueryBuilder::new("INSERT INTO blocks (base_fee_per_gas, chain, difficulty, extra_data, gas_limit, gas_used, block_hash, logs_bloom, miner, mix_hash, nonce, number, parent_hash, receipts_root, sha3_uncles, size, state_root, timestamp, total_difficulty, transactions, uncles) ");
 			// end = start + 1;
 			query_builder.push_values(&blocks[start..end], |mut row, block| {

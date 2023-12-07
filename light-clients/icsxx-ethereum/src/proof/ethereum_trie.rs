@@ -2,7 +2,6 @@ extern crate alloc;
 
 use crate::{proof::node_codec, utils::keccak256};
 use alloc::{
-	fmt::{Display, Formatter},
 	vec::Vec,
 };
 use core::marker::PhantomData;

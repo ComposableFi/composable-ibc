@@ -37,7 +37,7 @@ pub async fn sync_chain(
 
 	// Re-fetch previous `config.block_confirmation_length` blocks also because of a potential
 	// chain reorganization
-	let mut min_missing = *missing_blocks.first().unwrap_or(&0);
+	let min_missing = *missing_blocks.first().unwrap_or(&0);
 	let new_min_missing =
 		min_missing.saturating_sub(config.block_confirmation_length as i64).max(0);
 	if new_min_missing != min_missing {
@@ -73,10 +73,10 @@ pub async fn sync_chain(
 		let results2 = join_all(work2).await;
 
 		let mut db_blocks: Vec<DatabaseBlock> = Vec::new();
-		let mut db_transactions: Vec<DatabaseTransaction> = Vec::new();
-		let mut db_receipts: Vec<DatabaseReceipt> = Vec::new();
-		let mut db_logs: Vec<DatabaseLog> = Vec::new();
-		let mut db_contracts: Vec<DatabaseContract> = Vec::new();
+		let db_transactions: Vec<DatabaseTransaction> = Vec::new();
+		let db_receipts: Vec<DatabaseReceipt> = Vec::new();
+		let db_logs: Vec<DatabaseLog> = Vec::new();
+		let db_contracts: Vec<DatabaseContract> = Vec::new();
 		let mut db_ibc_events: Vec<DatabaseIBCEventData> = Vec::new();
 
 		for result in results {
@@ -102,14 +102,7 @@ pub async fn sync_chain(
 
 		for result in results2 {
 			match result {
-				Some((
-					block,
-					mut transactions,
-					mut receipts,
-					mut logs,
-					mut contracts,
-					mut ibc_events,
-				)) => {
+				Some((block, _transactions, _receipts, _logs, _contracts, _ibc_events)) => {
 					db_blocks.push(block);
 					// db_transactions.append(&mut transactions);
 					// db_receipts.append(&mut receipts);
@@ -195,7 +188,7 @@ async fn fetch_ibc_events(
 async fn fetch_block(
 	rpc: &Rpc,
 	block_number: &i64,
-	chain: &Chain,
+	_chain: &Chain,
 ) -> Option<(
 	DatabaseBlock,
 	Vec<DatabaseTransaction>,
@@ -207,8 +200,8 @@ async fn fetch_block(
 	let block_data = rpc.get_block(block_number).await.unwrap();
 
 	match block_data {
-		Some((db_block, mut db_transactions)) => {
-			let total_block_transactions = db_transactions.len();
+		Some((db_block, db_transactions)) => {
+			let _total_block_transactions = db_transactions.len();
 
 			// Make sure all the transactions are correctly formatted.
 			// if db_block.transactions != total_block_transactions as i64 {
@@ -220,10 +213,10 @@ async fn fetch_block(
 			// 	return None
 			// }
 
-			let mut db_receipts: Vec<DatabaseReceipt> = Vec::new();
-			let mut db_logs: Vec<DatabaseLog> = Vec::new();
-			let mut db_contracts: Vec<DatabaseContract> = Vec::new();
-			let mut db_ibc_events: Vec<DatabaseIBCEventData> = Vec::new();
+			let db_receipts: Vec<DatabaseReceipt> = Vec::new();
+			let db_logs: Vec<DatabaseLog> = Vec::new();
+			let db_contracts: Vec<DatabaseContract> = Vec::new();
+			let db_ibc_events: Vec<DatabaseIBCEventData> = Vec::new();
 
 			// if chain.supports_blocks_receipts {
 			// 	let receipts_data = rpc.get_block_receipts(block_number).await.unwrap();

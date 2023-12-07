@@ -211,7 +211,7 @@ impl Rpc {
 
 						let mut db_contracts: Vec<DatabaseContract> = Vec::new();
 
-						let mut db_ibc_events: Vec<DatabaseIBCEventData> = Vec::new();
+						let db_ibc_events: Vec<DatabaseIBCEventData> = Vec::new();
 
 						for receipt in receipts {
 							let db_receipt = DatabaseReceipt::from_rpc(&receipt);
@@ -233,7 +233,7 @@ impl Rpc {
 							for log in receipt.logs {
 								let db_log =
 									DatabaseLog::from_rpc(log.clone(), self.chain.name.to_owned());
-								if let Ok(Some(s)) = parse_log(log.clone()) {
+								if let Ok(Some(_s)) = parse_log(log.clone()) {
 									// db_ibc_events.push(DatabaseIBCEventData {
 									// 	block_number: *block_number,
 									// 	event_data: serde_json::from_str(s.as_str()).unwrap(),

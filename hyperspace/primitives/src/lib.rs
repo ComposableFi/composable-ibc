@@ -35,7 +35,7 @@ use std::{
 	fmt::Debug,
 	pin::Pin,
 	str::FromStr,
-	sync::{Arc, Mutex, RwLock},
+	sync::{Arc, Mutex},
 	time::Duration,
 };
 use tokio::{sync::Mutex as AsyncMutex, task::JoinSet, time::sleep};
@@ -617,7 +617,7 @@ pub async fn query_undelivered_sequences(
 	)
 	.map_err(|e| Error::Custom(e.to_string()))?;
 	// First we fetch all packet commitments from source
-	let ignored_timeouts = source.common_state().ignored_timeouted_sequences.lock().await;
+	let _ignored_timeouts = source.common_state().ignored_timeouted_sequences.lock().await;
 	let seqs = source
 		.query_packet_commitments(source_height, channel_id, port_id.clone())
 		.await?

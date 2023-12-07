@@ -36,7 +36,7 @@ use ibc::{
 };
 use ibc_proto::google::protobuf::Any;
 use primitives::{find_suitable_proof_height_for_client, Chain};
-use std::{ops::Sub, time::Duration};
+use std::time::Duration;
 use tendermint_proto::Protobuf;
 
 #[allow(clippy::too_many_arguments)]

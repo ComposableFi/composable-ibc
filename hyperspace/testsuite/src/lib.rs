@@ -34,8 +34,6 @@ use ibc::{
 	tx_msg::Msg,
 };
 use ibc_proto::google::protobuf::Any;
-
-use log::info;
 use pallet_ibc::Timeout;
 use std::{str::FromStr, time::Duration};
 use tendermint_proto::Protobuf;
