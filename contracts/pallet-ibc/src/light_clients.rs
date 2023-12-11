@@ -6,8 +6,7 @@ use frame_support::{
 use ibc::core::{
 	ics02_client,
 	ics02_client::{
-		client_consensus::ConsensusState, client_message::ClientMessage,
-		client_state::ClientState,
+		client_consensus::ConsensusState, client_message::ClientMessage, client_state::ClientState,
 	},
 };
 use ibc_derive::{ClientDef, ClientMessage, ClientState, ConsensusState, Protobuf};
@@ -22,10 +21,8 @@ use ics07_tendermint::{
 	consensus_state::TENDERMINT_CONSENSUS_STATE_TYPE_URL,
 };
 use ics08_wasm::{
-	client_message::WASM_CLIENT_MESSAGE_TYPE_URL,
-	client_state::WASM_CLIENT_STATE_TYPE_URL,
-	consensus_state::WASM_CONSENSUS_STATE_TYPE_URL,
-	Bytes,
+	client_message::WASM_CLIENT_MESSAGE_TYPE_URL, client_state::WASM_CLIENT_STATE_TYPE_URL,
+	consensus_state::WASM_CONSENSUS_STATE_TYPE_URL, Bytes,
 };
 use ics10_grandpa::{
 	client_message::{
@@ -329,18 +326,15 @@ pub enum AnyClientMessage {
 
 impl AnyClientMessage {
 	pub fn wasm(inner: Self) -> Result<Self, tendermint_proto::Error> {
-		Ok(Self::Wasm(
-			ics08_wasm::client_message::ClientMessage {
-				data: inner.encode_to_vec()?,
-				inner: Box::new(inner),
-			}
-		))
+		Ok(Self::Wasm(ics08_wasm::client_message::ClientMessage {
+			data: inner.encode_to_vec()?,
+			inner: Box::new(inner),
+		}))
 	}
 
 	pub fn unpack_recursive_into(self) -> Self {
 		match self {
-			Self::Wasm(ics08_wasm::client_message::ClientMessage{inner, data}) =>
-				*inner,
+			Self::Wasm(ics08_wasm::client_message::ClientMessage { inner, data }) => *inner,
 			_ => self,
 		}
 	}
@@ -400,7 +394,7 @@ impl From<AnyClientMessage> for Any {
 		match client_msg {
 			AnyClientMessage::Wasm(msg) => Any {
 				type_url: WASM_CLIENT_MESSAGE_TYPE_URL.to_string(),
-				value: msg.encode_vec().expect("encode_vec failed")
+				value: msg.encode_vec().expect("encode_vec failed"),
 			},
 			AnyClientMessage::Grandpa(msg) => match msg {
 				ics10_grandpa::client_message::ClientMessage::Header(h) => Any {

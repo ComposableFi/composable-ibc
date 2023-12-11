@@ -77,12 +77,8 @@ where
 		client_state: Self::ClientState,
 		client_msg: Self::ClientMessage,
 	) -> Result<(), Error> {
-		self.inner.verify_client_message(
-			ctx,
-			client_id,
-			*client_state.inner,
-			*client_msg.inner,
-		)
+		self.inner
+			.verify_client_message(ctx, client_id, *client_state.inner, *client_msg.inner)
 	}
 
 	fn update_state<Ctx: ReaderContext>(
@@ -92,12 +88,9 @@ where
 		client_state: Self::ClientState,
 		client_msg: Self::ClientMessage,
 	) -> Result<(Self::ClientState, ConsensusUpdateResult<Ctx>), Error> {
-		let (inner_client_state, inner_consensus_update_result) = self.inner.update_state(
-			ctx,
-			client_id,
-			*client_state.inner,
-			*client_msg.inner,
-		)?;
+		let (inner_client_state, inner_consensus_update_result) =
+			self.inner
+				.update_state(ctx, client_id, *client_state.inner, *client_msg.inner)?;
 		let client_state = ClientState {
 			data: client_state.data.clone(),
 			checksum: client_state.checksum.clone(),
@@ -132,12 +125,8 @@ where
 		client_state: Self::ClientState,
 		client_msg: Self::ClientMessage,
 	) -> Result<bool, Error> {
-		self.inner.check_for_misbehaviour(
-			ctx,
-			client_id,
-			*client_state.inner,
-			*client_msg.inner,
-		)
+		self.inner
+			.check_for_misbehaviour(ctx, client_id, *client_state.inner, *client_msg.inner)
 	}
 
 	fn verify_upgrade_and_update_state<Ctx: ReaderContext>(

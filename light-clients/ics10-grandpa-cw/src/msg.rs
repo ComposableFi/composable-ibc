@@ -30,7 +30,9 @@ use ics08_wasm::{
 	consensus_state::ConsensusState as WasmConsensusState,
 };
 use ics10_grandpa::{
-	client_message::{ClientMessage, Header, Misbehaviour, GRANDPA_HEADER_TYPE_URL, GRANDPA_MISBEHAVIOUR_TYPE_URL},
+	client_message::{
+		ClientMessage, Header, Misbehaviour, GRANDPA_HEADER_TYPE_URL, GRANDPA_MISBEHAVIOUR_TYPE_URL,
+	},
 	client_state::ClientState,
 	consensus_state::ConsensusState,
 };
@@ -70,7 +72,13 @@ pub struct QueryResponse {
 
 impl QueryResponse {
 	pub fn success() -> Self {
-		Self { is_valid: true, status: None, genesis_metadata: None, found_misbehaviour: None, timestamp: None }
+		Self {
+			is_valid: true,
+			status: None,
+			genesis_metadata: None,
+			found_misbehaviour: None,
+			timestamp: None,
+		}
 	}
 
 	pub fn status(mut self, status: String) -> Self {
@@ -82,7 +90,7 @@ impl QueryResponse {
 		self.genesis_metadata = genesis_metadata;
 		self
 	}
-	
+
 	pub fn misbehaviour(mut self, found_misbehavior: bool) -> Self {
 		self.found_misbehaviour = Some(found_misbehavior);
 		self
@@ -198,7 +206,8 @@ impl VerifyClientMessage {
 		let any = Any::decode(&mut raw.as_slice())?;
 		let client_message = match &*any.type_url {
 			GRANDPA_HEADER_TYPE_URL => ClientMessage::Header(Header::decode_vec(&any.value)?),
-			GRANDPA_MISBEHAVIOUR_TYPE_URL => ClientMessage::Misbehaviour(Misbehaviour::decode_vec(&any.value)?),
+			GRANDPA_MISBEHAVIOUR_TYPE_URL =>
+				ClientMessage::Misbehaviour(Misbehaviour::decode_vec(&any.value)?),
 			_ => return Err(ContractError::Grandpa("unknown client message type".to_string())),
 		};
 		Ok(client_message)

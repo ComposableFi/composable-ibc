@@ -27,7 +27,10 @@ use ibc::{
 };
 use ibc_proto::{google::protobuf::Any, ibc::core::client::v1::Height as HeightRaw};
 use ics07_tendermint::{
-	client_message::{ClientMessage, Header, Misbehaviour, TENDERMINT_HEADER_TYPE_URL, TENDERMINT_MISBEHAVIOUR_TYPE_URL},
+	client_message::{
+		ClientMessage, Header, Misbehaviour, TENDERMINT_HEADER_TYPE_URL,
+		TENDERMINT_MISBEHAVIOUR_TYPE_URL,
+	},
 	client_state::ClientState,
 	consensus_state::ConsensusState,
 };
@@ -67,7 +70,13 @@ pub struct QueryResponse {
 
 impl QueryResponse {
 	pub fn success() -> Self {
-		Self { is_valid: true, status: None, genesis_metadata: None, found_misbehaviour: None, timestamp: None }
+		Self {
+			is_valid: true,
+			status: None,
+			genesis_metadata: None,
+			found_misbehaviour: None,
+			timestamp: None,
+		}
 	}
 
 	pub fn status(mut self, status: String) -> Self {
@@ -79,7 +88,7 @@ impl QueryResponse {
 		self.genesis_metadata = genesis_metadata;
 		self
 	}
-	
+
 	pub fn misbehaviour(mut self, found_misbehavior: bool) -> Self {
 		self.found_misbehaviour = Some(found_misbehavior);
 		self
@@ -176,7 +185,8 @@ impl VerifyClientMessage {
 		let any = Any::decode(&mut raw.as_slice())?;
 		let client_message = match &*any.type_url {
 			TENDERMINT_HEADER_TYPE_URL => ClientMessage::Header(Header::decode_vec(&any.value)?),
-			TENDERMINT_MISBEHAVIOUR_TYPE_URL => ClientMessage::Misbehaviour(Misbehaviour::decode_vec(&any.value)?),
+			TENDERMINT_MISBEHAVIOUR_TYPE_URL =>
+				ClientMessage::Misbehaviour(Misbehaviour::decode_vec(&any.value)?),
 			_ => return Err(ContractError::Tendermint("unknown client message type".to_string())),
 		};
 		Ok(client_message)
@@ -361,7 +371,7 @@ impl<H: Clone> TryFrom<VerifyUpgradeAndUpdateStateMsgRaw> for VerifyUpgradeAndUp
 		let any = Any::decode(&mut raw.upgrade_client_state.as_slice())?;
 		let upgrade_client_state = ClientState::decode_vec(&any.value)?;
 		let any = Any::decode(&mut raw.upgrade_consensus_state.as_slice())?;
-		let upgrade_consensus_state =	ConsensusState::decode_vec(&any.value)?;
+		let upgrade_consensus_state = ConsensusState::decode_vec(&any.value)?;
 		if upgrade_client_state.trust_level != TrustThreshold::ZERO ||
 			upgrade_client_state.trusting_period != Duration::ZERO ||
 			upgrade_client_state.max_clock_drift != Duration::ZERO ||
@@ -373,8 +383,8 @@ impl<H: Clone> TryFrom<VerifyUpgradeAndUpdateStateMsgRaw> for VerifyUpgradeAndUp
 		}
 
 		Ok(VerifyUpgradeAndUpdateStateMsg {
-			upgrade_client_state: upgrade_client_state,
-			upgrade_consensus_state: upgrade_consensus_state,
+			upgrade_client_state,
+			upgrade_consensus_state,
 			proof_upgrade_client: CommitmentProofBytes::try_from(raw.proof_upgrade_client)?,
 			proof_upgrade_consensus_state: CommitmentProofBytes::try_from(
 				raw.proof_upgrade_consensus_state,

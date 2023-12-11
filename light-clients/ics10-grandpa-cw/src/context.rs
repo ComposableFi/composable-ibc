@@ -80,7 +80,7 @@ impl<'a, H> Context<'a, H> {
 	pub fn log(&self, msg: &str) {
 		match &self.deps_mut {
 			Some(deps_mut) => deps_mut.api.debug(msg),
-			None => unimplemented!()
+			None => unimplemented!(),
 		}
 	}
 
@@ -89,15 +89,15 @@ impl<'a, H> Context<'a, H> {
 			Some(deps_mut) => deps_mut.storage,
 			None => match &self.deps {
 				Some(deps) => deps.storage,
-				None => unimplemented!()
-			}
+				None => unimplemented!(),
+			},
 		}
 	}
 
 	pub fn storage_mut(&mut self) -> &mut dyn Storage {
 		match &mut self.deps_mut {
 			Some(deps_mut) => deps_mut.storage,
-			None => unimplemented!()
+			None => unimplemented!(),
 		}
 	}
 
@@ -186,11 +186,10 @@ where
 		let client_states = ReadonlyClientStates::new(self.storage());
 		let checksum = match self.checksum.clone() {
 			None => {
-				let encoded_wasm_client_state = client_states.get_prefixed(prefix).ok_or_else(|| {
-					ContractError::Grandpa(
-						Error::client_not_found(client_id).to_string(),
-					)
-				})?;
+				let encoded_wasm_client_state =
+					client_states.get_prefixed(prefix).ok_or_else(|| {
+						ContractError::Grandpa(Error::client_not_found(client_id).to_string())
+					})?;
 				let any = Any::decode(&*encoded_wasm_client_state)
 					.map_err(Error::decode)
 					.map_err(|e| ContractError::Grandpa(e.to_string()))?;
