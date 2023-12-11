@@ -9,14 +9,13 @@ use consensus_state::convert_new_consensus_state_to_old;
 use core::{pin::Pin, str::FromStr, time::Duration};
 use msgs::convert_old_msgs_to_new;
 use solana_transaction_status::UiTransactionEncoding;
-use tendermint::Hash;
 use tokio::sync::mpsc::unbounded_channel;
 
 use anchor_client::{
 	solana_client::{
 		nonblocking::rpc_client::RpcClient as AsyncRpcClient,
 		pubsub_client::PubsubClient,
-		rpc_client::{GetConfirmedSignaturesForAddress2Config, RpcClient},
+		rpc_client::{RpcClient, GetConfirmedSignaturesForAddress2Config},
 		rpc_config::{
 			RpcBlockSubscribeConfig, RpcBlockSubscribeFilter, RpcSendTransactionConfig,
 			RpcTransactionLogsConfig, RpcTransactionLogsFilter,
@@ -36,7 +35,7 @@ use ibc::{
 	applications::transfer::{Amount, BaseDenom, PrefixedCoin, PrefixedDenom, TracePath},
 	core::{
 		ics02_client::{client_state::ClientType, events::UpdateClient},
-		ics23_commitment::commitment::{CommitmentPrefix, CommitmentRoot},
+		ics23_commitment::commitment::CommitmentPrefix,
 		ics24_host::identifier::{ChannelId, ClientId, ConnectionId, PortId},
 		ics26_routing::msgs::Ics26Envelope,
 	},
@@ -66,8 +65,7 @@ use primitives::{
 };
 use std::{
 	collections::{BTreeMap, HashSet},
-	result::Result,
-	sync::{Arc, Mutex},
+	result::Result, sync::{Mutex, Arc},
 };
 use tendermint_rpc::Url;
 use tokio_stream::{Stream, StreamExt};
@@ -76,8 +74,6 @@ use tokio_stream::{Stream, StreamExt};
 use solana_ibc::storage::{PrivateStorage, SequenceTripleIdx, Serialised};
 use solana_trie::trie;
 use trie_ids::{ClientIdx, ConnectionIdx, PortChannelPK, Tag, TrieKey};
-
-use crate::events::convert_new_event_to_old;
 
 // mod accounts;
 mod client_state;
@@ -93,7 +89,6 @@ mod msgs;
 
 const SOLANA_IBC_STORAGE_SEED: &[u8] = b"private";
 const TRIE_SEED: &[u8] = b"trie";
-const PACKET_STORAGE_SEED: &[u8] = b"packet";
 const CHAIN_SEED: &[u8] = b"chain";
 
 pub struct InnerAny {
@@ -103,7 +98,7 @@ pub struct InnerAny {
 
 /// Implements the [`crate::Chain`] trait for solana
 #[derive(Clone)]
-pub struct Client {
+pub struct SolanaClient {
 	/// Chain name
 	pub name: String,
 	/// rpc url for solana
@@ -125,13 +120,14 @@ pub struct Client {
 	pub program_id: Pubkey,
 	pub common_state: CommonClientState,
 	pub client_type: ClientType,
+	// pub last_searched_sig_for_send_packets: Arc<Mutex<String>>,
 	/// Reference to commitment
 	pub commitment_prefix: CommitmentPrefix,
 	/// Channels cleared for packet relay
 	pub channel_whitelist: Arc<Mutex<HashSet<(ChannelId, PortId)>>>,
 }
 
-pub struct ClientConfig {
+pub struct SolanaClientConfig {
 	/// Chain name
 	pub name: String,
 	/// rpc url for cosmos
@@ -178,7 +174,7 @@ impl KeyEntry {
 	}
 }
 
-impl Client {
+impl SolanaClient {
 	pub fn get_trie_key(&self) -> Pubkey {
 		let trie_seeds = &[TRIE_SEED];
 		let trie = Pubkey::find_program_address(trie_seeds, &self.program_id).0;
@@ -256,7 +252,7 @@ impl Client {
 }
 
 #[async_trait::async_trait]
-impl IbcProvider for Client {
+impl IbcProvider for SolanaClient {
 	type FinalityEvent = FinalityEvent;
 
 	type TransactionId = String;
@@ -737,7 +733,7 @@ deserialize client state"
 
 	async fn query_unreceived_packets(
 		&self,
-		at: Height,
+		_at: Height,
 		channel_id: ibc::core::ics24_host::identifier::ChannelId,
 		port_id: ibc::core::ics24_host::identifier::PortId,
 		seqs: Vec<u64>,
@@ -772,7 +768,7 @@ deserialize client state"
 
 	async fn query_unreceived_acknowledgements(
 		&self,
-		at: Height,
+		_at: Height,
 		channel_id: ibc::core::ics24_host::identifier::ChannelId,
 		port_id: ibc::core::ics24_host::identifier::PortId,
 		seqs: Vec<u64>,
@@ -1061,7 +1057,6 @@ deserialize client state"
 		let trie = self.get_trie().await;
 		let height = client_state.latest_height();
 		let client_id = self.client_id();
-		let client_type = self.client_type();
 		let new_client_id =
 			ibc_new::core::host::types::identifiers::ClientId::from_str(client_id.as_str())
 				.unwrap();
@@ -1187,7 +1182,7 @@ deserialize client state"
 
 	async fn query_connection_using_client(
 		&self,
-		height: u32,
+		_height: u32,
 		client_id: String,
 	) -> Result<Vec<IdentifiedConnection>, Self::Error> {
 		let storage = self.get_ibc_storage();
@@ -1255,6 +1250,7 @@ deserialize client state"
 		(pallet_ibc::light_clients::AnyClientState, pallet_ibc::light_clients::AnyConsensusState),
 		Self::Error,
 	> {
+		// let client_state = 
 		todo!()
 	}
 
@@ -1369,7 +1365,7 @@ deserialize client state"
 	}
 }
 
-impl KeyProvider for Client {
+impl KeyProvider for SolanaClient {
 	fn account_id(&self) -> ibc::signer::Signer {
 		let key_entry = &self.keybase;
 		let public_key = key_entry.public_key;
@@ -1378,7 +1374,7 @@ impl KeyProvider for Client {
 }
 
 #[async_trait::async_trait]
-impl MisbehaviourHandler for Client {
+impl MisbehaviourHandler for SolanaClient {
 	async fn check_for_misbehaviour<C: Chain>(
 		&self,
 		_counterparty: &C,
@@ -1389,7 +1385,7 @@ impl MisbehaviourHandler for Client {
 }
 
 #[async_trait::async_trait]
-impl LightClientSync for Client {
+impl LightClientSync for SolanaClient {
 	async fn is_synced<C: Chain>(&self, _counterparty: &C) -> Result<bool, anyhow::Error> {
 		Ok(true)
 	}
@@ -1403,7 +1399,7 @@ impl LightClientSync for Client {
 }
 
 #[async_trait::async_trait]
-impl Chain for Client {
+impl Chain for SolanaClient {
 	fn name(&self) -> &str {
 		&self.name
 	}

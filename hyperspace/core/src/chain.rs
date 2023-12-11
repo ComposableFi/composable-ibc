@@ -23,6 +23,8 @@ use crate::{
 use async_trait::async_trait;
 #[cfg(feature = "cosmos")]
 use cosmos::client::{CosmosClient, CosmosClientConfig};
+#[cfg(feature = "solana")]
+use solana::{SolanaClient, SolanaClientConfig};
 use futures::Stream;
 #[cfg(any(test, feature = "testing"))]
 use ibc::applications::transfer::msgs::transfer::MsgTransfer;
@@ -99,6 +101,8 @@ chains! {
 	PicassoKusama(ParachainClientConfig, ParachainClient<PicassoKusamaConfig>),
 	#[cfg(feature = "cosmos")]
 	Cosmos(CosmosClientConfig, CosmosClient<DefaultConfig>),
+	#[cfg(feature = "solana")]
+	Solana(SolanaClientConfig, SolanaClient),
 }
 
 fn wrap_any_msg_into_wasm(msg: Any, code_id: Bytes) -> Result<Any, anyhow::Error> {
