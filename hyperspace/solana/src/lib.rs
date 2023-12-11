@@ -161,6 +161,11 @@ pub struct ClientConfig {
 	pub commitment_prefix: CommitmentPrefix,
 }
 
+#[derive(Debug, Clone)]
+pub enum FinalityEvent {
+	Tendermint { previous_blockhash: String, blockhash: String, height: u64, timestamp: u64 },
+}
+
 #[derive(Clone)]
 pub struct KeyEntry {
 	pub public_key: Pubkey,
@@ -252,7 +257,7 @@ impl Client {
 
 #[async_trait::async_trait]
 impl IbcProvider for Client {
-	type FinalityEvent = Vec<u8>;
+	type FinalityEvent = FinalityEvent;
 
 	type TransactionId = String;
 
@@ -1236,8 +1241,8 @@ deserialize client state"
 
 	async fn is_update_required(
 		&self,
-		latest_height: u64,
-		latest_client_height_on_counterparty: u64,
+		_latest_height: u64,
+		_latest_client_height_on_counterparty: u64,
 	) -> Result<bool, Self::Error> {
 		// we never need to use LightClientSync trait in this case, because
 		// all the events will be eventually submitted via `finality_notifications`
@@ -1417,7 +1422,44 @@ impl Chain for Client {
 		Pin<Box<dyn Stream<Item = <Self as IbcProvider>::FinalityEvent> + Send + Sync>>,
 		Error,
 	> {
-		todo!()
+		let (tx, rx) = unbounded_channel();
+		let cluster = Cluster::Devnet;
+		tokio::task::spawn_blocking(move || {
+			let (_logs_listener, receiver) = PubsubClient::block_subscribe(
+				"", /* Quicknode rpc should be used for devnet/mainnet and incase of localnet,
+				     * the flag `--rpc-pubsub-enable-block-subscription` has to be passed to
+				     * local validator. */
+				RpcBlockSubscribeFilter::All,
+				Some(RpcBlockSubscribeConfig {
+					commitment: Some(CommitmentConfig::finalized()),
+					..Default::default()
+				}),
+			)
+			.unwrap();
+
+			loop {
+				match receiver.recv() {
+					Ok(logs) => {
+						if logs.value.block.is_some() {
+							let block_info = logs.value.block.clone().unwrap();
+							let finality_event = FinalityEvent::Tendermint {
+								previous_blockhash: block_info.previous_blockhash,
+								blockhash: block_info.blockhash,
+								height: block_info.block_height.unwrap(),
+								timestamp: block_info.block_time.unwrap() as u64,
+							};
+							let _ = tx.send(finality_event);
+						}
+					},
+					Err(err) => {
+						panic!("{}", format!("Disconnected: {err}"));
+					},
+				}
+			}
+		});
+
+		let streams = tokio_stream::wrappers::UnboundedReceiverStream::new(rx);
+		Ok(Box::pin(streams))
 	}
 
 	async fn submit(&self, messages: Vec<Any>) -> Result<Self::TransactionId, Error> {
@@ -1558,43 +1600,6 @@ fn get_events_from_logs(logs: Vec<String>) -> Vec<ibc_new::core::handler::types:
 		})
 		.collect();
 	events
-}
-
-async fn get_stream() -> Pin<Box<dyn Stream<Item = (Option<u64>, Option<i64>)> + Send + 'static>> {
-	let (tx, rx) = unbounded_channel();
-	let cluster = Cluster::Devnet;
-	tokio::task::spawn_blocking(move || {
-		let (logs_listener, receiver) = PubsubClient::block_subscribe(
-			"", // Quicknode rpc should be used for devnet/mainnet and incase of localnet, the flag `--rpc-pubsub-enable-block-subscription` has to be passed to local validator.
-			RpcBlockSubscribeFilter::All,
-			Some(RpcBlockSubscribeConfig { commitment: Some(CommitmentConfig::finalized()), ..Default::default() }),
-		)
-		.unwrap();
-
-		loop {
-			match receiver.recv() {
-				Ok(logs) => {
-					// println!("this is block height {:?} and time {:?}",
-					// logs.value.block.clone().unwrap().block_height,
-					// logs.clone().value.block.unwrap().block_time); let events =
-					// get_events_from_logs(logs.value.logs); events.iter().for_each(|event|
-					// tx.send(event.clone()).unwrap());
-					if logs.value.block.is_some() {
-						let _ = tx.send((
-							logs.value.block.clone().unwrap().block_height,
-							logs.value.block.clone().unwrap().block_time,
-						));
-					}
-				},
-				Err(err) => {
-					panic!("{}", format!("Disconnected: {err}"));
-				},
-			}
-		}
-	});
-
-	let streams = tokio_stream::wrappers::UnboundedReceiverStream::new(rx);
-	Box::pin(streams)
 }
 
 // #[tokio::test]
