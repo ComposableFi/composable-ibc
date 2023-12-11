@@ -59,10 +59,10 @@ memory = { git = "https://github.com/ComposableFi/emulated-light-client.git" }
 sealable-trie = { git = "https://github.com/ComposableFi/emulated-light-client.git", features = ["borsh"] }
 stdx = { git = "https://github.com/ComposableFi/emulated-light-client.git" }
 solana-trie = { git = "https://github.com/ComposableFi/emulated-light-client.git" }
-trie-ids = { git = "https://github.com/ComposableFi/emulated-light-client.git", features = ["borsh"] }
+trie-ids = { git = "https://github.com/ComposableFi/emulated-light-client.git",branch="make-tag-public", features = ["borsh"] }
 
 #Contract
-solana-ibc = { git = "https://github.com/ComposableFi/emulated-light-client.git",features = ["mocks"]}
+solana-ibc = { git = "https://github.com/ComposableFi/emulated-light-client.git", branch="make-tag-public", features = ["mocks"]}
 # solana-ibc = { path = "../../../emulated-light-client/solana/solana-ibc/programs/solana-ibc", features = ["mocks"] }
 
 tracing = "0.1.36"
