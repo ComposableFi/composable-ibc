@@ -25,7 +25,10 @@ use ics10_grandpa::client_state::ClientState;
 use prost::Message;
 
 /// Retrieves raw bytes from storage and deserializes them into [`ClientState`]
-pub fn get_client_state<H: Clone>(deps: Deps, client_id: ClientId) -> Result<ClientState<H>, Error> {
+pub fn get_client_state<H: Clone>(
+	deps: Deps,
+	client_id: ClientId,
+) -> Result<ClientState<H>, Error> {
 	deps.storage
 		.get(&"clientState".to_string().into_bytes())
 		.ok_or_else(|| Error::unknown_client_state_type(client_id.to_string()))

@@ -70,9 +70,7 @@ impl<'a, H: HostFunctions<Header = RelayChainHeader>> ClientReader for Context<'
 		})?;
 		match ClientType::from_str(&data) {
 			Err(_err) => Err(Error::unknown_client_type(data.to_string())),
-			Ok(val) => {
-				Ok(val)
-			},
+			Ok(val) => Ok(val),
 		}
 	}
 
@@ -88,7 +86,6 @@ impl<'a, H: HostFunctions<Header = RelayChainHeader>> ClientReader for Context<'
 		client_id: &ClientId,
 		height: Height,
 	) -> Result<ConsensusState, Error> {
-
 		let consensus_states = ReadonlyConsensusStates::new(self.storage());
 		let value = consensus_states
 			.get(height)

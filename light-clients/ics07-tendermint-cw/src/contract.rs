@@ -22,10 +22,9 @@ use crate::{
 	},
 	ics23::ReadonlyProcessedStates,
 	msg::{
-		CheckForMisbehaviourMsg, ContractResult, ExportMetadataMsg, QueryMsg,
-		QueryResponse, StatusMsg, SudoMsg, UpdateStateMsg, UpdateStateOnMisbehaviourMsg,
-		VerifyClientMessage, VerifyMembershipMsg, VerifyNonMembershipMsg,
-		VerifyUpgradeAndUpdateStateMsg,
+		CheckForMisbehaviourMsg, ContractResult, ExportMetadataMsg, QueryMsg, QueryResponse,
+		StatusMsg, SudoMsg, UpdateStateMsg, UpdateStateOnMisbehaviourMsg, VerifyClientMessage,
+		VerifyMembershipMsg, VerifyNonMembershipMsg, VerifyUpgradeAndUpdateStateMsg,
 	},
 	state::{get_client_state, get_consensus_state},
 };
@@ -169,11 +168,7 @@ pub fn instantiate(
 	Ok(response)
 }
 #[cfg_attr(not(feature = "library"), entry_point)]
-pub fn sudo(
-	deps: DepsMut,
-	env: Env,
-	msg: SudoMsg,
-) -> Result<Response, ContractError> {
+pub fn sudo(deps: DepsMut, env: Env, msg: SudoMsg) -> Result<Response, ContractError> {
 	let client = TendermintClient::<HostFunctions>::default();
 	let client_id = ClientId::from_str(env.contract.address.as_str()).expect("client id is valid");
 	let mut ctx = Context::<HostFunctions>::new(deps, env);
@@ -267,7 +262,7 @@ fn process_message(
 				msg.value,
 			)
 			.map_err(|e| ContractError::Tendermint(e.to_string()))
-		  .map(|_| to_binary(&ContractResult::success()))
+			.map(|_| to_binary(&ContractResult::success()))
 		},
 		SudoMsg::VerifyNonMembership(msg) => {
 			let client_state = ctx
@@ -357,7 +352,9 @@ pub fn query(deps: Deps, env: Env, msg: QueryMsg) -> StdResult<Binary> {
 						let tp = client_state.trusting_period.as_secs();
 						let now = env.block.time.seconds();
 						if (last_update + tp) < now {
-							return to_binary(&QueryResponse::success().status("Expired".to_string()))
+							return to_binary(
+								&QueryResponse::success().status("Expired".to_string()),
+							)
 						}
 						to_binary(&QueryResponse::success().status("Active".to_string()))
 					},
@@ -370,7 +367,11 @@ pub fn query(deps: Deps, env: Env, msg: QueryMsg) -> StdResult<Binary> {
 			let consensus_state = ctx
 				.consensus_state(&client_id, msg.height)
 				.map_err(|e| ContractError::Tendermint(e.to_string()))?;
-			to_binary(&QueryResponse::success().timestamp(consensus_state.timestamp.unix_timestamp_nanos().unsigned_abs() as u64))
+			to_binary(
+				&QueryResponse::success().timestamp(
+					consensus_state.timestamp.unix_timestamp_nanos().unsigned_abs() as u64,
+				),
+			)
 		},
 		QueryMsg::VerifyClientMessage(msg) => {
 			let ctx = Context::<HostFunctions>::new_ro(deps, env);

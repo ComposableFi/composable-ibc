@@ -30,8 +30,7 @@ use cosmwasm_schema::cw_serde;
 use ibc::{
 	core::{
 		ics02_client::client_consensus::{
-			ConsensusState as IcsConsensusState,
-			ConsensusState as IbcConsensusState,
+			ConsensusState as IcsConsensusState, ConsensusState as IbcConsensusState,
 		},
 		ics23_commitment::commitment::CommitmentRoot,
 	},

@@ -24,11 +24,11 @@ use core::fmt::Display;
 #[cfg(feature = "cosmwasm")]
 use cosmwasm_schema::cw_serde;
 use ibc::{
-	core::ics02_client::client_message::ClientMessage as IbcClientMessage,
-	protobuf::Protobuf,
+	core::ics02_client::client_message::ClientMessage as IbcClientMessage, protobuf::Protobuf,
 };
-use ibc_proto::google::protobuf::Any;
-use ibc_proto::ibc::lightclients::wasm::v1::ClientMessage as RawClientMessage;
+use ibc_proto::{
+	google::protobuf::Any, ibc::lightclients::wasm::v1::ClientMessage as RawClientMessage,
+};
 use prost::Message;
 
 pub const WASM_CLIENT_MESSAGE_TYPE_URL: &str = "/ibc.lightclients.wasm.v1.ClientMessage";
@@ -81,12 +81,10 @@ where
 	fn try_from(raw: RawClientMessage) -> Result<Self, Self::Error> {
 		let any = Any::decode(&mut &raw.data[..])
 			.map_err(|e| format!("failed to decode ClientMessage::data into Any: {}", e))?;
-		let inner = AnyClientMessage::try_from(any).map_err(
-			|e| {
-				format!("failed to decode ClientMessage::data into ClientMessage: {}", e)
-			})?;
-		Ok(Self { data: raw.data, inner: Box::new(inner)})
-
+		let inner = AnyClientMessage::try_from(any).map_err(|e| {
+			format!("failed to decode ClientMessage::data into ClientMessage: {}", e)
+		})?;
+		Ok(Self { data: raw.data, inner: Box::new(inner) })
 	}
 }
 
