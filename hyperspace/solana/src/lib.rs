@@ -6,8 +6,8 @@ use anchor_spl::associated_token::get_associated_token_address;
 use base64::Engine;
 use client_state::convert_new_client_state_to_old;
 use consensus_state::convert_new_consensus_state_to_old;
-use ics07_tendermint::client_state::ClientState as TmClientState;
 use core::{pin::Pin, str::FromStr, time::Duration};
+use ics07_tendermint::client_state::ClientState as TmClientState;
 use msgs::convert_old_msgs_to_new;
 use solana_transaction_status::UiTransactionEncoding;
 use tokio::sync::mpsc::unbounded_channel;
@@ -16,7 +16,7 @@ use anchor_client::{
 	solana_client::{
 		nonblocking::rpc_client::RpcClient as AsyncRpcClient,
 		pubsub_client::PubsubClient,
-		rpc_client::{RpcClient, GetConfirmedSignaturesForAddress2Config},
+		rpc_client::{GetConfirmedSignaturesForAddress2Config, RpcClient},
 		rpc_config::{
 			RpcBlockSubscribeConfig, RpcBlockSubscribeFilter, RpcSendTransactionConfig,
 			RpcTransactionLogsConfig, RpcTransactionLogsFilter,
@@ -35,9 +35,11 @@ use error::Error;
 use ibc::{
 	applications::transfer::{Amount, BaseDenom, PrefixedCoin, PrefixedDenom, TracePath},
 	core::{
-		ics02_client::{client_state::ClientType, events::UpdateClient, trust_threshold::TrustThreshold},
+		ics02_client::{
+			client_state::ClientType, events::UpdateClient, trust_threshold::TrustThreshold,
+		},
 		ics23_commitment::{commitment::CommitmentPrefix, specs::ProofSpecs},
-		ics24_host::identifier::{ChannelId, ClientId, ConnectionId, PortId, ChainId},
+		ics24_host::identifier::{ChainId, ChannelId, ClientId, ConnectionId, PortId},
 		ics26_routing::msgs::Ics26Envelope,
 	},
 	events::IbcEvent,
@@ -48,7 +50,7 @@ use ibc_proto::{
 	google::protobuf::Any,
 	ibc::core::{
 		channel::v1::{
-			Channel, Counterparty as ChanCounterparty, QueryChannelResponse,
+			Channel, Counterparty as ChanCounterparty, IdentifiedChannel, QueryChannelResponse,
 			QueryNextSequenceReceiveResponse, QueryPacketAcknowledgementResponse,
 			QueryPacketCommitmentResponse, QueryPacketReceiptResponse,
 		},
@@ -59,14 +61,15 @@ use ibc_proto::{
 		},
 	},
 };
-use pallet_ibc::light_clients::{AnyClientMessage, AnyConsensusState, AnyClientState};
+use pallet_ibc::light_clients::{AnyClientMessage, AnyClientState, AnyConsensusState};
 use primitives::{
 	mock::LocalClientTypes, Chain, CommonClientConfig, CommonClientState, IbcProvider, KeyProvider,
 	LightClientSync, MisbehaviourHandler, UndeliveredType,
 };
 use std::{
 	collections::{BTreeMap, HashSet},
-	result::Result, sync::{Mutex, Arc, RwLock},
+	result::Result,
+	sync::{Arc, Mutex, RwLock},
 };
 use tendermint_rpc::Url;
 use tokio_stream::{Stream, StreamExt};
@@ -812,12 +815,53 @@ deserialize client state"
 		self.channel_whitelist.lock().unwrap().clone()
 	}
 
+	/// We just return all the channels since there doesnt seem to be any kind of relation between connection ID and channels.
 	async fn query_connection_channels(
 		&self,
 		at: Height,
-		connection_id: &ConnectionId,
+		_connection_id: &ConnectionId,
 	) -> Result<ibc_proto::ibc::core::channel::v1::QueryChannelsResponse, Self::Error> {
-		todo!()
+		let storage = self.get_ibc_storage();
+		let channels: Vec<IdentifiedChannel> = storage
+			.channel_ends
+			.into_iter()
+			.map(|(key, value)| {
+				let channel = Serialised::get(&value).unwrap();
+				let state = match channel.state {
+					ibc_new::core::channel::types::channel::State::Uninitialized => 0,
+					ibc_new::core::channel::types::channel::State::Init => 1,
+					ibc_new::core::channel::types::channel::State::TryOpen => 2,
+					ibc_new::core::channel::types::channel::State::Open => 3,
+					ibc_new::core::channel::types::channel::State::Closed => 4,
+				};
+				let ordering = match channel.ordering {
+					ibc_new::core::channel::types::channel::Order::None => 0,
+					ibc_new::core::channel::types::channel::Order::Unordered => 1,
+					ibc_new::core::channel::types::channel::Order::Ordered => 2,
+				};
+				IdentifiedChannel {
+					state,
+					ordering,
+					counterparty: Some(ChanCounterparty {
+						port_id: channel.counterparty().port_id.to_string(),
+						channel_id: channel.counterparty().channel_id.clone().unwrap().to_string(),
+					}),
+					connection_hops: channel
+						.connection_hops
+						.iter()
+						.map(|connection_id| connection_id.to_string())
+						.collect(),
+					version: channel.version.to_string(),
+					port_id: key.port_id().to_string(),
+					channel_id: key.channel_id().to_string(),
+				}
+			})
+			.collect();
+		Ok(ibc_proto::ibc::core::channel::v1::QueryChannelsResponse {
+			channels,
+			pagination: None,
+			height: Some(at.into()),
+		})
 	}
 
 	async fn query_send_packets(
@@ -833,8 +877,16 @@ deserialize client state"
 		} else {
 			Some(Signature::from_str(&last_sent_packet_hash.as_str()).unwrap())
 		};
-		let sigs = rpc_client.get_signatures_for_address_with_config(&solana_ibc::ID,
-		GetConfirmedSignaturesForAddress2Config { until: hash , ..GetConfirmedSignaturesForAddress2Config::default()  }).await.map_err(|e| Error::RpcError(format!("{:?}", e)))?;
+		let sigs = rpc_client
+			.get_signatures_for_address_with_config(
+				&solana_ibc::ID,
+				GetConfirmedSignaturesForAddress2Config {
+					until: hash,
+					..GetConfirmedSignaturesForAddress2Config::default()
+				},
+			)
+			.await
+			.map_err(|e| Error::RpcError(format!("{:?}", e)))?;
 		if !sigs.is_empty() {
 			*last_sent_packet_hash = sigs[0].signature.clone();
 		}
@@ -910,8 +962,16 @@ deserialize client state"
 		} else {
 			Some(Signature::from_str(&last_recv_packet_hash.as_str()).unwrap())
 		};
-		let sigs = rpc_client.get_signatures_for_address_with_config(&solana_ibc::ID,
-		GetConfirmedSignaturesForAddress2Config { until: hash , ..GetConfirmedSignaturesForAddress2Config::default()  }).await.map_err(|e| Error::RpcError(format!("{:?}", e)))?;
+		let sigs = rpc_client
+			.get_signatures_for_address_with_config(
+				&solana_ibc::ID,
+				GetConfirmedSignaturesForAddress2Config {
+					until: hash,
+					..GetConfirmedSignaturesForAddress2Config::default()
+				},
+			)
+			.await
+			.map_err(|e| Error::RpcError(format!("{:?}", e)))?;
 		if !sigs.is_empty() {
 			*last_recv_packet_hash = sigs[0].signature.clone();
 		}
@@ -1457,7 +1517,7 @@ impl Chain for SolanaClient {
 
 			loop {
 				match receiver.recv() {
-					Ok(logs) => {
+					Ok(logs) =>
 						if logs.value.block.is_some() {
 							let block_info = logs.value.block.clone().unwrap();
 							let finality_event = FinalityEvent::Tendermint {
@@ -1467,8 +1527,7 @@ impl Chain for SolanaClient {
 								timestamp: block_info.block_time.unwrap() as u64,
 							};
 							let _ = tx.send(finality_event);
-						}
-					},
+						},
 					Err(err) => {
 						panic!("{}", format!("Disconnected: {err}"));
 					},
