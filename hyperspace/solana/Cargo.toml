@@ -44,6 +44,7 @@ borsh = { version = "0.10.3", default-features = false }
 
 # composable
 ibc-new = { version = "0.48.1", default-features = false, features = ["borsh", "serde"],package="ibc" }
+ibc-testkit = { version = "0.48.1", default-features = false }
 ibc-proto-new = { version = "0.38.0", default-features = false, package="ibc-proto" }
 ibc = { path = "../../ibc/modules", features = [] }
 ibc-proto = { path = "../../ibc/proto", package="ibc-proto" }
@@ -51,7 +52,7 @@ ibc-primitives = { path = "../../contracts/pallet-ibc/primitives" }
 ics07-tendermint = { path = "../../light-clients/ics07-tendermint" }
 # ics08-wasm = { path = "../../light-clients/ics08-wasm" }
 ibc-rpc = { path = "../../contracts/pallet-ibc/rpc" }
-pallet-ibc = { path = "../../contracts/pallet-ibc"}
+pallet-ibc = { path = "../../contracts/pallet-ibc", features = ["testing"]}
 
 # Trie
 lib = { git = "https://github.com/ComposableFi/emulated-light-client.git" }

@@ -5,9 +5,11 @@ use ibc::{
 		ics02_client::trust_threshold::TrustThreshold, ics23_commitment::specs::ProofSpecs,
 		ics24_host::identifier::ChainId,
 	},
+	mock::header::MockHeader,
 	Height,
 };
 use ibc_proto_new::ibc::lightclients::tendermint::v1::{ClientState, Fraction};
+use ibc_testkit::testapp::ibc::clients::mock::client_state::MockClientState;
 use pallet_ibc::light_clients::AnyClientState;
 
 pub fn convert_new_client_state_to_old(
@@ -38,7 +40,22 @@ pub fn convert_new_client_state_to_old(
 				_phantom: std::marker::PhantomData,
 			})
 		},
-		solana_ibc::client_state::AnyClientState::Mock(_) => panic!("Mocks are not supported"),
+		solana_ibc::client_state::AnyClientState::Mock(client) =>
+			AnyClientState::Mock(ibc::mock::client_state::MockClientState {
+				header: MockHeader {
+					height: Height::new(
+						client.header.height.revision_number(),
+						client.header.height.revision_height(),
+					),
+					timestamp: ibc::timestamp::Timestamp::from_nanoseconds(
+						client.header.timestamp.nanoseconds(),
+					)
+					.unwrap(),
+				},
+				frozen_height: client.frozen_height.and_then(|height| {
+					Some(Height::new(height.revision_number(), height.revision_height()))
+				}),
+			}),
 	}
 }
 
@@ -74,6 +91,29 @@ pub fn convert_old_client_state_to_new(
 			.try_into()
 			.unwrap(),
 		),
+		AnyClientState::Mock(cs) =>
+			solana_ibc::client_state::AnyClientState::Mock(MockClientState {
+				header: ibc_testkit::testapp::ibc::clients::mock::header::MockHeader {
+					height: ibc_new::core::client::types::Height::new(
+						cs.header.height().revision_number,
+						cs.header.height().revision_height,
+					)
+					.unwrap(),
+					timestamp: ibc_new::primitives::Timestamp::from_nanoseconds(
+						cs.header.timestamp.nanoseconds(),
+					)
+					.unwrap(),
+				},
+				frozen_height: cs.frozen_height.and_then(|height| {
+					Some(
+						ibc_new::core::client::types::Height::new(
+							height.revision_number,
+							height.revision_height,
+						)
+						.unwrap(),
+					)
+				}),
+			}),
 		_ => panic!("Client state not supported"),
 	}
 }

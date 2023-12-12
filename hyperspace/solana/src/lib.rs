@@ -6,6 +6,7 @@ use anchor_spl::associated_token::get_associated_token_address;
 use base64::Engine;
 use client_state::convert_new_client_state_to_old;
 use consensus_state::convert_new_consensus_state_to_old;
+use ics07_tendermint::client_state::ClientState as TmClientState;
 use core::{pin::Pin, str::FromStr, time::Duration};
 use msgs::convert_old_msgs_to_new;
 use solana_transaction_status::UiTransactionEncoding;
@@ -34,9 +35,9 @@ use error::Error;
 use ibc::{
 	applications::transfer::{Amount, BaseDenom, PrefixedCoin, PrefixedDenom, TracePath},
 	core::{
-		ics02_client::{client_state::ClientType, events::UpdateClient},
-		ics23_commitment::commitment::CommitmentPrefix,
-		ics24_host::identifier::{ChannelId, ClientId, ConnectionId, PortId},
+		ics02_client::{client_state::ClientType, events::UpdateClient, trust_threshold::TrustThreshold},
+		ics23_commitment::{commitment::CommitmentPrefix, specs::ProofSpecs},
+		ics24_host::identifier::{ChannelId, ClientId, ConnectionId, PortId, ChainId},
 		ics26_routing::msgs::Ics26Envelope,
 	},
 	events::IbcEvent,
@@ -58,14 +59,14 @@ use ibc_proto::{
 		},
 	},
 };
-use pallet_ibc::light_clients::{AnyClientMessage, AnyConsensusState};
+use pallet_ibc::light_clients::{AnyClientMessage, AnyConsensusState, AnyClientState};
 use primitives::{
 	mock::LocalClientTypes, Chain, CommonClientConfig, CommonClientState, IbcProvider, KeyProvider,
 	LightClientSync, MisbehaviourHandler, UndeliveredType,
 };
 use std::{
 	collections::{BTreeMap, HashSet},
-	result::Result, sync::{Mutex, Arc},
+	result::Result, sync::{Mutex, Arc, RwLock},
 };
 use tendermint_rpc::Url;
 use tokio_stream::{Stream, StreamExt};
@@ -120,7 +121,8 @@ pub struct SolanaClient {
 	pub program_id: Pubkey,
 	pub common_state: CommonClientState,
 	pub client_type: ClientType,
-	// pub last_searched_sig_for_send_packets: Arc<Mutex<String>>,
+	pub last_searched_sig_for_send_packets: Arc<tokio::sync::Mutex<String>>,
+	pub last_searched_sig_for_recv_packets: Arc<tokio::sync::Mutex<String>>,
 	/// Reference to commitment
 	pub commitment_prefix: CommitmentPrefix,
 	/// Channels cleared for packet relay
@@ -825,15 +827,17 @@ deserialize client state"
 		seqs: Vec<u64>,
 	) -> Result<Vec<ibc_rpc::PacketInfo>, Self::Error> {
 		let rpc_client = self.rpc_client();
-		// let sigs = rpc_client.get_signatures_for_address_with_config(&solana_ibc::ID,
-		// GetConfirmedSignaturesForAddress2Config { until:
-		// Some(Signature::from_str("
-		// KXvtq4ogcKnPCLwEqDsdiPt7BPbZpFrxFg2wudnxMXpjRu7ox6vEGrfkUNHWFJwLx9cHpWURhJihCYrbdrL7qj9"
-		// ).unwrap()), ..GetConfirmedSignaturesForAddress2Config::default()  }).unwrap();
-		let sigs = rpc_client
-			.get_signatures_for_address(&solana_ibc::ID)
-			.await
-			.map_err(|e| Error::RpcError(format!("{:?}", e)))?;
+		let mut last_sent_packet_hash = self.last_searched_sig_for_send_packets.lock().await;
+		let hash = if last_sent_packet_hash.is_empty() {
+			None
+		} else {
+			Some(Signature::from_str(&last_sent_packet_hash.as_str()).unwrap())
+		};
+		let sigs = rpc_client.get_signatures_for_address_with_config(&solana_ibc::ID,
+		GetConfirmedSignaturesForAddress2Config { until: hash , ..GetConfirmedSignaturesForAddress2Config::default()  }).await.map_err(|e| Error::RpcError(format!("{:?}", e)))?;
+		if !sigs.is_empty() {
+			*last_sent_packet_hash = sigs[0].signature.clone();
+		}
 		let send_packet_events: Vec<_> = sigs
 			.iter()
 			.filter_map(|sig| {
@@ -845,7 +849,7 @@ deserialize client state"
 					.unwrap();
 				let logs = match tx.transaction.meta.unwrap().log_messages {
 					solana_transaction_status::option_serializer::OptionSerializer::Some(e) => e,
-					_ => panic!(),
+					_ => Vec::new(),
 				};
 				let events = get_events_from_logs(logs);
 				let send_packet_event = events.iter().find(|event| {
@@ -900,15 +904,17 @@ deserialize client state"
 		seqs: Vec<u64>,
 	) -> Result<Vec<ibc_rpc::PacketInfo>, Self::Error> {
 		let rpc_client = self.rpc_client();
-		// let sigs = rpc_client.get_signatures_for_address_with_config(&solana_ibc::ID,
-		// GetConfirmedSignaturesForAddress2Config { until:
-		// Some(Signature::from_str("
-		// KXvtq4ogcKnPCLwEqDsdiPt7BPbZpFrxFg2wudnxMXpjRu7ox6vEGrfkUNHWFJwLx9cHpWURhJihCYrbdrL7qj9"
-		// ).unwrap()), ..GetConfirmedSignaturesForAddress2Config::default()  }).unwrap();
-		let sigs = rpc_client
-			.get_signatures_for_address(&solana_ibc::ID)
-			.await
-			.map_err(|e| Error::RpcError(format!("{:?}", e)))?;
+		let mut last_recv_packet_hash = self.last_searched_sig_for_recv_packets.lock().await;
+		let hash = if last_recv_packet_hash.is_empty() {
+			None
+		} else {
+			Some(Signature::from_str(&last_recv_packet_hash.as_str()).unwrap())
+		};
+		let sigs = rpc_client.get_signatures_for_address_with_config(&solana_ibc::ID,
+		GetConfirmedSignaturesForAddress2Config { until: hash , ..GetConfirmedSignaturesForAddress2Config::default()  }).await.map_err(|e| Error::RpcError(format!("{:?}", e)))?;
+		if !sigs.is_empty() {
+			*last_recv_packet_hash = sigs[0].signature.clone();
+		}
 		let recv_packet_events: Vec<_> =
 			sigs.iter()
 				.filter_map(|sig| {
@@ -921,7 +927,7 @@ deserialize client state"
 					let logs = match tx.transaction.meta.unwrap().log_messages {
 						solana_transaction_status::option_serializer::OptionSerializer::Some(e) =>
 							e,
-						_ => panic!(),
+						_ => Vec::new(),
 					};
 					let events = get_events_from_logs(logs);
 					let send_packet_event =
@@ -1250,8 +1256,24 @@ deserialize client state"
 		(pallet_ibc::light_clients::AnyClientState, pallet_ibc::light_clients::AnyConsensusState),
 		Self::Error,
 	> {
-		// let client_state = 
-		todo!()
+		// let latest_height_timestamp = self.latest_height_and_timestamp().await?;
+		// let client_state = TmClientState::<LocalClientTypes>::new(
+		// 	ChainId::from_string(&self.chain_id),
+		// 	TrustThreshold::default(),
+		// 	Duration::from_secs(64000),
+		// 	Duration::from_secs(1814400),
+		// 	Duration::new(15, 0),
+		// 	latest_height_timestamp.0,
+		// 	ProofSpecs::default(),
+		// 	vec!["upgrade".to_string(), "upgradedIBCState".to_string()],
+		// ).map_err(|e| Error::from(format!("Invalid client state {e}")))?;
+		let mock_header = ibc::mock::header::MockHeader {
+			height: ibc::Height::new(0, 1),
+			timestamp: ibc::timestamp::Timestamp::from_nanoseconds(1).unwrap(),
+		};
+		let mock_client_state = ibc::mock::client_state::MockClientState::new(mock_header.into());
+		let mock_cs_state = ibc::mock::client_state::MockConsensusState::new(mock_header);
+		Ok((AnyClientState::Mock(mock_client_state), AnyConsensusState::Mock(mock_cs_state)))
 	}
 
 	async fn query_client_id_from_tx_hash(
