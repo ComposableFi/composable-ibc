@@ -24,9 +24,7 @@ jobs:
         RUST_LOG: hyperspace=trace,hyperspace_parachain=trace
       volumes:
         - /home/ghr/_work/_temp:/home/ghr/_work/_temp
-    runs-on:
-      - self-hosted
-      - x64-monster
+    runs-on: ubuntu-latest
     timeout-minutes: 300
     steps:
       - name: Install git

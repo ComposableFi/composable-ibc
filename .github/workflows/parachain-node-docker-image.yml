@@ -13,14 +13,10 @@ on:
 
 jobs:
   build-and-publish:
-    runs-on:
-      - self-hosted
-      - x64-monster
+    runs-on: ubuntu-latest
     concurrency:
       group: parachain-node-docker-image-${{ github.ref }}
       cancel-in-progress: true
-    strategy:
-      fail-fast: true
 
     steps:
     - name: Clean up
