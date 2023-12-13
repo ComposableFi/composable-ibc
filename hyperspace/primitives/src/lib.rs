@@ -54,7 +54,7 @@ use ibc::{
 		ics04_channel::{
 			channel::{ChannelEnd, Order},
 			context::calculate_block_delay,
-			packet::Packet,
+			packet::{Packet, Sequence},
 		},
 		ics23_commitment::commitment::CommitmentPrefix,
 		ics24_host::identifier::{ChannelId, ClientId, ConnectionId, PortId},
@@ -79,7 +79,7 @@ pub enum UpdateMessage {
 	Batch(Vec<Any>),
 }
 
-#[derive(Debug)]
+#[derive(Debug, PartialEq, Eq)]
 pub enum UpdateType {
 	// contains an authority set change.
 	Mandatory,
@@ -133,6 +133,7 @@ pub struct CommonClientState {
 	pub initial_rpc_call_delay: Duration,
 	pub misbehaviour_client_msg_queue: Arc<AsyncMutex<Vec<AnyClientMessage>>>,
 	pub max_packets_to_process: usize,
+	pub ignored_timeouted_sequences: Arc<AsyncMutex<HashSet<u64>>>,
 }
 
 impl Default for CommonClientState {
@@ -145,6 +146,7 @@ impl Default for CommonClientState {
 			initial_rpc_call_delay: rpc_call_delay,
 			misbehaviour_client_msg_queue: Arc::new(Default::default()),
 			max_packets_to_process: 100,
+			ignored_timeouted_sequences: Arc::new(Default::default()),
 		}
 	}
 }
@@ -307,6 +309,7 @@ pub trait IbcProvider {
 		at: Height,
 		channel_id: ChannelId,
 		port_id: PortId,
+		next_send_seq: Sequence,
 	) -> Result<Vec<u64>, Self::Error>;
 
 	/// Given a list of counterparty packet commitments, the querier checks if the packet
@@ -356,6 +359,15 @@ pub trait IbcProvider {
 		port_id: PortId,
 		seqs: Vec<u64>,
 	) -> Result<Vec<PacketInfo>, Self::Error>;
+
+	/// Query next send packet sequence
+	/// This represents the next sequence that will be used when sending a packet
+	async fn query_next_send_sequence(
+		&self,
+		at: Height,
+		channel_id: ChannelId,
+		port_id: PortId,
+	) -> Result<Sequence, Self::Error>;
 
 	/// Query received packets with their acknowledgement
 	/// This represents packets for which the `ReceivePacket` and `WriteAcknowledgement` events were
@@ -578,6 +590,10 @@ pub trait Chain:
 		self.common_state_mut().set_rpc_call_delay(delay)
 	}
 
+	fn set_client_id_ref(&mut self, client_id: Arc<Mutex<Option<ClientId>>>);
+
+	fn get_counterparty_client_id_ref(&self) -> Arc<Mutex<Option<ClientId>>>;
+
 	async fn reconnect(&mut self) -> anyhow::Result<()>;
 }
 
@@ -601,12 +617,15 @@ pub async fn query_undelivered_sequences(
 	)
 	.map_err(|e| Error::Custom(e.to_string()))?;
 	// First we fetch all packet commitments from source
+	let _ignored_timeouts = source.common_state().ignored_timeouted_sequences.lock().await;
 	let seqs = source
 		.query_packet_commitments(source_height, channel_id, port_id.clone())
 		.await?
 		.into_iter()
+		// .filter(|seq| !ignored_timeouts.contains(seq))
 		.collect::<Vec<_>>();
 	log::trace!(target: "hyperspace", "Seqs: {:?}", seqs);
+
 	let counterparty_channel_id = channel_end
 		.counterparty()
 		.channel_id
@@ -650,20 +669,29 @@ pub async fn query_undelivered_acks(
 			.ok_or_else(|| Error::Custom("ChannelEnd not could not be decoded".to_string()))?,
 	)
 	.map_err(|e| Error::Custom(e.to_string()))?;
+	let counterparty_channel_id = channel_end
+		.counterparty()
+		.channel_id
+		.ok_or_else(|| Error::Custom("Expected counterparty channel id".to_string()))?;
+	let counterparty_port_id = channel_end.counterparty().port_id.clone();
+
+	let next_send_seq = sink
+		.query_next_send_sequence(
+			sink_height,
+			counterparty_channel_id,
+			counterparty_port_id.clone(),
+		)
+		.await?;
+
 	// First we fetch all packet acknowledgements from source
 	let seqs = source
-		.query_packet_acknowledgements(source_height, channel_id, port_id.clone())
+		.query_packet_acknowledgements(source_height, channel_id, port_id.clone(), next_send_seq)
 		.await?;
 	log::trace!(
 		target: "hyperspace",
 		"Found {} packet acks from {} chain",
 		seqs.len(), source.name()
 	);
-	let counterparty_channel_id = channel_end
-		.counterparty()
-		.channel_id
-		.ok_or_else(|| Error::Custom("Expected counterparty channel id".to_string()))?;
-	let counterparty_port_id = channel_end.counterparty().port_id.clone();
 
 	let mut undelivered_acks = sink
 		.query_unreceived_acknowledgements(
@@ -722,6 +750,16 @@ pub async fn find_suitable_proof_height_for_client(
 	// missing values  for some heights
 	for height in start_height.revision_height..=latest_client_height.revision_height {
 		let temp_height = Height::new(start_height.revision_number, height);
+
+		if sink
+			.query_client_update_time_and_height(client_id.clone(), temp_height)
+			.await
+			.ok()
+			.is_none()
+		{
+			continue
+		}
+
 		let consensus_state =
 			sink.query_client_consensus(at, client_id.clone(), temp_height).await.ok();
 		let decoded = consensus_state
@@ -733,6 +771,7 @@ pub async fn find_suitable_proof_height_for_client(
 		let mut matches = false;
 		if let Some(timestamp_to_match) = &timestamp_to_match {
 			let consensus_state = decoded.unwrap().unwrap();
+
 			if consensus_state.timestamp().nanoseconds() >= timestamp_to_match.nanoseconds() {
 				matches = true;
 			}

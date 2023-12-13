@@ -23,7 +23,7 @@ use ibc::{
 			identifier::{ChainId, ChannelId, ClientId, ConnectionId, PortId},
 			path::{
 				AcksPath, ChannelEndsPath, ClientConsensusStatePath, ClientStatePath,
-				CommitmentsPath, ConnectionsPath, Path, ReceiptsPath, SeqRecvsPath,
+				CommitmentsPath, ConnectionsPath, Path, ReceiptsPath, SeqRecvsPath, SeqSendsPath,
 			},
 		},
 	},
@@ -78,6 +78,7 @@ use tendermint_rpc::{
 use tokio::{task::JoinSet, time::sleep};
 
 pub const NUMBER_OF_BLOCKS_TO_PROCESS_PER_ITER: u64 = 250;
+pub const MANDATORY_UPDATES_PERIOD: usize = 25;
 
 #[derive(Clone, Debug)]
 pub enum FinalityEvent {
@@ -171,11 +172,20 @@ where
 		}
 		block_events.sort_by_key(|(height, _)| *height);
 
+		let mut mandatory_updates_num = 0;
 		let mut updates = Vec::new();
-		for (events, (update_header, update_type)) in
-			block_events.into_iter().map(|(_, events)| events).zip(update_headers)
+		let len = update_headers.len();
+		for (i, (events, (update_header, mut update_type))) in block_events
+			.into_iter()
+			.map(|(_, events)| events)
+			.zip(update_headers)
+			.enumerate()
 		{
 			let height = update_header.height();
+			if len >= MANDATORY_UPDATES_PERIOD && mandatory_updates_num < 2 && i >= len - 2 {
+				update_type = UpdateType::Mandatory;
+				mandatory_updates_num += 1;
+			}
 			let update_client_header = {
 				let msg = MsgUpdateAnyClient::<LocalClientTypes> {
 					client_id: client_id.clone(),
@@ -263,7 +273,7 @@ where
 									log::debug!(target: "hyperspace_cosmos", "the event is unknown");
 								}
 							} else {
-								log::debug!(target: "hyperspace_cosmos", "Failed to parse event {:?}", abci_event);
+								log::debug!(target: "hyperspace_cosmos", "Event wasn't parsed {:?}", abci_event);
 							}
 						}
 					},
@@ -520,6 +530,7 @@ where
 		_at: Height,
 		channel_id: ChannelId,
 		port_id: PortId,
+		_next_send_seq: Sequence,
 	) -> Result<Vec<u64>, Self::Error> {
 		log::debug!(
 			target: "hyperspace_cosmos",
@@ -713,6 +724,23 @@ where
 			}
 		}
 		Ok(block_events)
+	}
+
+	async fn query_next_send_sequence(
+		&self,
+		at: Height,
+		channel_id: ChannelId,
+		port_id: PortId,
+	) -> Result<Sequence, Self::Error> {
+		let path_bytes = Path::SeqSends(SeqSendsPath(port_id, channel_id)).to_string().into_bytes();
+		let (query_result, _) = self.query_path(path_bytes, at, true).await?;
+		let next_sequence_send = u64::from_be_bytes(
+			query_result
+				.value
+				.try_into()
+				.map_err(|_| Error::Custom("invalid next_sequence_send value".to_owned()))?,
+		);
+		Ok(Sequence(next_sequence_send))
 	}
 
 	async fn query_received_packets(

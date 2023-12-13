@@ -1,1 +1,1 @@
-prometheus_endpoint = "https://127.0.0.1"
+prometheus_endpoint = "0.0.0.0:9617"

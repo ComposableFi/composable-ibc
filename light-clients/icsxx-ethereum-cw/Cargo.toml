@@ -44,6 +44,7 @@ thiserror = { version = "1.0.31" }
 sha2 = "0.10"
 sha3 = "0.10"
 derive_more = "0.99.17"
+compress = { path = "../../utils/compress", default-features = false }
 
 ibc = { path = "../../ibc/modules", default-features = false }
 ibc-derive = { path = "../../ibc/derive", default-features = false }

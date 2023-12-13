@@ -20,6 +20,7 @@
 
 extern crate alloc;
 
+pub mod abi;
 pub mod client_def;
 pub mod client_message;
 pub mod client_state;

@@ -10,12 +10,12 @@ import {
     IbcLightclientsMockV1Header as Header
 } from "../proto/MockClient.sol";
 import {GoogleProtobufAny as Any} from "../proto/GoogleProtobufAny.sol";
-import "../proto/BytesLib.sol";
+import "../proto/BytesUtils.sol";
 
 // MockClient implements https://github.com/datachainlab/ibc-mock-client
 // WARNING: This client is intended to be used for testing purpose. Therefore, it is not generally available in a production, except in a fully trusted environment.
 contract MockClient is ILightClient {
-    using BytesLib for bytes;
+    using BytesUtils for bytes;
     using IBCHeight for Height.Data;
 
     string private constant HEADER_TYPE_URL = "/ibc.lightclients.mock.v1.Header";

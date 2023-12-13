@@ -26,7 +26,7 @@ pub const USE_GETH: bool = true;
 pub const ETH_NODE_PORT: u16 = 8545;
 pub const ETH_NODE_PORT_WS: u16 = 8546;
 pub const BEACON_NODE_PORT: u16 = 3500;
-pub const PRIVATE_KEY: &str = "keys/0x73db010c3275eb7a92e5c38770316248f4c644ee";
+pub const PRIVATE_KEY: &str = "/Users/vmark/work/centauri-private/hyperspace/ethereum/keys/0x73db010c3275eb7a92e5c38770316248f4c644ee";
 
 #[track_caller]
 pub fn yui_ibc_solidity_path() -> PathBuf {
@@ -42,7 +42,11 @@ pub fn yui_ibc_solidity_path() -> PathBuf {
 
 #[track_caller]
 pub async fn spawn_anvil() -> (AnvilInstance, Arc<SignerMiddleware<Provider<Http>, LocalWallet>>) {
+	#[cfg(not(feature = "no_beacon"))]
 	let anvil = Anvil::new().spawn();
+	#[cfg(feature = "no_beacon")]
+	let anvil = Anvil::new().port(8545u16).spawn();
+
 	println!("{:?}", std::env::current_dir().unwrap());
 	let wallet: LocalWallet = if USE_GETH {
 		LocalWallet::decrypt_keystore(
@@ -118,6 +122,8 @@ pub mod mock {
 pub async fn hyperspace_ethereum_client_fixture(
 	anvil: &AnvilInstance,
 	yui_ibc: DeployYuiIbc<Arc<ProviderImpl>, ProviderImpl>,
+	db_url: &str,
+	redis_url: &str,
 ) -> EthereumClientConfig {
 	let endpoint =
 		if USE_GETH { format!("http://localhost:{}", ETH_NODE_PORT) } else { anvil.endpoint() };
@@ -137,8 +143,11 @@ pub async fn hyperspace_ethereum_client_fixture(
 		None
 	};
 
-	let jwt_secret_path =
-		if !USE_GETH { None } else { Some("../eth-pos-devnet/execution/jwtsecret".to_string()) };
+	let jwt_secret_path = if !USE_GETH {
+		None
+	} else {
+		Some("/Users/vmark/work/eth-pos-devnet/execution/jwtsecret".to_string())
+	};
 
 	EthereumClientConfig {
 		http_rpc_url: endpoint.parse().unwrap(),
@@ -152,9 +161,11 @@ pub async fn hyperspace_ethereum_client_fixture(
 		client_id: Some(ClientId::new("07-tendermint", 0).unwrap()),
 		connection_id: None,
 		channel_whitelist: vec![],
-		commitment_prefix: "424242".into(),
+		commitment_prefix: "696263".into(),
+		// commitment_prefix: "424242".into(),
 		wasm_code_id: None,
-		bank_address: yui_ibc.bank.clone().map(|b| b.address()),
+		ics20_transfer_bank_address: yui_ibc.ics20_transfer_bank.clone().map(|b| b.address()),
+		ics20_bank_address: yui_ibc.ics20_bank.clone().map(|b| b.address()),
 		diamond_address: Some(yui_ibc.diamond.address()),
 		tendermint_address: yui_ibc.tendermint.clone().map(|x| x.address()),
 		diamond_facets: yui_ibc
@@ -165,5 +176,8 @@ pub async fn hyperspace_ethereum_client_fixture(
 		yui: Some(yui_ibc),
 		client_type: "07-tendermint".into(),
 		jwt_secret_path,
+		indexer_pg_url: db_url.parse().unwrap(),
+		indexer_redis_url: redis_url.parse().unwrap(),
+		anvil: None,
 	}
 }

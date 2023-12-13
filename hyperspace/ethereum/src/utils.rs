@@ -1,39 +1,56 @@
 use crate::{
 	client::ClientError,
-	config::{ContractName, EthereumClientConfig},
+	config::ContractName,
 	contract::UnwrapContractError,
-	ibc_provider::{DIAMONDABI_ABI, ICS20TRANSFERBANKABI_ABI, TENDERMINTCLIENTABI_ABI},
+	ibc_provider::{
+		DIAMONDABI_ABI, ICS20BANKABI_ABI, ICS20TRANSFERBANKABI_ABI, TENDERMINTCLIENTABI_ABI,
+	},
 };
+use cast::revm::primitives::hex_literal::hex;
 use ethers::{
 	abi::{AbiError, Address, Detokenize, EventExt, Function, Token, Tokenize},
 	contract::{ContractFactory, ContractInstance, FunctionCall},
 	core::types::Bytes,
 	prelude::{
-		EthEvent, Event, Filter, Http, LocalWallet, Middleware, Provider, TransactionReceipt, H256,
-		U256,
+		Block, ContractError, EthEvent, Event, Filter, Http, LocalWallet, Middleware, Provider,
+		TransactionReceipt, TransactionRequest, H256, U256,
 	},
-	types::BlockNumber,
+	types::{BlockNumber, Bloom, H160, H64, U64},
+	utils::{rlp, rlp::RlpStream},
 };
 use ethers_solc::{
 	artifacts::{
 		output_selection::OutputSelection, Libraries, Optimizer, OptimizerDetails, Settings,
 		StorageLayout,
 	},
+	report::{BasicStdoutReporter, Report},
 	Artifact, ArtifactOutput, ConfigurableContractArtifact, EvmVersion, Project,
 	ProjectCompileOutput, ProjectPathsConfig, SolcConfig,
 };
-use ibc::core::{ics02_client::client_state::ClientType, ics04_channel::packet::Packet};
+use ibc::core::{
+	ics02_client::client_state::ClientType,
+	ics04_channel::packet::Packet,
+	ics23_commitment::{commitment::CommitmentProofBytes, merkle::MerkleProof},
+};
+use ics23::commitment_proof::Proof;
+use icsxx_ethereum::utils::keccak256;
 use log::info;
+use pallet_ibc::light_clients::HostFunctionsManager;
 use std::{
 	borrow::Borrow,
 	collections::{HashMap, HashSet},
-	fs::File,
 	iter::once,
+	ops::Mul,
 	path::{Path, PathBuf},
+	str::FromStr,
 	sync::{Arc, Mutex},
+	time::Duration,
 };
+use tokio::time::sleep;
 
 pub type ProviderImpl = ethers::prelude::SignerMiddleware<Provider<Http>, LocalWallet>;
+
+pub const SEQUENCES_PER_ITER: u64 = 256;
 
 #[repr(u32)]
 #[derive(Clone, Copy, Debug)]
@@ -105,7 +122,8 @@ pub struct DeployYuiIbc<B, M> {
 	pub diamond: ContractInstance<B, M>,
 	// pub storage_layout: StorageLayout,
 	pub tendermint: Option<ContractInstance<B, M>>,
-	pub bank: Option<ContractInstance<B, M>>,
+	pub ics20_transfer_bank: Option<ContractInstance<B, M>>,
+	pub ics20_bank: Option<ContractInstance<B, M>>,
 	pub contract_creation_block: Arc<Mutex<Option<BlockNumber>>>,
 }
 
@@ -118,12 +136,14 @@ where
 		deployed_facets: Vec<Facet<B, M>>,
 		diamond: ContractInstance<B, M>,
 		tendermint: Option<ContractInstance<B, M>>,
-		bank: Option<ContractInstance<B, M>>,
+		ics20_transfer_bank: Option<ContractInstance<B, M>>,
+		ics20_bank: Option<ContractInstance<B, M>>,
 	) -> Result<Self, ClientError> {
 		let ibc = Self {
 			diamond,
 			tendermint,
-			bank,
+			ics20_transfer_bank,
+			ics20_bank,
 			deployed_facets,
 			contract_creation_block: Arc::new(Mutex::new(None)),
 		};
@@ -143,7 +163,8 @@ where
 		client: B,
 		diamond_address: Address,
 		tendermint_address: Option<Address>,
-		bank_address: Option<Address>,
+		ics20_transfer_bank_address: Option<Address>,
+		ics20_bank_address: Option<Address>,
 		diamond_facets: Vec<(ContractName, Address)>,
 	) -> Result<Self, ClientError> {
 		let diamond =
@@ -151,14 +172,17 @@ where
 		let tendermint = tendermint_address.map(|addr| {
 			ContractInstance::<B, M>::new(addr, TENDERMINTCLIENTABI_ABI.clone(), client.clone())
 		});
-		let bank = bank_address.map(|addr| {
+		let ics20_transfer_bank = ics20_transfer_bank_address.map(|addr| {
 			ContractInstance::<B, M>::new(addr, ICS20TRANSFERBANKABI_ABI.clone(), client.clone())
+		});
+		let ics20_bank = ics20_bank_address.map(|addr| {
+			ContractInstance::<B, M>::new(addr, ICS20BANKABI_ABI.clone(), client.clone())
 		});
 		let deployed_facets = diamond_facets
 			.into_iter()
 			.map(|(abi, addr)| Facet::from_address(addr, abi, client.clone()))
 			.collect();
-		Ok(Self::new(deployed_facets, diamond, tendermint, bank).await?)
+		Ok(Self::new(deployed_facets, diamond, tendermint, ics20_transfer_bank, ics20_bank).await?)
 	}
 
 	pub fn set_contract_creation_block(&self, number: U256) {
@@ -606,7 +630,8 @@ where
 			diamond: self.diamond.clone(),
 			// storage_layout: self.storage_layout.clone(),
 			tendermint: self.tendermint.clone(),
-			bank: self.bank.clone(),
+			ics20_bank: self.ics20_bank.clone(),
+			ics20_transfer_bank: self.ics20_transfer_bank.clone(),
 			contract_creation_block: self.contract_creation_block.clone(),
 		}
 	}
@@ -620,8 +645,9 @@ pub async fn deploy_contract<M, T>(
 ) -> ContractInstance<Arc<M>, M>
 where
 	M: Middleware,
-	T: Tokenize,
+	T: Tokenize + std::fmt::Debug,
 {
+	info!("Deploying contract {} with args {:?}, ", name, constructor_args);
 	let contract = artifacts.into_iter().filter_map(|x| x.find_first(name)).next().unwrap();
 	let (abi, bytecode, _) = contract.clone().into_parts();
 	let mut factory = ContractFactory::new(abi.unwrap(), bytecode.unwrap(), client.clone());
@@ -684,7 +710,6 @@ pub fn compile_solc(project_paths: ProjectPathsConfig) -> ProjectCompileOutput {
 		.solc_config(solc_config)
 		.build()
 		.expect("project build failed");
-
 	// TODO: figure out how to enable it in the config
 	// project.artifacts.additional_values.storage_layout = true;
 	// project.artifacts.additional_files.abi = true;
@@ -865,7 +890,7 @@ where
 	// 		acc
 	// 	});
 
-	DeployYuiIbc::<Arc<M>, M>::new(deployed_facets, diamond, None, None)
+	DeployYuiIbc::<Arc<M>, M>::new(deployed_facets, diamond, None, None, None)
 		.await
 		.unwrap()
 }
@@ -887,10 +912,17 @@ pub async fn deploy_client<M: Middleware>(
 		update_client_delegate_contract.address()
 	);
 
+	let ics23_contract =
+		deploy_contract("Ics23Contract", &[&project_output1], (), client.clone()).await;
+
 	let light_client = deploy_contract(
 		client_name,
 		&[&project_output1],
-		(yui_ibc.diamond.address(), update_client_delegate_contract.address()),
+		(
+			yui_ibc.diamond.address(),
+			update_client_delegate_contract.address(),
+			ics23_contract.address(),
+		),
 		client.clone(),
 	)
 	.await;
@@ -916,11 +948,16 @@ pub async fn deploy_transfer_module<M: Middleware>(
 	yui_ibc: DeployYuiIbc<Arc<M>, M>,
 	diamond_address: Address,
 	client: Arc<M>,
-) -> Result<ContractInstance<Arc<M>, M>, ClientError> {
+) -> Result<(ContractInstance<Arc<M>, M>, ContractInstance<Arc<M>, M>), ClientError> {
 	let project_output = compile_yui(&yui_solidity_path, "contracts/apps/20-transfer");
 
-	let bank_contract =
-		deploy_contract::<M, _>("ICS20Bank", &[&project_output], (), client.clone()).await;
+	let bank_contract = deploy_contract::<M, _>(
+		"ICS20Bank",
+		&[&project_output],
+		(Token::String("ETH".into())),
+		client.clone(),
+	)
+	.await;
 	info!("Deployed Bank module address: {:?}", bank_contract.address());
 	let constructor_args =
 		(Token::Address(diamond_address), Token::Address(bank_contract.address()));
@@ -931,7 +968,7 @@ pub async fn deploy_transfer_module<M: Middleware>(
 
 	yui_ibc.bind_port("transfer", module_contract.address()).await;
 
-	Ok(module_contract)
+	Ok((module_contract, bank_contract))
 }
 
 pub fn handle_gas_usage(receipt: &TransactionReceipt) {
@@ -939,5 +976,225 @@ pub fn handle_gas_usage(receipt: &TransactionReceipt) {
 		info!("GAS: {gas}");
 	} else {
 		info!("GAS: {} (2)", receipt.gas_used.unwrap());
+	}
+}
+
+pub fn create_intervals(start: u64, end: u64) -> Vec<(u64, u64)> {
+	let mut intervals = Vec::new();
+	let mut current_start = start;
+
+	while current_start <= end {
+		let current_end = std::cmp::min(current_start + SEQUENCES_PER_ITER - 1, end);
+		intervals.push((current_start, current_end));
+		current_start = current_end + 1;
+	}
+
+	intervals
+}
+
+pub struct Header {
+	pub parent_hash: H256,
+	pub ommers_hash: H256,
+	pub beneficiary: Address,
+	pub state_root: H256,
+	pub transactions_root: H256,
+	pub receipts_root: H256,
+	pub logs_bloom: Bloom,
+	pub difficulty: U256,
+	pub number: U256,
+	pub gas_limit: U256,
+	pub gas_used: U256,
+	pub timestamp: u64,
+	pub extra_data: Bytes,
+	pub mix_hash: H256,
+	pub nonce: H64,
+	/// BaseFee was added by EIP-1559 and is ignored in legacy headers.
+	pub base_fee_per_gas: Option<U256>,
+	/// Ignored in legacy headers
+	pub withdrawals_root: Option<H256>,
+}
+
+impl rlp::Encodable for Header {
+	fn rlp_append(&self, s: &mut RlpStream) {
+		let mut list_len = 15;
+		if self.base_fee_per_gas.is_some() {
+			list_len += 1;
+		}
+		if self.withdrawals_root.is_some() {
+			list_len += 1;
+		}
+		s.begin_list(list_len);
+		s.append(&self.parent_hash);
+		s.append(&self.ommers_hash);
+		s.append(&self.beneficiary);
+		s.append(&self.state_root);
+		s.append(&self.transactions_root);
+		s.append(&self.receipts_root);
+		s.append(&self.logs_bloom);
+		s.append(&self.difficulty);
+		s.append(&self.number);
+		s.append(&self.gas_limit);
+		s.append(&self.gas_used);
+		s.append(&self.timestamp);
+		s.append(&self.extra_data.as_ref());
+		s.append(&self.mix_hash);
+		s.append(&self.nonce);
+		if let Some(ref base_fee) = self.base_fee_per_gas {
+			s.append(base_fee);
+		}
+		if let Some(ref root) = self.withdrawals_root {
+			s.append(root);
+		}
+	}
+}
+
+impl<T> From<Block<T>> for Header {
+	fn from(value: Block<T>) -> Self {
+		Header {
+			parent_hash: value.parent_hash,
+			ommers_hash: value.uncles_hash,
+			beneficiary: value.author.expect("author not found"),
+			state_root: value.state_root,
+			transactions_root: value.transactions_root,
+			receipts_root: value.receipts_root,
+			logs_bloom: value.logs_bloom.unwrap_or_default(),
+			difficulty: value.difficulty,
+			number: U256::from(value.number.expect("block number should exist").as_u64()),
+			gas_limit: value.gas_limit,
+			gas_used: value.gas_used,
+			timestamp: value.timestamp.as_u64(),
+			extra_data: value.extra_data,
+			mix_hash: value.mix_hash.expect("mix hash not found"),
+			nonce: value.nonce.expect("nonce not found"),
+			base_fee_per_gas: value.base_fee_per_gas,
+			withdrawals_root: value.withdrawals_root,
+		}
+	}
+}
+
+#[test]
+fn test_block_header_rlp_encoding() {
+	let block = Block::<()> {
+		hash: None,
+		parent_hash: H256(hex!("1e77d8f1267348b516ebc4f4da1e2aa59f85f0cbd853949500ffac8bfc38ba14")),
+		uncles_hash: H256(hex!("1dcc4de8dec75d7aab85b567b6ccd41ad312451b948a7413f0a142fd40d49347")),
+		author: Some(H160(hex!("2a65Aca4D5fC5B5C859090a6c34d164135398226"))),
+		state_root: H256(hex!("0b5e4386680f43c224c5c037efc0b645c8e1c3f6b30da0eec07272b4e6f8cd89")),
+		transactions_root: H256(hex!(
+			"56e81f171bcc55a6ff8345e692c0f86e5b48e01b996cadc001622fb5e363b421"
+		)),
+		receipts_root: H256(hex!(
+			"56e81f171bcc55a6ff8345e692c0f86e5b48e01b996cadc001622fb5e363b421"
+		)),
+		logs_bloom: Some(Bloom::from_slice(&[0u8; 256])),
+		difficulty: U256::from(6022643743806u64),
+		total_difficulty: None,
+		seal_fields: vec![],
+		uncles: vec![],
+		transactions: vec![],
+		number: Some(U64::from(400000u32)),
+		gas_limit: U256::from(3141592u64),
+		gas_used: U256::from(0u64),
+		timestamp: U256::from(1445130204u64),
+		extra_data: Bytes::from(hex!("d583010202844765746885676f312e35856c696e7578").to_vec()),
+		mix_hash: Some(H256(hex!(
+			"3fbea7af642a4e20cd93a945a1f5e23bd72fc5261153e09102cf718980aeff38"
+		))),
+		nonce: Some(H64(hex!("6af23caae95692ef"))),
+		base_fee_per_gas: None,
+		withdrawals_root: None,
+		withdrawals: None,
+		size: None,
+		other: Default::default(),
+	};
+	let header: Header = block.clone().into();
+	let rlp_encoded_header = rlp::encode(&header).to_vec();
+	let hash = keccak256(rlp_encoded_header);
+	assert_eq!(
+		H256(hash),
+		H256(hex!("5d15649e25d8f3e2c0374946078539d200710afc977cdfc6a977bd23f20fa8e8"))
+	);
+
+	let block = serde_json::from_str::<Block<()>>(r#"
+	{
+	  "baseFeePerGas": "0x7",
+	  "difficulty": "0x0",
+	  "extraData": "0xd883010d01846765746888676f312e32312e31856c696e7578",
+	  "gasLimit": "0x1c9c380",
+	  "gasUsed": "0x570c1",
+	  "hash": "0x89f2e55516b1ec33275f67fb08864b269f29d682c4294692bd7885ff98022376",
+	  "logsBloom": "0x00000000000000002000000000000000000000000800000000800000000000000000000100000000000200000000000000000000000000000000000000000000000000080000000000000000000000000000000000040000000000000000000000000000000000000000000000000000000000001000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000100000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000",
+	  "miner": "0x123463a4b065722e99115d6c222f267d9cabb524",
+	  "mixHash": "0x9465af5f5db63c8abc700d61e60baae7f386479c78d8cfd1013ce98663aa2399",
+	  "nonce": "0x0000000000000000",
+	  "number": "0x3c28",
+	  "parentHash": "0xdc31160f48f2a7338b2943077e639019ba7478f2ba00c96d59e9aa1f27e24cba",
+	  "receiptsRoot": "0xd80423deccefededa1392413952297320135f4414ddca1850cfea1ae3527d3c1",
+	  "sha3Uncles": "0x1dcc4de8dec75d7aab85b567b6ccd41ad312451b948a7413f0a142fd40d49347",
+	  "size": "0x53c",
+	  "stateRoot": "0x51fa3910be4db6c196677c750ee9b3126e334f71e795ac17475a345da8b9ad6a",
+	  "timestamp": "0x6537f3ce",
+	  "totalDifficulty": "0x1",
+	  "transactions": [],
+	  "transactionsRoot": "0x931a3d5aca9f9ea1a61e9b6642f69f9943dcde5ebb92030edcd03a959d33e968",
+	  "uncles": [],
+	  "withdrawals": [],
+	  "withdrawalsRoot": "0x56e81f171bcc55a6ff8345e692c0f86e5b48e01b996cadc001622fb5e363b421"
+	}"#).unwrap();
+	let header: Header = block.clone().into();
+	let rlp_encoded_header = rlp::encode(&header).to_vec();
+	let hash = keccak256(rlp_encoded_header);
+	assert_eq!(H256(hash), block.hash.unwrap());
+}
+
+pub fn clear_proof_value(
+	commitment_proof: &CommitmentProofBytes,
+) -> Result<CommitmentProofBytes, ClientError> {
+	let cs_proof = commitment_proof.as_bytes();
+	use ibc_proto::ibc::core::commitment::v1::MerkleProof as RawMerkleProof;
+	let mut merkle_proof: MerkleProof<HostFunctionsManager> =
+		RawMerkleProof::try_from(CommitmentProofBytes::try_from(cs_proof.to_vec()).unwrap())
+			.unwrap()
+			.into();
+	for (i, proof) in merkle_proof.proofs.iter_mut().enumerate() {
+		if let Some(proof) = proof.proof.as_mut() {
+			match proof {
+				Proof::Exist(p) =>
+					if i == 0 {
+						p.value.clear();
+					},
+				p => return Err(ClientError::Other(format!("unexpected proof type: {:?}", p))),
+			}
+		}
+	}
+	let new_raw_proof = RawMerkleProof::from(merkle_proof.clone());
+	Ok(CommitmentProofBytes::try_from(new_raw_proof).unwrap())
+}
+
+pub async fn send_retrying<B, M, D>(
+	method: &FunctionCall<B, M, D>,
+) -> Result<TransactionReceipt, ContractError<M>>
+where
+	B: Clone + Borrow<M>,
+	M: Middleware,
+	D: Detokenize,
+{
+	loop {
+		let result = method.send().await;
+		match result {
+			Ok(v) => {
+				let receipt = v.await.unwrap().unwrap();
+				info!("Sent approval transfer. Tx hash: {:?}", receipt.transaction_hash);
+				assert_eq!(receipt.status, Some(1.into()));
+				return Ok(receipt);
+			},
+			Err(e) =>
+				if e.to_string().contains("replacement transaction underpriced") {
+					sleep(Duration::from_secs(1)).await;
+					continue;
+				} else {
+					return Err(e);
+				},
+		}
 	}
 }

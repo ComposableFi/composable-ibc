@@ -4,7 +4,7 @@ use futures::{Stream, StreamExt};
 use ibc::{
 	core::{
 		ics02_client::{events::UpdateClient, msgs::ClientMsg},
-		ics24_host::identifier::ChainId,
+		ics24_host::identifier::{ChainId, ClientId},
 		ics26_routing::msgs::Ics26Envelope,
 	},
 	events::IbcEvent,
@@ -23,7 +23,11 @@ use primitives::{
 	MisbehaviourHandler,
 };
 use prost::Message;
-use std::{pin::Pin, time::Duration};
+use std::{
+	pin::Pin,
+	sync::{Arc, Mutex},
+	time::Duration,
+};
 use tendermint_rpc::{
 	event::{Event, EventData},
 	query::{EventType, Query},
@@ -265,6 +269,15 @@ where
 		self.rpc_client = rpc_client;
 		log::info!(target: "hyperspace_cosmos", "Reconnected to cosmos chain");
 		Ok(())
+	}
+
+	fn set_client_id_ref(&mut self, _client_id: Arc<Mutex<Option<ClientId>>>) {
+		//ignore.
+		//we do not need it on cosmos
+	}
+
+	fn get_counterparty_client_id_ref(&self) -> Arc<Mutex<Option<ClientId>>> {
+		self.client_id.clone()
 	}
 }
 

@@ -13,15 +13,19 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-use crate::{alloc::string::ToString, error::Error, proto::ConsensusState as RawConsensusState};
-use alloc::{format, vec::Vec};
+use crate::{
+	abi::EthereumClientAbi::EthereumClientPrimitivesConsensusState, alloc::string::ToString,
+	error::Error, proto::ConsensusState as RawConsensusState,
+};
+use alloc::{vec::Vec};
+use alloy_sol_types::SolValue;
 use core::{convert::Infallible, fmt::Debug};
 use ibc::{core::ics23_commitment::commitment::CommitmentRoot, timestamp::Timestamp};
 use ibc_proto::google::protobuf::Any;
 use primitive_types::H256;
 use serde::{Deserialize, Serialize};
 use tendermint::time::Time;
-use tendermint_proto::{google::protobuf as tpb, Protobuf};
+use tendermint_proto::{Protobuf};
 
 /// Protobuf type url for GRANDPA Consensus State
 pub const ETHEREUM_CONSENSUS_STATE_TYPE_URL: &str = "/ibc.lightclients.ethereum.v1.ConsensusState";
@@ -30,6 +34,17 @@ pub const ETHEREUM_CONSENSUS_STATE_TYPE_URL: &str = "/ibc.lightclients.ethereum.
 pub struct ConsensusState {
 	pub timestamp: Time,
 	pub root: CommitmentRoot,
+}
+
+impl ConsensusState {
+	pub fn abi_encode(self) -> Vec<u8> {
+		EthereumClientPrimitivesConsensusState::from(self).abi_encode()
+	}
+
+	pub fn abi_decode(bytes: &[u8]) -> Result<Self, Error> {
+		let abi = EthereumClientPrimitivesConsensusState::abi_decode(bytes, true)?;
+		Ok(abi.into())
+	}
 }
 
 impl ConsensusState {
@@ -72,23 +87,12 @@ impl TryFrom<RawConsensusState> for ConsensusState {
 	type Error = Error;
 
 	fn try_from(raw: RawConsensusState) -> Result<Self, Self::Error> {
-		let prost_types::Timestamp { seconds, nanos } = raw
-			.timestamp
-			.ok_or_else(|| Error::Custom(format!("Invalid consensus state: missing timestamp")))?;
-		let proto_timestamp = tpb::Timestamp { seconds, nanos };
-		let timestamp = proto_timestamp.try_into().map_err(|e| {
-			Error::Custom(format!("Invalid consensus state: invalid timestamp {e}"))
-		})?;
-
-		Ok(Self { root: raw.root.into(), timestamp })
+		ConsensusState::abi_decode(&raw.abi_data)
 	}
 }
 
 impl From<ConsensusState> for RawConsensusState {
 	fn from(value: ConsensusState) -> Self {
-		let tpb::Timestamp { seconds, nanos } = value.timestamp.into();
-		let timestamp = prost_types::Timestamp { seconds, nanos };
-
-		RawConsensusState { timestamp: Some(timestamp), root: value.root.into_vec() }
+		RawConsensusState { abi_data: value.abi_encode() }
 	}
 }

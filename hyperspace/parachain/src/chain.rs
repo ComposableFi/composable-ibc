@@ -27,6 +27,7 @@ use ibc::{
 			events::UpdateClient,
 			msgs::{update_client::MsgUpdateAnyClient, ClientMsg},
 		},
+		ics24_host::identifier::ClientId,
 		ics26_routing::msgs::Ics26Envelope,
 	},
 	events::IbcEvent,
@@ -47,7 +48,13 @@ use sp_runtime::{
 	traits::{IdentifyAccount, One, Verify},
 	MultiSignature, MultiSigner,
 };
-use std::{collections::BTreeMap, fmt::Display, pin::Pin, sync::Arc, time::Duration};
+use std::{
+	collections::BTreeMap,
+	fmt::Display,
+	pin::Pin,
+	sync::{Arc, Mutex},
+	time::Duration,
+};
 // #[cfg(not(feature = "dali"))]
 // use subxt::config::polkadot::PlainTip as Tip;
 // #[cfg(feature = "dali")]
@@ -386,6 +393,15 @@ where
 
 	fn common_state_mut(&mut self) -> &mut CommonClientState {
 		&mut self.common_state
+	}
+
+	fn set_client_id_ref(&mut self, _client_id: Arc<Mutex<Option<ClientId>>>) {
+		//ignore.
+		//we do not need it on parachain
+	}
+
+	fn get_counterparty_client_id_ref(&self) -> Arc<Mutex<Option<ClientId>>> {
+		self.client_id.clone()
 	}
 }
 

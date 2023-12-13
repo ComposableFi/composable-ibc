@@ -47,6 +47,7 @@ grandpa-light-client = { path = "../../algorithms/grandpa/verifier", package = "
 hex = "0.4.3"
 rand = "0.8.5"
 toml = "0.7.4"
+evm-indexer = { path = "../ethereum/evm-indexer" }
 
 [dev-dependencies]
 subxt = { git = "https://github.com/paritytech/subxt",  rev = "2a4da618a033bb82f768e4ef67b093b371f8b492", features = ["substrate-compat"] }

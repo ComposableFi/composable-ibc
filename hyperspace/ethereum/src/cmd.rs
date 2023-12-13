@@ -83,6 +83,7 @@ impl DeployClientCmd {
 			diamond_addr,
 			None,
 			None,
+			None,
 			facets,
 		)
 		.await?;
@@ -116,9 +117,6 @@ impl DeployTransferModuleCmd {
 		let diamond_addr = config.diamond_address.ok_or_else(|| {
 			anyhow!("Diamond contract should be deployed first (use 'deploy core' subcommand)")
 		})?;
-		let diamond_addr = config.diamond_address.ok_or_else(|| {
-			anyhow!("Diamond contract should be deployed first (use 'deploy core' subcommand)")
-		})?;
 		let facets = config.diamond_facets.clone();
 		if facets.is_empty() {
 			bail!("Diamond facets are empty. Make sure to deploy the core first ('deploy core')")
@@ -128,13 +126,15 @@ impl DeployTransferModuleCmd {
 			diamond_addr,
 			None,
 			None,
+			None,
 			facets,
 		)
 		.await?;
 
-		let contract =
+		let (transfer_bank_contract, bank_contract) =
 			deploy_transfer_module::<EthRpcClient>(path, yui_ibc, diamond_addr, client).await?;
-		config.bank_address = Some(contract.address());
+		config.ics20_transfer_bank_address = Some(transfer_bank_contract.address());
+		config.ics20_bank_address = Some(bank_contract.address());
 		Ok(config)
 	}
 }

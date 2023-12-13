@@ -273,21 +273,22 @@ message LightClientState {
 }
 
 message ClientState {
-  LightClientState inner = 1;
-  optional uint64 frozen_height_revision_height = 2;
-  optional uint64 frozen_height_revision_number = 3;
-  uint32 latest_height = 4;
+  bytes abi_data = 1;
 }
 
 message Misbehaviour {
 }
 
+//message ConsensusState {
+//  // timestamp that corresponds to the block height in which the ConsensusState
+//  // was stored.
+//  google.protobuf.Timestamp timestamp = 1;
+//  // packet commitment root
+//  bytes root = 2;
+//}
+
 message ConsensusState {
-  // timestamp that corresponds to the block height in which the ConsensusState
-  // was stored.
-  google.protobuf.Timestamp timestamp = 1;
-  // packet commitment root
-  bytes root = 2;
+  bytes abi_data = 1;
 }
 
 message ClientMessage {

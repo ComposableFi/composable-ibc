@@ -46,11 +46,14 @@ members = [
     "hyperspace/ethereum",
 
     # utilities
-    # "utils/subxt/codegen",
-    # "utils/subxt/generated",
-    # "utils/parachain-node",
-    # "utils/parachain-node/runtime",
-    #     "utils/simnode"
+    "utils/subxt/codegen",
+    "utils/subxt/generated",
+    "utils/parachain-node",
+    "utils/parachain-node/runtime",
+    "utils/compress",
+#     "utils/simnode"
+
+    "hyperspace/ethereum/evm-indexer"
 ]
 
 [patch."https://github.com/paritytech/jsonrpsee"]

@@ -1,7 +1,9 @@
 extern crate alloc;
 
 use crate::{proof::node_codec, utils::keccak256};
-use alloc::vec::Vec;
+use alloc::{
+	vec::Vec,
+};
 use core::marker::PhantomData;
 use hash256_std_hasher::Hash256StdHasher;
 use hash_db::Hasher;

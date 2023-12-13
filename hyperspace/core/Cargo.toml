@@ -79,7 +79,7 @@ sp-keyring = { git = "https://github.com/paritytech/substrate", branch = "polkad
 build-metadata-from-ws = []
 #near = ["dep:near"]
 cosmos = ["dep:cosmos"]
-parachain = []
+parachain = ["subxt-generated"]
 ethereum = ["dep:ethereum"]
 testing = ["primitives/testing", "parachain/testing", "cosmos/testing"]
 default = ["cosmos", "ethereum"]

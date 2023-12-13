@@ -84,25 +84,25 @@
       {
         "indexed": false,
         "internalType": "string",
-        "name": "source_port",
+        "name": "sourcePort",
         "type": "string"
       },
       {
         "indexed": false,
         "internalType": "string",
-        "name": "source_channel",
+        "name": "sourceChannel",
         "type": "string"
       },
       {
         "indexed": true,
         "internalType": "string",
-        "name": "destination_port",
+        "name": "destinationPortIndexed",
         "type": "string"
       },
       {
         "indexed": true,
         "internalType": "string",
-        "name": "destination_channel",
+        "name": "destinationChannelIndexed",
         "type": "string"
       },
       {
@@ -126,13 +126,13 @@
         ],
         "indexed": false,
         "internalType": "struct HeightData",
-        "name": "timeout_height",
+        "name": "timeoutHeight",
         "type": "tuple"
       },
       {
         "indexed": false,
         "internalType": "uint64",
-        "name": "timeout_timestamp",
+        "name": "timeoutTimestamp",
         "type": "uint64"
       }
     ],
@@ -149,27 +149,27 @@
         "type": "uint64"
       },
       {
-        "indexed": true,
+        "indexed": false,
         "internalType": "string",
         "name": "sourcePort",
         "type": "string"
       },
       {
-        "indexed": true,
+        "indexed": false,
         "internalType": "string",
         "name": "sourceChannel",
         "type": "string"
       },
       {
-        "indexed": false,
+        "indexed": true,
         "internalType": "string",
-        "name": "sourcePortRaw",
+        "name": "sourcePortIndexed",
         "type": "string"
       },
       {
-        "indexed": false,
+        "indexed": true,
         "internalType": "string",
-        "name": "sourceChannelRaw",
+        "name": "sourceChannelIndexed",
         "type": "string"
       },
       {
@@ -369,18 +369,6 @@
     "inputs": [
       {
         "indexed": true,
-        "internalType": "string",
-        "name": "destinationPortId",
-        "type": "string"
-      },
-      {
-        "indexed": true,
-        "internalType": "string",
-        "name": "destinationChannel",
-        "type": "string"
-      },
-      {
-        "indexed": true,
         "internalType": "uint64",
         "name": "sequence",
         "type": "uint64"
@@ -388,13 +376,25 @@
       {
         "indexed": false,
         "internalType": "string",
-        "name": "destinationPortIdRaw",
+        "name": "destinationPort",
         "type": "string"
       },
       {
         "indexed": false,
         "internalType": "string",
-        "name": "destinationChannelRaw",
+        "name": "destinationChannel",
+        "type": "string"
+      },
+      {
+        "indexed": true,
+        "internalType": "string",
+        "name": "destinationPortIndexed",
+        "type": "string"
+      },
+      {
+        "indexed": true,
+        "internalType": "string",
+        "name": "destinationChannelIndexed",
         "type": "string"
       },
       {

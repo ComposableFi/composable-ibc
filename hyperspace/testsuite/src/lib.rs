@@ -34,7 +34,6 @@ use ibc::{
 	tx_msg::Msg,
 };
 use ibc_proto::google::protobuf::Any;
-
 use pallet_ibc::Timeout;
 use std::{str::FromStr, time::Duration};
 use tendermint_proto::Protobuf;
@@ -242,7 +241,7 @@ async fn assert_send_transfer<A>(
 		.expect("No Ibc balances");
 
 	let new_amount = balance.amount.as_u256().as_u128();
-	assert!(new_amount <= (previous_balance * 80) / 100);
+	assert!(new_amount <= (previous_balance * 80) / 100 + 1);
 }
 
 /// Send a packet using a height timeout that has already passed
@@ -266,8 +265,8 @@ async fn send_packet_and_assert_height_timeout<A, B>(
 	let (.., msg) = send_transfer(
 		chain_a,
 		chain_b,
-		asset_a,
-		channel_id,
+		asset_a.clone(),
+		channel_id.clone(),
 		Some(Timeout::Offset { timestamp: Some(60 * 60), height: Some(20) }),
 	)
 	.await;

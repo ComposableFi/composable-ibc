@@ -36,11 +36,16 @@ rlp = { version = "0.5.2", default-features = false }
 hex-literal = { version = "0.4.1", default-features = false }
 hash256-std-hasher = { version = "0.15.2", default-features = false }
 ethabi = { version = "18.0.0", default-features = false }
+alloy-sol-macro = { version = "0.4.2", default-features = false, features = ["json"] }
+alloy-sol-types = { version = "0.4.2", default-features = false }
 tiny-keccak = { version = "2.0.2", default-features = false, features = ["keccak"] }
+log = "0.4"
+deflate = { version = "1.0.0", default-features = false }
+hex = "0.4.3"
+parity-scale-codec = { version = "1.3.4", default-features = false }
+compress = { path = "../../utils/compress", default-features = false }
 
 [dev-dependencies]
-hex = "0.4.3"
-log = "0.4"
 futures = "0.3.24"
 env_logger = "0.9.0"
 serde = { version = "1.0.144", features = ["derive"] }
@@ -75,3 +80,4 @@ testnet = [
     "sync-committee-primitives/testnet",
     "sync-committee-verifier/testnet",
 ]
+no_beacon = []

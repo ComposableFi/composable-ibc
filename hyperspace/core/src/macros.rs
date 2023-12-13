@@ -325,16 +325,17 @@ macro_rules! chains {
 				at: Height,
 				channel_id: ChannelId,
 				port_id: PortId,
+	        	next_send_seq: Sequence,
 			) -> Result<Vec<u64>, Self::Error> {
 				match self {
 					$(
 						$(#[$($meta)*])*
 						Self::$name(chain) => chain
-							.query_packet_acknowledgements(at, channel_id, port_id)
+							.query_packet_acknowledgements(at, channel_id, port_id, next_send_seq)
 							.await
 							.map_err(AnyError::$name),
 					)*
-					Self::Wasm(c) => c.inner.query_packet_acknowledgements(at, channel_id, port_id).await,
+					Self::Wasm(c) => c.inner.query_packet_acknowledgements(at, channel_id, port_id, next_send_seq).await,
 				}
 			}
 
@@ -420,6 +421,25 @@ macro_rules! chains {
 							.map_err(AnyError::$name),
 					)*
 					Self::Wasm(c) => c.inner.query_send_packets(at, channel_id, port_id, seqs).await,
+				}
+			}
+
+			async fn query_next_send_sequence(
+				&self,
+				at: Height,
+				channel_id: ChannelId,
+				port_id: PortId,
+			) -> Result<Sequence, Self::Error>
+			{
+				match self {
+					$(
+						$(#[$($meta)*])*
+						Self::$name(chain) => chain
+							.query_next_send_sequence(at, channel_id, port_id)
+							.await
+							.map_err(AnyError::$name),
+					)*
+					Self::Wasm(c) => c.inner.query_next_send_sequence(at, channel_id, port_id).await,
 				}
 			}
 
@@ -908,6 +928,26 @@ macro_rules! chains {
 						Self::$name(chain) => chain.reconnect().await,
 					)*
 					Self::Wasm(c) => c.inner.reconnect().await,
+				}
+			}
+
+			fn set_client_id_ref(&mut self, client_id: Arc<Mutex<Option<ClientId>>>){
+				match self {
+					$(
+						$(#[$($meta)*])*
+						Self::$name(chain) => chain.set_client_id_ref(client_id),
+					)*
+					Self::Wasm(c) => c.inner.set_client_id_ref(client_id),
+				}
+			}
+
+			fn get_counterparty_client_id_ref(&self) -> Arc<Mutex<Option<ClientId>>>{
+				match self {
+					$(
+						$(#[$($meta)*])*
+						Self::$name(chain) => chain.get_counterparty_client_id_ref(),
+					)*
+					Self::Wasm(c) => c.inner.get_counterparty_client_id_ref(),
 				}
 			}
 		}

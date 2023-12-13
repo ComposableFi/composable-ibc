@@ -9,7 +9,10 @@ use ethers_solc::{Artifact, ProjectCompileOutput, ProjectPathsConfig};
 use hyperspace_ethereum::{
 	client::EthereumClient,
 	contract::{IbcHandler, UnwrapContractError},
-	mock::{utils, utils::hyperspace_ethereum_client_fixture},
+	mock::{
+		utils,
+		utils::{hyperspace_ethereum_client_fixture, USE_GETH},
+	},
 	utils::{DeployYuiIbc, ProviderImpl},
 	yui_types::IntoToken,
 };
@@ -245,7 +248,7 @@ async fn test_deploy_yui_ibc_and_create_eth_client() {
 
 	let (anvil, client) = utils::spawn_anvil().await;
 
-	let yui_ibc = hyperspace_ethereum::utils::deploy_yui_ibc(
+	let mut yui_ibc = hyperspace_ethereum::utils::deploy_yui_ibc(
 		&project_output,
 		&diamond_project_output,
 		client.clone(),
@@ -269,7 +272,7 @@ async fn test_deploy_yui_ibc_and_create_eth_client() {
 	let factory = ContractFactory::new(abi.unwrap(), bytecode.unwrap(), client.clone());
 	let update_client_delegate_contract = factory.deploy(()).unwrap().send().await.unwrap();
 
-	let contract = project_output1.find_first("TendermintLightClientSimple").unwrap();
+	let contract = project_output1.find_first("TendermintLightClientZK").unwrap();
 	// dbg!(&contract);
 	let r = contract.clone();
 	let (abi, bytecode, _) = r.into_parts();

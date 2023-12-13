@@ -13,8 +13,13 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-use crate::{client_def::EthereumClient, error::Error, proto::ClientState as RawClientState};
+use crate::{
+	abi::EthereumClientAbi::EthereumClientPrimitivesClientState, client_def::EthereumClient,
+	error::Error, proto::ClientState as RawClientState,
+};
 use alloc::{format, string::ToString, vec::Vec};
+use alloy_sol_types::SolValue;
+use compress::{compress, decompress};
 use core::{fmt::Debug, marker::PhantomData, time::Duration};
 use ibc::{
 	core::{ics02_client::client_state::ClientType, ics24_host::identifier::ChainId},
@@ -28,12 +33,23 @@ use tendermint_proto::Protobuf;
 /// Protobuf type url for GRANDPA ClientState
 pub const ETHEREUM_CLIENT_STATE_TYPE_URL: &str = "/ibc.lightclients.ethereum.v1.ClientState";
 
-#[derive(PartialEq, Clone, Debug, Default, Eq)]
+#[derive(PartialEq, Debug, Default, Eq)]
 pub struct ClientState<H> {
 	pub inner: LightClientState,
 	pub frozen_height: Option<Height>,
 	pub latest_height: u32,
 	pub _phantom: PhantomData<H>,
+}
+
+impl<H> Clone for ClientState<H> {
+	fn clone(&self) -> Self {
+		Self {
+			inner: self.inner.clone(),
+			frozen_height: self.frozen_height,
+			latest_height: self.latest_height,
+			_phantom: Default::default(),
+		}
+	}
 }
 
 impl<H: Clone> Protobuf<RawClientState> for ClientState<H> {}
@@ -115,6 +131,21 @@ impl<H> ClientState<H> {
 		}
 		Ok(Self { frozen_height: Some(h), ..self })
 	}
+
+	pub fn abi_encode(self) -> Vec<u8> {
+		let data = EthereumClientPrimitivesClientState::from(self).abi_encode();
+		let x = compress(data, 16);
+		// info!("COMP={}", hex::encode(&x));
+		x
+	}
+
+	pub fn abi_decode(bytes: &[u8]) -> Result<Self, Error> {
+		// panic!("compressed = {}", hex::encode(&bytes));
+		let decompressed = decompress(&mut &bytes[..], 16);
+		// panic!("decompressed = {}", hex::encode(&decompressed));
+		let value = EthereumClientPrimitivesClientState::abi_decode(&decompressed, true)?;
+		value.try_into()
+	}
 }
 
 impl<H> ibc::core::ics02_client::client_state::ClientState for ClientState<H>
@@ -166,31 +197,88 @@ impl<H> TryFrom<RawClientState> for ClientState<H> {
 	type Error = Error;
 
 	fn try_from(raw: RawClientState) -> Result<Self, Self::Error> {
-		let inner = raw
-			.inner
-			.ok_or(Error::Custom("missing inner client state".to_string()))?
-			.try_into()?;
-		let height = raw.frozen_height_revision_height.zip(raw.frozen_height_revision_number);
-		Ok(ClientState {
-			inner,
-			frozen_height: height.map(|x| Height::new(x.0, x.1)),
-			latest_height: raw.latest_height,
-			_phantom: Default::default(),
-		})
+		ClientState::abi_decode(&raw.abi_data)
 	}
 }
 
 impl<H> From<ClientState<H>> for RawClientState {
 	fn from(client_state: ClientState<H>) -> Self {
-		let (frozen_height_revision_height, frozen_height_revision_number) = client_state
-			.frozen_height
-			.map(|x| (x.revision_number, x.revision_height))
-			.unzip();
-		RawClientState {
-			inner: Some(client_state.inner.into()),
-			frozen_height_revision_height,
-			frozen_height_revision_number,
-			latest_height: client_state.latest_height,
+		let abi_data = client_state.clone().abi_encode();
+		RawClientState { abi_data }
+	}
+}
+
+#[cfg(test)]
+mod test_proto {
+	fn skip_field(ptr: &[u8], wire_type: u8) -> usize {
+		match wire_type {
+			2 => {
+				let (len, offset) = decode_varint(ptr);
+				return offset + len as usize
+			},
+			0 => {
+				let (_value, offset) = decode_varint(ptr);
+				return offset
+			},
+			n => panic!("unknown wire type {}", n),
 		}
+	}
+
+	fn decode_len_field<'a>(mut ptr: &'a [u8], index: u8) -> &'a [u8] {
+		loop {
+			let (field_number, wire_type, offset) = decode_tag(ptr);
+			ptr = &ptr[offset..];
+
+			if wire_type != 2 || field_number != index {
+				let offset = skip_field(ptr, wire_type);
+				ptr = &ptr[offset..];
+				continue
+			}
+			let (len, offset) = decode_varint(ptr);
+			ptr = &ptr[offset..];
+			let value = &ptr[..len as usize];
+			return value
+		}
+	}
+
+	fn decode_any<'a>(ptr: &'a [u8]) -> &'a [u8] {
+		let value = decode_len_field(&ptr, 2);
+		value
+	}
+
+	fn decode_tag(ptr: &[u8]) -> (u8, u8, usize) {
+		let tag = ptr[0];
+		let wire_type = tag & 0b111;
+		let field_number = tag >> 3;
+		(field_number, wire_type, 1)
+	}
+
+	fn decode_varint(ptr: &[u8]) -> (u64, usize) {
+		let mut value = 0u64;
+		let mut shift = 0;
+		let mut bytes_read = 0;
+		for i in 0.. {
+			let byte = ptr[i];
+			value |= ((byte & 0b0111_1111) as u64) << shift;
+			shift += 7;
+			bytes_read += 1;
+			if byte & 0b1000_0000 == 0 {
+				break
+			}
+		}
+		(value, bytes_read)
+	}
+
+	#[test]
+	fn test_proto() {
+		let data =
+			hex::decode(include_bytes!("/Users/vmark/work/centauri-private/proto.txt")).unwrap();
+		let mut ptr = &mut &data[..];
+
+		let wasm_any = decode_any(&mut ptr);
+		let wasm_data = decode_len_field(wasm_any, 1);
+		let client_state_any = decode_any(wasm_data);
+		let _abi_data = decode_len_field(client_state_any, 1);
+		// println!("abi_data = {}", hex::encode(abi_data));
 	}
 }
