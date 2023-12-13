@@ -50,9 +50,9 @@ CREATE TABLE transactions (
 
 CREATE INDEX IF NOT EXISTS transactions_by_block_number ON transactions (block_number DESC);
 
-CREATE INDEX IF NOT EXISTS transactions_by_sender ON transactions (from_address) STORING (to_address);
+CREATE INDEX IF NOT EXISTS transactions_by_sender ON transactions (from_address); --; -- STORING (to_address);
 
-CREATE INDEX IF NOT EXISTS transactions_by_receiver ON transactions (to_address) STORING (from_address);
+CREATE INDEX IF NOT EXISTS transactions_by_receiver ON transactions (to_address); --; -- STORING (from_address);
 
 CREATE INDEX IF NOT EXISTS transactions_by_chain ON transactions (chain);
 
@@ -91,13 +91,13 @@ CREATE INDEX IF NOT EXISTS erc20_transfers_by_token ON erc20_transfers (token);
 
 CREATE INDEX IF NOT EXISTS erc20_transfers_by_hash ON erc20_transfers (hash);
 
-CREATE INDEX IF NOT EXISTS erc20_transfers_by_sender ON erc20_transfers (from_address) STORING (to_address);
+CREATE INDEX IF NOT EXISTS erc20_transfers_by_sender ON erc20_transfers (from_address); -- STORING (to_address);
 
-CREATE INDEX IF NOT EXISTS erc20_transfers_by_receiver ON erc20_transfers (to_address) STORING (from_address);
+CREATE INDEX IF NOT EXISTS erc20_transfers_by_receiver ON erc20_transfers (to_address); -- STORING (from_address);
 
-CREATE INDEX IF NOT EXISTS erc20_transfers_by_erc20_tokens_parsed ON erc20_transfers (erc20_tokens_parsed) STORING (chain, erc20_balances_parsed, from_address, to_address, token, value);
+CREATE INDEX IF NOT EXISTS erc20_transfers_by_erc20_tokens_parsed ON erc20_transfers (erc20_tokens_parsed); -- STORING (chain, erc20_balances_parsed, from_address, to_address, token, value);
 
-CREATE INDEX IF NOT EXISTS erc20_transfers_by_erc20_balances_parsed ON erc20_transfers (erc20_balances_parsed) STORING (chain, erc20_tokens_parsed, from_address, to_address, token, value);
+CREATE INDEX IF NOT EXISTS erc20_transfers_by_erc20_balances_parsed ON erc20_transfers (erc20_balances_parsed); -- STORING (chain, erc20_tokens_parsed, from_address, to_address, token, value);
 
 CREATE TABLE erc20_tokens (
   address TEXT NOT NULL,
@@ -189,7 +189,7 @@ CREATE INDEX IF NOT EXISTS logs_by_address ON logs (address, chain);
 
 CREATE INDEX IF NOT EXISTS logs_by_hash ON logs (hash);
 
-CREATE INDEX IF NOT EXISTS logs_by_erc20_transfers_parsed ON logs (erc20_transfers_parsed) STORING (address, chain, data, removed, topics);
+CREATE INDEX IF NOT EXISTS logs_by_erc20_transfers_parsed ON logs (erc20_transfers_parsed); -- STORING (address, chain, data, removed, topics);
 
 CREATE TABLE ibc_events (
     block_number BIGINT NOT NULL,

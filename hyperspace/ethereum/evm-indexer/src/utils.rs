@@ -4,51 +4,51 @@ use ethers::contract::abigen;
 
 abigen!(
 	IbcClientAbi,
-	"hyperspace/ethereum/src/abi/ibc-client-abi.json",
+	"/Users/vmark/work/centauri-private/hyperspace/ethereum/src/abi/ibc-client-abi.json",
 	event_derives (serde::Deserialize, serde::Serialize);
 
 	IbcChannelAbi,
-	"hyperspace/ethereum/src/abi/ibc-channel-abi.json",
+	"/Users/vmark/work/centauri-private/hyperspace/ethereum/src/abi/ibc-channel-abi.json",
 	event_derives (serde::Deserialize, serde::Serialize);
 
 	IbcConnectionAbi,
-	"hyperspace/ethereum/src/abi/ibc-connection-abi.json",
+	"/Users/vmark/work/centauri-private/hyperspace/ethereum/src/abi/ibc-connection-abi.json",
 	event_derives (serde::Deserialize, serde::Serialize);
 
 	IbcPacketAbi,
-	"hyperspace/ethereum/src/abi/ibc-packet-abi.json",
+	"/Users/vmark/work/centauri-private/hyperspace/ethereum/src/abi/ibc-packet-abi.json",
 	event_derives (serde::Deserialize, serde::Serialize);
 
 	IbcQuerierAbi,
-	"hyperspace/ethereum/src/abi/ibc-querier-abi.json",
+	"/Users/vmark/work/centauri-private/hyperspace/ethereum/src/abi/ibc-querier-abi.json",
 	event_derives (serde::Deserialize, serde::Serialize);
 
 	Ics20TransferBankAbi,
-	"hyperspace/ethereum/src/abi/ics20-transfer-bank-abi.json",
+	"/Users/vmark/work/centauri-private/hyperspace/ethereum/src/abi/ics20-transfer-bank-abi.json",
 	event_derives (serde::Deserialize, serde::Serialize);
 
 	Ics20BankAbi,
-	"hyperspace/ethereum/src/abi/ics20-bank-abi.json",
+	"/Users/vmark/work/centauri-private/hyperspace/ethereum/src/abi/ics20-bank-abi.json",
 	event_derives (serde::Deserialize, serde::Serialize);
 
 	TendermintClientAbi,
-	"hyperspace/ethereum/src/abi/tendermint-client-abi.json",
+	"/Users/vmark/work/centauri-private/hyperspace/ethereum/src/abi/tendermint-client-abi.json",
 	event_derives (serde::Deserialize, serde::Serialize);
 
 	DiamondAbi,
-	"hyperspace/ethereum/src/abi/diamond-abi.json",
+	"/Users/vmark/work/centauri-private/hyperspace/ethereum/src/abi/diamond-abi.json",
 	event_derives (serde::Deserialize, serde::Serialize);
 
 	DiamondCutFacetAbi,
-	"hyperspace/ethereum/src/abi/diamond-cut-facet-abi.json",
+	"/Users/vmark/work/centauri-private/hyperspace/ethereum/src/abi/diamond-cut-facet-abi.json",
 	event_derives (serde::Deserialize, serde::Serialize);
 
 	DiamondLoupeFacetAbi,
-	"hyperspace/ethereum/src/abi/diamond-loupe-facet-abi.json",
+	"/Users/vmark/work/centauri-private/hyperspace/ethereum/src/abi/diamond-loupe-facet-abi.json",
 	event_derives (serde::Deserialize, serde::Serialize);
 
 	OwnershipFacetAbi,
-	"hyperspace/ethereum/src/abi/ownership-facet-abi.json",
+	"/Users/vmark/work/centauri-private/hyperspace/ethereum/src/abi/ownership-facet-abi.json",
 	event_derives (serde::Deserialize, serde::Serialize);
 );
 

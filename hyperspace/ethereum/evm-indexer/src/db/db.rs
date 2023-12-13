@@ -6,11 +6,12 @@ use futures::TryStreamExt;
 use log::*;
 use redis::Commands;
 use sqlx::{
+	migrate::{Migration, MigrationType},
 	postgres::{PgConnectOptions, PgPoolOptions},
 	ConnectOptions, Execute, QueryBuilder, Row,
 };
 
-use crate::chains::chains::Chain;
+use crate::{chains::chains::Chain, db::migration::migrate};
 
 use super::models::models::{
 	DatabaseBlock, DatabaseChainIndexedState, DatabaseContract, DatabaseContractInformation,
@@ -41,7 +42,7 @@ impl Database {
 			.expect("Unable to connect to the database");
 
 		let redis = redis::Client::open(redis_url).expect("Unable to connect with Redis server");
-
+		migrate(&db_conn).await?;
 		Ok(Self { chain, redis, db_conn })
 	}
 
