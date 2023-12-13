@@ -81,6 +81,7 @@ finality-grandpa = { version = "0.16.2", features = [
 [dependencies.ibc]
 path = "../../ibc/modules"
 default-features = false
+features = ["mocks"]
 
 [dependencies.ibc-derive]
 path = "../../ibc/derive"
@@ -122,7 +123,7 @@ features = ["mocks"]
 
 [features]
 default = ["std"]
-testing = []
+testing = ["ibc/mocks"]
 std = [
 	"codec/std",
 	"log/std",

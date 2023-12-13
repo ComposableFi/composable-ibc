@@ -1114,7 +1114,7 @@ pub mod pallet {
 					)
 				},
 				AnyClientState::Wasm(_) => return Err(Error::<T>::ClientFreezeFailed.into()),
-				#[cfg(test)]
+				#[cfg(any(test, feature = "testing"))]
 				AnyClientState::Mock(mut ms) => {
 					ms.frozen_height =
 						Some(Height::new(ms.latest_height().revision_number, height));

@@ -9,6 +9,7 @@ use consensus_state::convert_new_consensus_state_to_old;
 use core::{pin::Pin, str::FromStr, time::Duration};
 use ics07_tendermint::client_state::ClientState as TmClientState;
 use msgs::convert_old_msgs_to_new;
+use serde::{Deserialize, Serialize};
 use solana_transaction_status::UiTransactionEncoding;
 use tokio::sync::mpsc::unbounded_channel;
 
@@ -28,7 +29,7 @@ use anchor_client::{
 		signature::{Keypair, Signature},
 		signer::Signer as AnchorSigner,
 	},
-	Client as AnchorClient, Cluster, Program,
+	Client as AnchorClient, Cluster, Program
 };
 use anchor_lang::{prelude::*, system_program};
 use error::Error;
@@ -85,6 +86,7 @@ mod consensus_state;
 mod error;
 mod events;
 mod msgs;
+mod test_provider;
 // mod ibc_storage;
 // mod ids;
 // mod instructions;
@@ -132,6 +134,7 @@ pub struct SolanaClient {
 	pub channel_whitelist: Arc<Mutex<HashSet<(ChannelId, PortId)>>>,
 }
 
+#[derive(std::fmt::Debug, Serialize, Deserialize, Clone)]
 pub struct SolanaClientConfig {
 	/// Chain name
 	pub name: String,
@@ -159,7 +162,11 @@ pub struct SolanaClientConfig {
 	pub wasm_code_id: Option<String>,
 	pub common_state_config: CommonClientConfig,
 	/// Reference to commitment
-	pub commitment_prefix: CommitmentPrefix,
+	pub commitment_prefix: Vec<u8>,
+	/// Channels cleared for packet relay
+	pub channel_whitelist: Vec<(ChannelId, PortId)>,
+	pub commitment_level: String,
+	pub private_key: Vec<u8>,
 }
 
 #[derive(Debug, Clone)]
@@ -176,6 +183,13 @@ pub struct KeyEntry {
 impl KeyEntry {
 	fn keypair(&self) -> Keypair {
 		Keypair::from_bytes(&self.private_key).unwrap()
+	}
+}
+
+impl From<Vec<u8>> for KeyEntry {
+	fn from(value: Vec<u8>) -> Self {
+		let keypair = Keypair::from_bytes(&value).unwrap();
+		Self { public_key: keypair.pubkey(), private_key: value }
 	}
 }
 
@@ -217,10 +231,11 @@ impl SolanaClient {
 		trie
 	}
 
-	pub fn get_ibc_storage(&self) -> PrivateStorage {
+	pub async fn get_ibc_storage(&self) -> PrivateStorage {
 		let program = self.program();
 		let ibc_storage_key = self.get_ibc_storage_key();
-		let storage = program.account(ibc_storage_key).unwrap();
+		// let account: PrivateStorage = program.account(ibc_storage_key).await.unwrap();
+		let storage = program.account(ibc_storage_key).await.unwrap();
 		storage
 	}
 
@@ -241,18 +256,44 @@ impl SolanaClient {
 		program.rpc()
 	}
 
-	pub fn client(&self) -> AnchorClient<Rc<Keypair>> {
+	pub fn client(&self) -> AnchorClient<Arc<Keypair>> {
 		let cluster = Cluster::from_str(&self.rpc_url).unwrap();
 		let signer = self.keybase.keypair();
-		let authority = Rc::new(signer);
+		let authority = Arc::new(signer);
 		let client =
 			AnchorClient::new_with_options(cluster, authority, CommitmentConfig::processed());
 		client
 	}
 
-	pub fn program(&self) -> Program<Rc<Keypair>> {
+	pub fn program(&self) -> Program<Arc<Keypair>> {
 		let anchor_client = self.client();
 		anchor_client.program(self.program_id).unwrap()
+	}
+
+	pub async fn new(config: SolanaClientConfig) -> Result<Self, Error> {
+		Ok(Self {
+			name: config.name,
+			rpc_url: config.rpc_url.to_string(),
+			chain_id: config.chain_id,
+			client_id: config.client_id,
+			connection_id: config.connection_id,
+			account_prefix: config.account_prefix,
+			fee_denom: config.fee_denom,
+			keybase: config.private_key.into(),
+			max_tx_size: config.max_tx_size,
+			commitment_level: CommitmentLevel::from_str(&config.commitment_level).unwrap(),
+			program_id: solana_ibc::ID,
+			common_state: CommonClientState::default(),
+			client_type: "07-tendermint".to_string(),
+			last_searched_sig_for_send_packets: Arc::new(
+				tokio::sync::Mutex::new(String::default()),
+			),
+			last_searched_sig_for_recv_packets: Arc::new(
+				tokio::sync::Mutex::new(String::default()),
+			),
+			commitment_prefix: CommitmentPrefix::try_from(config.commitment_prefix).unwrap(),
+			channel_whitelist: Arc::new(Mutex::new(config.channel_whitelist.into_iter().collect())),
+		})
 	}
 }
 
@@ -315,7 +356,7 @@ impl IbcProvider for SolanaClient {
 		consensus_height: Height,
 	) -> Result<QueryConsensusStateResponse, Self::Error> {
 		let trie = self.get_trie().await;
-		let storage = self.get_ibc_storage();
+		let storage = self.get_ibc_storage().await;
 		let revision_height = consensus_height.revision_height;
 		let revision_number = consensus_height.revision_number;
 		let new_client_id =
@@ -369,7 +410,7 @@ deserialize consensus state"
 		client_id: ClientId,
 	) -> Result<QueryClientStateResponse, Self::Error> {
 		let trie = self.get_trie().await;
-		let storage = self.get_ibc_storage();
+		let storage = self.get_ibc_storage().await;
 		let new_client_id =
 			ibc_new::core::host::types::identifiers::ClientId::from_str(client_id.as_str())
 				.unwrap();
@@ -408,7 +449,7 @@ deserialize client state"
 		connection_id: ConnectionId,
 	) -> Result<QueryConnectionResponse, Self::Error> {
 		let trie = self.get_trie().await;
-		let storage = self.get_ibc_storage();
+		let storage = self.get_ibc_storage().await;
 		let connection_idx = ConnectionIdx::try_from(
 			ibc_new::core::host::types::identifiers::ConnectionId::from_str(connection_id.as_str())
 				.unwrap(),
@@ -470,7 +511,7 @@ deserialize client state"
 		port_id: ibc::core::ics24_host::identifier::PortId,
 	) -> Result<QueryChannelResponse, Self::Error> {
 		let trie = self.get_trie().await;
-		let storage = self.get_ibc_storage();
+		let storage = self.get_ibc_storage().await;
 		let new_port_id =
 			ibc_new::core::host::types::identifiers::PortId::from_str(port_id.as_str()).unwrap();
 		let new_channel_id =
@@ -597,7 +638,7 @@ deserialize client state"
 		channel_id: &ibc::core::ics24_host::identifier::ChannelId,
 	) -> Result<QueryNextSequenceReceiveResponse, Self::Error> {
 		let trie = self.get_trie().await;
-		let storage = self.get_ibc_storage();
+		let storage = self.get_ibc_storage().await;
 		let new_port_id =
 			ibc_new::core::host::types::identifiers::PortId::from_str(port_id.as_str()).unwrap();
 		let new_channel_id =
@@ -815,13 +856,14 @@ deserialize client state"
 		self.channel_whitelist.lock().unwrap().clone()
 	}
 
-	/// We just return all the channels since there doesnt seem to be any kind of relation between connection ID and channels.
+	/// We just return all the channels since there doesnt seem to be any kind of relation between
+	/// connection ID and channels.
 	async fn query_connection_channels(
 		&self,
 		at: Height,
 		_connection_id: &ConnectionId,
 	) -> Result<ibc_proto::ibc::core::channel::v1::QueryChannelsResponse, Self::Error> {
-		let storage = self.get_ibc_storage();
+		let storage = self.get_ibc_storage().await;
 		let channels: Vec<IdentifiedChannel> = storage
 			.channel_ends
 			.into_iter()
@@ -1088,7 +1130,7 @@ deserialize client state"
 		client_id: ClientId,
 		client_height: Height,
 	) -> Result<(Height, ibc::timestamp::Timestamp), Self::Error> {
-		let storage = self.get_ibc_storage();
+		let storage = self.get_ibc_storage().await;
 		let client_store = storage
 			.clients
 			.iter()
@@ -1216,7 +1258,7 @@ deserialize client state"
 	}
 
 	async fn query_clients(&self) -> Result<Vec<ClientId>, Self::Error> {
-		let storage = self.get_ibc_storage();
+		let storage = self.get_ibc_storage().await;
 		let client_ids: Vec<ClientId> = storage
 			.clients
 			.iter()
@@ -1234,7 +1276,7 @@ deserialize client state"
 		)>,
 		Self::Error,
 	> {
-		let storage = self.get_ibc_storage();
+		let storage = self.get_ibc_storage().await;
 		let channels: Vec<(ChannelId, PortId)> = BTreeMap::keys(&storage.channel_ends)
 			.map(|channel_end| {
 				(
@@ -1251,7 +1293,7 @@ deserialize client state"
 		_height: u32,
 		client_id: String,
 	) -> Result<Vec<IdentifiedConnection>, Self::Error> {
-		let storage = self.get_ibc_storage();
+		let storage = self.get_ibc_storage().await;
 		let client_id_key =
 			ibc_new::core::host::types::identifiers::ClientId::from_str(&client_id).unwrap();
 		let mut index = -1;
@@ -1541,7 +1583,7 @@ impl Chain for SolanaClient {
 
 	async fn submit(&self, messages: Vec<Any>) -> Result<Self::TransactionId, Error> {
 		let keypair = self.keybase.keypair();
-		let authority = Rc::new(keypair);
+		let authority = Arc::new(keypair);
 		let program = self.program();
 
 		// Build, sign, and send program instruction
@@ -1555,7 +1597,7 @@ impl Chain for SolanaClient {
 		// let all_messages = MsgEnvelope::try_from(messages[0].clone()).unwrap();
 		// .into_iter()
 
-		let sig: Signature = program
+		let sig = program
 			.request()
 			.accounts(solana_ibc::accounts::Deliver {
 				sender: authority.pubkey(),
@@ -1565,12 +1607,13 @@ impl Chain for SolanaClient {
 				system_program: system_program::ID,
 			})
 			.args(solana_ibc::instruction::Deliver { message: messages[0].clone() })
-			.payer(authority.clone())
-			.signer(&*authority)
+			// .payer(Arc::new(keypair))
+			.signer(&keypair)
 			.send_with_spinner_and_config(RpcSendTransactionConfig {
 				skip_preflight: true,
 				..RpcSendTransactionConfig::default()
 			})
+			.await
 			.unwrap();
 		Ok(sig.to_string())
 	}

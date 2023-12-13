@@ -251,17 +251,22 @@ where
 {
 	/// Initializes a [`CosmosClient`] given a [`CosmosClientConfig`]
 	pub async fn new(config: CosmosClientConfig) -> Result<Self, Error> {
+		println!("------------Hello-------------");
 		let (rpc_client, rpc_driver) = WebSocketClient::new(config.websocket_url.clone())
 			.await
 			.map_err(|e| Error::RpcError(format!("{:?}", e)))?;
+		println!("------------Hello-------------");
 		let rpc_http_client = HttpClient::new(config.rpc_url.clone())
 			.map_err(|e| Error::RpcError(format!("{:?}", e)))?;
+		println!("------------Hello-------------");
 		let ws_driver_jh = tokio::spawn(rpc_driver.run());
+		println!("------------Hello-------------");
 		let grpc_client = tonic::transport::Endpoint::new(config.grpc_url.to_string())
 			.map_err(|e| Error::RpcError(format!("{:?}", e)))?
 			.connect()
 			.await
 			.map_err(|e| Error::RpcError(format!("{:?}", e)))?;
+		println!("------------Hello-------------");
 
 		let chain_id = ChainId::from(config.chain_id);
 		let light_client =

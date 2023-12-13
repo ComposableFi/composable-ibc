@@ -17,19 +17,19 @@ use once_cell::sync::Lazy;
 
 static RELAY_URL: Lazy<String> = Lazy::new(|| {
 	let ip = std::env::var("RELAY_HOST").unwrap_or_else(|_| "127.0.0.1".to_string());
-	format!("ws://{ip}:9944")
+	format!("ws://{ip}:8900")
 });
 
-static PARA_URL: Lazy<String> = Lazy::new(|| {
+static SOLANA_URL: Lazy<String> = Lazy::new(|| {
 	let ip = std::env::var("PARA_HOST").unwrap_or_else(|_| "127.0.0.1".to_string());
-	format!("ws://{ip}:9188")
+	format!("ws://{ip}:8900")
 });
 
 #[tokio::main]
 async fn main() -> anyhow::Result<()> {
 	if cfg!(feature = "build-metadata-from-ws") {
 		subxt_codegen::build_script(&RELAY_URL, "polkadot").await?;
-		subxt_codegen::build_script(&PARA_URL, "parachain").await?;
+		subxt_codegen::build_script(&SOLANA_URL, "parachain").await?;
 	}
 	Ok(())
 }

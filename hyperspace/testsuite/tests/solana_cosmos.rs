@@ -47,15 +47,15 @@ pub struct Args {
 
 impl Default for Args {
 	fn default() -> Self {
-		let relay = std::env::var("RELAY_HOST").unwrap_or_else(|_| "127.0.0.1".to_string());
-		let para = std::env::var("PARA_HOST").unwrap_or_else(|_| "127.0.0.1".to_string());
-		let cosmos = std::env::var("COSMOS_HOST").unwrap_or_else(|_| "127.0.0.1".to_string());
+		let relay = std::env::var("RELAY_HOST").unwrap_or_else(|_| "192.168.0.101".to_string());
+		let solana = std::env::var("SOLANA_HOST").unwrap_or_else(|_| "192.168.0.101".to_string());
+		let cosmos = std::env::var("COSMOS_HOST").unwrap_or_else(|_| "192.168.0.101".to_string());
 		let wasm_path = std::env::var("WASM_PATH").unwrap_or_else(|_| {
 			"../../target/wasm32-unknown-unknown/release/ics10_grandpa_cw.wasm".to_string()
 		});
 
 		Args {
-			chain_a: format!("ws://{para}:9188"),
+			chain_a: format!("http://{solana}:8899"),
 			chain_b: format!("http://{cosmos}:26657"),
 			relay_chain: format!("ws://{relay}:9944"),
 			para_id: 2000,
@@ -77,17 +77,20 @@ async fn setup_clients() -> (AnyChain, AnyChain) {
 		name: "solana".to_string(),
 		client_id: None,
 		connection_id: None,
-		commitment_prefix: args.connection_prefix_a.as_bytes().to_vec().into(),
+		commitment_prefix: args.connection_prefix_a.as_bytes().to_vec(),
 		wasm_code_id: None,
     rpc_url: args.chain_a.clone().parse().unwrap(),
     chain_id: "Solana".to_string(),
-    account_prefix: args.connection_prefix_a.as_bytes().to_vec().into(),
+    account_prefix: args.connection_prefix_a.clone(),
     fee_denom: "stake".to_string(),
     fee_amount: "4000".to_string(),
     gas_limit: (i64::MAX - 1) as u64,
-    store_prefix: args.connection_prefix_a.as_bytes().to_vec().into(),
+    store_prefix: args.connection_prefix_a,
     max_tx_size: 320000,
-    common_state_config: CommonClientConfig{ skip_optional_client_updates: true, max_packets_to_process: 1  }
+    common_state_config: CommonClientConfig{ skip_optional_client_updates: true, max_packets_to_process: 1  },
+    channel_whitelist: vec![],
+    commitment_level: "confirmed".to_string(), 
+    private_key: vec![48,123,8,80,248,0,217,142,124,193,95,24,168,139,214,136,147,210,168,135,26,36,162,89,150,185,99,191,247,135,78,111,12,8,4,81,129,165,153,230,192,225,51,119,216,14,69,225,73,7,204,144,39,213,91,255,136,38,95,131,197,4,101,186],
 	};
 
 	let mut config_b = CosmosClientConfig {
@@ -116,21 +119,25 @@ async fn setup_clients() -> (AnyChain, AnyChain) {
 		skip_tokens_list: Some(vec!["uosmo".to_string()]),
 	};
 
-	let chain_b = CosmosClient::<DefaultConfig>::new(config_b.clone()).await.unwrap();
+	println!("This is config b {:?}", config_b);
 
-	let wasm_data = tokio::fs::read(&args.wasm_path).await.expect("Failed to read wasm file");
-	let code_id = match chain_b.upload_wasm(wasm_data.clone()).await {
-		Ok(code_id) => code_id,
-		Err(e) => {
-			let e_str = format!("{e:?}");
-			if !e_str.contains("wasm code already exists") {
-				panic!("Failed to upload wasm: {e_str}");
-			}
-			sha2_256(&wasm_data).to_vec()
-		},
-	};
-	let code_id_str = hex::encode(code_id);
-	config_b.wasm_code_id = Some(code_id_str);
+
+	let chain_a = SolanaClient::new(config_a.clone()).await.expect("Solana error");
+	let chain_b = CosmosClient::<DefaultConfig>::new(config_b.clone()).await.map_err(|e| println!("{:?}", e)).unwrap();
+
+	// let wasm_data = tokio::fs::read(&args.wasm_path).await.expect("Failed to read wasm file");
+	// let code_id = match chain_b.upload_wasm(wasm_data.clone()).await {
+	// 	Ok(code_id) => code_id,
+	// 	Err(e) => {
+	// 		let e_str = format!("{e:?}");
+	// 		if !e_str.contains("wasm code already exists") {
+	// 			panic!("Failed to upload wasm: {e_str}");
+	// 		}
+	// 		sha2_256(&wasm_data).to_vec()
+	// 	},
+	// };
+	// let code_id_str = hex::encode(code_id);
+	// config_b.wasm_code_id = Some(code_id_str);
 
 	let mut chain_a_wrapped = AnyConfig::Solana(config_a).into_client().await.unwrap();
 	let mut chain_b_wrapped = AnyConfig::Cosmos(config_b).into_client().await.unwrap();
@@ -170,11 +177,11 @@ async fn setup_clients() -> (AnyChain, AnyChain) {
 }
 
 #[tokio::test]
-#[ignore]
+// #[ignore]
 async fn solana_to_cosmos_ibc_messaging_full_integration_test() {
 	logging::setup_logging();
 
-	let asset_id_a = AnyAssetId::Solana(1);
+	let asset_id_a = AnyAssetId::Solana("1".to_string());
 	let asset_id_b = AnyAssetId::Cosmos(
 		"ibc/47B97D8FF01DA03FCB2F4B1FFEC931645F254E21EF465FA95CBA6888CB964DC4".to_string(),
 	);
@@ -256,7 +263,7 @@ async fn cosmos_to_solana_ibc_messaging_full_integration_test() {
 	chain_b.set_channel_whitelist(vec![(channel_b, PortId::transfer())].into_iter().collect());
 
 	let asset_id_a = AnyAssetId::Cosmos("stake".to_string());
-	let asset_id_b = AnyAssetId::Solana(2);
+	let asset_id_b = AnyAssetId::Solana(2.to_string());
 
 	// Run tests sequentially
 

@@ -218,7 +218,7 @@ pub enum AnyClient {
 	Beefy(ics11_beefy::client_def::BeefyClient<HostFunctionsManager>),
 	Tendermint(ics07_tendermint::client_def::TendermintClient<HostFunctionsManager>),
 	Wasm(ics08_wasm::client_def::WasmClient<AnyClient, AnyClientState, AnyConsensusState>),
-	#[cfg(test)]
+	#[cfg(any(test, feature = "testing"))]
 	Mock(ibc::mock::client_def::MockClient),
 }
 
@@ -228,7 +228,7 @@ pub enum AnyUpgradeOptions {
 	Beefy(ics11_beefy::client_state::UpgradeOptions),
 	Tendermint(ics07_tendermint::client_state::UpgradeOptions),
 	Wasm(Box<Self>),
-	#[cfg(test)]
+	#[cfg(any(test, feature = "testing"))]
 	Mock(()),
 }
 
@@ -242,7 +242,7 @@ pub enum AnyClientState {
 	Tendermint(ics07_tendermint::client_state::ClientState<HostFunctionsManager>),
 	#[ibc(proto_url = "WASM_CLIENT_STATE_TYPE_URL")]
 	Wasm(ics08_wasm::client_state::ClientState<AnyClient, Self, AnyConsensusState>),
-	#[cfg(test)]
+	#[cfg(any(test, feature = "testing"))]
 	#[ibc(proto_url = "MOCK_CLIENT_STATE_TYPE_URL")]
 	Mock(ibc::mock::client_state::MockClientState),
 }
@@ -297,7 +297,7 @@ impl AnyClientState {
 			AnyClientState::Beefy(client_state) => client_state.latest_height(),
 			AnyClientState::Tendermint(client_state) => client_state.latest_height(),
 			AnyClientState::Wasm(client_state) => client_state.latest_height(),
-			#[cfg(test)]
+			#[cfg(any(test, feature = "testing"))]
 			AnyClientState::Mock(client_state) => client_state.latest_height(),
 		}
 	}
@@ -313,7 +313,7 @@ pub enum AnyConsensusState {
 	Tendermint(ics07_tendermint::consensus_state::ConsensusState),
 	#[ibc(proto_url = "WASM_CONSENSUS_STATE_TYPE_URL")]
 	Wasm(ics08_wasm::consensus_state::ConsensusState<Self>),
-	#[cfg(test)]
+	#[cfg(any(test, feature = "testing"))]
 	#[ibc(proto_url = "MOCK_CONSENSUS_STATE_TYPE_URL")]
 	Mock(ibc::mock::client_state::MockConsensusState),
 }
@@ -339,7 +339,7 @@ pub enum AnyClientMessage {
 	Tendermint(ics07_tendermint::client_message::ClientMessage),
 	#[ibc(proto_url = "WASM_CLIENT_MESSAGE_TYPE_URL")]
 	Wasm(ics08_wasm::client_message::ClientMessage<Self>),
-	#[cfg(test)]
+	#[cfg(any(test, feature = "testing"))]
 	#[ibc(proto_url = "MOCK_CLIENT_MESSAGE_TYPE_URL")]
 	Mock(ibc::mock::header::MockClientMessage),
 }
@@ -365,7 +365,7 @@ impl AnyClientMessage {
 					h.inner.maybe_header_height(),
 				ics08_wasm::client_message::ClientMessage::Misbehaviour(_) => None,
 			},
-			#[cfg(test)]
+			#[cfg(any(test, feature = "testing"))]
 			Self::Mock(inner) => match inner {
 				ibc::mock::header::MockClientMessage::Header(h) => Some(h.height()),
 				ibc::mock::header::MockClientMessage::Misbehaviour(_) => None,
@@ -504,16 +504,16 @@ impl From<AnyClientMessage> for Any {
 				value: msg.encode_vec().expect("encode_vec failed"),
 			},
 
-			#[cfg(test)]
+			#[cfg(any(test, feature = "testing"))]
 			AnyClientMessage::Mock(_msg) => panic!("MockHeader can't be serialized"),
 		}
 	}
 }
 
-#[cfg(test)]
+#[cfg(any(test, feature = "testing"))]
 pub use mocks::*;
 
-#[cfg(test)]
+#[cfg(any(test, feature = "testing"))]
 mod mocks {
 	pub const MOCK_CLIENT_STATE_TYPE_URL: &str = "/ibc.mock.ClientState";
 	pub const MOCK_CLIENT_MESSAGE_TYPE_URL: &str = "/ibc.mock.ClientMessage";
