@@ -1,16 +1,12 @@
-name: "Build and publish Hyperspace Docker image"
+name: "Build and publish Grandpa Docker image"
 
 on:
   push:
-    branches:
-      - 'master'
-      - 'develop'
-      - 'release*'
     tags:
-      - 'v*'
+      - '*cosmos*'
 
 env:
-  IMAGE_NAME: ${{ github.repository }}
+  IMAGE_NAME: "composablefi/grandpa-cw"
 
 jobs:
   
@@ -21,7 +17,7 @@ jobs:
     runs-on: ubuntu-latest
     
     concurrency:
-      group: hyperspace-docker-image-${{ github.ref }}
+      group: grandpa-cw-image-${{ github.ref }}
       cancel-in-progress: true
     
     strategy:
@@ -68,7 +64,7 @@ jobs:
     - name: Build and push Docker image
       uses: docker/build-push-action@v5
       with:
-        file: scripts/hyperspace.Dockerfile
+        file: scripts/grandpa-cw.Dockerfile
         push: ${{ github.event_name != 'pull_request' }}
         tags: ${{ steps.meta.outputs.tags }}
         labels: ${{ steps.meta.outputs.labels }}

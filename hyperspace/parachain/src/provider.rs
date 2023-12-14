@@ -46,7 +46,7 @@ use ibc_proto::{
 };
 use ibc_rpc::{IbcApiClient, PacketInfo};
 use ics11_beefy::client_state::ClientState as BeefyClientState;
-use light_client_common::config::{AsInnerEvent, Config, IbcEventsT, RuntimeStorage};
+use light_client_common::config::{AsInnerEvent, IbcEventsT, RuntimeStorage};
 use pallet_ibc::{
 	light_clients::{AnyClientState, AnyConsensusState, HostFunctionsManager},
 	HostConsensusProof,

@@ -16,7 +16,6 @@
 
 use std::{
 	collections::{BTreeMap, HashSet},
-	f32::consts::E,
 	path::PathBuf,
 	str::FromStr,
 	sync::{Arc, Mutex},
@@ -75,7 +74,7 @@ use sp_runtime::{
 use ss58_registry::Ss58AddressFormat;
 use subxt::{
 	config::{Header as HeaderT, Header},
-	tx::{Signer, TxPayload},
+	tx::TxPayload,
 };
 use tokio::sync::Mutex as AsyncMutex;
 

@@ -43,7 +43,7 @@ impl Acknowledgement {
 	}
 
 	pub fn is_successful(&self) -> bool {
-		!matches!(self, Self::Error(s))
+		!matches!(self, Self::Error(_))
 	}
 
 	pub fn into_result(self) -> Result<String, String> {

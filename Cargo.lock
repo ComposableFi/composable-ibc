@@ -4604,7 +4604,7 @@ dependencies = [
  "hyperspace-parachain",
  "hyperspace-primitives",
  "ibc",
- "ibc-proto",
+ "ibc-proto 0.18.0",
  "ibc-rpc",
  "ics08-wasm",
  "ics10-grandpa",
@@ -4631,7 +4631,7 @@ dependencies = [
  "sp-trie 7.0.0",
  "subxt",
  "subxt-generated",
- "tendermint-proto",
+ "tendermint-proto 0.28.0",
  "thiserror",
  "tokio",
  "toml 0.7.6",
@@ -4652,8 +4652,8 @@ dependencies = [
  "hex",
  "hyperspace-primitives",
  "ibc",
- "ibc-primitives",
- "ibc-proto",
+ "ibc-primitives 0.1.0",
+ "ibc-proto 0.18.0",
  "ibc-rpc",
  "ics07-tendermint",
  "ics08-wasm",
@@ -4670,10 +4670,10 @@ dependencies = [
  "serde",
  "serde_json",
  "sha2 0.10.6",
- "tendermint",
+ "tendermint 0.28.0",
  "tendermint-light-client",
  "tendermint-light-client-verifier",
- "tendermint-proto",
+ "tendermint-proto 0.28.0",
  "tendermint-rpc",
  "thiserror",
  "tiny-bip39",
@@ -4691,10 +4691,10 @@ dependencies = [
  "futures-util",
  "hyper",
  "ibc",
- "ibc-proto",
+ "ibc-proto 0.18.0",
  "log",
  "prometheus",
- "tendermint-proto",
+ "tendermint-proto 0.28.0",
  "thiserror",
  "tokio",
 ]
@@ -4720,8 +4720,8 @@ dependencies = [
  "hex-literal 0.3.4",
  "hyperspace-primitives",
  "ibc",
- "ibc-primitives",
- "ibc-proto",
+ "ibc-primitives 0.1.0",
+ "ibc-proto 0.18.0",
  "ibc-rpc",
  "ics10-grandpa",
  "ics11-beefy",
@@ -4760,7 +4760,7 @@ dependencies = [
  "ss58-registry",
  "subxt",
  "subxt-generated",
- "tendermint-proto",
+ "tendermint-proto 0.28.0",
  "thiserror",
  "tokio",
  "tokio-stream",
@@ -4775,7 +4775,7 @@ dependencies = [
  "futures",
  "hex",
  "ibc",
- "ibc-proto",
+ "ibc-proto 0.18.0",
  "ibc-rpc",
  "ics08-wasm",
  "log",
@@ -4804,7 +4804,7 @@ dependencies = [
  "hyperspace-parachain",
  "hyperspace-primitives",
  "ibc",
- "ibc-proto",
+ "ibc-proto 0.18.0",
  "ics10-grandpa",
  "light-client-common",
  "log",
@@ -4822,7 +4822,7 @@ dependencies = [
  "sp-state-machine 0.13.0",
  "sp-trie 7.0.0",
  "subxt",
- "tendermint-proto",
+ "tendermint-proto 0.28.0",
  "tokio",
  "toml 0.7.6",
 ]
@@ -4860,9 +4860,10 @@ dependencies = [
  "env_logger 0.9.3",
  "flex-error",
  "hex",
+ "ibc-core-host-types",
  "ibc-derive",
- "ibc-proto",
- "ics23",
+ "ibc-proto 0.18.0",
+ "ics23 0.10.0",
  "log",
  "modelator",
  "num-traits",
@@ -4879,14 +4880,25 @@ dependencies = [
  "sp-core 7.0.0",
  "sp-std 5.0.0",
  "subtle-encoding",
- "tendermint",
- "tendermint-proto",
+ "tendermint 0.28.0",
+ "tendermint-proto 0.28.0",
  "test-log",
  "time 0.3.17",
  "tokio",
  "tracing",
  "tracing-subscriber 0.3.16",
  "uint",
+]
+
+[[package]]
+name = "ibc-core-host-types"
+version = "0.48.1"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "616955da310febbe93c0569a2feebd9f57cafed3eee5a56b0c3bb953a75f6089"
+dependencies = [
+ "derive_more",
+ "displaydoc",
+ "ibc-primitives 0.48.1",
 ]
 
 [[package]]
@@ -4924,6 +4936,20 @@ dependencies = [
 ]
 
 [[package]]
+name = "ibc-primitives"
+version = "0.48.1"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "d5edea4685267fd68514c87e7aa3a62712340c4cff6903f088a9ab571428a08a"
+dependencies = [
+ "derive_more",
+ "displaydoc",
+ "ibc-proto 0.38.0",
+ "prost 0.12.3",
+ "tendermint 0.34.0",
+ "time 0.3.17",
+]
+
+[[package]]
 name = "ibc-proto"
 version = "0.18.0"
 dependencies = [
@@ -4932,8 +4958,23 @@ dependencies = [
  "prost 0.11.6",
  "schemars",
  "serde",
- "tendermint-proto",
+ "tendermint-proto 0.28.0",
  "tonic",
+]
+
+[[package]]
+name = "ibc-proto"
+version = "0.38.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "93cbf4cbe9e5113cc7c70f3208a7029b2205c629502cbb2ae7ea0a09a97d3005"
+dependencies = [
+ "base64 0.21.0",
+ "bytes",
+ "flex-error",
+ "ics23 0.11.0",
+ "prost 0.12.3",
+ "subtle-encoding",
+ "tendermint-proto 0.34.0",
 ]
 
 [[package]]
@@ -4955,8 +4996,8 @@ dependencies = [
  "frame-system",
  "ibc",
  "ibc-derive",
- "ibc-primitives",
- "ibc-proto",
+ "ibc-primitives 0.1.0",
+ "ibc-proto 0.18.0",
  "ibc-runtime-api",
  "jsonrpsee",
  "pallet-ibc",
@@ -4970,14 +5011,14 @@ dependencies = [
  "sp-core 7.0.0",
  "sp-runtime 7.0.0",
  "sp-trie 7.0.0",
- "tendermint-proto",
+ "tendermint-proto 0.28.0",
 ]
 
 [[package]]
 name = "ibc-runtime-api"
 version = "0.1.0"
 dependencies = [
- "ibc-primitives",
+ "ibc-primitives 0.1.0",
  "pallet-ibc",
  "parity-scale-codec",
  "sp-api",
@@ -4994,8 +5035,8 @@ dependencies = [
  "hex",
  "ibc",
  "ibc-derive",
- "ibc-proto",
- "ics23",
+ "ibc-proto 0.18.0",
+ "ics23 0.10.0",
  "log",
  "modelator",
  "prost 0.11.6",
@@ -5003,9 +5044,9 @@ dependencies = [
  "serde_json",
  "sha2 0.10.6",
  "subtle-encoding",
- "tendermint",
+ "tendermint 0.28.0",
  "tendermint-light-client-verifier",
- "tendermint-proto",
+ "tendermint-proto 0.28.0",
  "tendermint-rpc",
  "tendermint-testgen",
  "test-log",
@@ -5031,10 +5072,10 @@ dependencies = [
  "hyperspace-primitives",
  "ibc",
  "ibc-derive",
- "ibc-proto",
+ "ibc-proto 0.18.0",
  "ics07-tendermint",
  "ics08-wasm",
- "ics23",
+ "ics23 0.10.0",
  "pallet-ibc",
  "prost 0.11.6",
  "schemars",
@@ -5043,9 +5084,9 @@ dependencies = [
  "serde_json",
  "sha2 0.10.6",
  "sha3",
- "tendermint",
+ "tendermint 0.28.0",
  "tendermint-light-client-verifier",
- "tendermint-proto",
+ "tendermint-proto 0.28.0",
  "thiserror",
 ]
 
@@ -5056,10 +5097,10 @@ dependencies = [
  "cosmwasm-schema",
  "hex",
  "ibc",
- "ibc-proto",
+ "ibc-proto 0.18.0",
  "prost 0.11.6",
  "serde",
- "tendermint-proto",
+ "tendermint-proto 0.28.0",
 ]
 
 [[package]]
@@ -5080,14 +5121,14 @@ dependencies = [
  "hyperspace-core",
  "ibc",
  "ibc-derive",
- "ibc-proto",
+ "ibc-proto 0.18.0",
  "jsonrpsee-ws-client",
  "light-client-common",
  "log",
  "parity-scale-codec",
  "prost 0.11.6",
  "prost-build",
- "prost-types",
+ "prost-types 0.11.6",
  "sc-consensus-grandpa-rpc",
  "serde",
  "serde_json",
@@ -5097,8 +5138,8 @@ dependencies = [
  "sp-state-machine 0.13.0",
  "sp-trie 7.0.0",
  "subxt",
- "tendermint",
- "tendermint-proto",
+ "tendermint 0.28.0",
+ "tendermint-proto 0.28.0",
  "tokio",
 ]
 
@@ -5121,10 +5162,10 @@ dependencies = [
  "hyperspace-primitives",
  "ibc",
  "ibc-derive",
- "ibc-proto",
+ "ibc-proto 0.18.0",
  "ics08-wasm",
  "ics10-grandpa",
- "ics23",
+ "ics23 0.10.0",
  "light-client-common",
  "pallet-ibc",
  "prost 0.11.6",
@@ -5139,8 +5180,8 @@ dependencies = [
  "sp-runtime 7.0.0",
  "sp-runtime-interface 7.0.0",
  "sp-std 5.0.0",
- "tendermint",
- "tendermint-proto",
+ "tendermint 0.28.0",
+ "tendermint-proto 0.28.0",
  "thiserror",
  "twox-hash",
 ]
@@ -5160,12 +5201,12 @@ dependencies = [
  "hyperspace-core",
  "ibc",
  "ibc-derive",
- "ibc-proto",
+ "ibc-proto 0.18.0",
  "light-client-common",
  "parity-scale-codec",
  "prost 0.11.6",
  "prost-build",
- "prost-types",
+ "prost-types 0.11.6",
  "serde",
  "serde_json",
  "sp-consensus-beefy",
@@ -5176,8 +5217,8 @@ dependencies = [
  "sp-storage 7.0.0",
  "sp-trie 7.0.0",
  "subxt",
- "tendermint",
- "tendermint-proto",
+ "tendermint 0.28.0",
+ "tendermint-proto 0.28.0",
  "tokio",
 ]
 
@@ -5192,8 +5233,8 @@ dependencies = [
  "flex-error",
  "ibc",
  "ibc-derive",
- "ibc-proto",
- "ics23",
+ "ibc-proto 0.18.0",
+ "ics23 0.10.0",
  "modelator",
  "num-traits",
  "parity-scale-codec",
@@ -5207,8 +5248,8 @@ dependencies = [
  "sha3",
  "sp-core 7.0.0",
  "subtle-encoding",
- "tendermint",
- "tendermint-proto",
+ "tendermint 0.28.0",
+ "tendermint-proto 0.28.0",
  "tendermint-rpc",
  "tendermint-testgen",
  "test-log",
@@ -5231,6 +5272,18 @@ dependencies = [
  "ripemd",
  "sha2 0.10.6",
  "sha3",
+]
+
+[[package]]
+name = "ics23"
+version = "0.11.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "661e2d6f79952a65bc92b1c81f639ebd37228dae6ff412a5aba7d474bdc4b957"
+dependencies = [
+ "anyhow",
+ "bytes",
+ "hex",
+ "prost 0.12.3",
 ]
 
 [[package]]
@@ -6395,7 +6448,7 @@ dependencies = [
  "derive_more",
  "hash-db",
  "ibc",
- "ibc-proto",
+ "ibc-proto 0.18.0",
  "parity-scale-codec",
  "serde",
  "sp-consensus-beefy",
@@ -7760,13 +7813,13 @@ dependencies = [
  "hex-literal 0.3.4",
  "ibc",
  "ibc-derive",
- "ibc-primitives",
- "ibc-proto",
+ "ibc-primitives 0.1.0",
+ "ibc-proto 0.18.0",
  "ics07-tendermint",
  "ics08-wasm",
  "ics10-grandpa",
  "ics11-beefy",
- "ics23",
+ "ics23 0.10.0",
  "light-client-common",
  "log",
  "orml-tokens",
@@ -7795,9 +7848,9 @@ dependencies = [
  "sp-runtime 7.0.0",
  "sp-std 5.0.0",
  "sp-trie 7.0.0",
- "tendermint",
+ "tendermint 0.28.0",
  "tendermint-light-client-verifier",
- "tendermint-proto",
+ "tendermint-proto 0.28.0",
 ]
 
 [[package]]
@@ -7807,7 +7860,7 @@ dependencies = [
  "frame-support",
  "frame-system",
  "ibc",
- "ibc-primitives",
+ "ibc-primitives 0.1.0",
  "log",
  "parity-scale-codec",
  "scale-info",
@@ -8496,7 +8549,7 @@ dependencies = [
  "derive_more",
  "frame-benchmarking",
  "frame-benchmarking-cli",
- "ibc-primitives",
+ "ibc-primitives 0.1.0",
  "ibc-rpc",
  "ibc-runtime-api",
  "jsonrpsee",
@@ -8570,7 +8623,7 @@ dependencies = [
  "frame-try-runtime",
  "hex-literal 0.3.4",
  "ibc",
- "ibc-primitives",
+ "ibc-primitives 0.1.0",
  "ibc-runtime-api",
  "log",
  "orml-asset-registry",
@@ -10399,6 +10452,16 @@ dependencies = [
 ]
 
 [[package]]
+name = "prost"
+version = "0.12.3"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "146c289cda302b98a28d40c8b3b90498d6e526dd24ac2ecea73e4e491685b94a"
+dependencies = [
+ "bytes",
+ "prost-derive 0.12.3",
+]
+
+[[package]]
 name = "prost-build"
 version = "0.11.6"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -10413,7 +10476,7 @@ dependencies = [
  "petgraph",
  "prettyplease 0.1.23",
  "prost 0.11.6",
- "prost-types",
+ "prost-types 0.11.6",
  "regex",
  "syn 1.0.109",
  "tempfile",
@@ -10447,6 +10510,19 @@ dependencies = [
 ]
 
 [[package]]
+name = "prost-derive"
+version = "0.12.3"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "efb6c9a1dd1def8e2124d17e83a20af56f1570d6c2d2bd9e266ccb768df3840e"
+dependencies = [
+ "anyhow",
+ "itertools",
+ "proc-macro2",
+ "quote",
+ "syn 2.0.32",
+]
+
+[[package]]
 name = "prost-types"
 version = "0.11.6"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -10454,6 +10530,15 @@ checksum = "a5e0526209433e96d83d750dd81a99118edbc55739e7e61a46764fd2ad537788"
 dependencies = [
  "bytes",
  "prost 0.11.6",
+]
+
+[[package]]
+name = "prost-types"
+version = "0.12.3"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "193898f59edcf43c26227dcd4c8427f00d99d61e95dcde58dabd49fa291d470e"
+dependencies = [
+ "prost 0.12.3",
 ]
 
 [[package]]
@@ -13052,11 +13137,11 @@ name = "simple-iavl"
 version = "0.1.0"
 dependencies = [
  "bytes",
- "ics23",
+ "ics23 0.10.0",
  "proptest",
  "rand 0.8.5",
  "sha2 0.10.6",
- "tendermint",
+ "tendermint 0.28.0",
 ]
 
 [[package]]
@@ -14763,7 +14848,7 @@ dependencies = [
  "num-traits",
  "once_cell",
  "prost 0.11.6",
- "prost-types",
+ "prost-types 0.11.6",
  "ripemd",
  "serde",
  "serde_bytes",
@@ -14773,7 +14858,34 @@ dependencies = [
  "signature 1.6.4",
  "subtle",
  "subtle-encoding",
- "tendermint-proto",
+ "tendermint-proto 0.28.0",
+ "time 0.3.17",
+ "zeroize",
+]
+
+[[package]]
+name = "tendermint"
+version = "0.34.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "bc2294fa667c8b548ee27a9ba59115472d0a09c2ba255771092a7f1dcf03a789"
+dependencies = [
+ "bytes",
+ "digest 0.10.6",
+ "ed25519 2.2.2",
+ "flex-error",
+ "futures",
+ "num-traits",
+ "once_cell",
+ "prost 0.12.3",
+ "prost-types 0.12.3",
+ "serde",
+ "serde_bytes",
+ "serde_json",
+ "serde_repr",
+ "signature 2.1.0",
+ "subtle",
+ "subtle-encoding",
+ "tendermint-proto 0.34.0",
  "time 0.3.17",
  "zeroize",
 ]
@@ -14786,7 +14898,7 @@ dependencies = [
  "flex-error",
  "serde",
  "serde_json",
- "tendermint",
+ "tendermint 0.28.0",
  "toml 0.5.11",
  "url",
 ]
@@ -14805,7 +14917,7 @@ dependencies = [
  "serde_cbor",
  "serde_derive",
  "static_assertions",
- "tendermint",
+ "tendermint 0.28.0",
  "tendermint-light-client-verifier",
  "tendermint-rpc",
  "time 0.3.17",
@@ -14820,7 +14932,7 @@ dependencies = [
  "derive_more",
  "flex-error",
  "serde",
- "tendermint",
+ "tendermint 0.28.0",
  "time 0.3.17",
 ]
 
@@ -14834,7 +14946,25 @@ dependencies = [
  "num-derive",
  "num-traits",
  "prost 0.11.6",
- "prost-types",
+ "prost-types 0.11.6",
+ "serde",
+ "serde_bytes",
+ "subtle-encoding",
+ "time 0.3.17",
+]
+
+[[package]]
+name = "tendermint-proto"
+version = "0.34.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "2cc728a4f9e891d71adf66af6ecaece146f9c7a11312288a3107b3e1d6979aaf"
+dependencies = [
+ "bytes",
+ "flex-error",
+ "num-derive",
+ "num-traits",
+ "prost 0.12.3",
+ "prost-types 0.12.3",
  "serde",
  "serde_bytes",
  "subtle-encoding",
@@ -14863,7 +14993,7 @@ dependencies = [
  "serde_json",
  "subtle",
  "subtle-encoding",
- "tendermint",
+ "tendermint 0.28.0",
  "tendermint-config",
  "thiserror",
  "time 0.3.17",
@@ -14885,7 +15015,7 @@ dependencies = [
  "serde_json",
  "simple-error",
  "tempfile",
- "tendermint",
+ "tendermint 0.28.0",
  "time 0.3.17",
 ]
 

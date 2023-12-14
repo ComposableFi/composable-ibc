@@ -88,11 +88,14 @@ impl From<SendPingParams> for FakeSendPingParams {
 #[derive(Debug, Clone)]
 pub enum PicassoKusamaConfig {}
 
-define_id!(PicassoId, relaychain::api::runtime_types::polkadot_parachain::primitives::Id);
+define_id!(
+	PicassoId,
+	relaychain::api::runtime_types::polkadot_parachain_primitives::primitives::Id
+);
 
 define_head_data!(
 	PicassoHeadData,
-	relaychain::api::runtime_types::polkadot_parachain::primitives::HeadData,
+	relaychain::api::runtime_types::polkadot_parachain_primitives::primitives::HeadData,
 );
 
 define_para_lifecycle!(PicassoParaLifecycle, ParaLifecycle);
