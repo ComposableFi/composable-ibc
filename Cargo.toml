@@ -57,6 +57,8 @@ jsonrpsee = { version = "0.16.3" }
 [patch.crates-io]
 aes-gcm-siv = { git = "https://github.com/dhruvja/AEADs", branch = "main-aes-gcm-siv-v0.10.3" }
 curve25519-dalek = { git = "https://github.com/dhruvja/curve25519-dalek", branch = "master" }
+# anchor-client = { path = "../anchor/client" }
+# anchor-lang = { path = "../anchor/lang" }
 
 [patch."https://github.com/paritytech/substrate"]
 sc-executor = { git = "https://github.com/paritytech//substrate.git", branch = "polkadot-v0.9.43" }

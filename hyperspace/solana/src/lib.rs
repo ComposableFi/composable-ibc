@@ -86,6 +86,7 @@ mod consensus_state;
 mod error;
 mod events;
 mod msgs;
+#[cfg(feature = "testing")]
 mod test_provider;
 // mod ibc_storage;
 // mod ids;
@@ -235,7 +236,9 @@ impl SolanaClient {
 		let program = self.program();
 		let ibc_storage_key = self.get_ibc_storage_key();
 		// let account: PrivateStorage = program.account(ibc_storage_key).await.unwrap();
-		let storage = program.account(ibc_storage_key).await.unwrap();
+		let storage = tokio::task::spawn_blocking(move || {
+			program.account(ibc_storage_key).unwrap()
+		}).await.unwrap();
 		storage
 	}
 
@@ -385,8 +388,7 @@ impl IbcProvider for SolanaClient {
 					.unwrap(),
 			)
 			.ok_or(Error::Custom("No value at given key".to_owned()))?;
-		let consensus_state = serialized_consensus_state
-			.get()
+		let consensus_state = serialized_consensus_state.state()
 			.map_err(|_| {
 				Error::Custom(
 					"Could not
@@ -522,12 +524,10 @@ deserialize client state"
 		let (_, channel_end_proof) = trie
 			.prove(&channel_end_trie_key)
 			.map_err(|_| Error::Custom("value is sealed and cannot be fetched".to_owned()))?;
-		let serialized_channel_end = storage
-			.channel_ends
+		let inner_channel_end = storage
+			.port_channel
 			.get(&channel_end_path)
-			.ok_or(Error::Custom("No value at given key".to_owned()))?;
-		let inner_channel_end = Serialised::get(serialized_channel_end)
-			.map_err(|_| Error::Custom("Could not deserialize connection end".to_owned()))?;
+			.ok_or(Error::Custom("No value at given key".to_owned()))?.channel_end().unwrap().ok_or(Error::Custom("Channel end not found".to_owned()))?;
 		let inner_counterparty = inner_channel_end.counterparty();
 		let state = match inner_channel_end.state {
 			ibc_new::core::channel::types::channel::State::Uninitialized => 0,
@@ -648,10 +648,10 @@ deserialize client state"
 		let (_, next_sequence_recv_proof) = trie
 			.prove(&next_sequence_recv_trie_key)
 			.map_err(|_| Error::Custom("value is sealed and cannot be fetched".to_owned()))?;
-		let next_seq = storage
-			.next_sequence
+		let next_seq = &storage
+			.port_channel
 			.get(&next_sequence_recv_path)
-			.ok_or(Error::Custom("No value at given key".to_owned()))?;
+			.ok_or(Error::Custom("No value at given key".to_owned()))?.next_sequence;
 		let next_seq_recv = next_seq
 			.get(SequenceTripleIdx::Recv)
 			.ok_or(Error::Custom("No value set for the next sequence receive".to_owned()))?;
@@ -865,10 +865,10 @@ deserialize client state"
 	) -> Result<ibc_proto::ibc::core::channel::v1::QueryChannelsResponse, Self::Error> {
 		let storage = self.get_ibc_storage().await;
 		let channels: Vec<IdentifiedChannel> = storage
-			.channel_ends
+			.port_channel
 			.into_iter()
 			.map(|(key, value)| {
-				let channel = Serialised::get(&value).unwrap();
+				let channel = value.channel_end().unwrap().unwrap();
 				let state = match channel.state {
 					ibc_new::core::channel::types::channel::State::Uninitialized => 0,
 					ibc_new::core::channel::types::channel::State::Init => 1,
@@ -1142,19 +1142,20 @@ deserialize client state"
 		)
 		.unwrap();
 		let height = client_store
-			.processed_heights
+			.consensus_states
 			.get(&inner_client_height)
-			.ok_or("No host height found with the given height".to_owned())?;
+			.ok_or("No host height found with the given height".to_owned())?.processed_height().ok_or("No height found".to_owned())?;
 		let timestamp = client_store
-			.processed_times
+			.consensus_states
 			.get(&inner_client_height)
-			.ok_or("No timestamp found with the given height".to_owned())?;
+			.ok_or("No timestamp found with the given height".to_owned())?.processed_time().ok_or("No timestamp found".to_owned())?;
 		Ok((
 			Height {
-				revision_height: height.revision_height(),
-				revision_number: height.revision_number(),
+				revision_height: u64::from(height),
+				// TODO: Use epoch
+				revision_number: u64::from(height), 
 			},
-			Timestamp::from_nanoseconds(*timestamp).unwrap(),
+			Timestamp::from_nanoseconds(u64::from(timestamp)).unwrap(),
 		))
 	}
 
@@ -1277,11 +1278,11 @@ deserialize client state"
 		Self::Error,
 	> {
 		let storage = self.get_ibc_storage().await;
-		let channels: Vec<(ChannelId, PortId)> = BTreeMap::keys(&storage.channel_ends)
-			.map(|channel_end| {
+		let channels: Vec<(ChannelId, PortId)> = BTreeMap::keys(&storage.port_channel)
+			.map(|channel_store| {
 				(
-					ChannelId::from_str(&channel_end.channel_id().as_str()).unwrap(),
-					PortId::from_str(&channel_end.port_id().as_str()).unwrap(),
+					ChannelId::from_str(&channel_store.channel_id().as_str()).unwrap(),
+					PortId::from_str(&channel_store.port_id().as_str()).unwrap(),
 				)
 			})
 			.collect();
@@ -1384,8 +1385,10 @@ deserialize client state"
 	) -> Result<ClientId, Self::Error> {
 		let program = self.program();
 		let signature = Signature::from_str(&tx_id).unwrap();
-		let sol_rpc_client: RpcClient = program.rpc();
-		let tx = sol_rpc_client.get_transaction(&signature, UiTransactionEncoding::Json).unwrap();
+		let sol_rpc_client = self.sync_rpc_client();
+		let tx = tokio::task::spawn_blocking(move || {
+			sol_rpc_client.get_transaction(&signature, UiTransactionEncoding::Json).unwrap()
+		}).await.unwrap();
 		let logs = match tx.transaction.meta.unwrap().log_messages {
 			solana_transaction_status::option_serializer::OptionSerializer::Some(logs) => logs,
 			solana_transaction_status::option_serializer::OptionSerializer::None =>
@@ -1582,6 +1585,7 @@ impl Chain for SolanaClient {
 	}
 
 	async fn submit(&self, messages: Vec<Any>) -> Result<Self::TransactionId, Error> {
+		println!("Creating a client now");
 		let keypair = self.keybase.keypair();
 		let authority = Arc::new(keypair);
 		let program = self.program();
@@ -1597,7 +1601,8 @@ impl Chain for SolanaClient {
 		// let all_messages = MsgEnvelope::try_from(messages[0].clone()).unwrap();
 		// .into_iter()
 
-		let sig = program
+		let sig = tokio::task::spawn_blocking(move || {
+			program
 			.request()
 			.accounts(solana_ibc::accounts::Deliver {
 				sender: authority.pubkey(),
@@ -1608,13 +1613,13 @@ impl Chain for SolanaClient {
 			})
 			.args(solana_ibc::instruction::Deliver { message: messages[0].clone() })
 			// .payer(Arc::new(keypair))
-			.signer(&keypair)
+			.signer(&*authority)
 			.send_with_spinner_and_config(RpcSendTransactionConfig {
 				skip_preflight: true,
 				..RpcSendTransactionConfig::default()
 			})
-			.await
-			.unwrap();
+			.unwrap()
+		}).await.map_err(|e| Error::Custom("Async Error".to_owned()))?;
 		Ok(sig.to_string())
 	}
 
