@@ -15,10 +15,7 @@ use sync_committee_primitives::{
 };
 use EthereumClientAbi::*;
 
-sol!(
-	EthereumClientAbi,
-	"/Users/vmark/work/centauri-private/hyperspace/ethereum/src/abi/ethereum-client-abi.json"
-);
+sol!(EthereumClientAbi, "../../hyperspace/ethereum/src/abi/ethereum-client-abi.json");
 
 impl HeightData {
 	fn is_zero(&self) -> bool {

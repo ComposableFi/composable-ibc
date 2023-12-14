@@ -32,7 +32,7 @@ features = ["colors"]
 
 [[bin]]
 path = "bin/indexer.rs"
-name = "indexer"
+name = "evm-indexer"
 
 [[bin]]
 path = "bin/abi-fetcher.rs"
