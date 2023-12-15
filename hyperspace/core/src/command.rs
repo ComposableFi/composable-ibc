@@ -105,10 +105,10 @@ impl UploadWasmCmd {
 		let mut config: AnyConfig = toml::from_str(&file_content)?;
 		let client = config.clone().into_client().await?;
 		let wasm = tokio::fs::read(&self.wasm_path).await?;
-		let code_id = client.upload_wasm(wasm).await?;
-		let code_id_str = hex::encode(code_id);
-		println!("{code_id_str}");
-		config.set_wasm_code_id(code_id_str);
+		let checksum = client.upload_wasm(wasm).await?;
+		let checksum_str = hex::encode(checksum);
+		println!("{checksum_str}");
+		config.set_wasm_checksum(checksum_str);
 		Ok(config)
 	}
 

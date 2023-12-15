@@ -32,7 +32,7 @@ use ibc::{
 		ics02_client::{
 			client_consensus::ConsensusState,
 			client_state::ClientType,
-			events::{CodeId, UpdateClient},
+			events::{Checksum, UpdateClient},
 			msgs::{create_client::MsgCreateAnyClient, update_client::MsgUpdateAnyClient},
 		},
 		ics03_connection::msgs::{
@@ -106,7 +106,7 @@ chains! {
 	Solana(SolanaClientConfig, SolanaClient),
 }
 
-fn wrap_any_msg_into_wasm(msg: Any, code_id: Bytes) -> Result<Any, anyhow::Error> {
+fn wrap_any_msg_into_wasm(msg: Any, checksum: Bytes) -> Result<Any, anyhow::Error> {
 	// TODO: consider rewriting with Ics26Envelope
 	use ibc::core::{
 		ics02_client::msgs::{
@@ -128,7 +128,7 @@ fn wrap_any_msg_into_wasm(msg: Any, code_id: Bytes) -> Result<Any, anyhow::Error
 				msg_decoded.consensus_state.timestamp()
 			);
 			msg_decoded.consensus_state = AnyConsensusState::wasm(msg_decoded.consensus_state)?;
-			msg_decoded.client_state = AnyClientState::wasm(msg_decoded.client_state, code_id)?;
+			msg_decoded.client_state = AnyClientState::wasm(msg_decoded.client_state, checksum)?;
 			log::info!(
 				"THis is consensus state in wrap any message with wasm {:?}",
 				msg_decoded.consensus_state.timestamp()
@@ -163,5 +163,5 @@ fn wrap_any_msg_into_wasm(msg: Any, code_id: Bytes) -> Result<Any, anyhow::Error
 #[derive(Clone)]
 pub struct WasmChain {
 	pub inner: Box<AnyChain>,
-	pub code_id: Bytes,
+	pub checksum: Bytes,
 }
