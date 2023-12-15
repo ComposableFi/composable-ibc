@@ -5180,6 +5180,7 @@ dependencies = [
  "sp-runtime 7.0.0",
  "sp-runtime-interface 7.0.0",
  "sp-std 5.0.0",
+ "tendermint 0.28.0",
  "tendermint-proto 0.28.0",
  "thiserror",
  "twox-hash",
