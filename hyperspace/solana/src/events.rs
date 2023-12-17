@@ -32,7 +32,7 @@ use ibc::{
 
 pub fn convert_new_event_to_old(
 	event: ibc_new::core::handler::types::events::IbcEvent,
-) -> IbcEvent {
+) -> Option<IbcEvent> {
 	let height = Height { revision_number: 0, revision_height: 1 };
 	match event {
 		ibc_new::core::handler::types::events::IbcEvent::CreateClient(e) => {
@@ -48,7 +48,7 @@ pub fn convert_new_event_to_old(
 					revision_height: e.consensus_height().revision_height(),
 				},
 			});
-			IbcEvent::CreateClient(eve)
+			Some(IbcEvent::CreateClient(eve))
 		},
 		ibc_new::core::handler::types::events::IbcEvent::UpdateClient(e) => {
 			let eve = UpdateClient {
@@ -66,7 +66,7 @@ pub fn convert_new_event_to_old(
 				},
 				header: Some(e.header().clone()),
 			};
-			IbcEvent::UpdateClient(eve)
+			Some(IbcEvent::UpdateClient(eve))
 		},
 		ibc_new::core::handler::types::events::IbcEvent::UpgradeClient(e) => {
 			let eve = UpgradeClient(ClientAttributes {
@@ -81,7 +81,7 @@ pub fn convert_new_event_to_old(
 					revision_height: e.consensus_height().revision_height(),
 				},
 			});
-			IbcEvent::UpgradeClient(eve)
+			Some(IbcEvent::UpgradeClient(eve))
 		},
 		ibc_new::core::handler::types::events::IbcEvent::ClientMisbehaviour(e) => {
 			let eve = ClientMisbehaviour(ClientAttributes {
@@ -90,7 +90,7 @@ pub fn convert_new_event_to_old(
 				client_type: ClientType::from_str(e.client_type().as_str()).unwrap(),
 				consensus_height: height,
 			});
-			IbcEvent::ClientMisbehaviour(eve)
+			Some(IbcEvent::ClientMisbehaviour(eve))
 		},
 		ibc_new::core::handler::types::events::IbcEvent::OpenInitConnection(e) => {
 			let eve = ConnOpenInit(ConnAttributes {
@@ -102,7 +102,7 @@ pub fn convert_new_event_to_old(
 					.and_then(|conn| Some(ConnectionId::from_str(conn.as_str()).unwrap())),
 				connection_id: Some(ConnectionId::from_str(e.conn_id_on_a().as_str()).unwrap()),
 			});
-			IbcEvent::OpenInitConnection(eve)
+			Some(IbcEvent::OpenInitConnection(eve))
 		},
 		ibc_new::core::handler::types::events::IbcEvent::OpenTryConnection(e) => {
 			let eve = ConnOpenTry(ConnAttributes {
@@ -116,7 +116,7 @@ pub fn convert_new_event_to_old(
 					.conn_id_on_a()
 					.and_then(|conn| Some(ConnectionId::from_str(conn.as_str()).unwrap())),
 			});
-			IbcEvent::OpenTryConnection(eve)
+			Some(IbcEvent::OpenTryConnection(eve))
 		},
 		ibc_new::core::handler::types::events::IbcEvent::OpenAckConnection(e) => {
 			let eve = ConnOpenAck(ConnAttributes {
@@ -128,7 +128,7 @@ pub fn convert_new_event_to_old(
 					.and_then(|conn| Some(ConnectionId::from_str(conn.as_str()).unwrap())),
 				connection_id: Some(ConnectionId::from_str(e.conn_id_on_a().as_str()).unwrap()),
 			});
-			IbcEvent::OpenAckConnection(eve)
+			Some(IbcEvent::OpenAckConnection(eve))
 		},
 		ibc_new::core::handler::types::events::IbcEvent::OpenConfirmConnection(e) => {
 			let eve = ConnOpenConfirm(ConnAttributes {
@@ -142,7 +142,7 @@ pub fn convert_new_event_to_old(
 					.conn_id_on_a()
 					.and_then(|conn| Some(ConnectionId::from_str(conn.as_str()).unwrap())),
 			});
-			IbcEvent::OpenConfirmConnection(eve)
+			Some(IbcEvent::OpenConfirmConnection(eve))
 		},
 		ibc_new::core::handler::types::events::IbcEvent::OpenInitChannel(e) => {
 			let eve = ChanOpenInit {
@@ -153,7 +153,7 @@ pub fn convert_new_event_to_old(
 				counterparty_port_id: PortId::from_str(e.port_id_on_b().as_str()).unwrap(),
 				counterparty_channel_id: None,
 			};
-			IbcEvent::OpenInitChannel(eve)
+			Some(IbcEvent::OpenInitChannel(eve))
 		},
 		ibc_new::core::handler::types::events::IbcEvent::OpenTryChannel(e) => {
 			let eve = ChanOpenTry {
@@ -164,7 +164,7 @@ pub fn convert_new_event_to_old(
 				counterparty_port_id: PortId::from_str(e.port_id_on_b().as_str()).unwrap(),
 				counterparty_channel_id: None,
 			};
-			IbcEvent::OpenTryChannel(eve)
+			Some(IbcEvent::OpenTryChannel(eve))
 		},
 		ibc_new::core::handler::types::events::IbcEvent::OpenAckChannel(e) => {
 			let eve = ChanOpenAck {
@@ -175,7 +175,7 @@ pub fn convert_new_event_to_old(
 				counterparty_port_id: PortId::from_str(e.port_id_on_b().as_str()).unwrap(),
 				counterparty_channel_id: None,
 			};
-			IbcEvent::OpenAckChannel(eve)
+			Some(IbcEvent::OpenAckChannel(eve))
 		},
 		ibc_new::core::handler::types::events::IbcEvent::OpenConfirmChannel(e) => {
 			let eve = ChanOpenConfirm {
@@ -186,7 +186,7 @@ pub fn convert_new_event_to_old(
 				counterparty_port_id: PortId::from_str(e.port_id_on_b().as_str()).unwrap(),
 				counterparty_channel_id: None,
 			};
-			IbcEvent::OpenConfirmChannel(eve)
+			Some(IbcEvent::OpenConfirmChannel(eve))
 		},
 		ibc_new::core::handler::types::events::IbcEvent::CloseInitChannel(e) => {
 			let eve = ChanCloseInit {
@@ -197,7 +197,7 @@ pub fn convert_new_event_to_old(
 				counterparty_port_id: PortId::from_str(e.port_id_on_b().as_str()).unwrap(),
 				counterparty_channel_id: None,
 			};
-			IbcEvent::CloseInitChannel(eve)
+			Some(IbcEvent::CloseInitChannel(eve))
 		},
 		ibc_new::core::handler::types::events::IbcEvent::CloseConfirmChannel(e) => {
 			let eve = ChanCloseConfirm {
@@ -208,7 +208,7 @@ pub fn convert_new_event_to_old(
 				counterparty_port_id: PortId::from_str(e.port_id_on_b().as_str()).unwrap(),
 				counterparty_channel_id: None,
 			};
-			IbcEvent::CloseConfirmChannel(eve)
+			Some(IbcEvent::CloseConfirmChannel(eve))
 		},
 		ibc_new::core::handler::types::events::IbcEvent::SendPacket(e) => {
 			let eve = SendPacket {
@@ -234,7 +234,7 @@ pub fn convert_new_event_to_old(
 					.unwrap(),
 				},
 			};
-			IbcEvent::SendPacket(eve)
+			Some(IbcEvent::SendPacket(eve))
 		},
 		ibc_new::core::handler::types::events::IbcEvent::ReceivePacket(e) => {
 			let eve = ReceivePacket {
@@ -260,7 +260,7 @@ pub fn convert_new_event_to_old(
 					.unwrap(),
 				},
 			};
-			IbcEvent::ReceivePacket(eve)
+			Some(IbcEvent::ReceivePacket(eve))
 		},
 		ibc_new::core::handler::types::events::IbcEvent::WriteAcknowledgement(e) => {
 			let eve = WriteAcknowledgement {
@@ -287,7 +287,7 @@ pub fn convert_new_event_to_old(
 				},
 				ack: e.acknowledgement().as_bytes().to_vec(),
 			};
-			IbcEvent::WriteAcknowledgement(eve)
+			Some(IbcEvent::WriteAcknowledgement(eve))
 		},
 		ibc_new::core::handler::types::events::IbcEvent::AcknowledgePacket(e) => {
 			let eve = AcknowledgePacket {
@@ -313,7 +313,7 @@ pub fn convert_new_event_to_old(
 					.unwrap(),
 				},
 			};
-			IbcEvent::AcknowledgePacket(eve)
+			Some(IbcEvent::AcknowledgePacket(eve))
 		},
 		ibc_new::core::handler::types::events::IbcEvent::TimeoutPacket(e) => {
 			let eve = TimeoutPacket {
@@ -339,9 +339,9 @@ pub fn convert_new_event_to_old(
 					.unwrap(),
 				},
 			};
-			IbcEvent::TimeoutPacket(eve)
+			Some(IbcEvent::TimeoutPacket(eve))
 		},
-		ibc_new::core::handler::types::events::IbcEvent::ChannelClosed(_) => panic!(),
+		ibc_new::core::handler::types::events::IbcEvent::ChannelClosed(_) => None,
 		ibc_new::core::handler::types::events::IbcEvent::Module(e) => {
 			let attributes: Vec<ModuleEventAttribute> = e
 				.attributes
@@ -353,8 +353,8 @@ pub fn convert_new_event_to_old(
 				module_name: ModuleId::from_str("").unwrap(),
 				attributes,
 			};
-			IbcEvent::AppModule(eve)
+			Some(IbcEvent::AppModule(eve))
 		},
-		ibc_new::core::handler::types::events::IbcEvent::Message(_) => panic!(),
+		ibc_new::core::handler::types::events::IbcEvent::Message(_) => None,
 	}
 }
