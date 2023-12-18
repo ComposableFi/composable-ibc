@@ -123,7 +123,7 @@ where
 			.client_state
 			.ok_or_else(|| Error::Custom("counterparty returned empty client state".to_string()))?;
 		let client_state =
-			ClientState::<HostFunctionsManager>::decode_vec(&client_state_response.value)
+			ibc::mock::client_state::MockClientState::decode_vec(&client_state_response.value)
 				.map_err(|_| Error::Custom("failed to decode client state response".to_string()))?;
 		let latest_cp_client_height = client_state.latest_height().revision_height;
 		let latest_height = self.latest_height_and_timestamp().await?.0;
@@ -139,7 +139,8 @@ where
 		// query (exclusively) up to `to`, because the proof for the event at `to - 1` will be
 		// contained at `to` and will be fetched below by `msg_update_client_header`
 		let update_headers =
-			self.msg_update_client_header(from, to, client_state.latest_height).await?;
+			self.msg_update_client_header(from, to, client_state.latest_height()).await?;
+		log::info!(target: "hyperspace_cosmos", "These are update headers {:?}", update_headers);
 		let mut block_events = Vec::new();
 		block_events.push((0, Vec::new()));
 		let mut join_set: JoinSet<Result<_, anyhow::Error>> = JoinSet::new();

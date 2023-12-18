@@ -67,6 +67,7 @@ anchor-lang = { path = "../anchor/lang" }
  ibc-core-commitment-types = { path = "../ibc-rs/ibc-core/ics23-commitment/types", default-features = false }
  ibc-core-connection-types = { path = "../ibc-rs/ibc-core/ics03-connection/types", default-features = false }
  ibc-core-host-types = { path = "../ibc-rs/ibc-core/ics24-host/types", default-features = false }
+ bip39 = { git="https://github.com/dhruvja/rust-bip39.git" }
 
 
 [patch."https://github.com/paritytech/substrate"]

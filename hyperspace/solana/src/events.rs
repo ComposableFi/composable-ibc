@@ -346,7 +346,10 @@ pub fn convert_new_event_to_old(
 			let attributes: Vec<ModuleEventAttribute> = e
 				.attributes
 				.iter()
-				.map(|attr| ModuleEventAttribute { key: attr.clone().key, value: attr.clone().value })
+				.map(|attr| ModuleEventAttribute {
+					key: attr.clone().key,
+					value: attr.clone().value,
+				})
 				.collect();
 			let eve = ModuleEvent {
 				kind: e.kind,

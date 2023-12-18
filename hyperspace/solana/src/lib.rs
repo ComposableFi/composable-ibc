@@ -7,11 +7,12 @@ use base64::Engine;
 use client_state::convert_new_client_state_to_old;
 use consensus_state::convert_new_consensus_state_to_old;
 use core::{pin::Pin, str::FromStr, time::Duration};
+use futures::future::join_all;
 use ibc_proto_new::cosmos::crypto::keyring::v1::record::Local;
 use ics07_tendermint::client_state::ClientState as TmClientState;
 use msgs::convert_old_msgs_to_new;
 use serde::{Deserialize, Serialize};
-use solana_transaction_status::UiTransactionEncoding;
+use solana_transaction_status::{EncodedConfirmedTransactionWithStatusMeta, UiTransactionEncoding};
 use tendermint_proto::Protobuf;
 use tokio::{sync::mpsc::unbounded_channel, task::JoinSet};
 
@@ -271,11 +272,6 @@ impl SolanaClient {
 		program.async_rpc()
 	}
 
-	pub fn sync_rpc_client(&self) -> RpcClient {
-		let program = self.program();
-		program.rpc()
-	}
-
 	pub fn client(&self) -> AnchorClient<Arc<Keypair>> {
 		let cluster = Cluster::from_str(&self.rpc_url).unwrap();
 		let signer = self.keybase.keypair();
@@ -442,7 +438,6 @@ impl IbcProvider for SolanaClient {
 		Box::pin(streams)
 	}
 
-	// WIP
 	async fn query_client_consensus(
 		&self,
 		at: Height,
@@ -542,7 +537,6 @@ deserialize client state"
 		at: Height,
 		connection_id: ConnectionId,
 	) -> Result<QueryConnectionResponse, Self::Error> {
-		log::info!("THis is connection id {}", connection_id);
 		let trie = self.get_trie().await;
 		let storage = self.get_ibc_storage().await;
 		let connection_idx = ConnectionIdx::try_from(
@@ -585,7 +579,10 @@ deserialize client state"
 			state: inner_connection_end.state.into(),
 			counterparty: Some(ConnCounterparty {
 				client_id: inner_counterparty.client_id().to_string(),
-				connection_id: inner_counterparty.connection_id.as_ref().map_or_else(|| "".to_string(), |v| v.as_str().to_string()),
+				connection_id: inner_counterparty
+					.connection_id
+					.as_ref()
+					.map_or_else(|| "".to_string(), |v| v.as_str().to_string()),
 				prefix: Some(ibc_proto::ibc::core::commitment::v1::MerklePrefix {
 					key_prefix: inner_counterparty.prefix().clone().into_vec(),
 				}),
@@ -1024,16 +1021,21 @@ deserialize client state"
 		if !sigs.is_empty() {
 			*last_sent_packet_hash = sigs[0].signature.clone();
 		}
-		let send_packet_events: Vec<_> = sigs
+		let mut transactions = Vec::new();
+		for sig in sigs {
+			let signature = Signature::from_str(&sig.signature).unwrap();
+			let cloned_sig = signature.clone();
+			let rpc_client = self.rpc_client();
+			let tx = rpc_client
+				.get_transaction(&cloned_sig, UiTransactionEncoding::Json)
+				.await
+				.unwrap();
+			transactions.push(tx)
+		}
+		let send_packet_events: Vec<_> = transactions
 			.iter()
-			.filter_map(|sig| {
-				let sync_rpc_client = self.sync_rpc_client();
-				let signature = Signature::from_str(&sig.signature).unwrap();
-				let tx = sync_rpc_client
-					.get_transaction(&signature, UiTransactionEncoding::Json)
-					.map_err(|e| Error::RpcError(format!("{:?}", e)))
-					.unwrap();
-				let logs = match tx.transaction.meta.unwrap().log_messages {
+			.filter_map(|tx| {
+				let logs = match tx.transaction.meta.clone().unwrap().log_messages {
 					solana_transaction_status::option_serializer::OptionSerializer::Some(e) => e,
 					_ => Vec::new(),
 				};
@@ -1109,16 +1111,22 @@ deserialize client state"
 		if !sigs.is_empty() {
 			*last_recv_packet_hash = sigs[0].signature.clone();
 		}
+		let mut transactions = Vec::new();
+		for sig in sigs {
+			let signature = Signature::from_str(&sig.signature).unwrap();
+			let cloned_sig = signature.clone();
+			let rpc_client = self.rpc_client();
+			let tx = rpc_client
+				.get_transaction(&cloned_sig, UiTransactionEncoding::Json)
+				.await
+				.unwrap();
+			transactions.push(tx)
+		}
 		let recv_packet_events: Vec<_> =
-			sigs.iter()
-				.filter_map(|sig| {
-					let sync_rpc_client = self.sync_rpc_client();
-					let signature = Signature::from_str(&sig.signature).unwrap();
-					let tx = sync_rpc_client
-						.get_transaction(&signature, UiTransactionEncoding::Json)
-						.map_err(|e| Error::RpcError(format!("{:?}", e)))
-						.unwrap();
-					let logs = match tx.transaction.meta.unwrap().log_messages {
+			transactions
+				.iter()
+				.filter_map(|tx| {
+					let logs = match tx.transaction.meta.clone().unwrap().log_messages {
 						solana_transaction_status::option_serializer::OptionSerializer::Some(e) =>
 							e,
 						_ => Vec::new(),
@@ -1390,13 +1398,10 @@ deserialize client state"
 		_height: u32,
 		client_id: String,
 	) -> Result<Vec<IdentifiedConnection>, Self::Error> {
-		log::info!("querying connecting using client 1");
 		let storage = self.get_ibc_storage().await;
-		log::info!("querying connecting using client 2");
 		let client_id_key =
 			ibc_new::core::host::types::identifiers::ClientId::from_str(&client_id).unwrap();
-		log::info!("querying connecting using client 3");
-		let mut index = 0;
+		let mut index = -1;
 		let connections: Vec<IdentifiedConnection> = storage
 			.connections
 			.iter()
@@ -1404,7 +1409,6 @@ deserialize client state"
 				index += 1;
 				// let serialized_connection = &storage.connections[0];
 				let connection = serialized_connection.get().unwrap();
-				log::info!("querying connecting using client 4");
 				if connection.client_id_matches(&client_id_key) {
 					let versions = connection
 						.versions()
@@ -1420,18 +1424,13 @@ deserialize client state"
 							}
 						})
 						.collect();
-					log::info!("querying connecting using client 5 {}", i32::from(connection.state));
 					let counterparty = connection.counterparty();
 					let connection_id = format!("{}-{}", ConnectionId::prefix(), index);
-					log::info!("querying connecting using client 6 {}", connection.state);
-					// let connectionless = 
 					return Some(IdentifiedConnection {
 						id: connection_id,
 						client_id: client_id.clone(),
 						versions,
 						state: i32::from(connection.state),
-						// state: 0,
-						// counterparty: None,
 						counterparty: Some(ConnCounterparty {
 							client_id: counterparty.client_id.to_string(),
 							connection_id: counterparty
@@ -1442,14 +1441,11 @@ deserialize client state"
 							}),
 						}),
 						delay_period: connection.delay_period().as_secs(),
-						// delay_period: 0,
 					})
 				};
 				None
 			})
 			.collect();
-		log::info!("querying connecting using client final");
-		// let connections = vec![*connectionless];
 		log::info!("querying connecting using client final");
 		Ok(connections)
 	}
@@ -1494,7 +1490,6 @@ deserialize client state"
 		&self,
 		tx_id: Self::TransactionId,
 	) -> Result<ClientId, Self::Error> {
-		println!("client id req here 1");
 		let program = self.program();
 		let signature = Signature::from_str(&tx_id).unwrap();
 		let sol_rpc_client = program.async_rpc();
@@ -1502,7 +1497,6 @@ deserialize client state"
 			.get_transaction(&signature, UiTransactionEncoding::Base64)
 			.await
 			.unwrap();
-		println!("here 2");
 		let logs = match tx.transaction.meta.unwrap().log_messages {
 			solana_transaction_status::option_serializer::OptionSerializer::Some(logs) => logs,
 			solana_transaction_status::option_serializer::OptionSerializer::None =>
@@ -1864,11 +1858,11 @@ fn get_events_from_logs(logs: Vec<String>) -> Vec<ibc_new::core::handler::types:
 pub fn test_state() {
 	let state = ibc_new::core::connection::types::State::Init;
 	let integer = match state {
-    ibc_new::core::connection::types::State::Uninitialized => 0,
-    ibc_new::core::connection::types::State::Init => 1,
-    ibc_new::core::connection::types::State::TryOpen => 2,
-    ibc_new::core::connection::types::State::Open => 3,
-};
+		ibc_new::core::connection::types::State::Uninitialized => 0,
+		ibc_new::core::connection::types::State::Init => 1,
+		ibc_new::core::connection::types::State::TryOpen => 2,
+		ibc_new::core::connection::types::State::Open => 3,
+	};
 	println!("This is state {} {}", integer, i32::from(state));
 }
 
@@ -1881,7 +1875,6 @@ pub async fn test_storage_deserialization() {
 	let client =
 		AnchorClient::new_with_options(cluster, authority.clone(), CommitmentConfig::finalized());
 	let program = client.program(solana_ibc::ID).unwrap();
-	
 
 	let (tx, rx) = unbounded_channel();
 	let cluster = Cluster::Devnet;

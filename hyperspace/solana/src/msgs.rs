@@ -53,17 +53,22 @@ pub fn convert_old_msgs_to_new(messages: Vec<Ics26Envelope<LocalClientTypes>>) -
 					MsgEnvelope::Client(ClientMsg::UpdateClient(MsgUpdateClient {
 						client_id: ClientId::from_str(e.client_id.as_str()).unwrap(),
 						client_message: Any {
-							type_url: ibc_proto::google::protobuf::Any::from(e.client_message.clone())
-								.type_url,
-							value: ibc_proto::google::protobuf::Any::from(e.client_message.clone()).value,
+							type_url: ibc_proto::google::protobuf::Any::from(
+								e.client_message.clone(),
+							)
+							.type_url,
+							value: ibc_proto::google::protobuf::Any::from(e.client_message.clone())
+								.value,
 						},
 						signer: Signer::from(e.signer.as_ref().to_string()),
 					})),
 				ibc::core::ics02_client::msgs::ClientMsg::UpgradeClient(e) =>
 					MsgEnvelope::Client(ClientMsg::UpgradeClient(MsgUpgradeClient {
 						client_id: ClientId::from_str(e.client_id.as_str()).unwrap(),
-						upgraded_client_state: convert_old_client_state_to_new(e.client_state.clone())
-							.into(),
+						upgraded_client_state: convert_old_client_state_to_new(
+							e.client_state.clone(),
+						)
+						.into(),
 						upgraded_consensus_state: convert_old_consensus_state_to_new(
 							e.consensus_state.clone(),
 						)
@@ -86,9 +91,9 @@ pub fn convert_old_msgs_to_new(messages: Vec<Ics26Envelope<LocalClientTypes>>) -
 						counterparty: Counterparty {
 							client_id: ClientId::from_str(e.counterparty.client_id().as_str())
 								.unwrap(),
-							connection_id: e.counterparty.connection_id.clone().and_then(|conn_id| {
-								Some(ConnectionId::from_str(conn_id.as_str()).unwrap())
-							}),
+							connection_id: e.counterparty.connection_id.clone().and_then(
+								|conn_id| Some(ConnectionId::from_str(conn_id.as_str()).unwrap()),
+							),
 							prefix: CommitmentPrefix::try_from(
 								e.counterparty.prefix().as_bytes().to_vec(),
 							)
@@ -114,9 +119,9 @@ pub fn convert_old_msgs_to_new(messages: Vec<Ics26Envelope<LocalClientTypes>>) -
 						counterparty: Counterparty {
 							client_id: ClientId::from_str(e.counterparty.client_id().as_str())
 								.unwrap(),
-							connection_id: e.counterparty.connection_id.clone().and_then(|conn_id| {
-								Some(ConnectionId::from_str(conn_id.as_str()).unwrap())
-							}),
+							connection_id: e.counterparty.connection_id.clone().and_then(
+								|conn_id| Some(ConnectionId::from_str(conn_id.as_str()).unwrap()),
+							),
 							prefix: CommitmentPrefix::try_from(
 								e.counterparty.prefix().as_bytes().to_vec(),
 							)
@@ -168,7 +173,8 @@ pub fn convert_old_msgs_to_new(messages: Vec<Ics26Envelope<LocalClientTypes>>) -
 						)
 						.unwrap(),
 						proof_consensus_state_of_b: Some(
-							CommitmentProofBytes::try_from(e.host_consensus_state_proof.clone()).unwrap(),
+							CommitmentProofBytes::try_from(e.host_consensus_state_proof.clone())
+								.unwrap(),
 						),
 						previous_connection_id: String::default(),
 					})),
@@ -216,7 +222,8 @@ pub fn convert_old_msgs_to_new(messages: Vec<Ics26Envelope<LocalClientTypes>>) -
 							.unwrap()
 						},
 						proof_consensus_state_of_a: Some(
-							CommitmentProofBytes::try_from(e.host_consensus_state_proof.clone()).unwrap(),
+							CommitmentProofBytes::try_from(e.host_consensus_state_proof.clone())
+								.unwrap(),
 						),
 					})),
 				ibc::core::ics03_connection::msgs::ConnectionMsg::ConnectionOpenConfirm(e) =>
@@ -399,7 +406,12 @@ pub fn convert_old_msgs_to_new(messages: Vec<Ics26Envelope<LocalClientTypes>>) -
 							.unwrap(),
 						},
 						signer: Signer::from(e.signer.as_ref().to_string()),
-						acknowledgement: e.acknowledgement().clone().into_bytes().try_into().unwrap(),
+						acknowledgement: e
+							.acknowledgement()
+							.clone()
+							.into_bytes()
+							.try_into()
+							.unwrap(),
 						proof_acked_on_b: CommitmentProofBytes::try_from(
 							e.proofs.object_proof().as_bytes().to_vec(),
 						)

@@ -1288,8 +1288,7 @@ dependencies = [
 [[package]]
 name = "bip39"
 version = "2.0.0"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "93f2635620bf0b9d4576eb7bb9a38a55df78bd1205d26fa994b25911a69f212f"
+source = "git+https://github.com/dhruvja/rust-bip39.git#e3e70f8e935e71a86d177a057cedaa8163af0046"
 dependencies = [
  "bitcoin_hashes",
  "rand 0.8.5",

@@ -1,14 +1,21 @@
 use super::SolanaClient;
 use crate::error::Error;
+use anchor_client::{
+	solana_client::{
+		pubsub_client::PubsubClient,
+		rpc_config::{RpcBlockSubscribeConfig, RpcBlockSubscribeFilter},
+	},
+	solana_sdk::commitment_config::CommitmentConfig,
+	Cluster,
+};
 use core::pin::Pin;
-use anchor_client::{Cluster, solana_client::{pubsub_client::PubsubClient, rpc_config::{RpcBlockSubscribeFilter, RpcBlockSubscribeConfig}}, solana_sdk::commitment_config::CommitmentConfig};
 use futures::{Stream, StreamExt};
 use ibc::{
 	applications::transfer::{msgs::transfer::MsgTransfer, PrefixedCoin},
 	core::ics24_host::identifier::ChannelId,
 	tx_msg::Msg,
 };
-use primitives::{TestProvider, Chain};
+use primitives::{Chain, TestProvider};
 use tendermint_rpc::{
 	event::{Event, EventData},
 	query::{EventType, Query},
@@ -16,8 +23,7 @@ use tendermint_rpc::{
 use tokio::sync::mpsc::unbounded_channel;
 
 #[async_trait::async_trait]
-impl TestProvider for SolanaClient
-{
+impl TestProvider for SolanaClient {
 	/// Initiate an ibc transfer on chain.
 	async fn send_transfer(&self, msg: MsgTransfer<PrefixedCoin>) -> Result<(), Self::Error> {
 		let hash = self.submit(vec![msg.to_any()]).await?;

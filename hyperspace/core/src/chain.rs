@@ -23,8 +23,6 @@ use crate::{
 use async_trait::async_trait;
 #[cfg(feature = "cosmos")]
 use cosmos::client::{CosmosClient, CosmosClientConfig};
-#[cfg(feature = "solana")]
-use solana::{SolanaClient, SolanaClientConfig};
 use futures::Stream;
 #[cfg(any(test, feature = "testing"))]
 use ibc::applications::transfer::msgs::transfer::MsgTransfer;
@@ -71,6 +69,8 @@ use primitives::{
 	MisbehaviourHandler, UpdateType,
 };
 use serde::{Deserialize, Serialize};
+#[cfg(feature = "solana")]
+use solana::{SolanaClient, SolanaClientConfig};
 use std::{pin::Pin, time::Duration};
 use tendermint_proto::Protobuf;
 use thiserror::Error;

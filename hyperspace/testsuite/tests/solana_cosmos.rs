@@ -20,8 +20,8 @@ use hyperspace_core::{
 	substrate::DefaultConfig,
 };
 use hyperspace_cosmos::client::{CosmosClient, CosmosClientConfig};
-use hyperspace_solana::{SolanaClientConfig, SolanaClient};
 use hyperspace_primitives::{utils::create_clients, CommonClientConfig, IbcProvider};
+use hyperspace_solana::{SolanaClient, SolanaClientConfig};
 use hyperspace_testsuite::{
 	ibc_channel_close, ibc_messaging_packet_height_timeout_with_connection_delay,
 	ibc_messaging_packet_timeout_on_channel_close,
@@ -79,36 +79,47 @@ async fn setup_clients() -> (AnyChain, AnyChain) {
 		connection_id: None,
 		commitment_prefix: args.connection_prefix_a.as_bytes().to_vec(),
 		wasm_code_id: None,
-    rpc_url: args.chain_a.clone().parse().unwrap(),
-    chain_id: "solana-1".to_string(),
-    account_prefix: args.connection_prefix_a.clone(),
-    fee_denom: "stake".to_string(),
-    fee_amount: "4000".to_string(),
-    gas_limit: (i64::MAX - 1) as u64,
-    store_prefix: args.connection_prefix_a,
-    max_tx_size: 320000,
-    common_state_config: CommonClientConfig{ skip_optional_client_updates: true, max_packets_to_process: 1  },
-    channel_whitelist: vec![],
-    commitment_level: "confirmed".to_string(), 
-    private_key: vec![48,123,8,80,248,0,217,142,124,193,95,24,168,139,214,136,147,210,168,135,26,36,162,89,150,185,99,191,247,135,78,111,12,8,4,81,129,165,153,230,192,225,51,119,216,14,69,225,73,7,204,144,39,213,91,255,136,38,95,131,197,4,101,186],
+		rpc_url: args.chain_a.clone().parse().unwrap(),
+		chain_id: "solana-1".to_string(),
+		account_prefix: args.connection_prefix_a.clone(),
+		fee_denom: "stake".to_string(),
+		fee_amount: "4000".to_string(),
+		gas_limit: (i64::MAX - 1) as u64,
+		store_prefix: args.connection_prefix_a,
+		max_tx_size: 320000,
+		common_state_config: CommonClientConfig {
+			skip_optional_client_updates: true,
+			max_packets_to_process: 1,
+		},
+		channel_whitelist: vec![],
+		commitment_level: "confirmed".to_string(),
+		private_key: vec![
+			48, 123, 8, 80, 248, 0, 217, 142, 124, 193, 95, 24, 168, 139, 214, 136, 147, 210, 168,
+			135, 26, 36, 162, 89, 150, 185, 99, 191, 247, 135, 78, 111, 12, 8, 4, 81, 129, 165,
+			153, 230, 192, 225, 51, 119, 216, 14, 69, 225, 73, 7, 204, 144, 39, 213, 91, 255, 136,
+			38, 95, 131, 197, 4, 101, 186,
+		],
 	};
 
 	let mut config_b = CosmosClientConfig {
-		name: "cosmos".to_string(),
+		name: "centauri".to_string(),
 		rpc_url: args.chain_b.clone().parse().unwrap(),
 		grpc_url: args.cosmos_grpc.clone().parse().unwrap(),
 		websocket_url: args.cosmos_ws.clone().parse().unwrap(),
-		chain_id: "ibcgo-1".to_string(),
+		chain_id: "test-1".to_string(),
 		client_id: None,
 		connection_id: None,
-		account_prefix: "cosmos".to_string(),
+		account_prefix: "centauri".to_string(),
 		fee_denom: "stake".to_string(),
 		fee_amount: "4000".to_string(),
 		gas_limit: (i64::MAX - 1) as u64,
 		store_prefix: args.connection_prefix_b,
 		max_tx_size: 200000,
+		// centauri1g5r2vmnp6lta9cpst4lzc4syy3kcj2ljte3tlh
 		mnemonic:
-			"oxygen fall sure lava energy veteran enroll frown question detail include maximum"
+			// "oxygen fall sure lava energy veteran enroll frown question detail include maximum"
+			"decorate bright ozone fork gallery riot bus exhaust worth way bone indoor calm squirrel merry zero scheme cotton until shop any excess stage laundry"
+		//  "taste shoot adapt slow truly grape gift need suggest midnight burger horn whisper hat vast aspect exit scorpion jewel axis great area awful blind"
 				.to_string(),
 		wasm_code_id: None,
 		channel_whitelist: vec![],
@@ -119,11 +130,13 @@ async fn setup_clients() -> (AnyChain, AnyChain) {
 		skip_tokens_list: Some(vec!["uosmo".to_string()]),
 	};
 
-	println!("This is config b {:?}", config_b);
-
+	// println!("This is config b {:?}", config_b);
 
 	let chain_a = SolanaClient::new(config_a.clone()).await.expect("Solana error");
-	let chain_b = CosmosClient::<DefaultConfig>::new(config_b.clone()).await.map_err(|e| println!("{:?}", e)).unwrap();
+	let chain_b = CosmosClient::<DefaultConfig>::new(config_b.clone())
+		.await
+		.map_err(|e| println!("{:?}", e))
+		.unwrap();
 
 	// let wasm_data = tokio::fs::read(&args.wasm_path).await.expect("Failed to read wasm file");
 	// let code_id = match chain_b.upload_wasm(wasm_data.clone()).await {

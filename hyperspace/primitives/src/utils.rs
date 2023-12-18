@@ -33,8 +33,7 @@ use ibc::{
 	tx_msg::Msg,
 };
 use ibc_proto::google::protobuf::Any;
-use std::thread::sleep;
-use std::{future::Future, time::Duration};
+use std::{future::Future, thread::sleep, time::Duration};
 
 pub async fn timeout_future<T: Future>(future: T, secs: u64, reason: String) -> T::Output {
 	let duration = Duration::from_secs(secs);

@@ -253,15 +253,15 @@ where
 	pub async fn new(config: CosmosClientConfig) -> Result<Self, Error> {
 		let (rpc_client, rpc_driver) = WebSocketClient::new(config.websocket_url.clone())
 			.await
-			.map_err(|e| Error::RpcError(format!("{:?}", e)))?;
+			.map_err(|e| Error::RpcError(format!("websocket{:?}", e)))?;
 		let rpc_http_client = HttpClient::new(config.rpc_url.clone())
-			.map_err(|e| Error::RpcError(format!("{:?}", e)))?;
+			.map_err(|e| Error::RpcError(format!("only rpc{:?}", e)))?;
 		let ws_driver_jh = tokio::spawn(rpc_driver.run());
 		let grpc_client = tonic::transport::Endpoint::new(config.grpc_url.to_string())
-			.map_err(|e| Error::RpcError(format!("{:?}", e)))?
+			.map_err(|e| Error::RpcError(format!("grpc {:?}", e)))?
 			.connect()
 			.await
-			.map_err(|e| Error::RpcError(format!("{:?}", e)))?;
+			.map_err(|e| Error::RpcError(format!("grpc again{:?}", e)))?;
 
 		let chain_id = ChainId::from(config.chain_id);
 		let light_client =
@@ -367,14 +367,17 @@ where
 			self.get_fee(),
 		)?;
 
+		log::info!("i came here 1");
+
 		// Simulate transaction
 		let res = simulate_tx(self.grpc_url.clone(), tx, tx_bytes.clone()).await?;
 		res.result
-			.map(|r| log::debug!(target: "hyperspace_cosmos", "Simulated transaction: events: {:?}\nlogs: {}", r.events, r.log));
+			.map(|r| log::info!(target: "hyperspace_cosmos", "Simulated transaction: events: {:?}\nlogs: {}", r.events, r.log));
 
+		log::info!("i came here 2");
 		// Broadcast transaction
 		let hash = broadcast_tx(&self.rpc_client, tx_bytes).await?;
-		log::debug!(target: "hyperspace_cosmos", "🤝 Transaction sent with hash: {:?}", hash);
+		log::info!(target: "hyperspace_cosmos", "🤝 Transaction sent with hash: {:?}", hash);
 
 		// wait for confirmation
 		confirm_tx(&self.rpc_client, hash).await
