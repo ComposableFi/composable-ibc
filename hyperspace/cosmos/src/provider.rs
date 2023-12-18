@@ -140,7 +140,7 @@ where
 		// contained at `to` and will be fetched below by `msg_update_client_header`
 		let update_headers =
 			self.msg_update_client_header(from, to, client_state.latest_height()).await?;
-		log::info!(target: "hyperspace_cosmos", "These are update headers {:?}", update_headers);
+		// log::info!(target: "hyperspace_cosmos", "These are update headers {:?}", update_headers);
 		let mut block_events = Vec::new();
 		block_events.push((0, Vec::new()));
 		let mut join_set: JoinSet<Result<_, anyhow::Error>> = JoinSet::new();

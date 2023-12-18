@@ -342,7 +342,13 @@ async fn process_messages<B: Chain>(
 		if let Some(metrics) = metrics.as_ref() {
 			metrics.handle_messages(msgs.as_slice()).await;
 		}
-		let type_urls = msgs.iter().map(|msg| msg.type_url.as_str()).collect::<Vec<_>>();
+		let type_urls = msgs.iter().filter_map(|msg| {
+			let type_url = msg.type_url.as_str();
+			if type_url == "" {
+				return None
+			};
+			Some(type_url)
+		}).collect::<Vec<_>>();
 		log::info!("Submitting messages to {}: {type_urls:#?}", sink.name());
 
 		queue::flush_message_batch(msgs, metrics.as_ref(), &*sink)

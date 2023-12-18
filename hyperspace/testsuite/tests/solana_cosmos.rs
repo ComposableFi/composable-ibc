@@ -138,19 +138,19 @@ async fn setup_clients() -> (AnyChain, AnyChain) {
 		.map_err(|e| println!("{:?}", e))
 		.unwrap();
 
-	// let wasm_data = tokio::fs::read(&args.wasm_path).await.expect("Failed to read wasm file");
-	// let code_id = match chain_b.upload_wasm(wasm_data.clone()).await {
-	// 	Ok(code_id) => code_id,
-	// 	Err(e) => {
-	// 		let e_str = format!("{e:?}");
-	// 		if !e_str.contains("wasm code already exists") {
-	// 			panic!("Failed to upload wasm: {e_str}");
-	// 		}
-	// 		sha2_256(&wasm_data).to_vec()
-	// 	},
-	// };
-	// let code_id_str = hex::encode(code_id);
-	// config_b.wasm_code_id = Some(code_id_str);
+	let wasm_data = tokio::fs::read(&args.wasm_path).await.expect("Failed to read wasm file");
+	let code_id = match chain_b.upload_wasm(wasm_data.clone()).await {
+		Ok(code_id) => code_id,
+		Err(e) => {
+			let e_str = format!("{e:?}");
+			if !e_str.contains("wasm code already exists") {
+				panic!("Failed to upload wasm: {e_str}");
+			}
+			sha2_256(&wasm_data).to_vec()
+		},
+	};
+	let code_id_str = hex::encode(code_id);
+	config_b.wasm_code_id = Some(code_id_str);
 
 	let mut chain_a_wrapped = AnyConfig::Solana(config_a).into_client().await.unwrap();
 	let mut chain_b_wrapped = AnyConfig::Cosmos(config_b).into_client().await.unwrap();
@@ -176,11 +176,11 @@ async fn setup_clients() -> (AnyChain, AnyChain) {
 	let clients_on_a = chain_a_wrapped.query_clients().await.unwrap();
 	let clients_on_b = chain_b_wrapped.query_clients().await.unwrap();
 
-	if !clients_on_a.is_empty() && !clients_on_b.is_empty() {
-		chain_a_wrapped.set_client_id(clients_on_b[0].clone());
-		chain_b_wrapped.set_client_id(clients_on_a[0].clone());
-		return (chain_a_wrapped, chain_b_wrapped)
-	}
+	// if !clients_on_a.is_empty() && !clients_on_b.is_empty() {
+	// 	chain_a_wrapped.set_client_id(clients_on_b[0].clone());
+	// 	chain_b_wrapped.set_client_id(clients_on_a[0].clone());
+	// 	return (chain_a_wrapped, chain_b_wrapped)
+	// }
 
 	let (client_a, client_b) =
 		create_clients(&mut chain_a_wrapped, &mut chain_b_wrapped).await.unwrap();
@@ -199,8 +199,8 @@ async fn solana_to_cosmos_ibc_messaging_full_integration_test() {
 		"ibc/47B97D8FF01DA03FCB2F4B1FFEC931645F254E21EF465FA95CBA6888CB964DC4".to_string(),
 	);
 	let (mut chain_a, mut chain_b) = setup_clients().await;
-	let (handle, channel_a, channel_b, connection_id_a, connection_id_b) =
-		setup_connection_and_channel(&mut chain_a, &mut chain_b, Duration::from_secs(60 * 2)).await;
+	// let (handle, channel_a, channel_b, connection_id_a, connection_id_b) =
+	// 	setup_connection_and_channel(&mut chain_a, &mut chain_b, Duration::from_secs(60 * 2)).await;
 	// handle.abort();
 
 	// // Set connections and channel whitelist

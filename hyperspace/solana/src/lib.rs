@@ -1650,7 +1650,7 @@ impl Chain for SolanaClient {
 	}
 
 	async fn estimate_weight(&self, msg: Vec<Any>) -> Result<u64, Self::Error> {
-		todo!()
+		Ok(0)
 	}
 
 	async fn finality_notifications(

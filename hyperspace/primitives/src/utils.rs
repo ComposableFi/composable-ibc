@@ -69,22 +69,23 @@ pub async fn create_clients(
 ) -> Result<(ClientId, ClientId), anyhow::Error> {
 	println!("In clients");
 	let (client_state_a, cs_state_a) = chain_a.initialize_client_state().await?;
+	// println!("In clients");
+	// let (client_state_b, cs_state_b) = chain_b.initialize_client_state().await?;
+
+	// let msg = MsgCreateAnyClient::<LocalClientTypes> {
+	// 	client_state: client_state_b.clone(),
+	// 	consensus_state: cs_state_b.clone(),
+	// 	signer: chain_a.account_id(),
+	// };
+
+	// let msg = Any { type_url: msg.type_url(), value: msg.encode_vec()? };
+
 	println!("In clients");
-	let (client_state_b, cs_state_b) = chain_b.initialize_client_state().await?;
-
-	let msg = MsgCreateAnyClient::<LocalClientTypes> {
-		client_state: client_state_b.clone(),
-		consensus_state: cs_state_b.clone(),
-		signer: chain_a.account_id(),
-	};
-
-	let msg = Any { type_url: msg.type_url(), value: msg.encode_vec()? };
-
-	println!("In clients");
-	let tx_id = chain_a.submit(vec![msg]).await?;
-	println!("In clients with tx_id {:?}", tx_id);
+	// let tx_id = chain_a.submit(vec![msg]).await?;
+	// println!("In clients with tx_id {:?}", tx_id);
 	sleep(Duration::from_secs(5));
-	let client_id_b_on_a = chain_a.query_client_id_from_tx_hash(tx_id).await?;
+	let client_id_b_on_a = ClientId::new("Mockasdfas", 99).unwrap();
+	// let client_id_b_on_a = chain_a.query_client_id_from_tx_hash(tx_id).await?;
 	chain_a.set_client_id(client_id_b_on_a.clone());
 
 	let msg = MsgCreateAnyClient::<LocalClientTypes> {

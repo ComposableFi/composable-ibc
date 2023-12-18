@@ -67,18 +67,21 @@ pub async fn simulate_tx(
 		tx: Some(tx), // needed for simulation to go through with Cosmos SDK <  0.43
 		tx_bytes,     // needed for simulation to go through with Cosmos SDk >= 0.43
 	};
+	log::info!("before conn");
 	let mut client = ServiceClient::connect(grpc_url.clone().to_string())
 		.await
 		.map_err(|e| Error::from(e.to_string()))?;
 	let request = tonic::Request::new(req);
 
+	log::info!("after conn, before request");
 	let response = tokio::time::timeout(
 		Duration::from_secs(15),
-		client.simulate(request).map_err(|e| Error::from(e.to_string())),
+		client.simulate(request).map_err(|e| format!("This is while making request {}", Error::from(e.to_string()))),
 	)
 	.await
 	.map_err(|_| Error::from("simulation timeout".to_string()))??
 	.into_inner();
+	log::info!("after requst");
 	Ok(response)
 }
 
