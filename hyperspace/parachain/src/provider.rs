@@ -709,7 +709,7 @@ where
 		// this update is required
 		let base =
 			if cfg!(test) { (session_length / 2) as u64 } else { (session_length / 12) as u64 };
-		let diff = latest_height - latest_client_height_on_counterparty;
+		let diff = latest_height.saturating_sub(latest_client_height_on_counterparty);
 		let pruning_len = 256;
 		Ok(diff >= base.min(pruning_len as u64))
 	}
