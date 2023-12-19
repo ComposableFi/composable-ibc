@@ -19,7 +19,7 @@ jobs:
       group: check-${{ github.ref }}
       cancel-in-progress: true
     container:
-      image: paritytech/ci-unified:bullseye-1.71.0-v20230727
+      image: paritytech/ci-unified:bullseye-1.74.0-2023-11-01-v20231214
     runs-on: ubuntu-latest
     steps:
     - uses: actions/checkout@v2
@@ -33,7 +33,7 @@ jobs:
       run: rustup show
 
     - name: Cargo fmt
-      run: cargo +nightly fmt --all -- --check
+      run: cargo fmt --all -- --check
 
     - uses: actions-rs/cargo@v1
       name: "Udeps Installation"
