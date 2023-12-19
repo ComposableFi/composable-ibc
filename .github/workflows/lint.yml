@@ -33,7 +33,7 @@ jobs:
       run: rustup show
 
     - name: Cargo fmt
-      run: cargo fmt --all -- --check
+      run: cargo +stable fmt --all -- --check
 
     - uses: actions-rs/cargo@v1
       name: "Udeps Installation"
