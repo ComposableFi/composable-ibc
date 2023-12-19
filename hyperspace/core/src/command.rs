@@ -13,14 +13,18 @@
 // limitations under the License.
 
 use crate::{
-	chain::{AnyConfig, Config, CoreConfig},
+	chain::{AnyChain, AnyConfig, Config, CoreConfig},
 	fish, relay, Mode,
 };
 use anyhow::{anyhow, Result};
 use clap::{Args, Parser};
-use ibc::core::{ics04_channel::channel::Order, ics24_host::identifier::PortId};
+use ibc::core::{
+	ics04_channel::channel::{ChannelEnd, Order},
+	ics24_host::identifier::PortId,
+};
 use metrics::{data::Metrics, handler::MetricsHandler, init_prometheus};
 use primitives::{
+	error::Error,
 	utils::{create_channel, create_clients, create_connection},
 	Chain, IbcProvider,
 };
@@ -52,9 +56,9 @@ pub enum Subcommand {
 	#[clap(name = "create-channel", about = "Creates a channel on the specified port")]
 	CreateChannel(Cmd),
 	#[clap(name = "query", about = "Query commands")]
-	Client {
+	Query {
 		#[command(subcommand)]
-		client: QueryCmd,
+		query: QueryCmd,
 		#[command(flatten)]
 		cmd: Cmd,
 	},
@@ -126,7 +130,7 @@ impl UploadWasmCmd {
 }
 
 impl Cmd {
-	async fn parse_config(&self) -> Result<Config> {
+	pub async fn parse_config(&self) -> Result<Config> {
 		use tokio::fs::read_to_string;
 		let path_a: PathBuf = self.config_a.parse()?;
 		let path_b: PathBuf = self.config_b.parse()?;
@@ -289,10 +293,122 @@ pub enum QueryCmd {
 	Packets(QueryPacketsCmd),
 }
 
+impl QueryCmd {
+	pub async fn run(&self, config: Config) -> anyhow::Result<()> {
+		let chain_a = config.chain_a.into_client().await?;
+		let chain_b = config.chain_b.into_client().await?;
+
+		match self {
+			QueryCmd::Packets(query) => query.run(chain_a, chain_b).await,
+		}
+	}
+}
+
 #[derive(Debug, Clone, clap::Subcommand)]
 pub enum QueryPacketsCmd {
 	/// Trace packets
 	Trace(TracePacketsCmd),
+}
+
+impl QueryPacketsCmd {
+	pub(crate) async fn run(&self, chain_a: AnyChain, chain_b: AnyChain) -> anyhow::Result<()> {
+		let name_a = chain_a.name();
+		let name_b = chain_b.name();
+		let (height_a, _) = chain_a.latest_height_and_timestamp().await?;
+		let (_height_b, _) = chain_b.latest_height_and_timestamp().await?;
+
+		match self {
+			QueryPacketsCmd::Trace(cmd) => {
+				let sequence = cmd.sequence;
+				let set = chain_a.channel_whitelist();
+				if set.is_empty() {
+					println!("No channels found on {name_a}");
+					return Ok(())
+				}
+				for (channel_id, port_id) in set {
+					let channel_response =
+						chain_a.query_channel_end(height_a, channel_id, port_id.clone()).await?;
+					let channel_end =
+						ChannelEnd::try_from(channel_response.channel.ok_or_else(|| {
+							Error::Custom("ChannelEnd not could not be decoded".to_string())
+						})?)
+						.map_err(|e| Error::Custom(e.to_string()))?;
+					let counterparty_channel_id =
+						channel_end.counterparty().channel_id.ok_or_else(|| {
+							Error::Custom("Expected counterparty channel id".to_string())
+						})?;
+					let counterparty_port_id = channel_end.counterparty().port_id.clone();
+
+					let maybe_received = chain_b
+						.query_received_packets(
+							counterparty_channel_id.clone(),
+							counterparty_port_id.clone(),
+							vec![sequence],
+						)
+						.await?
+						.pop();
+
+					if let Some(received) = maybe_received {
+						println!("Packet {sequence} was received on {name_b}: {received}");
+						let unreceived_acks = chain_a
+							.query_unreceived_acknowledgements(
+								height_a,
+								channel_id.clone(),
+								port_id.clone(),
+								vec![sequence],
+							)
+							.await?;
+						if unreceived_acks.is_empty() {
+							println!("Packet {sequence} was acknowledged on {name_a}");
+						} else {
+							println!("Packet {sequence} was not acknowledged on {name_a}");
+						}
+						continue;
+					}
+					let sent_packets = chain_a
+						.query_send_packets(channel_id.clone(), port_id.clone(), vec![sequence])
+						.await?;
+					if sent_packets.is_empty() {
+						println!("Packet {sequence} not found");
+						continue;
+					}
+					for packet_info in sent_packets {
+						let seq = packet_info.sequence;
+						println!("Sent packet {} ({name_a}->{name_b}): {}", seq, packet_info);
+						let received = chain_b
+							.query_received_packets(
+								packet_info.destination_channel.parse()?,
+								packet_info.destination_port.parse()?,
+								vec![seq],
+							)
+							.await?
+							.pop();
+						if received.is_none() {
+							println!("Packet {seq} ({name_a}->{name_b}) was not received");
+							continue;
+						}
+
+						println!("Received packet {seq} ({name_a}->{name_b}) {received:?}");
+
+						let ack = chain_a
+							.query_unreceived_acknowledgements(
+								height_a,
+								channel_id.clone(),
+								port_id.clone(),
+								vec![seq],
+							)
+							.await?;
+						if ack.is_empty() {
+							println!("Packet {seq} ({name_a}->{name_b}) was acknowledged");
+						} else {
+							println!("Packet {seq} ({name_a}->{name_b}) was not acknowledged");
+						}
+					}
+				}
+				Ok(())
+			},
+		}
+	}
 }
 
 #[derive(Debug, Clone, Args)]

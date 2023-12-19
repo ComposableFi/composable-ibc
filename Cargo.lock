@@ -4994,6 +4994,7 @@ name = "ibc-rpc"
 version = "0.1.0"
 dependencies = [
  "frame-system",
+ "hex",
  "ibc",
  "ibc-derive",
  "ibc-primitives 0.1.0",
