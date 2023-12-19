@@ -17,7 +17,7 @@ use crate::{
 	fish, relay, Mode,
 };
 use anyhow::{anyhow, Result};
-use clap::Parser;
+use clap::{Args, Parser};
 use ibc::core::{ics04_channel::channel::Order, ics24_host::identifier::PortId};
 use metrics::{data::Metrics, handler::MetricsHandler, init_prometheus};
 use primitives::{
@@ -51,6 +51,13 @@ pub enum Subcommand {
 	CreateConnection(Cmd),
 	#[clap(name = "create-channel", about = "Creates a channel on the specified port")]
 	CreateChannel(Cmd),
+	#[clap(name = "query", about = "Query commands")]
+	Client {
+		#[command(subcommand)]
+		client: QueryCmd,
+		#[command(flatten)]
+		cmd: Cmd,
+	},
 }
 
 #[derive(Debug, Clone, Parser)]
@@ -273,6 +280,24 @@ impl Cmd {
 		write_config(path_a, &new_config.chain_a).await?;
 		write_config(path_b, &new_config.chain_b).await
 	}
+}
+
+#[derive(Debug, Clone, Parser)]
+pub enum QueryCmd {
+	/// Query packets
+	#[command(subcommand)]
+	Packets(QueryPacketsCmd),
+}
+
+#[derive(Debug, Clone, clap::Subcommand)]
+pub enum QueryPacketsCmd {
+	/// Trace packets
+	Trace(TracePacketsCmd),
+}
+
+#[derive(Debug, Clone, Args)]
+pub struct TracePacketsCmd {
+	pub sequence: u64,
 }
 
 async fn write_config(path: String, config: &AnyConfig) -> Result<()> {
