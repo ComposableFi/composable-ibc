@@ -51,7 +51,7 @@ impl Default for Args {
 		let solana = std::env::var("SOLANA_HOST").unwrap_or_else(|_| "192.168.0.101".to_string());
 		let cosmos = std::env::var("COSMOS_HOST").unwrap_or_else(|_| "192.168.0.101".to_string());
 		let wasm_path = std::env::var("WASM_PATH").unwrap_or_else(|_| {
-			"../../target/wasm32-unknown-unknown/release/ics10_grandpa_cw.wasm".to_string()
+			"../../target/wasm32-unknown-unknown/release/icsxx_ethereum_cw.wasm".to_string()
 		});
 
 		Args {

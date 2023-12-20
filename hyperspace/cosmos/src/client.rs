@@ -381,6 +381,7 @@ where
 
 		// wait for confirmation
 		confirm_tx(&self.rpc_client, hash).await
+		// Ok(hash)
 	}
 
 	pub async fn fetch_light_block_with_cache(

@@ -83,7 +83,7 @@ use tokio_stream::{Stream, StreamExt};
 // use crate::ibc_storage::{AnyConsensusState, Serialised};
 use solana_ibc::{
 	chain::ChainData,
-	storage::{PrivateStorage, SequenceTripleIdx, Serialised},
+	storage::{PrivateStorage, SequenceKind, Serialised},
 };
 use solana_trie::trie;
 use trie_ids::{ClientIdx, ConnectionIdx, PortChannelPK, Tag, TrieKey};
@@ -747,7 +747,7 @@ deserialize client state"
 			.ok_or(Error::Custom("No value at given key".to_owned()))?
 			.next_sequence;
 		let next_seq_recv = next_seq
-			.get(SequenceTripleIdx::Recv)
+			.get(SequenceKind::Recv)
 			.ok_or(Error::Custom("No value set for the next sequence receive".to_owned()))?;
 		Ok(QueryNextSequenceReceiveResponse {
 			next_sequence_receive: next_seq_recv.into(),

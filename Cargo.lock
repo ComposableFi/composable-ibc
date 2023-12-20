@@ -6363,6 +6363,7 @@ dependencies = [
  "ed25519 1.5.3",
  "ed25519-consensus",
  "ed25519-zebra",
+ "getrandom 0.2.11",
  "hex",
  "hyperspace-primitives",
  "ibc 0.15.0",
@@ -20626,8 +20627,3 @@ dependencies = [
  "cc",
  "pkg-config",
 ]
-
-[[patch.unused]]
-name = "cfg-expr"
-version = "0.15.0"
-source = "git+https://github.com/EmbarkStudios/cfg-expr?tag=0.15.0#295353e0ba1b2952b3254ac64453f0d4e4fe707b"

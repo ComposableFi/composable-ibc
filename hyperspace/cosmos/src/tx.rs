@@ -95,7 +95,7 @@ pub async fn broadcast_tx(rpc_client: &WebSocketClient, tx_bytes: Vec<u8>) -> Re
 
 pub async fn confirm_tx(rpc_client: &WebSocketClient, tx_hash: Hash) -> Result<Hash, Error> {
 	let start_time = tokio::time::Instant::now();
-	let timeout = Duration::from_millis(30000);
+	let timeout = Duration::from_millis(300000);
 	const WAIT_BACKOFF: Duration = Duration::from_millis(300);
 	let response: TxResponse = loop {
 		let response = rpc_client

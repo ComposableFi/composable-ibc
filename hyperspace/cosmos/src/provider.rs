@@ -1274,6 +1274,7 @@ where
 
 	async fn upload_wasm(&self, wasm: Vec<u8>) -> Result<Vec<u8>, Self::Error> {
 		let msg = MsgPushNewWasmCode { signer: self.account_id(), code: wasm };
+		// log::info!("This is the msg {:?}", msg);
 		let hash = self.submit(vec![msg.into()]).await?;
 		let resp = self.wait_for_tx_result(hash).await?;
 		let height = Height::new(
