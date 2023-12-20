@@ -184,21 +184,21 @@ pub mod api {
 					&mut &*pallet_bytes,
 					pallet_ty,
 					metadata,
-				)?));
+				)?))
 			}
 			if pallet_name == "Indices" {
 				return Ok(Event::Indices(indices::Event::decode_with_metadata(
 					&mut &*pallet_bytes,
 					pallet_ty,
 					metadata,
-				)?));
+				)?))
 			}
 			if pallet_name == "Balances" {
 				return Ok(Event::Balances(balances::Event::decode_with_metadata(
 					&mut &*pallet_bytes,
 					pallet_ty,
 					metadata,
-				)?));
+				)?))
 			}
 			if pallet_name == "TransactionPayment" {
 				return Ok(Event::TransactionPayment(
@@ -207,63 +207,63 @@ pub mod api {
 						pallet_ty,
 						metadata,
 					)?,
-				));
+				))
 			}
 			if pallet_name == "Staking" {
 				return Ok(Event::Staking(staking::Event::decode_with_metadata(
 					&mut &*pallet_bytes,
 					pallet_ty,
 					metadata,
-				)?));
+				)?))
 			}
 			if pallet_name == "Offences" {
 				return Ok(Event::Offences(offences::Event::decode_with_metadata(
 					&mut &*pallet_bytes,
 					pallet_ty,
 					metadata,
-				)?));
+				)?))
 			}
 			if pallet_name == "Session" {
 				return Ok(Event::Session(session::Event::decode_with_metadata(
 					&mut &*pallet_bytes,
 					pallet_ty,
 					metadata,
-				)?));
+				)?))
 			}
 			if pallet_name == "Grandpa" {
 				return Ok(Event::Grandpa(grandpa::Event::decode_with_metadata(
 					&mut &*pallet_bytes,
 					pallet_ty,
 					metadata,
-				)?));
+				)?))
 			}
 			if pallet_name == "ImOnline" {
 				return Ok(Event::ImOnline(im_online::Event::decode_with_metadata(
 					&mut &*pallet_bytes,
 					pallet_ty,
 					metadata,
-				)?));
+				)?))
 			}
 			if pallet_name == "Treasury" {
 				return Ok(Event::Treasury(treasury::Event::decode_with_metadata(
 					&mut &*pallet_bytes,
 					pallet_ty,
 					metadata,
-				)?));
+				)?))
 			}
 			if pallet_name == "ConvictionVoting" {
 				return Ok(Event::ConvictionVoting(conviction_voting::Event::decode_with_metadata(
 					&mut &*pallet_bytes,
 					pallet_ty,
 					metadata,
-				)?));
+				)?))
 			}
 			if pallet_name == "Referenda" {
 				return Ok(Event::Referenda(referenda::Event::decode_with_metadata(
 					&mut &*pallet_bytes,
 					pallet_ty,
 					metadata,
-				)?));
+				)?))
 			}
 			if pallet_name == "FellowshipCollective" {
 				return Ok(Event::FellowshipCollective(
@@ -272,7 +272,7 @@ pub mod api {
 						pallet_ty,
 						metadata,
 					)?,
-				));
+				))
 			}
 			if pallet_name == "FellowshipReferenda" {
 				return Ok(Event::FellowshipReferenda(
@@ -281,98 +281,98 @@ pub mod api {
 						pallet_ty,
 						metadata,
 					)?,
-				));
+				))
 			}
 			if pallet_name == "Whitelist" {
 				return Ok(Event::Whitelist(whitelist::Event::decode_with_metadata(
 					&mut &*pallet_bytes,
 					pallet_ty,
 					metadata,
-				)?));
+				)?))
 			}
 			if pallet_name == "Claims" {
 				return Ok(Event::Claims(claims::Event::decode_with_metadata(
 					&mut &*pallet_bytes,
 					pallet_ty,
 					metadata,
-				)?));
+				)?))
 			}
 			if pallet_name == "Utility" {
 				return Ok(Event::Utility(utility::Event::decode_with_metadata(
 					&mut &*pallet_bytes,
 					pallet_ty,
 					metadata,
-				)?));
+				)?))
 			}
 			if pallet_name == "Identity" {
 				return Ok(Event::Identity(identity::Event::decode_with_metadata(
 					&mut &*pallet_bytes,
 					pallet_ty,
 					metadata,
-				)?));
+				)?))
 			}
 			if pallet_name == "Society" {
 				return Ok(Event::Society(society::Event::decode_with_metadata(
 					&mut &*pallet_bytes,
 					pallet_ty,
 					metadata,
-				)?));
+				)?))
 			}
 			if pallet_name == "Recovery" {
 				return Ok(Event::Recovery(recovery::Event::decode_with_metadata(
 					&mut &*pallet_bytes,
 					pallet_ty,
 					metadata,
-				)?));
+				)?))
 			}
 			if pallet_name == "Vesting" {
 				return Ok(Event::Vesting(vesting::Event::decode_with_metadata(
 					&mut &*pallet_bytes,
 					pallet_ty,
 					metadata,
-				)?));
+				)?))
 			}
 			if pallet_name == "Scheduler" {
 				return Ok(Event::Scheduler(scheduler::Event::decode_with_metadata(
 					&mut &*pallet_bytes,
 					pallet_ty,
 					metadata,
-				)?));
+				)?))
 			}
 			if pallet_name == "Proxy" {
 				return Ok(Event::Proxy(proxy::Event::decode_with_metadata(
 					&mut &*pallet_bytes,
 					pallet_ty,
 					metadata,
-				)?));
+				)?))
 			}
 			if pallet_name == "Multisig" {
 				return Ok(Event::Multisig(multisig::Event::decode_with_metadata(
 					&mut &*pallet_bytes,
 					pallet_ty,
 					metadata,
-				)?));
+				)?))
 			}
 			if pallet_name == "Preimage" {
 				return Ok(Event::Preimage(preimage::Event::decode_with_metadata(
 					&mut &*pallet_bytes,
 					pallet_ty,
 					metadata,
-				)?));
+				)?))
 			}
 			if pallet_name == "Bounties" {
 				return Ok(Event::Bounties(bounties::Event::decode_with_metadata(
 					&mut &*pallet_bytes,
 					pallet_ty,
 					metadata,
-				)?));
+				)?))
 			}
 			if pallet_name == "ChildBounties" {
 				return Ok(Event::ChildBounties(child_bounties::Event::decode_with_metadata(
 					&mut &*pallet_bytes,
 					pallet_ty,
 					metadata,
-				)?));
+				)?))
 			}
 			if pallet_name == "ElectionProviderMultiPhase" {
 				return Ok(Event::ElectionProviderMultiPhase(
@@ -381,14 +381,14 @@ pub mod api {
 						pallet_ty,
 						metadata,
 					)?,
-				));
+				))
 			}
 			if pallet_name == "Nis" {
 				return Ok(Event::Nis(nis::Event::decode_with_metadata(
 					&mut &*pallet_bytes,
 					pallet_ty,
 					metadata,
-				)?));
+				)?))
 			}
 			if pallet_name == "NisCounterpartBalances" {
 				return Ok(Event::NisCounterpartBalances(
@@ -397,84 +397,84 @@ pub mod api {
 						pallet_ty,
 						metadata,
 					)?,
-				));
+				))
 			}
 			if pallet_name == "VoterList" {
 				return Ok(Event::VoterList(voter_list::Event::decode_with_metadata(
 					&mut &*pallet_bytes,
 					pallet_ty,
 					metadata,
-				)?));
+				)?))
 			}
 			if pallet_name == "NominationPools" {
 				return Ok(Event::NominationPools(nomination_pools::Event::decode_with_metadata(
 					&mut &*pallet_bytes,
 					pallet_ty,
 					metadata,
-				)?));
+				)?))
 			}
 			if pallet_name == "FastUnstake" {
 				return Ok(Event::FastUnstake(fast_unstake::Event::decode_with_metadata(
 					&mut &*pallet_bytes,
 					pallet_ty,
 					metadata,
-				)?));
+				)?))
 			}
 			if pallet_name == "ParaInclusion" {
 				return Ok(Event::ParaInclusion(para_inclusion::Event::decode_with_metadata(
 					&mut &*pallet_bytes,
 					pallet_ty,
 					metadata,
-				)?));
+				)?))
 			}
 			if pallet_name == "Paras" {
 				return Ok(Event::Paras(paras::Event::decode_with_metadata(
 					&mut &*pallet_bytes,
 					pallet_ty,
 					metadata,
-				)?));
+				)?))
 			}
 			if pallet_name == "Hrmp" {
 				return Ok(Event::Hrmp(hrmp::Event::decode_with_metadata(
 					&mut &*pallet_bytes,
 					pallet_ty,
 					metadata,
-				)?));
+				)?))
 			}
 			if pallet_name == "ParasDisputes" {
 				return Ok(Event::ParasDisputes(paras_disputes::Event::decode_with_metadata(
 					&mut &*pallet_bytes,
 					pallet_ty,
 					metadata,
-				)?));
+				)?))
 			}
 			if pallet_name == "Registrar" {
 				return Ok(Event::Registrar(registrar::Event::decode_with_metadata(
 					&mut &*pallet_bytes,
 					pallet_ty,
 					metadata,
-				)?));
+				)?))
 			}
 			if pallet_name == "Slots" {
 				return Ok(Event::Slots(slots::Event::decode_with_metadata(
 					&mut &*pallet_bytes,
 					pallet_ty,
 					metadata,
-				)?));
+				)?))
 			}
 			if pallet_name == "Auctions" {
 				return Ok(Event::Auctions(auctions::Event::decode_with_metadata(
 					&mut &*pallet_bytes,
 					pallet_ty,
 					metadata,
-				)?));
+				)?))
 			}
 			if pallet_name == "Crowdloan" {
 				return Ok(Event::Crowdloan(crowdloan::Event::decode_with_metadata(
 					&mut &*pallet_bytes,
 					pallet_ty,
 					metadata,
-				)?));
+				)?))
 			}
 			if pallet_name == "StateTrieMigration" {
 				return Ok(Event::StateTrieMigration(
@@ -483,21 +483,21 @@ pub mod api {
 						pallet_ty,
 						metadata,
 					)?,
-				));
+				))
 			}
 			if pallet_name == "XcmPallet" {
 				return Ok(Event::XcmPallet(xcm_pallet::Event::decode_with_metadata(
 					&mut &*pallet_bytes,
 					pallet_ty,
 					metadata,
-				)?));
+				)?))
 			}
 			if pallet_name == "MessageQueue" {
 				return Ok(Event::MessageQueue(message_queue::Event::decode_with_metadata(
 					&mut &*pallet_bytes,
 					pallet_ty,
 					metadata,
-				)?));
+				)?))
 			}
 			Err(::subxt::ext::scale_decode::Error::custom(format!(
 				"Pallet name '{}' not found in root Event enum",
@@ -631,91 +631,91 @@ pub mod api {
 					&mut &*pallet_bytes,
 					pallet_ty,
 					metadata,
-				)?));
+				)?))
 			}
 			if pallet_name == "Babe" {
 				return Ok(Call::Babe(babe::Call::decode_with_metadata(
 					&mut &*pallet_bytes,
 					pallet_ty,
 					metadata,
-				)?));
+				)?))
 			}
 			if pallet_name == "Timestamp" {
 				return Ok(Call::Timestamp(timestamp::Call::decode_with_metadata(
 					&mut &*pallet_bytes,
 					pallet_ty,
 					metadata,
-				)?));
+				)?))
 			}
 			if pallet_name == "Indices" {
 				return Ok(Call::Indices(indices::Call::decode_with_metadata(
 					&mut &*pallet_bytes,
 					pallet_ty,
 					metadata,
-				)?));
+				)?))
 			}
 			if pallet_name == "Balances" {
 				return Ok(Call::Balances(balances::Call::decode_with_metadata(
 					&mut &*pallet_bytes,
 					pallet_ty,
 					metadata,
-				)?));
+				)?))
 			}
 			if pallet_name == "Staking" {
 				return Ok(Call::Staking(staking::Call::decode_with_metadata(
 					&mut &*pallet_bytes,
 					pallet_ty,
 					metadata,
-				)?));
+				)?))
 			}
 			if pallet_name == "Beefy" {
 				return Ok(Call::Beefy(beefy::Call::decode_with_metadata(
 					&mut &*pallet_bytes,
 					pallet_ty,
 					metadata,
-				)?));
+				)?))
 			}
 			if pallet_name == "Session" {
 				return Ok(Call::Session(session::Call::decode_with_metadata(
 					&mut &*pallet_bytes,
 					pallet_ty,
 					metadata,
-				)?));
+				)?))
 			}
 			if pallet_name == "Grandpa" {
 				return Ok(Call::Grandpa(grandpa::Call::decode_with_metadata(
 					&mut &*pallet_bytes,
 					pallet_ty,
 					metadata,
-				)?));
+				)?))
 			}
 			if pallet_name == "ImOnline" {
 				return Ok(Call::ImOnline(im_online::Call::decode_with_metadata(
 					&mut &*pallet_bytes,
 					pallet_ty,
 					metadata,
-				)?));
+				)?))
 			}
 			if pallet_name == "Treasury" {
 				return Ok(Call::Treasury(treasury::Call::decode_with_metadata(
 					&mut &*pallet_bytes,
 					pallet_ty,
 					metadata,
-				)?));
+				)?))
 			}
 			if pallet_name == "ConvictionVoting" {
 				return Ok(Call::ConvictionVoting(conviction_voting::Call::decode_with_metadata(
 					&mut &*pallet_bytes,
 					pallet_ty,
 					metadata,
-				)?));
+				)?))
 			}
 			if pallet_name == "Referenda" {
 				return Ok(Call::Referenda(referenda::Call::decode_with_metadata(
 					&mut &*pallet_bytes,
 					pallet_ty,
 					metadata,
-				)?));
+				)?))
 			}
 			if pallet_name == "FellowshipCollective" {
 				return Ok(Call::FellowshipCollective(
@@ -724,7 +724,7 @@ pub mod api {
 						pallet_ty,
 						metadata,
 					)?,
-				));
+				))
 			}
 			if pallet_name == "FellowshipReferenda" {
 				return Ok(Call::FellowshipReferenda(
@@ -733,98 +733,98 @@ pub mod api {
 						pallet_ty,
 						metadata,
 					)?,
-				));
+				))
 			}
 			if pallet_name == "Whitelist" {
 				return Ok(Call::Whitelist(whitelist::Call::decode_with_metadata(
 					&mut &*pallet_bytes,
 					pallet_ty,
 					metadata,
-				)?));
+				)?))
 			}
 			if pallet_name == "Claims" {
 				return Ok(Call::Claims(claims::Call::decode_with_metadata(
 					&mut &*pallet_bytes,
 					pallet_ty,
 					metadata,
-				)?));
+				)?))
 			}
 			if pallet_name == "Utility" {
 				return Ok(Call::Utility(utility::Call::decode_with_metadata(
 					&mut &*pallet_bytes,
 					pallet_ty,
 					metadata,
-				)?));
+				)?))
 			}
 			if pallet_name == "Identity" {
 				return Ok(Call::Identity(identity::Call::decode_with_metadata(
 					&mut &*pallet_bytes,
 					pallet_ty,
 					metadata,
-				)?));
+				)?))
 			}
 			if pallet_name == "Society" {
 				return Ok(Call::Society(society::Call::decode_with_metadata(
 					&mut &*pallet_bytes,
 					pallet_ty,
 					metadata,
-				)?));
+				)?))
 			}
 			if pallet_name == "Recovery" {
 				return Ok(Call::Recovery(recovery::Call::decode_with_metadata(
 					&mut &*pallet_bytes,
 					pallet_ty,
 					metadata,
-				)?));
+				)?))
 			}
 			if pallet_name == "Vesting" {
 				return Ok(Call::Vesting(vesting::Call::decode_with_metadata(
 					&mut &*pallet_bytes,
 					pallet_ty,
 					metadata,
-				)?));
+				)?))
 			}
 			if pallet_name == "Scheduler" {
 				return Ok(Call::Scheduler(scheduler::Call::decode_with_metadata(
 					&mut &*pallet_bytes,
 					pallet_ty,
 					metadata,
-				)?));
+				)?))
 			}
 			if pallet_name == "Proxy" {
 				return Ok(Call::Proxy(proxy::Call::decode_with_metadata(
 					&mut &*pallet_bytes,
 					pallet_ty,
 					metadata,
-				)?));
+				)?))
 			}
 			if pallet_name == "Multisig" {
 				return Ok(Call::Multisig(multisig::Call::decode_with_metadata(
 					&mut &*pallet_bytes,
 					pallet_ty,
 					metadata,
-				)?));
+				)?))
 			}
 			if pallet_name == "Preimage" {
 				return Ok(Call::Preimage(preimage::Call::decode_with_metadata(
 					&mut &*pallet_bytes,
 					pallet_ty,
 					metadata,
-				)?));
+				)?))
 			}
 			if pallet_name == "Bounties" {
 				return Ok(Call::Bounties(bounties::Call::decode_with_metadata(
 					&mut &*pallet_bytes,
 					pallet_ty,
 					metadata,
-				)?));
+				)?))
 			}
 			if pallet_name == "ChildBounties" {
 				return Ok(Call::ChildBounties(child_bounties::Call::decode_with_metadata(
 					&mut &*pallet_bytes,
 					pallet_ty,
 					metadata,
-				)?));
+				)?))
 			}
 			if pallet_name == "ElectionProviderMultiPhase" {
 				return Ok(Call::ElectionProviderMultiPhase(
@@ -833,14 +833,14 @@ pub mod api {
 						pallet_ty,
 						metadata,
 					)?,
-				));
+				))
 			}
 			if pallet_name == "Nis" {
 				return Ok(Call::Nis(nis::Call::decode_with_metadata(
 					&mut &*pallet_bytes,
 					pallet_ty,
 					metadata,
-				)?));
+				)?))
 			}
 			if pallet_name == "NisCounterpartBalances" {
 				return Ok(Call::NisCounterpartBalances(
@@ -849,119 +849,119 @@ pub mod api {
 						pallet_ty,
 						metadata,
 					)?,
-				));
+				))
 			}
 			if pallet_name == "VoterList" {
 				return Ok(Call::VoterList(voter_list::Call::decode_with_metadata(
 					&mut &*pallet_bytes,
 					pallet_ty,
 					metadata,
-				)?));
+				)?))
 			}
 			if pallet_name == "NominationPools" {
 				return Ok(Call::NominationPools(nomination_pools::Call::decode_with_metadata(
 					&mut &*pallet_bytes,
 					pallet_ty,
 					metadata,
-				)?));
+				)?))
 			}
 			if pallet_name == "FastUnstake" {
 				return Ok(Call::FastUnstake(fast_unstake::Call::decode_with_metadata(
 					&mut &*pallet_bytes,
 					pallet_ty,
 					metadata,
-				)?));
+				)?))
 			}
 			if pallet_name == "Configuration" {
 				return Ok(Call::Configuration(configuration::Call::decode_with_metadata(
 					&mut &*pallet_bytes,
 					pallet_ty,
 					metadata,
-				)?));
+				)?))
 			}
 			if pallet_name == "ParasShared" {
 				return Ok(Call::ParasShared(paras_shared::Call::decode_with_metadata(
 					&mut &*pallet_bytes,
 					pallet_ty,
 					metadata,
-				)?));
+				)?))
 			}
 			if pallet_name == "ParaInclusion" {
 				return Ok(Call::ParaInclusion(para_inclusion::Call::decode_with_metadata(
 					&mut &*pallet_bytes,
 					pallet_ty,
 					metadata,
-				)?));
+				)?))
 			}
 			if pallet_name == "ParaInherent" {
 				return Ok(Call::ParaInherent(para_inherent::Call::decode_with_metadata(
 					&mut &*pallet_bytes,
 					pallet_ty,
 					metadata,
-				)?));
+				)?))
 			}
 			if pallet_name == "Paras" {
 				return Ok(Call::Paras(paras::Call::decode_with_metadata(
 					&mut &*pallet_bytes,
 					pallet_ty,
 					metadata,
-				)?));
+				)?))
 			}
 			if pallet_name == "Initializer" {
 				return Ok(Call::Initializer(initializer::Call::decode_with_metadata(
 					&mut &*pallet_bytes,
 					pallet_ty,
 					metadata,
-				)?));
+				)?))
 			}
 			if pallet_name == "Hrmp" {
 				return Ok(Call::Hrmp(hrmp::Call::decode_with_metadata(
 					&mut &*pallet_bytes,
 					pallet_ty,
 					metadata,
-				)?));
+				)?))
 			}
 			if pallet_name == "ParasDisputes" {
 				return Ok(Call::ParasDisputes(paras_disputes::Call::decode_with_metadata(
 					&mut &*pallet_bytes,
 					pallet_ty,
 					metadata,
-				)?));
+				)?))
 			}
 			if pallet_name == "ParasSlashing" {
 				return Ok(Call::ParasSlashing(paras_slashing::Call::decode_with_metadata(
 					&mut &*pallet_bytes,
 					pallet_ty,
 					metadata,
-				)?));
+				)?))
 			}
 			if pallet_name == "Registrar" {
 				return Ok(Call::Registrar(registrar::Call::decode_with_metadata(
 					&mut &*pallet_bytes,
 					pallet_ty,
 					metadata,
-				)?));
+				)?))
 			}
 			if pallet_name == "Slots" {
 				return Ok(Call::Slots(slots::Call::decode_with_metadata(
 					&mut &*pallet_bytes,
 					pallet_ty,
 					metadata,
-				)?));
+				)?))
 			}
 			if pallet_name == "Auctions" {
 				return Ok(Call::Auctions(auctions::Call::decode_with_metadata(
 					&mut &*pallet_bytes,
 					pallet_ty,
 					metadata,
-				)?));
+				)?))
 			}
 			if pallet_name == "Crowdloan" {
 				return Ok(Call::Crowdloan(crowdloan::Call::decode_with_metadata(
 					&mut &*pallet_bytes,
 					pallet_ty,
 					metadata,
-				)?));
+				)?))
 			}
 			if pallet_name == "StateTrieMigration" {
 				return Ok(Call::StateTrieMigration(
@@ -970,21 +970,21 @@ pub mod api {
 						pallet_ty,
 						metadata,
 					)?,
-				));
+				))
 			}
 			if pallet_name == "XcmPallet" {
 				return Ok(Call::XcmPallet(xcm_pallet::Call::decode_with_metadata(
 					&mut &*pallet_bytes,
 					pallet_ty,
 					metadata,
-				)?));
+				)?))
 			}
 			if pallet_name == "MessageQueue" {
 				return Ok(Call::MessageQueue(message_queue::Call::decode_with_metadata(
 					&mut &*pallet_bytes,
 					pallet_ty,
 					metadata,
-				)?));
+				)?))
 			}
 			Err(::subxt::ext::scale_decode::Error::custom(format!(
 				"Pallet name '{}' not found in root Call enum",
@@ -1109,224 +1109,224 @@ pub mod api {
 			let cursor = &mut &pallet_bytes[..];
 			if pallet_name == "System" {
 				let variant_error = system::Error::decode_with_metadata(cursor, 528u32, metadata)?;
-				return Ok(Error::System(variant_error));
+				return Ok(Error::System(variant_error))
 			}
 			if pallet_name == "Babe" {
 				let variant_error = babe::Error::decode_with_metadata(cursor, 544u32, metadata)?;
-				return Ok(Error::Babe(variant_error));
+				return Ok(Error::Babe(variant_error))
 			}
 			if pallet_name == "Indices" {
 				let variant_error = indices::Error::decode_with_metadata(cursor, 546u32, metadata)?;
-				return Ok(Error::Indices(variant_error));
+				return Ok(Error::Indices(variant_error))
 			}
 			if pallet_name == "Balances" {
 				let variant_error =
 					balances::Error::decode_with_metadata(cursor, 562u32, metadata)?;
-				return Ok(Error::Balances(variant_error));
+				return Ok(Error::Balances(variant_error))
 			}
 			if pallet_name == "Staking" {
 				let variant_error = staking::Error::decode_with_metadata(cursor, 586u32, metadata)?;
-				return Ok(Error::Staking(variant_error));
+				return Ok(Error::Staking(variant_error))
 			}
 			if pallet_name == "Beefy" {
 				let variant_error = beefy::Error::decode_with_metadata(cursor, 591u32, metadata)?;
-				return Ok(Error::Beefy(variant_error));
+				return Ok(Error::Beefy(variant_error))
 			}
 			if pallet_name == "Session" {
 				let variant_error = session::Error::decode_with_metadata(cursor, 597u32, metadata)?;
-				return Ok(Error::Session(variant_error));
+				return Ok(Error::Session(variant_error))
 			}
 			if pallet_name == "Grandpa" {
 				let variant_error = grandpa::Error::decode_with_metadata(cursor, 601u32, metadata)?;
-				return Ok(Error::Grandpa(variant_error));
+				return Ok(Error::Grandpa(variant_error))
 			}
 			if pallet_name == "ImOnline" {
 				let variant_error =
 					im_online::Error::decode_with_metadata(cursor, 604u32, metadata)?;
-				return Ok(Error::ImOnline(variant_error));
+				return Ok(Error::ImOnline(variant_error))
 			}
 			if pallet_name == "Treasury" {
 				let variant_error =
 					treasury::Error::decode_with_metadata(cursor, 610u32, metadata)?;
-				return Ok(Error::Treasury(variant_error));
+				return Ok(Error::Treasury(variant_error))
 			}
 			if pallet_name == "ConvictionVoting" {
 				let variant_error =
 					conviction_voting::Error::decode_with_metadata(cursor, 623u32, metadata)?;
-				return Ok(Error::ConvictionVoting(variant_error));
+				return Ok(Error::ConvictionVoting(variant_error))
 			}
 			if pallet_name == "Referenda" {
 				let variant_error =
 					referenda::Error::decode_with_metadata(cursor, 641u32, metadata)?;
-				return Ok(Error::Referenda(variant_error));
+				return Ok(Error::Referenda(variant_error))
 			}
 			if pallet_name == "FellowshipCollective" {
 				let variant_error =
 					fellowship_collective::Error::decode_with_metadata(cursor, 646u32, metadata)?;
-				return Ok(Error::FellowshipCollective(variant_error));
+				return Ok(Error::FellowshipCollective(variant_error))
 			}
 			if pallet_name == "FellowshipReferenda" {
 				let variant_error =
 					fellowship_referenda::Error::decode_with_metadata(cursor, 650u32, metadata)?;
-				return Ok(Error::FellowshipReferenda(variant_error));
+				return Ok(Error::FellowshipReferenda(variant_error))
 			}
 			if pallet_name == "Whitelist" {
 				let variant_error =
 					whitelist::Error::decode_with_metadata(cursor, 651u32, metadata)?;
-				return Ok(Error::Whitelist(variant_error));
+				return Ok(Error::Whitelist(variant_error))
 			}
 			if pallet_name == "Claims" {
 				let variant_error = claims::Error::decode_with_metadata(cursor, 652u32, metadata)?;
-				return Ok(Error::Claims(variant_error));
+				return Ok(Error::Claims(variant_error))
 			}
 			if pallet_name == "Utility" {
 				let variant_error = utility::Error::decode_with_metadata(cursor, 653u32, metadata)?;
-				return Ok(Error::Utility(variant_error));
+				return Ok(Error::Utility(variant_error))
 			}
 			if pallet_name == "Identity" {
 				let variant_error =
 					identity::Error::decode_with_metadata(cursor, 664u32, metadata)?;
-				return Ok(Error::Identity(variant_error));
+				return Ok(Error::Identity(variant_error))
 			}
 			if pallet_name == "Society" {
 				let variant_error = society::Error::decode_with_metadata(cursor, 681u32, metadata)?;
-				return Ok(Error::Society(variant_error));
+				return Ok(Error::Society(variant_error))
 			}
 			if pallet_name == "Recovery" {
 				let variant_error =
 					recovery::Error::decode_with_metadata(cursor, 685u32, metadata)?;
-				return Ok(Error::Recovery(variant_error));
+				return Ok(Error::Recovery(variant_error))
 			}
 			if pallet_name == "Vesting" {
 				let variant_error = vesting::Error::decode_with_metadata(cursor, 689u32, metadata)?;
-				return Ok(Error::Vesting(variant_error));
+				return Ok(Error::Vesting(variant_error))
 			}
 			if pallet_name == "Scheduler" {
 				let variant_error =
 					scheduler::Error::decode_with_metadata(cursor, 694u32, metadata)?;
-				return Ok(Error::Scheduler(variant_error));
+				return Ok(Error::Scheduler(variant_error))
 			}
 			if pallet_name == "Proxy" {
 				let variant_error = proxy::Error::decode_with_metadata(cursor, 703u32, metadata)?;
-				return Ok(Error::Proxy(variant_error));
+				return Ok(Error::Proxy(variant_error))
 			}
 			if pallet_name == "Multisig" {
 				let variant_error =
 					multisig::Error::decode_with_metadata(cursor, 707u32, metadata)?;
-				return Ok(Error::Multisig(variant_error));
+				return Ok(Error::Multisig(variant_error))
 			}
 			if pallet_name == "Preimage" {
 				let variant_error =
 					preimage::Error::decode_with_metadata(cursor, 712u32, metadata)?;
-				return Ok(Error::Preimage(variant_error));
+				return Ok(Error::Preimage(variant_error))
 			}
 			if pallet_name == "Bounties" {
 				let variant_error =
 					bounties::Error::decode_with_metadata(cursor, 716u32, metadata)?;
-				return Ok(Error::Bounties(variant_error));
+				return Ok(Error::Bounties(variant_error))
 			}
 			if pallet_name == "ChildBounties" {
 				let variant_error =
 					child_bounties::Error::decode_with_metadata(cursor, 719u32, metadata)?;
-				return Ok(Error::ChildBounties(variant_error));
+				return Ok(Error::ChildBounties(variant_error))
 			}
 			if pallet_name == "ElectionProviderMultiPhase" {
 				let variant_error = election_provider_multi_phase::Error::decode_with_metadata(
 					cursor, 729u32, metadata,
 				)?;
-				return Ok(Error::ElectionProviderMultiPhase(variant_error));
+				return Ok(Error::ElectionProviderMultiPhase(variant_error))
 			}
 			if pallet_name == "Nis" {
 				let variant_error = nis::Error::decode_with_metadata(cursor, 737u32, metadata)?;
-				return Ok(Error::Nis(variant_error));
+				return Ok(Error::Nis(variant_error))
 			}
 			if pallet_name == "NisCounterpartBalances" {
 				let variant_error = nis_counterpart_balances::Error::decode_with_metadata(
 					cursor, 742u32, metadata,
 				)?;
-				return Ok(Error::NisCounterpartBalances(variant_error));
+				return Ok(Error::NisCounterpartBalances(variant_error))
 			}
 			if pallet_name == "VoterList" {
 				let variant_error =
 					voter_list::Error::decode_with_metadata(cursor, 746u32, metadata)?;
-				return Ok(Error::VoterList(variant_error));
+				return Ok(Error::VoterList(variant_error))
 			}
 			if pallet_name == "NominationPools" {
 				let variant_error =
 					nomination_pools::Error::decode_with_metadata(cursor, 764u32, metadata)?;
-				return Ok(Error::NominationPools(variant_error));
+				return Ok(Error::NominationPools(variant_error))
 			}
 			if pallet_name == "FastUnstake" {
 				let variant_error =
 					fast_unstake::Error::decode_with_metadata(cursor, 769u32, metadata)?;
-				return Ok(Error::FastUnstake(variant_error));
+				return Ok(Error::FastUnstake(variant_error))
 			}
 			if pallet_name == "Configuration" {
 				let variant_error =
 					configuration::Error::decode_with_metadata(cursor, 773u32, metadata)?;
-				return Ok(Error::Configuration(variant_error));
+				return Ok(Error::Configuration(variant_error))
 			}
 			if pallet_name == "ParaInclusion" {
 				let variant_error =
 					para_inclusion::Error::decode_with_metadata(cursor, 781u32, metadata)?;
-				return Ok(Error::ParaInclusion(variant_error));
+				return Ok(Error::ParaInclusion(variant_error))
 			}
 			if pallet_name == "ParaInherent" {
 				let variant_error =
 					para_inherent::Error::decode_with_metadata(cursor, 787u32, metadata)?;
-				return Ok(Error::ParaInherent(variant_error));
+				return Ok(Error::ParaInherent(variant_error))
 			}
 			if pallet_name == "Paras" {
 				let variant_error = paras::Error::decode_with_metadata(cursor, 812u32, metadata)?;
-				return Ok(Error::Paras(variant_error));
+				return Ok(Error::Paras(variant_error))
 			}
 			if pallet_name == "Hrmp" {
 				let variant_error = hrmp::Error::decode_with_metadata(cursor, 824u32, metadata)?;
-				return Ok(Error::Hrmp(variant_error));
+				return Ok(Error::Hrmp(variant_error))
 			}
 			if pallet_name == "ParasDisputes" {
 				let variant_error =
 					paras_disputes::Error::decode_with_metadata(cursor, 833u32, metadata)?;
-				return Ok(Error::ParasDisputes(variant_error));
+				return Ok(Error::ParasDisputes(variant_error))
 			}
 			if pallet_name == "ParasSlashing" {
 				let variant_error =
 					paras_slashing::Error::decode_with_metadata(cursor, 838u32, metadata)?;
-				return Ok(Error::ParasSlashing(variant_error));
+				return Ok(Error::ParasSlashing(variant_error))
 			}
 			if pallet_name == "Registrar" {
 				let variant_error =
 					registrar::Error::decode_with_metadata(cursor, 841u32, metadata)?;
-				return Ok(Error::Registrar(variant_error));
+				return Ok(Error::Registrar(variant_error))
 			}
 			if pallet_name == "Slots" {
 				let variant_error = slots::Error::decode_with_metadata(cursor, 843u32, metadata)?;
-				return Ok(Error::Slots(variant_error));
+				return Ok(Error::Slots(variant_error))
 			}
 			if pallet_name == "Auctions" {
 				let variant_error =
 					auctions::Error::decode_with_metadata(cursor, 848u32, metadata)?;
-				return Ok(Error::Auctions(variant_error));
+				return Ok(Error::Auctions(variant_error))
 			}
 			if pallet_name == "Crowdloan" {
 				let variant_error =
 					crowdloan::Error::decode_with_metadata(cursor, 851u32, metadata)?;
-				return Ok(Error::Crowdloan(variant_error));
+				return Ok(Error::Crowdloan(variant_error))
 			}
 			if pallet_name == "StateTrieMigration" {
 				let variant_error =
 					state_trie_migration::Error::decode_with_metadata(cursor, 508u32, metadata)?;
-				return Ok(Error::StateTrieMigration(variant_error));
+				return Ok(Error::StateTrieMigration(variant_error))
 			}
 			if pallet_name == "XcmPallet" {
 				let variant_error =
 					xcm_pallet::Error::decode_with_metadata(cursor, 873u32, metadata)?;
-				return Ok(Error::XcmPallet(variant_error));
+				return Ok(Error::XcmPallet(variant_error))
 			}
 			if pallet_name == "MessageQueue" {
 				let variant_error =
 					message_queue::Error::decode_with_metadata(cursor, 880u32, metadata)?;
-				return Ok(Error::MessageQueue(variant_error));
+				return Ok(Error::MessageQueue(variant_error))
 			}
 			Err(::subxt::ext::scale_decode::Error::custom(format!(
 				"Pallet name '{}' not found in root Error enum",

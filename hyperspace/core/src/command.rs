@@ -363,14 +363,14 @@ impl QueryPacketsCmd {
 						} else {
 							println!("Packet {sequence} was not acknowledged on {name_a}");
 						}
-						continue;
+						continue
 					}
 					let sent_packets = chain_a
 						.query_send_packets(channel_id.clone(), port_id.clone(), vec![sequence])
 						.await?;
 					if sent_packets.is_empty() {
 						println!("Packet {sequence} not found");
-						continue;
+						continue
 					}
 					for packet_info in sent_packets {
 						let seq = packet_info.sequence;
@@ -385,7 +385,7 @@ impl QueryPacketsCmd {
 							.pop();
 						if received.is_none() {
 							println!("Packet {seq} ({name_a}->{name_b}) was not received");
-							continue;
+							continue
 						}
 
 						println!("Received packet {seq} ({name_a}->{name_b}) {received:?}");
