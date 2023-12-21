@@ -90,12 +90,13 @@ pub async fn broadcast_tx(rpc_client: &WebSocketClient, tx_bytes: Vec<u8>) -> Re
 		.broadcast_tx_sync(tx_bytes)
 		.await
 		.map_err(|e| Error::from(format!("failed to broadcast transaction {e:?}")))?;
+	log::info!("This is the response {:?}", response);
 	Ok(response.hash)
 }
 
 pub async fn confirm_tx(rpc_client: &WebSocketClient, tx_hash: Hash) -> Result<Hash, Error> {
 	let start_time = tokio::time::Instant::now();
-	let timeout = Duration::from_millis(300000);
+	let timeout = Duration::from_millis(30000);
 	const WAIT_BACKOFF: Duration = Duration::from_millis(300);
 	let response: TxResponse = loop {
 		let response = rpc_client

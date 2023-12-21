@@ -6,10 +6,12 @@ use anchor_spl::associated_token::get_associated_token_address;
 use base64::Engine;
 use client_state::convert_new_client_state_to_old;
 use consensus_state::convert_new_consensus_state_to_old;
+use tendermint::{Hash, Time};
 use core::{pin::Pin, str::FromStr, time::Duration};
 use futures::future::join_all;
 use ibc_proto_new::cosmos::crypto::keyring::v1::record::Local;
 use ics07_tendermint::client_state::ClientState as TmClientState;
+use ics07_tendermint::consensus_state::ConsensusState as TmConsensusState;
 use msgs::convert_old_msgs_to_new;
 use serde::{Deserialize, Serialize};
 use solana_transaction_status::{EncodedConfirmedTransactionWithStatusMeta, UiTransactionEncoding};
@@ -42,7 +44,7 @@ use ibc::{
 		ics02_client::{
 			client_state::ClientType, events::UpdateClient, trust_threshold::TrustThreshold,
 		},
-		ics23_commitment::{commitment::CommitmentPrefix, specs::ProofSpecs},
+		ics23_commitment::{commitment::{CommitmentPrefix, CommitmentRoot}, specs::ProofSpecs},
 		ics24_host::identifier::{ChainId, ChannelId, ClientId, ConnectionId, PortId},
 		ics26_routing::msgs::Ics26Envelope,
 	},
@@ -1466,24 +1468,29 @@ deserialize client state"
 		(pallet_ibc::light_clients::AnyClientState, pallet_ibc::light_clients::AnyConsensusState),
 		Self::Error,
 	> {
-		// let latest_height_timestamp = self.latest_height_and_timestamp().await?;
-		// let client_state = TmClientState::<LocalClientTypes>::new(
-		// 	ChainId::from_string(&self.chain_id),
-		// 	TrustThreshold::default(),
-		// 	Duration::from_secs(64000),
-		// 	Duration::from_secs(1814400),
-		// 	Duration::new(15, 0),
-		// 	latest_height_timestamp.0,
-		// 	ProofSpecs::default(),
-		// 	vec!["upgrade".to_string(), "upgradedIBCState".to_string()],
-		// ).map_err(|e| Error::from(format!("Invalid client state {e}")))?;
-		let mock_header = ibc::mock::header::MockHeader {
-			height: ibc::Height::new(0, 1),
-			timestamp: ibc::timestamp::Timestamp::from_nanoseconds(1).unwrap(),
-		};
-		let mock_client_state = ibc::mock::client_state::MockClientState::new(mock_header.into());
-		let mock_cs_state = ibc::mock::client_state::MockConsensusState::new(mock_header);
-		Ok((AnyClientState::Mock(mock_client_state), AnyConsensusState::Mock(mock_cs_state)))
+		let latest_height_timestamp = self.latest_height_and_timestamp().await?;
+		let client_state = TmClientState::<HostFunctionsManager>::new(
+			ChainId::from_string(&self.chain_id),
+			TrustThreshold::default(),
+			Duration::from_secs(64000),
+			Duration::from_secs(1814400),
+			Duration::new(15, 0),
+			latest_height_timestamp.0,
+			ProofSpecs::default(),
+			vec!["upgrade".to_string(), "upgradedIBCState".to_string()],
+		).map_err(|e| Error::from(format!("Invalid client state {e}")))?;
+		let timestamp_in_nano = latest_height_timestamp.1.nanoseconds();
+		let secs = timestamp_in_nano / 10_u64.pow(9);
+		let nano = timestamp_in_nano % 10_u64.pow(9);
+		let time = Time::from_unix_timestamp(secs.try_into().unwrap(), nano.try_into().unwrap()).unwrap();
+		let consensus_state = TmConsensusState::new(vec![].into(), time, Hash::None);
+		// let mock_header = ibc::mock::header::MockHeader {
+		// 	height: ibc::Height::new(0, 1),
+		// 	timestamp: ibc::timestamp::Timestamp::from_nanoseconds(1).unwrap(),
+		// };
+		// let mock_client_state = ibc::mock::client_state::MockClientState::new(mock_header.into());
+		// let mock_cs_state = ibc::mock::client_state::MockConsensusState::new(mock_header);
+		Ok((AnyClientState::Tendermint(client_state), AnyConsensusState::Tendermint(consensus_state)))
 	}
 
 	async fn query_client_id_from_tx_hash(

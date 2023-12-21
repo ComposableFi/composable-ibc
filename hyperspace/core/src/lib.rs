@@ -351,7 +351,14 @@ async fn process_messages<B: Chain>(
 		}).collect::<Vec<_>>();
 		log::info!("Submitting messages to {}: {type_urls:#?}", sink.name());
 
-		queue::flush_message_batch(msgs, metrics.as_ref(), &*sink)
+		let filtered_msgs: Vec<_> = msgs.iter().filter_map(|msg| {
+			if msg.type_url == "" {
+				return None
+			}
+			Some(msg.clone())
+		}).collect();
+
+		queue::flush_message_batch(filtered_msgs, metrics.as_ref(), &*sink)
 			.await
 			.map_err(|e| anyhow!("Failed to submit messages: {:?}", e))?;
 		log::debug!(target: "hyperspace", "Successfully submitted messages to {}", sink.name());

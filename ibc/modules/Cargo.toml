@@ -29,7 +29,7 @@ std = [
 	"log/std",
 	"hex/std",
 	"num-traits/std",
-	"primitive-types/std",
+	# "primitive-types/std",
 	"prost/std",
 	"serde/std",
 	"serde_json/std",

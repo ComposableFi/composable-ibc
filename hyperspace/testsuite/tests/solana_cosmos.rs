@@ -51,7 +51,7 @@ impl Default for Args {
 		let solana = std::env::var("SOLANA_HOST").unwrap_or_else(|_| "192.168.0.101".to_string());
 		let cosmos = std::env::var("COSMOS_HOST").unwrap_or_else(|_| "192.168.0.101".to_string());
 		let wasm_path = std::env::var("WASM_PATH").unwrap_or_else(|_| {
-			"../../target/wasm32-unknown-unknown/release/icsxx_ethereum_cw.wasm".to_string()
+			"../../target/wasm32-unknown-unknown/release/icsxx_solana_cw.wasm".to_string()
 		});
 
 		Args {
@@ -111,15 +111,13 @@ async fn setup_clients() -> (AnyChain, AnyChain) {
 		connection_id: None,
 		account_prefix: "centauri".to_string(),
 		fee_denom: "stake".to_string(),
-		fee_amount: "4000".to_string(),
+		fee_amount: "92233720368547899".to_string(),
 		gas_limit: (i64::MAX - 1) as u64,
 		store_prefix: args.connection_prefix_b,
 		max_tx_size: 200000,
-		// centauri1g5r2vmnp6lta9cpst4lzc4syy3kcj2ljte3tlh
 		mnemonic:
-			// "oxygen fall sure lava energy veteran enroll frown question detail include maximum"
+		// centauri1g5r2vmnp6lta9cpst4lzc4syy3kcj2ljte3tlh
 			"decorate bright ozone fork gallery riot bus exhaust worth way bone indoor calm squirrel merry zero scheme cotton until shop any excess stage laundry"
-		//  "taste shoot adapt slow truly grape gift need suggest midnight burger horn whisper hat vast aspect exit scorpion jewel axis great area awful blind"
 				.to_string(),
 		wasm_code_id: None,
 		channel_whitelist: vec![],
@@ -140,7 +138,10 @@ async fn setup_clients() -> (AnyChain, AnyChain) {
 
 	let wasm_data = tokio::fs::read(&args.wasm_path).await.expect("Failed to read wasm file");
 	let code_id = match chain_b.upload_wasm(wasm_data.clone()).await {
-		Ok(code_id) => code_id,
+		Ok(code_id) => {
+			log::info!("wasm was uploaded");
+			code_id
+		},
 		Err(e) => {
 			let e_str = format!("{e:?}");
 			if !e_str.contains("wasm code already exists") {
@@ -199,8 +200,8 @@ async fn solana_to_cosmos_ibc_messaging_full_integration_test() {
 		"ibc/47B97D8FF01DA03FCB2F4B1FFEC931645F254E21EF465FA95CBA6888CB964DC4".to_string(),
 	);
 	let (mut chain_a, mut chain_b) = setup_clients().await;
-	// let (handle, channel_a, channel_b, connection_id_a, connection_id_b) =
-	// 	setup_connection_and_channel(&mut chain_a, &mut chain_b, Duration::from_secs(60 * 2)).await;
+	let (handle, channel_a, channel_b, connection_id_a, connection_id_b) =
+		setup_connection_and_channel(&mut chain_a, &mut chain_b, Duration::from_secs(60 * 2)).await;
 	// handle.abort();
 
 	// // Set connections and channel whitelist

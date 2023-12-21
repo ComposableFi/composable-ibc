@@ -51,7 +51,7 @@ use tokio::{
 };
 
 const DEFAULT_FEE_DENOM: &str = "stake";
-const DEFAULT_FEE_AMOUNT: &str = "4000";
+const DEFAULT_FEE_AMOUNT: &str = "400000000000000000";
 const DEFAULT_GAS_LIMIT: u64 = (i64::MAX - 1) as u64;
 
 fn default_gas_limit() -> u64 {
