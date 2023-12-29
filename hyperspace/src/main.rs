@@ -42,5 +42,10 @@ async fn main() -> Result<()> {
 			cmd.save_config(&new_config).await
 		},
 		Subcommand::Fish(cmd) => cmd.fish().await,
+		Subcommand::Query { cmd, query } => {
+			let config = cmd.parse_config().await?;
+			query.run(config).await?;
+			Ok(())
+		},
 	}
 }

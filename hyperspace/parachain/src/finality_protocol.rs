@@ -384,13 +384,13 @@ where
 	<T as subxt::Config>::AccountId: Send + Sync,
 	<T as subxt::Config>::Address: Send + Sync,
 {
-	log::debug!(target: "hyperspace", "Trying to find next justification in blocks {from}..{to}");
+	log::debug!(target: "hyperspace_parachain", "Trying to find next justification in blocks {from}..{to}");
 	let mut join_set: JoinSet<Result<_, anyhow::Error>> = JoinSet::new();
 	let heights = (from..to).collect::<Vec<_>>();
 	for heights in heights.chunks(PROCESS_BLOCKS_BATCH_SIZE) {
 		for height in heights.to_owned() {
 			if height % 100 == 0 {
-				log::debug!(target: "hyperspace", "Looking for a closer proof {height}/{to}...");
+				log::debug!(target: "hyperspace_parachain", "Looking for a closer proof {height}/{to}...");
 			}
 			let relay_client = prover.relay_client.clone();
 			let delay = prover.rpc_call_delay.as_millis();
@@ -405,7 +405,7 @@ where
 				};
 				let Some(justifications) = block.justifications else { return Ok(None) };
 				for (id, justification) in justifications {
-					log::info!(target: "hyperspace", "Found closer justification at {height} (suggested {to})");
+					log::info!(target: "hyperspace_parachain", "Found closer justification at {height} (suggested {to})");
 					if id == GRANDPA_ENGINE_ID {
 						let decoded_justification =
 							GrandpaJustification::<T::Header>::decode(&mut &justification[..])?;
@@ -614,7 +614,7 @@ where
 					.collect::<Vec<_>>(),
 				&channel_and_port_ids,
 			);
-			log::trace!(target: "hyperspace", "Filtering event: {:?}: {f}", e.event_type());
+			log::trace!(target: "hyperspace_parachain", "Filtering event: {:?}: {f}", e.event_type());
 			f
 		})
 		.collect();

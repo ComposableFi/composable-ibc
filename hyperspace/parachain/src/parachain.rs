@@ -48,7 +48,7 @@ impl<T: Config> Decode for UncheckedExtrinsic<T> {
 		let signature = is_signed.then(|| Decode::decode(input)).transpose()?;
 		let function =
 			Decode::decode(input).map_err(|e| {
-				log::error!(target: "hyperspace", "Failed to decode extrinsic: {:?}.\nCheck that the chain's SignedExtra is correct", e);
+				log::error!(target: "hyperspace_parachain", "Failed to decode extrinsic: {:?}.\nCheck that the chain's SignedExtra is correct", e);
 				e
 			})?;
 

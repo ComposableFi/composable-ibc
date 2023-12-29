@@ -62,13 +62,14 @@ macro_rules! chains {
 		}
 
 		#[derive(Error, Debug)]
+		#[hyperspace_macros::any_error]
 		pub enum AnyError {
 			$(
 				$(#[$($meta)*])*
-				#[error("{0}")]
+				#[error(" error: {0}")]
 				$name(<$client as IbcProvider>::Error),
 			)*
-			#[error("{0}")]
+			#[error(" error: {0}")]
 			Other(String),
 		}
 
