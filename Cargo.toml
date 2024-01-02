@@ -68,6 +68,8 @@ ibc-core-commitment-types = { path = "../ibc-rs/ibc-core/ics23-commitment/types"
 ibc-core-connection-types = { path = "../ibc-rs/ibc-core/ics03-connection/types" }
 ibc-core-host-types = { path = "../ibc-rs/ibc-core/ics24-host/types" }
 bip39 = { git="https://github.com/dhruvja/rust-bip39.git" }
+tendermint = { path = "../tendermint-rs/tendermint" }
+tendermint-proto = { path = "../tendermint-rs/proto" }
 # cfg-expr = { git = "https://github.com/EmbarkStudios/cfg-expr", tag="0.15.0" }
 
 

@@ -10,7 +10,9 @@ use ibc::{
 };
 use ibc_proto_new::ibc::lightclients::tendermint::v1::{ClientState, Fraction};
 use ibc_testkit::testapp::ibc::clients::mock::client_state::MockClientState;
-use pallet_ibc::light_clients::AnyClientState;
+use pallet_ibc::light_clients::{AnyClientState, HostFunctionsManager};
+use primitives::mock::LocalClientTypes;
+use tendermint_proto::Protobuf;
 
 pub fn convert_new_client_state_to_old(
 	client_state: solana_ibc::client_state::AnyClientState,
@@ -114,6 +116,41 @@ pub fn convert_old_client_state_to_new(
 					)
 				}),
 			}),
-		_ => panic!("Client state not supported"),
+			AnyClientState::Wasm(cs) => {
+				let cs = AnyClientState::decode_vec(&cs.data).unwrap();
+				println!("This is tendermint\n {:?}", cs);
+				let cs = match cs {
+					AnyClientState::Tendermint(e) => e, 
+					_ => panic!("Invalid state")
+				};
+				solana_ibc::client_state::AnyClientState::Tendermint(
+				ClientState {
+					chain_id: cs.chain_id.to_string(),
+					trust_level: Some(Fraction {
+						numerator: cs.trust_level.numerator(),
+						denominator: cs.trust_level.denominator(),
+					}),
+					trusting_period: Some(cs.trusting_period.into()),
+					unbonding_period: Some(cs.unbonding_period.into()),
+					max_clock_drift: Some(cs.max_clock_drift.into()),
+					frozen_height: cs.frozen_height.and_then(|height| {
+						Some(ibc_proto_new::ibc::core::client::v1::Height {
+							revision_number: height.revision_number,
+							revision_height: height.revision_height,
+						})
+					}),
+					latest_height: Some(ibc_proto_new::ibc::core::client::v1::Height {
+						revision_number: cs.latest_height.revision_number,
+						revision_height: cs.latest_height.revision_height,
+					}),
+					proof_specs: ibc_new::core::commitment_types::specs::ProofSpecs::cosmos().into(),
+					upgrade_path: cs.upgrade_path,
+					allow_update_after_expiry: false,
+					allow_update_after_misbehaviour: false,
+				}
+				.try_into()
+				.unwrap(),
+			)},
+		_ => panic!("Client state not supported")
 	}
 }

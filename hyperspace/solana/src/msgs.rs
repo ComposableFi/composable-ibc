@@ -27,7 +27,7 @@ use ibc_new::{
 		handler::types::msgs::MsgEnvelope,
 		host::types::identifiers::{ChannelId, ClientId, ConnectionId, PortId, Sequence},
 	},
-	primitives::{Signer, Timestamp},
+	primitives::{proto::Protobuf, Msg, Signer, Timestamp},
 };
 use ibc_proto_new::{google::protobuf::Any, ibc::core::connection::v1::Version};
 use primitives::mock::LocalClientTypes;
@@ -49,19 +49,19 @@ pub fn convert_old_msgs_to_new(messages: Vec<Ics26Envelope<LocalClientTypes>>) -
 						convert_old_consensus_state_to_new(e.consensus_state.clone()).into(),
 						Signer::from(e.signer.as_ref().to_string()),
 					))),
-				ibc::core::ics02_client::msgs::ClientMsg::UpdateClient(e) =>
+				ibc::core::ics02_client::msgs::ClientMsg::UpdateClient(e) => {
+					let header = match &e.client_message {
+						pallet_ibc::light_clients::AnyClientMessage::Tendermint(msg) =>
+							ibc_proto::google::protobuf::Any::from(msg.clone()),
+						_ => panic!("Not supported"),
+					};
+					let new_any_header = Any { type_url: header.type_url, value: header.value };
 					MsgEnvelope::Client(ClientMsg::UpdateClient(MsgUpdateClient {
 						client_id: ClientId::from_str(e.client_id.as_str()).unwrap(),
-						client_message: Any {
-							type_url: ibc_proto::google::protobuf::Any::from(
-								e.client_message.clone(),
-							)
-							.type_url,
-							value: ibc_proto::google::protobuf::Any::from(e.client_message.clone())
-								.value,
-						},
+						client_message: new_any_header,
 						signer: Signer::from(e.signer.as_ref().to_string()),
-					})),
+					}))
+				},
 				ibc::core::ics02_client::msgs::ClientMsg::UpgradeClient(e) =>
 					MsgEnvelope::Client(ClientMsg::UpgradeClient(MsgUpgradeClient {
 						client_id: ClientId::from_str(e.client_id.as_str()).unwrap(),
@@ -172,10 +172,16 @@ pub fn convert_old_msgs_to_new(messages: Vec<Ics26Envelope<LocalClientTypes>>) -
 							e.proofs.consensus_proof().unwrap().height().revision_height,
 						)
 						.unwrap(),
-						proof_consensus_state_of_b: Some(
-							CommitmentProofBytes::try_from(e.host_consensus_state_proof.clone())
+						proof_consensus_state_of_b: if e.host_consensus_state_proof.is_empty() {
+							None
+						} else {
+							Some(
+								CommitmentProofBytes::try_from(
+									e.host_consensus_state_proof.clone(),
+								)
 								.unwrap(),
-						),
+							)
+						},
 						previous_connection_id: String::default(),
 					})),
 				ibc::core::ics03_connection::msgs::ConnectionMsg::ConnectionOpenAck(e) =>
@@ -221,10 +227,16 @@ pub fn convert_old_msgs_to_new(messages: Vec<Ics26Envelope<LocalClientTypes>>) -
 							.try_into()
 							.unwrap()
 						},
-						proof_consensus_state_of_a: Some(
-							CommitmentProofBytes::try_from(e.host_consensus_state_proof.clone())
+						proof_consensus_state_of_a: if e.host_consensus_state_proof.is_empty() {
+							None
+						} else {
+							Some(
+								CommitmentProofBytes::try_from(
+									e.host_consensus_state_proof.clone(),
+								)
 								.unwrap(),
-						),
+							)
+						},
 					})),
 				ibc::core::ics03_connection::msgs::ConnectionMsg::ConnectionOpenConfirm(e) =>
 					MsgEnvelope::Connection(ConnectionMsg::OpenConfirm(MsgConnectionOpenConfirm {
@@ -498,4 +510,55 @@ pub fn convert_old_msgs_to_new(messages: Vec<Ics26Envelope<LocalClientTypes>>) -
 		})
 		.collect();
 	new_messages
+}
+
+pub fn convert_messages_to_any(messages: Vec<MsgEnvelope>) -> Vec<Any> {
+	let msgs: Vec<Any> = messages
+		.iter()
+		.map(|message| match message {
+			MsgEnvelope::Client(msg) => match msg {
+				ClientMsg::CreateClient(e) =>
+					Any { type_url: e.type_url(), value: e.clone().encode_vec() },
+				ClientMsg::UpdateClient(e) =>
+					Any { type_url: e.type_url(), value: e.clone().encode_vec() },
+				ClientMsg::Misbehaviour(e) =>
+					Any { type_url: e.type_url(), value: e.clone().encode_vec() },
+				ClientMsg::UpgradeClient(e) =>
+					Any { type_url: e.type_url(), value: e.clone().encode_vec() },
+			},
+			MsgEnvelope::Connection(msg) => match msg {
+				ConnectionMsg::OpenInit(e) =>
+					Any { type_url: e.type_url(), value: e.clone().encode_vec() },
+				ConnectionMsg::OpenTry(e) =>
+					Any { type_url: e.type_url(), value: e.clone().encode_vec() },
+				ConnectionMsg::OpenAck(e) =>
+					Any { type_url: e.type_url(), value: e.clone().encode_vec() },
+				ConnectionMsg::OpenConfirm(e) =>
+					Any { type_url: e.type_url(), value: e.clone().encode_vec() },
+			},
+			MsgEnvelope::Channel(msg) => match msg {
+				ChannelMsg::OpenInit(e) =>
+					Any { type_url: e.type_url(), value: e.clone().encode_vec() },
+				ChannelMsg::OpenTry(e) =>
+					Any { type_url: e.type_url(), value: e.clone().encode_vec() },
+				ChannelMsg::OpenAck(e) =>
+					Any { type_url: e.type_url(), value: e.clone().encode_vec() },
+				ChannelMsg::OpenConfirm(e) =>
+					Any { type_url: e.type_url(), value: e.clone().encode_vec() },
+				ChannelMsg::CloseInit(e) =>
+					Any { type_url: e.type_url(), value: e.clone().encode_vec() },
+				ChannelMsg::CloseConfirm(e) =>
+					Any { type_url: e.type_url(), value: e.clone().encode_vec() },
+			},
+			MsgEnvelope::Packet(msg) => match msg {
+				PacketMsg::Recv(e) => Any { type_url: e.type_url(), value: e.clone().encode_vec() },
+				PacketMsg::Ack(e) => Any { type_url: e.type_url(), value: e.clone().encode_vec() },
+				PacketMsg::Timeout(e) =>
+					Any { type_url: e.type_url(), value: e.clone().encode_vec() },
+				PacketMsg::TimeoutOnClose(e) =>
+					Any { type_url: e.type_url(), value: e.clone().encode_vec() },
+			},
+		})
+		.collect();
+	msgs
 }

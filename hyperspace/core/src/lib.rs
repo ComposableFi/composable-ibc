@@ -277,12 +277,16 @@ async fn process_updates<A: Chain, B: Chain>(
 			HashSet::new()
 		};
 
+	log::info!("Updates on {} are {}", source.name(), updates.len());
+
 	for (msg_update_client, height, events, update_type) in updates {
 		if let Some(metrics) = metrics.as_mut() {
 			if let Err(e) = metrics.handle_events(events.as_slice()).await {
 				log::error!("Failed to handle metrics for {} {:?}", source.name(), e);
 			}
 		}
+
+		// println!("These are events {:?}", events); 
 
 		let event_types = events.iter().map(|ev| ev.event_type()).collect::<Vec<_>>();
 		let mut messages = parse_events(source, sink, events, mode)
@@ -300,6 +304,9 @@ async fn process_updates<A: Chain, B: Chain>(
 			mandatory_heights_for_undelivered_seqs.contains(&height.revision_height);
 		let common_state = source.common_state();
 		let skip_optional_updates = common_state.skip_optional_client_updates;
+
+		// println!("These are messages len {}", messages.len());
+		// println!("update type: {:?}, skip_optional_updates {:?}", update_type, skip_optional_updates);
 
 		// We want to send client update if packet messages exist but where not sent due
 		// to a connection delay even if client update message is optional
@@ -327,6 +334,7 @@ async fn process_updates<A: Chain, B: Chain>(
 				},
 			_ => log::info!("Received finalized events from: {} {event_types:#?}", source.name()),
 		};
+		log::info!("pushed msg update client for {} with msg {} of len {}", source.name(), msg_update_client.type_url, msg_update_client.value.len());
 		msgs.push(msg_update_client);
 		msgs.append(&mut messages);
 	}
@@ -358,9 +366,11 @@ async fn process_messages<B: Chain>(
 			Some(msg.clone())
 		}).collect();
 
-		queue::flush_message_batch(filtered_msgs, metrics.as_ref(), &*sink)
-			.await
-			.map_err(|e| anyhow!("Failed to submit messages: {:?}", e))?;
+		if !filtered_msgs.is_empty() {
+			queue::flush_message_batch(filtered_msgs, metrics.as_ref(), &*sink)
+				.await
+				.map_err(|e| anyhow!("Failed to submit messages: {:?}", e))?;
+		}
 		log::debug!(target: "hyperspace", "Successfully submitted messages to {}", sink.name());
 	}
 	Ok(())

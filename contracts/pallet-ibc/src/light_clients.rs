@@ -375,6 +375,9 @@ impl AnyClientMessage {
 
 	pub fn wasm(inner: Self) -> Result<Self, tendermint_proto::Error> {
 		let maybe_height = inner.maybe_header_height();
+		println!("---------------------------------------------------");
+		println!("This has height {:?}", maybe_height);
+		println!("---------------------------------------------------");
 		Ok(match maybe_height {
 			Some(height) => Self::Wasm(ics08_wasm::client_message::ClientMessage::Header(
 				ics08_wasm::client_message::Header {

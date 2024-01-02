@@ -70,6 +70,7 @@ pub async fn parse_events(
 		match event {
 			IbcEvent::OpenInitConnection(open_init) => {
 				if let Some(connection_id) = open_init.connection_id() {
+					log::info!("I am in open init connection with open init {:?}", open_init);
 					let connection_id = connection_id.clone();
 					// Get connection end with proof
 					let connection_response = source
@@ -95,16 +96,19 @@ pub async fn parse_events(
 						)
 						.await?;
 
-					let proof_height = connection_response.proof_height.ok_or_else(|| Error::Custom("[get_messages_for_events - open_conn_init] Proof height not found in response".to_string()))?;
-					let proof_height =
-						Height::new(proof_height.revision_number, proof_height.revision_height);
-					let client_state_proof =
-						CommitmentProofBytes::try_from(client_state_response.proof).ok();
-
 					let client_state = client_state_response
 						.client_state
 						.map(AnyClientState::try_from)
 						.ok_or_else(|| Error::Custom("Client state is empty".to_string()))??;
+
+					let proof_height = connection_response.proof_height.ok_or_else(|| Error::Custom("[get_messages_for_events - open_conn_init] Proof height not found in response".to_string()))?;
+					let proof_height = 
+						Height::new(proof_height.revision_number, proof_height.revision_height);
+					// client_state.latest_height();
+					let client_state_proof =
+						CommitmentProofBytes::try_from(client_state_response.proof).ok();
+
+					
 					let consensus_proof = source
 						.query_client_consensus(
 							open_init.height(),
@@ -131,16 +135,16 @@ pub async fn parse_events(
 							client_state_proof,
 							Some(ConsensusProof::new(
 								CommitmentProofBytes::try_from(consensus_proof.proof)?,
-								client_state.latest_height(),
+								client_state.latest_height()
 							)?),
 							None,
-							proof_height,
+							proof_height
 						)?,
 						delay_period: connection_end.delay_period(),
 						signer: sink.account_id(),
 						host_consensus_state_proof,
 					};
-
+					log::info!("Constructed open try {:?} with client height {:?}", proof_height, client_state.latest_height());
 					let value = msg.encode_vec()?;
 					let msg = Any { value, type_url: msg.type_url() };
 					messages.push(msg)
@@ -191,6 +195,9 @@ pub async fn parse_events(
 					let host_consensus_state_proof =
 						query_host_consensus_state_proof(sink, client_state.clone()).await?;
 					// Construct OpenAck
+					println!("-----------------");
+					println!("OpenAck consensus height {:?}", client_state.latest_height());
+					println!("-----------------");
 					let msg = MsgConnectionOpenAck::<LocalClientTypes> {
 						connection_id: counterparty
 							.connection_id()
@@ -254,6 +261,10 @@ pub async fn parse_events(
 					})?;
 					let proof_height =
 						Height::new(proof_height.revision_number, proof_height.revision_height);
+
+					println!("-----------------");
+					println!("Proof Height for OpenConfirm {:?} {:?}", proof_height, open_ack.height());
+					println!("-----------------");
 
 					// Construct OpenConfirm
 					let msg = MsgConnectionOpenConfirm {

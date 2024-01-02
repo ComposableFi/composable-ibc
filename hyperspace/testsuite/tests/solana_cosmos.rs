@@ -20,7 +20,7 @@ use hyperspace_core::{
 	substrate::DefaultConfig,
 };
 use hyperspace_cosmos::client::{CosmosClient, CosmosClientConfig};
-use hyperspace_primitives::{utils::create_clients, CommonClientConfig, IbcProvider};
+use hyperspace_primitives::{utils::create_clients, CommonClientConfig, IbcProvider, KeyProvider};
 use hyperspace_solana::{SolanaClient, SolanaClientConfig};
 use hyperspace_testsuite::{
 	ibc_channel_close, ibc_messaging_packet_height_timeout_with_connection_delay,
@@ -29,7 +29,8 @@ use hyperspace_testsuite::{
 	ibc_messaging_with_connection_delay, misbehaviour::ibc_messaging_submit_misbehaviour,
 	setup_connection_and_channel,
 };
-use ibc::core::ics24_host::identifier::PortId;
+use ibc::core::{ics24_host::identifier::PortId, ics02_client::msgs::update_client::MsgUpdateAnyClient};
+use ibc_proto::ibc::core::client::v1::MsgUpdateClient;
 use sp_core::hashing::sha2_256;
 
 #[derive(Debug, Clone)]
@@ -183,6 +184,16 @@ async fn setup_clients() -> (AnyChain, AnyChain) {
 	// 	return (chain_a_wrapped, chain_b_wrapped)
 	// }
 
+	// let update_client = MsgUpdateAnyClient::<LocalClientTypes> {
+	// 	client_id: client_on_b[0],
+  //   client_message: None,
+  //   signer: chain_a.account_id(),
+	// };
+
+	// let msg = Any { type_url: update_client.type_url(), value: msg.encode_vec()? };
+
+	// chain_b.submit_call(vec![msg]).await.unwrap();
+
 	let (client_a, client_b) =
 		create_clients(&mut chain_a_wrapped, &mut chain_b_wrapped).await.unwrap();
 	chain_a_wrapped.set_client_id(client_a);
@@ -190,7 +201,8 @@ async fn setup_clients() -> (AnyChain, AnyChain) {
 	(chain_a_wrapped, chain_b_wrapped)
 }
 
-#[tokio::test]
+// #[tokio::test]
+#[tokio::test(flavor = "multi_thread", worker_threads = 5)]
 // #[ignore]
 async fn solana_to_cosmos_ibc_messaging_full_integration_test() {
 	logging::setup_logging();
@@ -202,28 +214,29 @@ async fn solana_to_cosmos_ibc_messaging_full_integration_test() {
 	let (mut chain_a, mut chain_b) = setup_clients().await;
 	let (handle, channel_a, channel_b, connection_id_a, connection_id_b) =
 		setup_connection_and_channel(&mut chain_a, &mut chain_b, Duration::from_secs(60 * 2)).await;
+
 	// handle.abort();
 
-	// // Set connections and channel whitelist
-	// chain_a.set_connection_id(connection_id_a);
-	// chain_b.set_connection_id(connection_id_b);
+	// Set connections and channel whitelist
+	chain_a.set_connection_id(connection_id_a);
+	chain_b.set_connection_id(connection_id_b);
 
-	// chain_a.set_channel_whitelist(vec![(channel_a, PortId::transfer())].into_iter().collect());
-	// chain_b.set_channel_whitelist(vec![(channel_b, PortId::transfer())].into_iter().collect());
+	chain_a.set_channel_whitelist(vec![(channel_a, PortId::transfer())].into_iter().collect());
+	chain_b.set_channel_whitelist(vec![(channel_b, PortId::transfer())].into_iter().collect());
 
-	// // Run tests sequentially
+	// Run tests sequentially
 
-	// // no timeouts + connection delay
+	// no timeouts + connection delay
 
-	// ibc_messaging_with_connection_delay(
-	// 	&mut chain_a,
-	// 	&mut chain_b,
-	// 	asset_id_a.clone(),
-	// 	asset_id_b.clone(),
-	// 	channel_a,
-	// 	channel_b,
-	// )
-	// .await;
+	ibc_messaging_with_connection_delay(
+		&mut chain_a,
+		&mut chain_b,
+		asset_id_a.clone(),
+		asset_id_b.clone(),
+		channel_a,
+		channel_b,
+	)
+	.await;
 
 	// // timeouts + connection delay
 	// ibc_messaging_packet_height_timeout_with_connection_delay(
@@ -257,7 +270,8 @@ async fn solana_to_cosmos_ibc_messaging_full_integration_test() {
 	// // ibc_messaging_submit_misbehaviour(&mut chain_a, &mut chain_b).await;
 }
 
-#[tokio::test]
+// #[tokio::test]
+#[tokio::test(flavor = "multi_thread", worker_threads = 5)]
 #[ignore]
 async fn cosmos_to_solana_ibc_messaging_full_integration_test() {
 	logging::setup_logging();

@@ -262,7 +262,9 @@ impl VerifyClientMessage {
 		let client_message = match raw {
 			ClientMessageRaw::Header(header) => {
 				let any = Any::decode(&mut header.data.as_slice())?;
-				ClientMessage::Header(Header::decode_vec(&any.value)?)
+				// panic!("This is any {:?}\n {:?}", any.type_url, any.value);
+				// ClientMessage::Header(Header::decode_vec(&any.value)?)
+				ClientMessage::decode_vec(&any.value)?
 			},
 			ClientMessageRaw::Misbehaviour(misbehaviour) => {
 				let any = Any::decode(&mut misbehaviour.data.as_slice())?;

@@ -32,8 +32,8 @@ use ibc::{
 
 pub fn convert_new_event_to_old(
 	event: ibc_new::core::handler::types::events::IbcEvent,
+	height: Height
 ) -> Option<IbcEvent> {
-	let height = Height { revision_number: 0, revision_height: 1 };
 	match event {
 		ibc_new::core::handler::types::events::IbcEvent::CreateClient(e) => {
 			let eve = CreateClient(ClientAttributes {

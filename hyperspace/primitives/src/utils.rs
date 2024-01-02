@@ -18,7 +18,7 @@ use crate::{mock::LocalClientTypes, Chain};
 use futures::{future, StreamExt};
 use ibc::{
 	core::{
-		ics02_client::msgs::create_client::MsgCreateAnyClient,
+		ics02_client::msgs::{create_client::MsgCreateAnyClient, update_client::MsgUpdateAnyClient},
 		ics03_connection::{connection::Counterparty, msgs::conn_open_init::MsgConnectionOpenInit},
 		ics04_channel,
 		ics04_channel::{
@@ -68,7 +68,7 @@ pub async fn create_clients(
 	chain_b: &mut impl Chain,
 ) -> Result<(ClientId, ClientId), anyhow::Error> {
 	println!("In clients");
-	let (client_state_a, cs_state_a) = chain_a.initialize_client_state().await?;
+	
 	println!("In clients");
 	let (client_state_b, cs_state_b) = chain_b.initialize_client_state().await?;
 
@@ -84,8 +84,10 @@ pub async fn create_clients(
 	let tx_id = chain_a.submit(vec![msg]).await?;
 	println!("In clients with tx_id {:?}", tx_id);
 	// sleep(Duration::from_secs(5));
-	let client_id_b_on_a = ClientId::new("9999-mock", 0).unwrap();
-	// let client_id_b_on_a = chain_a.query_client_id_from_tx_hash(tx_id).await?;
+	// let client_id_b_on_a = ClientId::new("9999-mock", 0).unwrap();
+	let client_id_b_on_a = chain_a.query_client_id_from_tx_hash(tx_id).await?;
+
+	let (client_state_a, cs_state_a) = chain_a.initialize_client_state().await?;
 
 	let msg = MsgCreateAnyClient::<LocalClientTypes> {
 		client_state: client_state_a,
@@ -102,6 +104,17 @@ pub async fn create_clients(
 	let tx_id = chain_b.submit(vec![msg]).await?;
 	let client_id_a_on_b = chain_b.query_client_id_from_tx_hash(tx_id).await?;
 	chain_a.set_client_id(client_id_b_on_a.clone());
+
+	// let msg = MsgUpdateAnyClient::<LocalClientTypes> {
+	// 	signer: chain_a.account_id(),
+  //   client_id: client_id_b_on_a,
+  //   client_message: Any { type_url: "/ibc.lightclients.tendermint.v1.Header".to_owned(), value: Vec::new() },
+	// };
+
+	// let msg = Any { type_url: msg.type_url(), value: msg.encode_vec()? };
+
+	// println!("In clients");
+	// let tx_id = chain_a.submit(vec![msg]).await?;	
 
 	Ok((client_id_a_on_b, client_id_b_on_a))
 }

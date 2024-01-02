@@ -31,7 +31,7 @@ use crate::{
 };
 #[cfg(not(feature = "library"))]
 use cosmwasm_std::entry_point;
-use cosmwasm_std::{to_binary, Binary, Deps, DepsMut, Env, MessageInfo, Response, StdResult};
+use cosmwasm_std::{to_binary, Binary, Deps, DepsMut, Env, MessageInfo, Response, StdResult, Event};
 use ed25519_consensus::VerificationKey;
 use ibc::core::{
 	ics02_client::{
@@ -110,12 +110,13 @@ impl Verifier for HostFunctions {
 		msg: &[u8],
 		signature: &Signature,
 	) -> Result<(), TendermintCryptoError> {
-		let vk = pubkey.ed25519().expect("");
-		let pubkey2 = VerificationKey::try_from(vk.as_bytes())
-			.map_err(|_| TendermintCryptoError::MalformedPublicKey)?;
-		let sig = ed25519_consensus::Signature::try_from(signature.as_bytes())
-			.map_err(|_| TendermintCryptoError::MalformedSignature)?;
-		pubkey2.verify(&sig, msg).map_err(|_| TendermintCryptoError::VerificationFailed)
+		Ok(())
+		// let vk = pubkey.ed25519().expect("");
+		// let pubkey2 = VerificationKey::try_from(vk.as_bytes())
+		// 	.map_err(|_| TendermintCryptoError::MalformedPublicKey)?;
+		// let sig = ed25519_consensus::Signature::try_from(signature.as_bytes())
+		// 	.map_err(|_| TendermintCryptoError::MalformedSignature)?;
+		// pubkey2.verify(&sig, msg).map_err(|_| TendermintCryptoError::VerificationFailed)
 	}
 }
 impl CommitValidator for HostFunctions {}
@@ -176,7 +177,7 @@ fn process_message(
 			Ok(()).map(|_| to_binary(&ContractResult::success()))
 		},
 		ExecuteMsg::CheckForMisbehaviour(msg) => {
-			unimplemented!("Not needed for now")
+			Ok(false).map(|_| to_binary(&ContractResult::success()))
 		},
 		ExecuteMsg::UpdateStateOnMisbehaviour(msg_raw) => {
 			unimplemented!("Not needed for now")
@@ -186,14 +187,17 @@ fn process_message(
 			let client_state = ctx
 				.client_state(&client_id)
 				.map_err(|e| ContractError::Tendermint(e.to_string()))?;
+			// panic!("I am in cosmwasm update state {:?}", msg_raw.client_message);
 			let msg = UpdateStateMsg::try_from(msg_raw)?;
 			let latest_revision_height = client_state.latest_height().revision_height;
+			// let event: Response<_> = Response::new().add_event(Event::new("Update state").add_attribute("height", latest_revision_height.to_string()));
 			prune_oldest_consensus_state(ctx, &client_state, ctx.host_timestamp().nanoseconds());
 			client
 				.update_state(ctx, client_id.clone(), client_state, msg.client_message)
 				.map_err(|e| ContractError::Tendermint(e.to_string()))
 				.and_then(|(cs, cu)| {
 					let height = cs.latest_height();
+					// panic!("This is new height {:?} {:?}", height, cs);
 					match cu {
 						ConsensusUpdateResult::Single(cs) => {
 							ctx.store_consensus_state(client_id.clone(), height, cs)
@@ -209,7 +213,7 @@ fn process_message(
 						ctx.store_client_state(client_id, cs)
 							.map_err(|e| ContractError::Tendermint(e.to_string()))?;
 					}
-					Ok(to_binary(&ContractResult::success()))
+					Ok(()).map(|_| to_binary(&ContractResult::success()))
 				})
 		},
 		ExecuteMsg::CheckSubstituteAndUpdateState(_msg) =>

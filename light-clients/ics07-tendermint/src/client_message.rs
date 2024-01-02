@@ -242,7 +242,7 @@ impl From<Header> for RawHeader {
 	}
 }
 
-#[cfg(test)]
+// #[cfg(test)]
 pub mod test_util {
 	use alloc::vec;
 
@@ -299,7 +299,7 @@ pub mod test_util {
 		Header {
 			signed_header: shdr,
 			validator_set: vs.clone(),
-			trusted_height: Height::new(0, 1),
+			trusted_height: Height::new(1, 1),
 			trusted_validator_set: vs,
 		}
 	}

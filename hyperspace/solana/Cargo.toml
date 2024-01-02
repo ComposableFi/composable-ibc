@@ -52,7 +52,7 @@ ibc = { path = "../../ibc/modules", features = [] }
 ibc-proto = { path = "../../ibc/proto", package="ibc-proto" }
 ibc-primitives = { path = "../../contracts/pallet-ibc/primitives" }
 ics07-tendermint = { path = "../../light-clients/ics07-tendermint" }
-# ics08-wasm = { path = "../../light-clients/ics08-wasm" }
+ics08-wasm = { path = "../../light-clients/ics08-wasm" }
 ibc-rpc = { path = "../../contracts/pallet-ibc/rpc" }
 pallet-ibc = { path = "../../contracts/pallet-ibc", features = ["testing"]}
 
@@ -62,11 +62,12 @@ memory = { git = "https://github.com/ComposableFi/emulated-light-client.git" }
 sealable-trie = { git = "https://github.com/ComposableFi/emulated-light-client.git", features = ["borsh"] }
 stdx = { git = "https://github.com/ComposableFi/emulated-light-client.git" }
 solana-trie = { git = "https://github.com/ComposableFi/emulated-light-client.git" }
-trie-ids = { git = "https://github.com/ComposableFi/emulated-light-client.git",features = ["borsh"] }
+# trie-ids = { git = "https://github.com/ComposableFi/emulated-light-client.git", branch = "deliver-chunks", features = ["borsh"] }
+trie-ids = { path = "../../../emulated-light-client/common/trie-ids", features = ["borsh"] }
 
 #Contract
-solana-ibc = { git = "https://github.com/ComposableFi/emulated-light-client.git", features = ["mocks"]}
-# solana-ibc = { path = "../../../emulated-light-client/solana/solana-ibc/programs/solana-ibc", features = ["mocks"] }
+# solana-ibc = { git = "https://github.com/ComposableFi/emulated-light-client.git", branch="deliver-chunks", features = ["mocks"]}
+solana-ibc = { path = "../../../emulated-light-client/solana/solana-ibc/programs/solana-ibc", features = ["mocks"] }
 
 tracing = "0.1.36"
 
