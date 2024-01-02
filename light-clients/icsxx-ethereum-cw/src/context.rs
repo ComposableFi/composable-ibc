@@ -15,7 +15,7 @@
 
 use crate::{
 	ics23::{ClientStates, ConsensusStates, ReadonlyClientStates, ReadonlyConsensusStates},
-	log, ContractError,
+	ContractError,
 };
 use cosmwasm_std::{DepsMut, Env, Storage};
 use ibc::{core::ics26_routing::context::ReaderContext, Height};

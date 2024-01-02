@@ -316,6 +316,13 @@ pub async fn construct_recv_message(
 	let key = get_key_path(KeyPathType::CommitmentPath, &packet).into_bytes();
 	let proof = source.query_proof(proof_height, vec![key]).await?;
 	let commitment_proof = CommitmentProofBytes::try_from(proof)?;
+	log::trace!(
+		target: "hyperspace",
+		"construct_recv_message: source: {}, sink: {}, proof_height: {}",
+		source.name(),
+		sink.name(),
+		proof_height
+	);
 	let actual_proof_height = source.get_proof_height(proof_height).await;
 	let msg = MsgRecvPacket {
 		packet,
@@ -339,6 +346,13 @@ pub async fn construct_ack_message(
 	let proof = source.query_proof(proof_height, vec![key.into_bytes()]).await?;
 	let commitment_proof = CommitmentProofBytes::try_from(proof)?;
 	let actual_proof_height = source.get_proof_height(proof_height).await;
+	log::trace!(
+		target: "hyperspace",
+		"construct_ack_message: source: {}, sink: {}, proof_height: {}",
+		source.name(),
+		sink.name(),
+		proof_height
+	);
 	let msg = MsgAcknowledgement {
 		packet,
 		proofs: Proofs::new(commitment_proof, None, None, None, actual_proof_height)?,

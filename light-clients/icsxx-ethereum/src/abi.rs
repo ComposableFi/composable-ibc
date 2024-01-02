@@ -11,7 +11,7 @@ use ssz_rs::{Node, Vector};
 use sync_committee_primitives::{
 	consensus_types::{BeaconBlockHeader, SyncCommittee},
 	constants::{BlsPublicKey, SYNC_COMMITTEE_SIZE},
-	types::LightClientState,
+	types::VerifierState as LightClientState,
 };
 use EthereumClientAbi::*;
 
@@ -75,6 +75,7 @@ impl From<LightClientState> for EthereumClientPrimitivesLightClientState {
 			latestFinalizedEpoch: value.latest_finalized_epoch,
 			currentSyncCommittee: value.current_sync_committee.into(),
 			nextSyncCommittee: value.next_sync_committee.into(),
+			statePeriod: value.state_period,
 		}
 	}
 }
@@ -88,6 +89,7 @@ impl TryFrom<EthereumClientPrimitivesLightClientState> for LightClientState {
 			latest_finalized_epoch: value.latestFinalizedEpoch,
 			current_sync_committee: value.currentSyncCommittee.try_into()?,
 			next_sync_committee: value.nextSyncCommittee.try_into()?,
+			state_period: value.statePeriod,
 		})
 	}
 }

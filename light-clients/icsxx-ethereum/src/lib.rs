@@ -13,12 +13,13 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
+//! ICS-10: Grandpa IBC light client protocol implementation
+
 #![cfg_attr(not(feature = "std"), no_std)]
 #![allow(clippy::all)]
 
-//! ICS-10: Grandpa IBC light client protocol implementation
-
 extern crate alloc;
+extern crate core;
 
 pub mod abi;
 pub mod client_def;

@@ -78,7 +78,7 @@ use tendermint_rpc::{
 use tokio::{task::JoinSet, time::sleep};
 
 pub const NUMBER_OF_BLOCKS_TO_PROCESS_PER_ITER: u64 = 250;
-pub const MANDATORY_UPDATES_PERIOD: usize = 25;
+pub const MANDATORY_UPDATES_PERIOD: usize = 50;
 
 #[derive(Clone, Debug)]
 pub enum FinalityEvent {
@@ -175,6 +175,8 @@ where
 		let mut mandatory_updates_num = 0;
 		let mut updates = Vec::new();
 		let len = update_headers.len();
+		let has_mandatory_updates =
+			update_headers.iter().any(|(_h, ty)| matches!(ty, UpdateType::Mandatory));
 		for (i, (events, (update_header, mut update_type))) in block_events
 			.into_iter()
 			.map(|(_, events)| events)
@@ -182,9 +184,8 @@ where
 			.enumerate()
 		{
 			let height = update_header.height();
-			if len >= MANDATORY_UPDATES_PERIOD && mandatory_updates_num < 2 && i >= len - 2 {
+			if !has_mandatory_updates && len >= MANDATORY_UPDATES_PERIOD && i >= len - 1 {
 				update_type = UpdateType::Mandatory;
-				mandatory_updates_num += 1;
 			}
 			let update_client_header = {
 				let msg = MsgUpdateAnyClient::<LocalClientTypes> {
@@ -828,38 +829,48 @@ where
 			client_id,
 			client_height
 		);
-		let query_str = Query::eq("update_client.client_id", client_id.to_string())
+		let query_update = Query::eq("update_client.client_id", client_id.to_string())
 			.and_eq("update_client.consensus_height", client_height.to_string());
+		let query_create = Query::eq("create_client.client_id", client_id.to_string())
+			.and_eq("create_client.consensus_height", client_height.to_string());
+		for query_str in [query_update, query_create] {
+			let response = self
+				.rpc_http_client
+				.tx_search(
+					query_str,
+					true,
+					1,
+					1, // get only the first Tx matching the query
+					Order::Ascending,
+				)
+				.await
+				.map_err(|e| Error::RpcError(format!("{e:?}")))?;
 
-		let response = self
-			.rpc_http_client
-			.tx_search(
-				query_str,
-				true,
-				1,
-				1, // get only the first Tx matching the query
-				Order::Ascending,
-			)
-			.await
-			.map_err(|e| Error::RpcError(format!("{e:?}")))?;
-
-		for tx in response.txs {
-			for ev in &tx.tx_result.events {
-				let height = tx.height.value();
-				let ev =
-					ibc_event_try_from_abci_event(ev, Height::new(self.id().version(), height));
-				let timestamp = self.query_timestamp_at(height).await?;
-				match ev {
-					Ok(IbcEvent::UpdateClient(e)) if e.client_id() == &client_id =>
-						return Ok((
-							Height::new(self.chain_id.version(), height),
-							Timestamp::from_nanoseconds(timestamp)?,
-						)),
-					_ => (),
+			for tx in response.txs {
+				for ev in &tx.tx_result.events {
+					let height = tx.height.value();
+					let ev =
+						ibc_event_try_from_abci_event(ev, Height::new(self.id().version(), height));
+					let timestamp = self
+						.query_timestamp_at(height)
+						.await
+						.map_err(|e| Error::RpcError(format!("{e:?}")))?;
+					match ev {
+						Ok(IbcEvent::UpdateClient(e)) if e.client_id() == &client_id =>
+							return Ok((
+								Height::new(self.chain_id.version(), height),
+								Timestamp::from_nanoseconds(timestamp)?,
+							)),
+						Ok(IbcEvent::CreateClient(e)) if e.client_id() == &client_id =>
+							return Ok((
+								Height::new(self.chain_id.version(), height),
+								Timestamp::from_nanoseconds(timestamp)?,
+							)),
+						_ => (),
+					}
 				}
 			}
 		}
-
 		Err(Error::from("not found".to_string()))
 	}
 

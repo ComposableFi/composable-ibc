@@ -27,7 +27,7 @@ use ibc::{
 };
 use ibc_proto::google::protobuf::Any;
 use serde::{Deserialize, Serialize};
-use sync_committee_verifier::LightClientState;
+use sync_committee_primitives::types::VerifierState as LightClientState;
 use tendermint_proto::Protobuf;
 
 /// Protobuf type url for GRANDPA ClientState

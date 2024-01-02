@@ -1,5 +1,8 @@
 extern crate alloc;
 
+#[cfg(feature = "std")]
+compile_error!("std feature is enabled");
+
 mod channel;
 mod client;
 mod connection;

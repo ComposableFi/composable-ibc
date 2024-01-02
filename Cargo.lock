@@ -4439,6 +4439,17 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "0206175f82b8d6bf6652ff7d71a1e27fd2e4efde587fd368662814d6ec1d9ce0"
 
 [[package]]
+name = "eventsource-stream"
+version = "0.2.3"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "74fef4569247a5f429d9156b9d0a2599914385dd189c539334c625d8099d90ab"
+dependencies = [
+ "futures-core",
+ "nom",
+ "pin-project-lite 0.2.13",
+]
+
+[[package]]
 name = "evm-disassembler"
 version = "0.2.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -6272,6 +6283,7 @@ dependencies = [
  "async-trait",
  "cast",
  "clap 4.4.3",
+ "derivative",
  "ecdsa 0.16.7",
  "elliptic-curve 0.13.5",
  "env_logger 0.10.0",
@@ -6299,6 +6311,7 @@ dependencies = [
  "prost 0.11.6",
  "redis",
  "reqwest",
+ "reqwest-eventsource",
  "serde",
  "serde_json",
  "sqlx 0.6.3",
@@ -8829,9 +8842,9 @@ dependencies = [
 
 [[package]]
 name = "num-bigint"
-version = "0.4.3"
+version = "0.4.4"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "f93ab6289c7b344a8a9f60f88d80aa20032336fe78da341afc91c8a2341fc75f"
+checksum = "608e7659b5c3d7cba262d894801b9ec9d00de989e8a82bd4bef91d08da45cdc0"
 dependencies = [
  "autocfg",
  "num-integer",
@@ -12878,13 +12891,31 @@ dependencies = [
  "tokio",
  "tokio-native-tls",
  "tokio-rustls 0.24.1",
+ "tokio-util",
  "tower-service",
  "url",
  "wasm-bindgen",
  "wasm-bindgen-futures",
+ "wasm-streams",
  "web-sys",
  "webpki-roots 0.25.2",
  "winreg 0.50.0",
+]
+
+[[package]]
+name = "reqwest-eventsource"
+version = "0.4.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "8f03f570355882dd8d15acc3a313841e6e90eddbc76a93c748fd82cc13ba9f51"
+dependencies = [
+ "eventsource-stream",
+ "futures-core",
+ "futures-timer",
+ "mime",
+ "nom",
+ "pin-project-lite 0.2.13",
+ "reqwest",
+ "thiserror",
 ]
 
 [[package]]
@@ -17431,7 +17462,7 @@ dependencies = [
 [[package]]
 name = "sync-committee-primitives"
 version = "0.1.0"
-source = "git+https://github.com/polytope-labs/sync-committee-rs.git?rev=106f53e045cc85c4a8d984c8e295800cebaa2475#106f53e045cc85c4a8d984c8e295800cebaa2475"
+source = "git+https://github.com/polytope-labs/hyperbridge.git?rev=7adb936a6fdf4a9cc418259bf0cec35a31ce35d8#7adb936a6fdf4a9cc418259bf0cec35a31ce35d8"
 dependencies = [
  "anyhow",
  "ark-bls12-381",
@@ -17448,7 +17479,7 @@ dependencies = [
 [[package]]
 name = "sync-committee-prover"
 version = "0.1.0"
-source = "git+https://github.com/polytope-labs/sync-committee-rs.git?rev=106f53e045cc85c4a8d984c8e295800cebaa2475#106f53e045cc85c4a8d984c8e295800cebaa2475"
+source = "git+https://github.com/polytope-labs/hyperbridge.git?rev=7adb936a6fdf4a9cc418259bf0cec35a31ce35d8#7adb936a6fdf4a9cc418259bf0cec35a31ce35d8"
 dependencies = [
  "anyhow",
  "ark-bls12-381",
@@ -17473,7 +17504,7 @@ dependencies = [
 [[package]]
 name = "sync-committee-verifier"
 version = "0.1.0"
-source = "git+https://github.com/polytope-labs/sync-committee-rs.git?rev=106f53e045cc85c4a8d984c8e295800cebaa2475#106f53e045cc85c4a8d984c8e295800cebaa2475"
+source = "git+https://github.com/polytope-labs/hyperbridge.git?rev=7adb936a6fdf4a9cc418259bf0cec35a31ce35d8#7adb936a6fdf4a9cc418259bf0cec35a31ce35d8"
 dependencies = [
  "anyhow",
  "ark-bls12-381",
@@ -18956,6 +18987,19 @@ dependencies = [
  "cxx",
  "cxx-build",
  "regex",
+]
+
+[[package]]
+name = "wasm-streams"
+version = "0.3.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "b4609d447824375f43e1ffbc051b50ad8f4b3ae8219680c94452ea05eb240ac7"
+dependencies = [
+ "futures-util",
+ "js-sys",
+ "wasm-bindgen",
+ "wasm-bindgen-futures",
+ "web-sys",
 ]
 
 [[package]]

@@ -37,7 +37,7 @@ use ibc::{
 	},
 	Height,
 };
-use ibc_proto::{google::protobuf::Any, ibc::core::channel::v1::QueryNextSequenceReceiveResponse};
+use ibc_proto::google::protobuf::Any;
 use pallet_ibc::light_clients::AnyClientState;
 use primitives::{
 	error::Error, find_suitable_proof_height_for_client, packet_info_to_packet,
@@ -207,6 +207,7 @@ pub async fn query_ready_and_timed_out_packets(
 		let sink = Arc::new(sink.clone());
 		let timeout_packets_count = Arc::new(AtomicUsize::new(0));
 		let send_packets_count = Arc::new(AtomicUsize::new(0));
+		let acks_packets_count = Arc::new(AtomicUsize::new(0));
 		for send_packets in send_packets.chunks(PROCESS_PACKETS_BATCH_SIZE) {
 			for send_packet in send_packets.iter().cloned() {
 				let source_connection_end = source_connection_end.clone();
@@ -235,7 +236,6 @@ pub async fn query_ready_and_timed_out_packets(
 						source.common_state().ignored_timeouted_sequences.lock().await.insert(
 							packet.sequence.0
 						);
-						timeout_packets_count.fetch_add(1, Ordering::SeqCst);
 						// so we know this packet has timed out on the sink, we need to find the maximum
 						// consensus state height at which we can generate a non-membership proof of the
 						// packet for the sink's client on the source.
@@ -255,6 +255,7 @@ pub async fn query_ready_and_timed_out_packets(
 						{
 							proof_height
 						} else {
+							timeout_packets_count.fetch_add(1, Ordering::SeqCst);
 							log::trace!(target: "hyperspace", "Skipping packet as no timeout proof height could be found: {:?}", packet);
 							return Ok(None)
 						};
@@ -408,8 +409,7 @@ pub async fn query_ready_and_timed_out_packets(
 			.await?;
 		log::trace!(target: "hyperspace", "Got acknowledgements for channel {:?}: {:?}", channel_id, acknowledgements);
 		let mut acknowledgements_join_set: JoinSet<Result<_, anyhow::Error>> = JoinSet::new();
-		sink.on_undelivered_sequences(!acknowledgements.is_empty(), UndeliveredType::Acks)
-			.await;
+
 		for acknowledgements in acknowledgements.chunks(PROCESS_PACKETS_BATCH_SIZE) {
 			for acknowledgement in acknowledgements.iter().cloned() {
 				let source_connection_end = source_connection_end.clone();
@@ -418,6 +418,7 @@ pub async fn query_ready_and_timed_out_packets(
 				let duration1 = Duration::from_millis(
 					rand::thread_rng().gen_range(1..source.rpc_call_delay().as_millis() as u64),
 				);
+				let acks_packets_count = acks_packets_count.clone();
 				acknowledgements_join_set.spawn(async move {
 					sleep(duration1).await;
 					let source = &source;
@@ -441,6 +442,7 @@ pub async fn query_ready_and_timed_out_packets(
 					if ack_height > latest_source_height_on_sink.revision_height {
 						// Sink does not have client update required to prove acknowledgement packet message
 						log::trace!(target: "hyperspace", "Skipping acknowledgement for packet {:?} as sink does not have client update required to prove acknowledgement packet message", packet);
+						acks_packets_count.fetch_add(1, Ordering::SeqCst);
 						return Ok(None)
 					}
 
@@ -492,6 +494,12 @@ pub async fn query_ready_and_timed_out_packets(
 			let Some(msg) = result?? else { continue };
 			messages.push(msg)
 		}
+
+		sink.on_undelivered_sequences(
+			acks_packets_count.load(Ordering::SeqCst) != 0,
+			UndeliveredType::Acks,
+		)
+		.await;
 	}
 
 	Ok((messages, timeout_messages))

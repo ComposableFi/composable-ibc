@@ -77,6 +77,11 @@
                 "internalType": "struct EthereumClientPrimitivesSyncCommittee",
                 "name": "nextSyncCommittee",
                 "type": "tuple"
+              },
+              {
+                "internalType": "uint64",
+                "name": "statePeriod",
+                "type": "uint64"
               }
             ],
             "internalType": "struct EthereumClientPrimitivesLightClientState",

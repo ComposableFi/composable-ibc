@@ -89,7 +89,9 @@ use std::{
 	str::FromStr,
 	time::Duration,
 };
-use sync_committee_primitives::{consensus_types::BeaconBlockHeader, types::LightClientState};
+use sync_committee_primitives::{
+	consensus_types::BeaconBlockHeader, types::VerifierState as LightClientState,
+};
 use tokio::time::sleep;
 
 const EARLIEST_BLOCK: u64 = 0;

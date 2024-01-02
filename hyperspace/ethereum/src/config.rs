@@ -23,6 +23,7 @@ use crate::{
 use ethers::{types::Address, utils::AnvilInstance};
 use ethers_providers::{Http, Middleware, Provider};
 use ibc::core::ics24_host::identifier::{ChannelId, ClientId, ConnectionId, PortId};
+use primitives::CommonClientConfig;
 use serde::{de::Visitor, Deserialize, Deserializer, Serialize, Serializer};
 
 fn uri_de<'de, D>(de: D) -> Result<http::uri::Uri, D::Error>
@@ -149,6 +150,9 @@ pub struct EthereumClientConfig {
 	pub indexer_redis_url: String,
 	#[serde(skip)]
 	pub anvil: Option<Arc<Mutex<AnvilInstance>>>,
+	/// Common client config
+	#[serde(flatten)]
+	pub common: CommonClientConfig,
 }
 
 impl Debug for EthereumClientConfig {

@@ -270,6 +270,7 @@ message LightClientState {
   uint64 latest_finalized_epoch = 2;
   SyncCommittee current_sync_committee = 3;
   SyncCommittee next_sync_committee = 4;
+  uint64 statePeriod = 5;
 }
 
 message ClientState {

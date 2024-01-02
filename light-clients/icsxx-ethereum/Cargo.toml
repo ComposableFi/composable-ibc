@@ -13,10 +13,10 @@ ibc = { path = "../../ibc/modules", default-features = false }
 ibc-proto = { path = "../../ibc/proto", default-features = false }
 
 # local deps
-sync-committee-verifier = { git = "https://github.com/polytope-labs/sync-committee-rs.git", rev = "106f53e045cc85c4a8d984c8e295800cebaa2475", default-features = false }
-sync-committee-primitives = { git = "https://github.com/polytope-labs/sync-committee-rs.git", rev = "106f53e045cc85c4a8d984c8e295800cebaa2475", default-features = false }
+sync-committee-verifier = { git = "https://github.com/polytope-labs/hyperbridge.git", rev = "7adb936a6fdf4a9cc418259bf0cec35a31ce35d8", default-features = false }
+sync-committee-primitives = { git = "https://github.com/polytope-labs/hyperbridge.git", rev = "7adb936a6fdf4a9cc418259bf0cec35a31ce35d8", default-features = false }
 ssz-rs = { git = "https://github.com/polytope-labs/ssz-rs", branch = "main" , default-features = false }
-primitive-types = { version = "0.12.0", default-features = false, features = [] }
+primitive-types = { version = "0.12.0", default-features = false, features = ["serde_no_std"]}
 
 # crates.io
 prost = { version = "0.11", default-features = false }
@@ -55,13 +55,13 @@ tokio = { version = "1.21.1", features = ["macros"] }
 json = { package = "serde_json", version = "1.0.85" }
 jsonrpsee-ws-client = "0.16.2"
 actix-rt = "2.3.0"
-sync-committee-primitives = { git = "https://github.com/polytope-labs/sync-committee-rs.git", rev = "106f53e045cc85c4a8d984c8e295800cebaa2475" }
-sync-committee-verifier = { git = "https://github.com/polytope-labs/sync-committee-rs.git", rev = "106f53e045cc85c4a8d984c8e295800cebaa2475" }
-sync-committee-prover = { git = "https://github.com/polytope-labs/sync-committee-rs.git", rev = "106f53e045cc85c4a8d984c8e295800cebaa2475" }
+sync-committee-primitives = { git = "https://github.com/polytope-labs/hyperbridge.git", rev = "7adb936a6fdf4a9cc418259bf0cec35a31ce35d8" }
+sync-committee-verifier = { git = "https://github.com/polytope-labs/hyperbridge.git", rev = "7adb936a6fdf4a9cc418259bf0cec35a31ce35d8" }
+sync-committee-prover = { git = "https://github.com/polytope-labs/hyperbridge.git", rev = "7adb936a6fdf4a9cc418259bf0cec35a31ce35d8" }
 trie-db = { version = "0.28.0" }
 
 [features]
-default = ["std", "testnet"]
+default = ["std"]
 std = [
     "ibc/std",
     "ibc-proto/std",
@@ -77,7 +77,6 @@ std = [
     "rlp/std",
 ]
 testnet = [
-    "sync-committee-primitives/testnet",
-    "sync-committee-verifier/testnet",
+    "sync-committee-primitives/sepolia",
+    "sync-committee-verifier/sepolia",
 ]
-no_beacon = []

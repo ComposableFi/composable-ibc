@@ -25,16 +25,22 @@ pub mod queue;
 pub mod substrate;
 mod utils;
 
+use crate::utils::query_latest_update_time_and_height;
 use anyhow::anyhow;
-use events::{has_packet_events, parse_events};
+use events::parse_events;
 use futures::{future::ready, StreamExt, TryFutureExt};
-use ibc::{events::IbcEvent, Height};
+use ibc::{
+	core::ics02_client::msgs::update_client::MsgUpdateAnyClient,
+	events::{IbcEvent, IbcEventType},
+	timestamp::Timestamp,
+	Height,
+};
 use ibc_proto::google::protobuf::Any;
+use itertools::Itertools;
 use metrics::handler::MetricsHandler;
-use primitives::{Chain, IbcProvider, UndeliveredType, UpdateType};
+use primitives::{utils::RecentStream, Chain, IbcProvider, UndeliveredType, UpdateType};
 use std::collections::HashSet;
-
-use crate::utils::RecentStream;
+use tendermint_proto::Protobuf;
 
 #[derive(Copy, Debug, Clone)]
 pub enum Mode {
@@ -65,7 +71,6 @@ where
 	// Introduce altering between branches so that each branch gets a chance to execute first after
 	// another one
 	let mut first_executed = false;
-
 	// loop forever
 	loop {
 		tokio::select! {
@@ -248,8 +253,9 @@ async fn process_some_finality_event<A: Chain, B: Chain>(
 
 	log::trace!(
 		target: "hyperspace",
-		"Received timeouts count: {}",
-		timeout_msgs.len()
+		"Received timeouts count: {}, packets count: {}",
+		timeout_msgs.len(),
+		ready_packets.len(),
 	);
 
 	process_updates(source, sink, metrics, mode, updates, &mut msgs).await?;
@@ -273,68 +279,114 @@ async fn process_updates<A: Chain, B: Chain>(
 	let sink_has_undelivered_acks = sink.has_undelivered_sequences(UndeliveredType::Recvs) ||
 		sink.has_undelivered_sequences(UndeliveredType::Acks) ||
 		sink.has_undelivered_sequences(UndeliveredType::Timeouts);
-	let source_has_undelivered_acks = source.has_undelivered_sequences(UndeliveredType::Timeouts);
 
-	let mandatory_heights_for_undelivered_seqs =
-		if (sink_has_undelivered_acks || source_has_undelivered_acks) && !updates.is_empty() {
-			find_mandatory_heights_for_undelivered_sequences(source, &updates).await
-		} else {
-			HashSet::new()
-		};
+	let need_to_update = sink_has_undelivered_acks;
+	log::info!(target: "hyperspace", "Received {} client updates from {}", updates.len(), source.name(),);
 
-	for (msg_update_client, height, events, update_type) in updates {
-		if let Some(metrics) = metrics.as_mut() {
-			if let Err(e) = metrics.handle_events(events.as_slice()).await {
-				log::error!("Failed to handle metrics for {} {:?}", source.name(), e);
-			}
+	let common_state = source.common_state();
+	let skip_optional_updates = common_state.skip_optional_client_updates;
+	let has_events = updates.iter().any(|(_, _, events, ..)| !events.is_empty());
+	let mut mandatory_updates = updates
+		.iter()
+		.filter(|(_, _, _, update_type)| !skip_optional_updates || !update_type.is_optional())
+		.map(|(upd, height, ..)| (upd.clone(), *height))
+		.collect::<Vec<_>>();
+
+	let mut update_delay_passed = true;
+	let (update_time, _update_height) = query_latest_update_time_and_height(source, sink)
+		.await
+		.map_err(|e| anyhow!("Failed to fetch latest update time and height {e}"))?;
+	log::debug!(
+		target: "hyperspace",
+		"update_time: {}, interval: {}",
+		update_time,
+		sink.common_state().client_update_interval.as_secs()
+	);
+	if let Some(not_updated_during) = Timestamp::now().duration_since(&update_time) {
+		if not_updated_during < source.common_state().client_update_interval {
+			log::debug!(target: "hyperspace", "Sending only mandatory updates, not updated during {} seconds, need {}", not_updated_during.as_secs(), sink.common_state().client_update_interval.as_secs());
+			update_delay_passed = false;
 		}
+	} else {
+		log::warn!(target: "hyperspace", "Update time is from the future: {}", update_time);
+	}
 
-		let event_types = events.iter().map(|ev| ev.event_type()).collect::<Vec<_>>();
-		let mut messages = parse_events(source, sink, events, mode)
+	log::debug!(target: "hyperspace", "Received' {} client updates from {}", mandatory_updates.len(), source.name(),);
+
+	let ibc_events = updates
+		.iter()
+		.map(|(_, _, events, ..)| events.clone())
+		.flatten()
+		.collect::<Vec<_>>();
+
+	let event_types = ibc_events.iter().map(|ev| ev.event_type()).collect::<Vec<_>>();
+
+	let has_instant_events = event_types.iter().any(|event_type| {
+		matches!(
+			event_type,
+			&IbcEventType::OpenInitConnection |
+				&IbcEventType::OpenInitChannel |
+				&IbcEventType::OpenTryConnection |
+				&IbcEventType::OpenTryChannel |
+				&IbcEventType::OpenAckChannel |
+				&IbcEventType::OpenAckConnection |
+				&IbcEventType::CloseInitChannel
+		)
+	});
+
+	log::debug!(target: "hyperspace", "Received'' {}, has_instant_events = {has_instant_events}, update_delay_passed = {update_delay_passed}, need_to_update = {need_to_update}", mandatory_updates.len(), );
+
+	if !updates.is_empty() &&
+		(mandatory_updates.is_empty() && update_delay_passed && need_to_update) ||
+		has_instant_events
+	{
+		let (forced_update, height) = updates.last().map(|(msg, h, ..)| (msg.clone(), h)).unwrap();
+		if !mandatory_updates.is_empty() {
+			let (_, last_height) =
+				mandatory_updates.last().map(|(msg, h)| (msg.clone(), h)).unwrap();
+			if last_height != height {
+				mandatory_updates.push((forced_update, *height));
+			}
+		} else {
+			mandatory_updates.push((forced_update, *height));
+		}
+	}
+	if mandatory_updates.is_empty() && !has_events {
+		log::info!(target: "hyperspace", "No messages to send");
+		return Ok(())
+	}
+
+	let latest_update_height = if !mandatory_updates.is_empty() {
+		mandatory_updates.last().map(|(_, height)| *height).unwrap()
+	} else {
+		log::warn!(target: "hyperspace", "Expected at least one update");
+		return Ok(())
+	};
+
+	log::info!(target: "hyperspace", "Received finalized events from: {} {event_types:#?}", source.name());
+	let mut new_height = source.get_proof_height(latest_update_height).await;
+	if new_height != latest_update_height {
+		new_height.revision_height -=
+			(new_height.revision_height - latest_update_height.revision_height) * 2;
+	}
+
+	let mut ibc_events_messages =
+		parse_events(source, sink, ibc_events.clone(), mode, Some(new_height))
 			.await
 			.map_err(|e| anyhow!("Failed to parse events: {:?}", e))?;
-
-		log::trace!(
-			target: "hyperspace",
-			"Received messages count: {}, is the update optional: {}",
-			messages.len(), update_type.is_optional(),
-		);
-
-		let need_to_send_proofs_for_sequences = (sink_has_undelivered_acks ||
-			source_has_undelivered_acks) &&
-			mandatory_heights_for_undelivered_seqs.contains(&height.revision_height);
-		let common_state = source.common_state();
-		let skip_optional_updates = common_state.skip_optional_client_updates;
-
-		// We want to send client update if packet messages exist but where not sent due
-		// to a connection delay even if client update message is optional
-		match (
-			// TODO: we actually may send only when timeout of some packet has reached,
-			// not when we have *any* undelivered packets. But this requires rewriting
-			// `find_suitable_proof_height_for_client` function, that uses binary
-			// search, which won't work in this case
-			skip_optional_updates &&
-				update_type.is_optional() &&
-				!need_to_send_proofs_for_sequences,
-			has_packet_events(&event_types),
-			messages.is_empty(),
-		) {
-			(true, false, true) => {
-				// skip sending ibc messages if no new events
-				log::debug!("Skipping finality notification for {}", sink.name());
-				continue
-			},
-			(false, _, true) =>
-				if update_type.is_optional() && need_to_send_proofs_for_sequences {
-					log::info!("Sending an optional update because source ({}) chain has undelivered sequences", sink.name());
-				} else {
-					log::info!("Sending mandatory client update message for {}", sink.name())
-				},
-			_ => log::info!("Received finalized events from: {} {event_types:#?}", source.name()),
-		};
+	for (msg_update_client, h) in mandatory_updates {
+		log::debug!(target: "hyperspace", "Received client update message for {}: {}", source.name(), h);
 		msgs.push(msg_update_client);
-		msgs.append(&mut messages);
 	}
+
+	msgs.append(&mut ibc_events_messages);
+
+	if let Some(metrics) = metrics.as_mut() {
+		if let Err(e) = metrics.handle_events(ibc_events.as_slice()).await {
+			log::error!(target: "hyperspace", "Failed to handle metrics for {} {:?}", source.name(), e);
+		}
+	}
+
 	Ok(())
 }
 

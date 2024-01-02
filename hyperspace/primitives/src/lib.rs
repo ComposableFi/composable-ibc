@@ -36,7 +36,7 @@ use std::{
 	pin::Pin,
 	str::FromStr,
 	sync::{Arc, Mutex},
-	time::Duration,
+	time::{Duration, SystemTime},
 };
 use tokio::{sync::Mutex as AsyncMutex, task::JoinSet, time::sleep};
 
@@ -113,6 +113,19 @@ pub struct CommonClientConfig {
 	pub skip_optional_client_updates: bool,
 	#[serde(default = "max_packets_to_process")]
 	pub max_packets_to_process: u32,
+	/// Minimal time that should pass between two client updates
+	#[serde(default)]
+	pub client_update_interval_sec: u32,
+}
+
+impl Default for CommonClientConfig {
+	fn default() -> Self {
+		Self {
+			skip_optional_client_updates: default_skip_optional_client_updates(),
+			max_packets_to_process: max_packets_to_process(),
+			client_update_interval_sec: 30,
+		}
+	}
 }
 
 /// A common data that all clients should keep.
@@ -134,6 +147,10 @@ pub struct CommonClientState {
 	pub misbehaviour_client_msg_queue: Arc<AsyncMutex<Vec<AnyClientMessage>>>,
 	pub max_packets_to_process: usize,
 	pub ignored_timeouted_sequences: Arc<AsyncMutex<HashSet<u64>>>,
+	/// Minimal time that should pass between two client updates
+	pub client_update_interval: Duration,
+	/// Last time when client was updated
+	pub last_client_update_time: SystemTime,
 }
 
 impl Default for CommonClientState {
@@ -147,11 +164,27 @@ impl Default for CommonClientState {
 			misbehaviour_client_msg_queue: Arc::new(Default::default()),
 			max_packets_to_process: 100,
 			ignored_timeouted_sequences: Arc::new(Default::default()),
+			client_update_interval: Default::default(),
+			last_client_update_time: SystemTime::now(),
 		}
 	}
 }
 
 impl CommonClientState {
+	pub fn from_config(config: &CommonClientConfig) -> Self {
+		Self {
+			skip_optional_client_updates: config.skip_optional_client_updates,
+			maybe_has_undelivered_packets: Default::default(),
+			rpc_call_delay: Duration::from_millis(10),
+			initial_rpc_call_delay: Duration::from_millis(10),
+			misbehaviour_client_msg_queue: Arc::new(Default::default()),
+			max_packets_to_process: config.max_packets_to_process as usize,
+			ignored_timeouted_sequences: Arc::new(Default::default()),
+			client_update_interval: Duration::from_secs(config.client_update_interval_sec.into()),
+			last_client_update_time: SystemTime::now(),
+		}
+	}
+
 	pub async fn on_undelivered_sequences(&self, has: bool, kind: UndeliveredType) {
 		log::trace!(
 			target: "hyperspace",
@@ -190,6 +223,7 @@ pub fn apply_prefix(mut commitment_prefix: Vec<u8>, path: impl Into<Vec<u8>>) ->
 /// - acknowledgement packet (`Acks`),
 /// - receive packet (`Recvs`)
 /// - timeout packet (`Timeouts`)
+/// - proofs for the packets (`Proofs`)
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
 pub enum UndeliveredType {
 	Acks,
@@ -746,10 +780,12 @@ pub async fn find_suitable_proof_height_for_client(
 		"Searching for suitable proof height for client {} ({}) starting at {}, {:?}, latest_client_height={}",
 		client_id, sink.name(), start_height, timestamp_to_match, latest_client_height
 	);
+	let start_height = source.get_proof_height(start_height).await;
+
 	// We use pure linear search because there's no valid comparison to be made and there might be
 	// missing values  for some heights
 	for height in start_height.revision_height..=latest_client_height.revision_height {
-		let temp_height = Height::new(start_height.revision_number, height);
+		let mut temp_height = Height::new(start_height.revision_number, height);
 
 		if sink
 			.query_client_update_time_and_height(client_id.clone(), temp_height)
@@ -787,14 +823,8 @@ pub async fn find_suitable_proof_height_for_client(
 
 		let proof_height = source.get_proof_height(temp_height).await;
 		if proof_height != temp_height {
-			let has_client_state = sink
-				.query_client_update_time_and_height(client_id.clone(), proof_height)
-				.await
-				.ok()
-				.is_some();
-			if !has_client_state {
-				continue
-			}
+			temp_height.revision_height -=
+				proof_height.revision_height - temp_height.revision_height;
 		}
 		info!("Found proof height on {} as {}:{}", sink.name(), temp_height, proof_height);
 		return Some(temp_height)

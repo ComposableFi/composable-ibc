@@ -274,6 +274,7 @@ where
 		.map_err(|e| e.to_string())?;
 
 		let rpc_call_delay = Duration::from_millis(1000);
+		let common_state = CommonClientState::from_config(&config.common);
 		Ok(Self {
 			name: config.name,
 			chain_id,
@@ -298,13 +299,12 @@ where
 			tx_mutex: Default::default(),
 			light_block_cache: Arc::new(Cache::new(100000)),
 			common_state: CommonClientState {
-				skip_optional_client_updates: config.common.skip_optional_client_updates,
 				maybe_has_undelivered_packets: Default::default(),
 				rpc_call_delay,
 				initial_rpc_call_delay: rpc_call_delay,
 				misbehaviour_client_msg_queue: Arc::new(AsyncMutex::new(vec![])),
-				max_packets_to_process: config.common.max_packets_to_process as usize,
 				ignored_timeouted_sequences: Arc::new(Default::default()),
+				..common_state
 			},
 			join_handles: Arc::new(TokioMutex::new(vec![ws_driver_jh])),
 		})

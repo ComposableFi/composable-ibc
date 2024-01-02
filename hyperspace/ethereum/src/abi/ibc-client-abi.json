@@ -51,6 +51,37 @@
       {
         "indexed": false,
         "internalType": "string",
+        "name": "clientId",
+        "type": "string"
+      },
+      {
+        "components": [
+          {
+            "internalType": "uint64",
+            "name": "revision_number",
+            "type": "uint64"
+          },
+          {
+            "internalType": "uint64",
+            "name": "revision_height",
+            "type": "uint64"
+          }
+        ],
+        "indexed": false,
+        "internalType": "struct HeightData",
+        "name": "client_height",
+        "type": "tuple"
+      }
+    ],
+    "name": "CreateClientHeight",
+    "type": "event"
+  },
+  {
+    "anonymous": false,
+    "inputs": [
+      {
+        "indexed": false,
+        "internalType": "string",
         "name": "",
         "type": "string"
       }

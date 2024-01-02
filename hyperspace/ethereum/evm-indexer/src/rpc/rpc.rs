@@ -59,7 +59,7 @@ impl Rpc {
 							chain_id.as_u64() as i64,
 							config.chain.id
 						);
-						continue
+						// 	continue
 					}
 
 					clients.push(client);
@@ -370,6 +370,7 @@ fn parse_log(log: Log) -> Result<Option<String>, Error> {
 		// TimeoutOnClosePacketFilter,
 		// Client
 		CreateClientFilter,
+		CreateClientHeightFilter,
 		UpdateClientHeightFilter,
 		UpdateClientFilter,
 		// Custom

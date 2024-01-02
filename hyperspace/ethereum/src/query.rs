@@ -45,8 +45,7 @@ impl EthereumClient {
 		let signature = T::abi_signature();
 		let contract_address = self.yui.diamond.address();
 		let address_val = format!("decode('{}', 'hex')", hex::encode(contract_address.as_bytes()));
-		trace!(target: "hyperspace_ethereum", "get_logs_for_event_name: from_block: {}, to_block:
-		{}, signature: {}", from_block, to_block, signature);
+		trace!(target: "hyperspace_ethereum", "get_logs_for_event_name: from_block: {}, to_block: {}, signature: {}", from_block, to_block, signature);
 		let topic0 = format!("decode('{}', 'hex')", hex::encode(&keccak256(signature.as_bytes())));
 		let mut string = format!("SELECT event_data, raw_log FROM ibc_events WHERE block_number >= {from_block} AND block_number <= {to_block} AND topic0 = {topic0} AND address = {address_val} AND {query}");
 		if let Some(additional_query) = additional_query {
@@ -85,8 +84,7 @@ impl EthereumClient {
 		};
 		let contract_address = self.yui.diamond.address();
 		let address_val = format!("decode('{}', 'hex')", hex::encode(contract_address.as_bytes()));
-		trace!(target: "hyperspace_ethereum", "get_logs: from_block: {}, to_block: {}",
-		from_block, to_block);
+		trace!(target: "hyperspace_ethereum", "get_logs: from_block: {}, to_block: {}", from_block, to_block);
 		let mut string = format!("SELECT raw_log FROM ibc_events WHERE block_number >= {from_block} AND block_number <= {to_block} AND address = {address_val}");
 		if let Some(additional_query) = additional_query {
 			string.push_str(&format!(" {additional_query}"));

@@ -44,7 +44,7 @@ use ibc_proto::ibc::core::{
 	},
 };
 use itertools::Itertools;
-use primitives::{IbcProvider, KeyProvider, UpdateType};
+use primitives::{Chain, IbcProvider, KeyProvider, UpdateType};
 use prost::Message;
 use std::{
 	collections::{HashMap, HashSet},
@@ -69,7 +69,7 @@ use crate::{
 	chain::{
 		client_state_from_abi_token, consensus_state_from_abi_token, tm_header_from_abi_token,
 	},
-	prove::prove_fast,
+	prove::{prove, prove_fast},
 	utils::{create_intervals, SEQUENCES_PER_ITER},
 };
 use ibc::{
@@ -97,14 +97,22 @@ use ibc_proto::{
 use ibc_rpc::{IbcApiClient, PacketInfo};
 use ics07_tendermint::consensus_state::ConsensusState as TmConsensusState;
 use icsxx_ethereum::{
-	client_message::ClientMessage, client_state::ClientState, consensus_state::ConsensusState,
+	client_message::{ClientMessage, Header},
+	client_state::ClientState,
+	consensus_state::ConsensusState,
 };
-use pallet_ibc::light_clients::{AnyClientMessage, AnyClientState, AnyConsensusState};
+use pallet_ibc::light_clients::{
+	AnyClientMessage, AnyClientState, AnyConsensusState, HostFunctionsManager,
+};
 use primitives::mock::LocalClientTypes;
-use sync_committee_primitives::types::LightClientState;
+use sync_committee_primitives::{
+	types::VerifierState as LightClientState,
+	util::{compute_epoch_at_slot, compute_sync_committee_period_at_slot},
+};
 use tokio::time::sleep;
 
 pub const INDEXER_DELAY_BLOCKS: u64 = 1;
+pub const MAX_UPDATES_PER_ITER: usize = 10;
 
 abigen!(
 	IbcClientAbi,
@@ -394,86 +402,38 @@ impl EthereumClient {
 
 		Ok(client_state.ok_or(ClientError::Other("client state not found".to_string()))?)
 	}
-}
 
-#[async_trait::async_trait]
-impl IbcProvider for EthereumClient {
-	type FinalityEvent = Block<H256>;
-
-	type TransactionId = (H256, H256);
-
-	type AssetId = String;
-
-	type Error = ClientError;
-
-	async fn query_latest_ibc_events<T>(
+	async fn fetch_next_update<T>(
 		&mut self,
-		finality_event: Self::FinalityEvent,
 		counterparty: &T,
-	) -> Result<Vec<(Any, Height, Vec<IbcEvent>, UpdateType)>, anyhow::Error>
+		client_id: ClientId,
+		client_state: &ClientState<HostFunctionsManager>,
+		latest_cp_client_height: u64,
+		latest_revision: u64,
+	) -> Result<Option<(Header, (Any, Height, Vec<IbcEvent>, UpdateType))>, ClientError>
 	where
 		T: primitives::Chain,
 	{
-		let client_id = self.client_id();
-		let latest_cp_height = counterparty.latest_height_and_timestamp().await?.0;
-		let latest_cp_client_state =
-			counterparty.query_client_state(latest_cp_height, client_id.clone()).await?;
-		let client_state_response = latest_cp_client_state.client_state.ok_or_else(|| {
-			ClientError::Other("counterparty returned empty client state".to_string())
-		})?;
-		let AnyClientState::Ethereum(client_state) =
-			AnyClientState::decode_recursive(client_state_response, |c| {
-				matches!(c, AnyClientState::Ethereum(_))
-			})
-			.ok_or_else(|| ClientError::Other(format!("Could not decode client state")))?
-		else {
-			unreachable!()
+		let header = {
+			let maybe_header = prove(self, &client_state, 0, 0).await?;
+			match maybe_header {
+				Some(x) => x,
+				None => {
+					log::debug!(target: "hyperspace_ethereum", "No more updates");
+					return Ok(None)
+				},
+			}
 		};
-		let latest_cp_client_height = client_state.latest_height().revision_height;
-		let latest_height = self.latest_height_and_timestamp().await?.0;
-		let latest_revision = latest_height.revision_number;
-		let block_to;
-		let number;
-		#[cfg(not(feature = "no_beacon"))]
-		{
-			let prover = self.prover();
-			let block = prover.fetch_block("head").await?;
-			block_to = (client_state.inner.finalized_header.slot +
-				NUMBER_OF_BLOCKS_TO_PROCESS_PER_ITER)
-				.min(block.slot);
-			number = block.body.execution_payload.block_number;
-		}
-		#[cfg(feature = "no_beacon")]
-		{
-			number = self.client().get_block_number().await?.as_u64();
-			block_to = number;
-		}
 		let from = latest_cp_client_height + 1;
-		let to = number
-			.min(latest_cp_client_height + NUMBER_OF_BLOCKS_TO_PROCESS_PER_ITER / 2)
-			.saturating_sub(INDEXER_DELAY_BLOCKS)
-			.max(from);
+		let to = header.inner.execution_payload.block_number;
+		if to < from {
+			return Ok(None)
+		}
 
 		info!(target: "hyperspace_ethereum", "Getting blocks {}..{}", from, to);
 
 		let logs = self.get_logs(from, to.into(), None).await?;
 
-		let tries = NUMBER_OF_BLOCKS_TO_PROCESS_PER_ITER / 2;
-		let mut i = 0;
-		let header = loop {
-			let maybe_proof = prove_fast(self, &client_state, block_to + i, to).await;
-			i += 1;
-			match maybe_proof {
-				Ok(x) => break x,
-				Err(e) => {
-					log::error!(target: "hyperspace_ethereum", "failed to prove block {}:  {e}", block_to + 1);
-					sleep(Duration::from_millis(200)).await;
-					if i >= tries {
-						return Ok(vec![])
-					}
-				},
-			};
-		};
 		let update = &header.inner;
 
 		info!(target: "hyperspace_ethereum",
@@ -483,10 +443,13 @@ impl IbcProvider for EthereumClient {
 			update.finalized_header.slot,
 			update.execution_payload.block_number
 		);
-		// finality_checkpoint.finalized.epoch <= client_state.latest_finalized_epoch
-		if update.execution_payload.block_number <= client_state.latest_height().revision_height {
+
+		if update.execution_payload.block_number <= client_state.latest_height().revision_height ||
+			update.attested_header.slot <= client_state.inner.finalized_header.slot ||
+			update.finality_proof.epoch <= client_state.inner.latest_finalized_epoch
+		{
 			info!(target: "hyperspace_ethereum", "no new events");
-			return Ok(vec![])
+			return Ok(None)
 		}
 		let update_height =
 			Height::new(latest_revision, update.execution_payload.block_number.into());
@@ -508,7 +471,7 @@ impl IbcProvider for EthereumClient {
 			);
 			let msg = MsgUpdateAnyClient::<LocalClientTypes> {
 				client_id: client_id.clone(),
-				client_message: AnyClientMessage::Ethereum(ClientMessage::Header(header)),
+				client_message: AnyClientMessage::Ethereum(ClientMessage::Header(header.clone())),
 				signer: counterparty.account_id(),
 			};
 			let value = msg.encode_vec().map_err(|e| {
@@ -517,7 +480,110 @@ impl IbcProvider for EthereumClient {
 			Any { value, type_url: msg.type_url() }
 		};
 
-		Ok(vec![(update_client_header, update_height, events, UpdateType::Mandatory)])
+		let update_type = if header.inner.sync_committee_update.is_some() {
+			UpdateType::Mandatory
+		} else {
+			UpdateType::Optional
+		};
+		Ok(Some((header, (update_client_header, update_height, events, update_type))))
+	}
+
+	async fn fetch_next_updates<T>(
+		&mut self,
+		counterparty: &T,
+		client_id: ClientId,
+		client_state: &ClientState<HostFunctionsManager>,
+		mut latest_cp_client_height: u64,
+		latest_revision: u64,
+		max_updates: usize,
+	) -> Result<Vec<(Any, Height, Vec<IbcEvent>, UpdateType)>, ClientError>
+	where
+		T: primitives::Chain,
+	{
+		let mut client_state = client_state.clone();
+		let mut updates = vec![];
+		let mut i = 0;
+		while i < max_updates {
+			let maybe_update = self
+				.fetch_next_update(
+					counterparty,
+					client_id.clone(),
+					&client_state,
+					latest_cp_client_height,
+					latest_revision,
+				)
+				.await?;
+			match maybe_update {
+				Some((header, update)) => {
+					info!(target: "hyperspace_ethereum", "Got update at slot {}", header.inner.finalized_header.slot);
+					updates.push(update);
+					client_state.inner.latest_finalized_epoch = header.inner.finality_proof.epoch;
+					if header.inner.sync_committee_update.is_some() {
+						client_state.inner.state_period = client_state.inner.state_period + 1;
+					}
+					latest_cp_client_height = header.inner.execution_payload.block_number;
+					i += 1;
+				},
+				None => {
+					log::debug!(target: "hyperspace_ethereum", "No more updates");
+					break
+				},
+			}
+		}
+		Ok(updates)
+	}
+}
+
+#[async_trait::async_trait]
+impl IbcProvider for EthereumClient {
+	type FinalityEvent = Block<H256>;
+
+	type TransactionId = (H256, H256);
+
+	type AssetId = String;
+
+	type Error = ClientError;
+
+	async fn query_latest_ibc_events<T>(
+		&mut self,
+		_finality_event: Self::FinalityEvent,
+		counterparty: &T,
+	) -> Result<Vec<(Any, Height, Vec<IbcEvent>, UpdateType)>, anyhow::Error>
+	where
+		T: primitives::Chain,
+	{
+		let client_id = self.client_id();
+		let latest_cp_height = counterparty.latest_height_and_timestamp().await?.0;
+		let latest_cp_client_state =
+			counterparty.query_client_state(latest_cp_height, client_id.clone()).await?;
+		let client_state_response = latest_cp_client_state.client_state.ok_or_else(|| {
+			ClientError::Other("counterparty returned empty client state".to_string())
+		})?;
+		let AnyClientState::Ethereum(client_state) =
+			AnyClientState::decode_recursive(client_state_response, |c| {
+				matches!(c, AnyClientState::Ethereum(_))
+			})
+			.ok_or_else(|| ClientError::Other(format!("Could not decode client state")))?
+		else {
+			unreachable!()
+		};
+		let latest_cp_client_height = client_state.latest_height().revision_height;
+
+		let latest_height = self.latest_height_and_timestamp().await?.0;
+		let latest_revision = latest_height.revision_number;
+
+		let updates = self
+			.fetch_next_updates(
+				counterparty,
+				client_id,
+				&client_state,
+				latest_cp_client_height,
+				latest_revision,
+				MAX_UPDATES_PER_ITER,
+			)
+			.await?;
+
+		Ok(updates)
 	}
 
 	// TODO: this function is mostly used in tests and in 'fishing' mode.
@@ -690,6 +756,7 @@ impl IbcProvider for EthereumClient {
 		at: Height,
 		client_id: ClientId,
 	) -> Result<QueryClientStateResponse, Self::Error> {
+		info!(target: "hyperspace_ethereum", "querying client state for client {} at {}", client_id, at);
 		// First, we try to find an `UpdateClient` event at the given height...
 		let mut client_state = None;
 		let maybe_log = self
@@ -1034,8 +1101,11 @@ impl IbcProvider for EthereumClient {
 		#[cfg(not(feature = "no_beacon"))]
 		{
 			let prover = self.prover();
-			let block = prover.fetch_block("head").await?;
-			number = block.body.execution_payload.block_number.saturating_sub(INDEXER_DELAY_BLOCKS);
+			let block = prover.fetch_block("finalized").await?;
+			let block2 = prover.fetch_block("head").await?;
+			info!(target: "hyperspace_ethereum", "latest_height_and_timestamp: finalized: {} ({}), head: {} ({})", block.slot, block.body.execution_payload.block_number, block2.slot, block2.body.execution_payload.block_number);
+			number =
+				block2.body.execution_payload.block_number.saturating_sub(INDEXER_DELAY_BLOCKS);
 		}
 		#[cfg(feature = "no_beacon")]
 		{
@@ -1397,7 +1467,7 @@ impl IbcProvider for EthereumClient {
 	) -> Result<(Height, Timestamp), Self::Error> {
 		info!(target: "hyperspace_ethereum", "query_client_update_time_and_height: {client_id:?}, {client_height:?}");
 
-		let (_, log) = self
+		let result = self
 			.get_logs_for_event_name::<UpdateClientHeightFilter>(
 				self.contract_creation_block(),
 				BlockNumber::Latest,
@@ -1407,11 +1477,27 @@ impl IbcProvider for EthereumClient {
 				),
 				None,
 			)
-			.await?.pop().ok_or_else(|| Self::Error::Other("no logs found".to_owned()))?;
+			.await?.pop().ok_or_else(|| Self::Error::Other("no logs found".to_owned())).map(|(_, log)| log.block_number);
+		let block_number = match result {
+			Ok(v) => v,
+			Err(_) => {
+				 self
+					.get_logs_for_event_name::<CreateClientHeightFilter>(
+						self.contract_creation_block(),
+						BlockNumber::Latest,
+						&format!(
+							"event_data->>'client_id' = '{client_id}' AND event_data->'client_height'->>'revision_number' = '{}' AND event_data->'client_height'->>'revision_height' = '{}'",
+							client_height.revision_number, client_height.revision_height
+						),
+						None,
+					)
+					.await?.pop().ok_or_else(|| Self::Error::Other("no logs found".to_owned()))?.1.block_number
+			},
+		};
 
 		let height = Height::new(
 			0,
-			log.block_number
+			block_number
 				.ok_or(ClientError::Other(
 					"block number not found in query_client_update_time_and_height".to_string(),
 				))?
@@ -1683,51 +1769,35 @@ impl IbcProvider for EthereumClient {
 	) -> Result<(AnyClientState, AnyConsensusState), Self::Error> {
 		let sync_committee_prover = self.prover();
 		let block_id = "head";
-		let block_header = sync_committee_prover
-			.fetch_header(&block_id)
-			.await
-			.map_err(|err| {
-				ClientError::Other(format!(
-					"failed to fetch header in initialize_client_state: {}",
-					err
-				))
-			})
-			.expect("1");
+		let block_header = sync_committee_prover.fetch_header(&block_id).await.map_err(|err| {
+			ClientError::Other(format!(
+				"failed to fetch header in initialize_client_state: {}",
+				err
+			))
+		})?;
 
-		let state = sync_committee_prover
-			.fetch_beacon_state(block_id)
-			.await
-			.map_err(|err| {
-				ClientError::Other(format!(
-					"failed to fetch beacon state in initialize_client_state: {}",
-					err
-				))
-			})
-			.expect("2");
-
+		let state = sync_committee_prover.fetch_beacon_state(block_id).await.map_err(|err| {
+			ClientError::Other(format!(
+				"failed to fetch beacon state in initialize_client_state: {}",
+				err
+			))
+		})?;
 		// TODO: query `at` block
 		// let finality_checkpoint =
 		// sync_committee_prover.fetch_finalized_checkpoint().await.unwrap();
 
 		let epoch = state.current_justified_checkpoint.epoch;
+		let period_at_slot = compute_sync_committee_period_at_slot(block_header.slot);
+		info!(target: "hyperspace_ethereum", "Using init state period: {period_at_slot}");
 		let client_state = LightClientState {
 			finalized_header: block_header.clone(),
-			latest_finalized_epoch: epoch, // TODO: ????
+			latest_finalized_epoch: compute_epoch_at_slot(block_header.slot),
 			current_sync_committee: state.current_sync_committee,
 			next_sync_committee: state.next_sync_committee,
+			state_period: period_at_slot,
 		};
 
 		let execution_header = state.latest_execution_payload_header;
-		let block = self
-			.client()
-			.get_block(BlockId::Number(BlockNumber::Number(execution_header.block_number.into())))
-			.await
-			.map_err(|err| ClientError::MiddlewareError(err))?
-			.ok_or(ClientError::Other(format!(
-				"not able to find a block : {}",
-				execution_header.block_number.to_string()
-			)))?;
-
 		info!(target: "hyperspace_ethereum", "Using init epoch: {epoch}, and height: {}", execution_header.block_number);
 
 		let client_state = AnyClientState::Ethereum(ClientState {
@@ -1750,7 +1820,6 @@ impl IbcProvider for EthereumClient {
 			})?
 			.into(),
 			root: CommitmentRoot { bytes: execution_header.state_root.to_vec() },
-			// root: CommitmentRoot { bytes: block.state_root.0.to_vec() },
 		});
 
 		Ok((client_state, consensus_state))

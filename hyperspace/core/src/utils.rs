@@ -1,47 +1,35 @@
-use futures::{Stream, StreamExt};
-use std::{
-	pin::Pin,
-	sync::{Arc, Mutex},
-	task::Poll,
+use ethereum::client::ClientError;
+use ibc::{
+	core::{ics02_client::client_state::ClientState, ics24_host::identifier::ClientId},
+	timestamp::Timestamp,
+	Height,
 };
+use pallet_ibc::light_clients::AnyClientState;
+use primitives::Chain;
 
-/// Keeps the most recent value of a stream and acts as stream itself.
-pub struct RecentStream<T: Send + 'static> {
-	value: Arc<Mutex<Option<Option<T>>>>,
+pub async fn query_latest_update_time_and_height<A: Chain, B: Chain>(
+	source: &A,
+	sink: &B,
+) -> anyhow::Result<(Timestamp, Height)> {
+	let (client_id, client_state) = query_latest_client_state(source, sink).await?;
+	let (update_height, update_time) = sink
+		.query_client_update_time_and_height(client_id.clone(), client_state.latest_height())
+		.await?;
+
+	Ok((update_time, update_height))
 }
 
-impl<T: Send + 'static> RecentStream<T> {
-	pub fn new(mut stream: impl Stream<Item = T> + Send + Unpin + 'static) -> Self {
-		let value = Arc::new(Mutex::new(Some(None)));
-		let value_cloned = value.clone();
-		tokio::spawn(async move {
-			while let Some(v) = stream.next().await {
-				*value_cloned.lock().unwrap() = Some(Some(v));
-			}
-			*value_cloned.lock().unwrap() = None;
-		});
-		Self { value }
-	}
-}
-
-impl<T: Send> Stream for RecentStream<T> {
-	type Item = T;
-
-	fn poll_next(
-		self: Pin<&mut Self>,
-		cx: &mut std::task::Context<'_>,
-	) -> Poll<Option<Self::Item>> {
-		let this = self.get_mut();
-		let mut value = this.value.lock().unwrap();
-		match value.as_mut() {
-			Some(v) => match v.take() {
-				Some(v) => Poll::Ready(Some(v)),
-				None => {
-					cx.waker().wake_by_ref();
-					Poll::Pending
-				},
-			},
-			None => Poll::Ready(None),
-		}
-	}
+async fn query_latest_client_state<A: Chain, B: Chain>(
+	source: &A,
+	sink: &B,
+) -> anyhow::Result<(ClientId, AnyClientState)> {
+	let client_id = source.client_id();
+	let latest_cp_height = sink.latest_height_and_timestamp().await?.0;
+	let latest_cp_client_state =
+		sink.query_client_state(latest_cp_height, client_id.clone()).await?;
+	let client_state_response = latest_cp_client_state.client_state.ok_or_else(|| {
+		ClientError::Other("counterparty returned empty client state".to_string())
+	})?;
+	let client_state = AnyClientState::try_from(client_state_response)?;
+	Ok((client_id, client_state))
 }

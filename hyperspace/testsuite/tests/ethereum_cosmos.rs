@@ -12,7 +12,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-use crate::utils::ETH_NODE_PORT_WS;
+use crate::utils::{BEACON_NODE_PORT, ETH_NODE_PORT_WS};
 use core::time::Duration;
 use ethers::{
 	abi::{Bytes, ParamType, StateMutability, Token},
@@ -20,12 +20,14 @@ use ethers::{
 	prelude::{
 		coins_bip39::{English, Mnemonic},
 		transaction::eip2718::TypedTransaction,
-		ContractInstance, Http, LocalWallet, Middleware, MnemonicBuilder, Provider, Signer,
+		ContractInstance, Http, JsonRpcClient, LocalWallet, Middleware, MnemonicBuilder, Provider,
+		Signer,
 	},
-	types::{Address, TransactionRequest, U256},
+	types::{Address, BlockNumber, TransactionRequest, U256},
 	utils::{keccak256, AnvilInstance},
 };
 use ethers_solc::ProjectCompileOutput;
+use futures::StreamExt;
 use hyperspace_core::{
 	chain::{AnyAssetId, AnyChain, AnyConfig},
 	logging,
@@ -392,6 +394,7 @@ async fn setup_clients() -> (AnyChain, AnyChain, JoinHandle<()>) {
 		common: CommonClientConfig {
 			skip_optional_client_updates: true,
 			max_packets_to_process: 200,
+			client_update_interval_sec: 30,
 		},
 	};
 
@@ -445,12 +448,29 @@ async fn setup_clients() -> (AnyChain, AnyChain, JoinHandle<()>) {
 #[ignore]
 async fn ethereum_to_cosmos_ibc_messaging_full_integration_test() {
 	logging::setup_logging();
+
 	let asset_str = "pica".to_string();
 	let asset_native_str = "ETH".to_string();
 	let _asset_id_a = AnyAssetId::Ethereum(asset_str.clone());
 	let asset_id_native_a = AnyAssetId::Ethereum(asset_native_str.clone());
 	let (mut chain_a, mut chain_b, _indexer_handle) = setup_clients().await;
 	sleep(Duration::from_secs(12)).await;
+	if !USE_GETH {
+		let a = chain_a.clone();
+		let _h = tokio::spawn(async move {
+			let AnyChain::Ethereum(eth) = &a else { unreachable!() };
+
+			let mut s = a.finality_notifications().await.unwrap();
+			let mut p = Provider::connect(eth.config.ws_rpc_url.to_string()).await.unwrap();
+			while let Some(_ev) = s.next().await {
+				// info!(target: "hyperspace", "Finality notification: {ev:?}");
+				tokio::time::sleep(Duration::from_secs(5)).await;
+				let res = p.request::<_, BlockNumber>("evm_mine", ()).await;
+				info!(target: "hyperspace", "Mined: {res:?}");
+			}
+		});
+	}
+
 	let (handle, channel_a, channel_b, connection_id_a, connection_id_b) =
 		setup_connection_and_channel(&mut chain_a, &mut chain_b, Duration::from_secs(1)).await;
 	handle.abort();

@@ -63,6 +63,7 @@ pub async fn parse_events(
 	sink: &mut impl Chain,
 	events: Vec<IbcEvent>,
 	mode: Option<Mode>,
+	consensus_height: Option<Height>,
 ) -> Result<Vec<Any>, anyhow::Error> {
 	let mut messages = vec![];
 	// 1. translate events to messages
@@ -72,9 +73,9 @@ pub async fn parse_events(
 				if let Some(connection_id) = open_init.connection_id() {
 					let connection_id = connection_id.clone();
 					// Get connection end with proof
-					let connection_response = source
-						.query_connection_end(open_init.height(), connection_id.clone())
-						.await?;
+					let height = consensus_height.unwrap_or(open_init.height());
+					let connection_response =
+						source.query_connection_end(height, connection_id.clone()).await?;
 					let connection_end = ConnectionEnd::try_from(
 						connection_response.connection.ok_or_else(|| {
 							Error::Custom(format!(
@@ -89,10 +90,7 @@ pub async fn parse_events(
 						CommitmentProofBytes::try_from(connection_response.proof)?;
 					let prefix: CommitmentPrefix = source.connection_prefix();
 					let client_state_response = source
-						.query_client_state(
-							open_init.height(),
-							open_init.attributes().client_id.clone(),
-						)
+						.query_client_state(height, open_init.attributes().client_id.clone())
 						.await?;
 
 					let proof_height = connection_response.proof_height.ok_or_else(|| Error::Custom("[get_messages_for_events - open_conn_init] Proof height not found in response".to_string()))?;
@@ -107,7 +105,7 @@ pub async fn parse_events(
 					log::info!(target: "hyperspace_ethereum", "ph={proof_height}, client_state.latest_height()={}", client_state.latest_height());
 					let consensus_proof = source
 						.query_client_consensus(
-							open_init.height(),
+							height,
 							open_init.attributes().client_id.clone(),
 							client_state.latest_height(),
 						)
@@ -150,9 +148,9 @@ pub async fn parse_events(
 				if let Some(connection_id) = open_try.connection_id() {
 					let connection_id = connection_id.clone();
 					// Get connection end with proof
-					let connection_response = source
-						.query_connection_end(open_try.height(), connection_id.clone())
-						.await?;
+					let height = consensus_height.unwrap_or(open_try.height());
+					let connection_response =
+						source.query_connection_end(height, connection_id.clone()).await?;
 					let connection_end = ConnectionEnd::try_from(
 						connection_response.connection.ok_or_else(|| {
 							Error::Custom(format!(
@@ -166,10 +164,7 @@ pub async fn parse_events(
 					let connection_proof =
 						CommitmentProofBytes::try_from(connection_response.proof)?;
 					let client_state_response = source
-						.query_client_state(
-							open_try.height(),
-							open_try.attributes().client_id.clone(),
-						)
+						.query_client_state(height, open_try.attributes().client_id.clone())
 						.await?;
 
 					let proof_height = connection_response.proof_height.ok_or_else(|| Error::Custom("[get_messages_for_events - open_conn_try] Proof height not found in response".to_string()))?;
@@ -183,7 +178,7 @@ pub async fn parse_events(
 						.ok_or_else(|| Error::Custom("Client state is empty".to_string()))??;
 					let consensus_proof = source
 						.query_client_consensus(
-							open_try.height(),
+							height,
 							open_try.attributes().client_id.clone(),
 							client_state.latest_height(),
 						)
@@ -191,6 +186,8 @@ pub async fn parse_events(
 					let host_consensus_state_proof =
 						query_host_consensus_state_proof(sink, client_state.clone()).await?;
 					// Construct OpenAck
+					log::info!(target: "hyperspace_ethereum", "ph={proof_height}, client_state.latest_height()={}", client_state.latest_height());
+
 					let msg = MsgConnectionOpenAck::<LocalClientTypes> {
 						connection_id: counterparty
 							.connection_id()
@@ -233,9 +230,9 @@ pub async fn parse_events(
 				if let Some(connection_id) = open_ack.connection_id() {
 					let connection_id = connection_id.clone();
 					// Get connection end with proof
-					let connection_response = source
-						.query_connection_end(open_ack.height(), connection_id.clone())
-						.await?;
+					let height = consensus_height.unwrap_or(open_ack.height());
+					let connection_response =
+						source.query_connection_end(height, connection_id.clone()).await?;
 					let connection_end = ConnectionEnd::try_from(
 						connection_response.connection.ok_or_else(|| {
 							Error::Custom(format!(
@@ -274,12 +271,9 @@ pub async fn parse_events(
 			},
 			IbcEvent::OpenInitChannel(open_init) => {
 				if let Some(channel_id) = open_init.channel_id {
+					let height = consensus_height.unwrap();
 					let channel_response = source
-						.query_channel_end(
-							open_init.height(),
-							channel_id,
-							open_init.port_id.clone(),
-						)
+						.query_channel_end(height, channel_id, open_init.port_id.clone())
 						.await?;
 					let channel_end =
 						ChannelEnd::try_from(channel_response.channel.ok_or_else(|| {
@@ -292,7 +286,7 @@ pub async fn parse_events(
 					let counterparty = channel_end.counterparty();
 
 					let connection_response = source
-						.query_connection_end(open_init.height(), open_init.connection_id.clone())
+						.query_connection_end(height, open_init.connection_id.clone())
 						.await?;
 					let connection_end = connection_response.connection.ok_or_else(|| {
 						Error::Custom(format!(
@@ -340,8 +334,9 @@ pub async fn parse_events(
 			},
 			IbcEvent::OpenTryChannel(open_try) =>
 				if let Some(channel_id) = open_try.channel_id {
+					let height = consensus_height.unwrap();
 					let channel_response = source
-						.query_channel_end(open_try.height(), channel_id, open_try.port_id.clone())
+						.query_channel_end(height, channel_id, open_try.port_id.clone())
 						.await?;
 					let channel_end =
 						ChannelEnd::try_from(channel_response.channel.ok_or_else(|| {
@@ -376,8 +371,9 @@ pub async fn parse_events(
 				},
 			IbcEvent::OpenAckChannel(open_ack) =>
 				if let Some(channel_id) = open_ack.channel_id {
+					let height = consensus_height.unwrap();
 					let channel_response = source
-						.query_channel_end(open_ack.height(), channel_id, open_ack.port_id.clone())
+						.query_channel_end(height, channel_id, open_ack.port_id.clone())
 						.await?;
 					let channel_end =
 						ChannelEnd::try_from(channel_response.channel.ok_or_else(|| {
@@ -408,8 +404,9 @@ pub async fn parse_events(
 				},
 			IbcEvent::CloseInitChannel(close_init) => {
 				let channel_id = close_init.channel_id;
+				let height = consensus_height.unwrap();
 				let channel_response = source
-					.query_channel_end(close_init.height(), channel_id, close_init.port_id.clone())
+					.query_channel_end(height, channel_id, close_init.port_id.clone())
 					.await?;
 				let channel_end =
 					ChannelEnd::try_from(channel_response.channel.ok_or_else(|| {
@@ -449,9 +446,9 @@ pub async fn parse_events(
 				// 3. otherwise skip.
 				let port_id = send_packet.packet.source_port.clone();
 				let channel_id = send_packet.packet.source_channel;
-				let channel_response = source
-					.query_channel_end(send_packet.height, channel_id, port_id.clone())
-					.await?;
+				let height = consensus_height.unwrap();
+				let channel_response =
+					source.query_channel_end(height, channel_id, port_id.clone()).await?;
 				let channel_end =
 					ChannelEnd::try_from(channel_response.channel.ok_or_else(|| {
 						Error::Custom(
@@ -465,7 +462,7 @@ pub async fn parse_events(
 					.ok_or_else(|| Error::Custom("Channel end missing connection id".to_string()))?
 					.clone();
 				let connection_response =
-					source.query_connection_end(send_packet.height, connection_id.clone()).await?;
+					source.query_connection_end(height, connection_id.clone()).await?;
 				let connection_end =
 					ConnectionEnd::try_from(connection_response.connection.ok_or_else(|| {
 						Error::Custom(format!("ConnectionEnd not found for {connection_id:?}"))
@@ -491,9 +488,8 @@ pub async fn parse_events(
 					continue
 				}
 
-				let packet_commitment_response = source
-					.query_packet_commitment(send_packet.height, &port_id, &channel_id, seq)
-					.await?;
+				let packet_commitment_response =
+					source.query_packet_commitment(height, &port_id, &channel_id, seq).await?;
 				let commitment_proof =
 					CommitmentProofBytes::try_from(packet_commitment_response.proof)?;
 
@@ -516,9 +512,9 @@ pub async fn parse_events(
 			IbcEvent::WriteAcknowledgement(write_ack) => {
 				let port_id = &write_ack.packet.destination_port.clone();
 				let channel_id = &write_ack.packet.destination_channel.clone();
-				let channel_response = source
-					.query_channel_end(write_ack.height, *channel_id, port_id.clone())
-					.await?;
+				let height = consensus_height.unwrap();
+				let channel_response =
+					source.query_channel_end(height, *channel_id, port_id.clone()).await?;
 				let channel_end =
 					ChannelEnd::try_from(channel_response.channel.ok_or_else(|| {
 						Error::Custom(
@@ -532,7 +528,7 @@ pub async fn parse_events(
 					.ok_or_else(|| Error::Custom("Channel end missing connection id".to_string()))?
 					.clone();
 				let connection_response =
-					source.query_connection_end(write_ack.height, connection_id.clone()).await?;
+					source.query_connection_end(height, connection_id.clone()).await?;
 				let connection_end =
 					ConnectionEnd::try_from(connection_response.connection.ok_or_else(|| {
 						Error::Custom(format!("ConnectionEnd not found for {connection_id:?}"))
@@ -545,9 +541,8 @@ pub async fn parse_events(
 				}
 				let seq = u64::from(write_ack.packet.sequence);
 				let packet = write_ack.packet;
-				let packet_acknowledgement_response = source
-					.query_packet_acknowledgement(write_ack.height, port_id, channel_id, seq)
-					.await?;
+				let packet_acknowledgement_response =
+					source.query_packet_acknowledgement(height, port_id, channel_id, seq).await?;
 				let acknowledgement = write_ack.ack;
 				let commitment_proof =
 					CommitmentProofBytes::try_from(packet_acknowledgement_response.proof)?;

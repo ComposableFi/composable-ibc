@@ -33,10 +33,9 @@ mod convert {
 		constants::SYNC_COMMITTEE_SIZE,
 		types::{
 			AncestorBlock, AncestryProof, BlockRootsProof, ExecutionPayloadProof, FinalityProof,
-			SyncCommitteeUpdate,
+			SyncCommitteeUpdate, VerifierState as LightClientState,
 		},
 	};
-	use sync_committee_verifier::LightClientState;
 
 	impl TryFrom<RawBeaconBlockHeader> for BeaconBlockHeader {
 		type Error = Error;
@@ -389,6 +388,7 @@ mod convert {
 				latest_finalized_epoch: raw.latest_finalized_epoch,
 				current_sync_committee,
 				next_sync_committee,
+				state_period: raw.state_period,
 			})
 		}
 	}
@@ -400,6 +400,7 @@ mod convert {
 				latest_finalized_epoch: client_state.latest_finalized_epoch,
 				current_sync_committee: Some(client_state.current_sync_committee.into()),
 				next_sync_committee: Some(client_state.next_sync_committee.into()),
+				state_period: client_state.state_period,
 			}
 		}
 	}

@@ -4,25 +4,25 @@ use crate::{
 	contract::UnwrapContractError,
 	ibc_provider::{u256_to_bytes, ERC20TOKENABI_ABI},
 	jwt::{JwtAuth, JwtKey},
-	mock::utils::mock::ClientState,
+	prove::EventResponse,
 	utils::{handle_gas_usage, send_retrying, DeployYuiIbc, ProviderImpl},
 };
 use anyhow::Error;
 use async_trait::async_trait;
+use derivative::Derivative;
 use ethers::{
-	abi::{encode, AbiEncode, Address, Bytes, ParamType, Token},
+	abi::{encode, AbiEncode, Address, Bytes, Token},
 	core::k256,
 	prelude::{
-		coins_bip39::English, signer::SignerMiddlewareError, Authorization, BlockId, BlockNumber,
-		ContractInstance, EIP1186ProofResponse, Filter, LocalWallet, Log, MnemonicBuilder,
-		NameOrAddress, SignerMiddleware, Wallet, H256,
+		signer::SignerMiddlewareError, Authorization, BlockId, BlockNumber, ContractInstance,
+		EIP1186ProofResponse, NameOrAddress, SignerMiddleware, Wallet, H256,
 	},
 	providers::{Http, Middleware, Provider, ProviderError, ProviderExt, Ws},
 	signers::Signer,
 	types::U256,
 	utils::keccak256,
 };
-use futures::{FutureExt, Stream, TryFutureExt, TryStreamExt};
+use futures::{future::ready, FutureExt, Stream, TryFutureExt, TryStreamExt};
 use ibc::{
 	applications::transfer::{msgs::transfer::MsgTransfer, PrefixedCoin},
 	core::ics24_host::{
@@ -34,8 +34,9 @@ use ibc::{
 use ibc_primitives::Timeout;
 use log::info;
 use once_cell::sync::Lazy;
-use pallet_ibc::light_clients::{AnyClientState, AnyConsensusState, HostFunctionsManager};
-use primitives::{CommonClientState, IbcProvider};
+use pallet_ibc::light_clients::{AnyClientState, HostFunctionsManager};
+use primitives::{utils::RecentStream, CommonClientState, IbcProvider};
+use reqwest_eventsource::EventSource;
 use sqlx::{
 	postgres::{PgConnectOptions, PgPoolOptions},
 	ConnectOptions,
@@ -48,11 +49,11 @@ use std::{
 	pin::Pin,
 	str::FromStr,
 	sync::{Arc, Mutex},
-	time::Duration,
 };
+use sync_committee_primitives::consensus_types::Checkpoint;
 use sync_committee_prover::SyncCommitteeProver;
 use thiserror::Error;
-use tokio::time::sleep;
+use tokio::sync::Mutex as AsyncMutex;
 
 pub type EthRpcClient = SignerMiddleware<Provider<Http>, Wallet<k256::ecdsa::SigningKey>>;
 pub(crate) type WsEth = Provider<Ws>;
@@ -66,7 +67,8 @@ pub const CLIENT_IMPLS_STORAGE_INDEX: u32 = 3;
 pub const CONNECTIONS_STORAGE_INDEX: u32 = 4;
 pub const CHANNELS_STORAGE_INDEX: u32 = 5;
 
-#[derive(Debug, Clone)]
+#[derive(Clone, Derivative)]
+#[derivative(Debug)]
 pub struct EthereumClient {
 	http_rpc: Arc<EthRpcClient>,
 	pub(crate) ws_uri: http::Uri,
@@ -76,7 +78,6 @@ pub struct EthereumClient {
 	pub yui: DeployYuiIbc<Arc<ProviderImpl>, ProviderImpl>,
 	/// Light client id on counterparty chain
 	pub client_id: Arc<Mutex<Option<ClientId>>>,
-
 	/// Light client id on the current chain
 	pub counterparty_client_id: Arc<Mutex<Option<ClientId>>>,
 	/// Connection Id
@@ -87,6 +88,10 @@ pub struct EthereumClient {
 	pub redis: redis::Client,
 	/// Indexer Postgres database
 	pub db_conn: sqlx::Pool<sqlx::Postgres>,
+	/// Checkpoint stream
+	#[derivative(Debug = "ignore")]
+	pub checkpoint_stream:
+		Arc<AsyncMutex<Pin<Box<dyn Stream<Item = Checkpoint> + Send + 'static>>>>,
 }
 
 pub type MiddlewareErrorType =
@@ -184,6 +189,33 @@ pub struct DatabaseLog {
 	pub topics: Vec<Option<String>>,
 }
 
+pub fn subscribe_to_checkpoint_stream(
+	node_url: &str,
+) -> Pin<Box<dyn Stream<Item = Checkpoint> + Send>> {
+	use futures::{Stream, StreamExt};
+	let es = EventSource::get(format!("{}/eth/v1/events?topics=finalized_checkpoint", node_url))
+		.filter_map(|ev| match ev {
+			Ok(reqwest_eventsource::Event::Message(msg)) => {
+				info!("Event stream: {:?}", msg);
+				let message: EventResponse = serde_json::from_str(&msg.data).unwrap();
+				info!("Event stream': {:?}", message);
+				ready(Some(Checkpoint {
+					epoch: message.epoch.parse().unwrap(),
+					root: message.block,
+				}))
+			},
+			Ok(v) => {
+				log::error!("Unexpected event: {:?}", v);
+				ready(None)
+			},
+			Err(e) => {
+				log::error!("Error in event stream: {:?}", e);
+				ready(None)
+			},
+		});
+	RecentStream::new(es.boxed()).boxed()
+}
+
 impl EthereumClient {
 	pub async fn new(mut config: EthereumClientConfig) -> Result<Self, ClientError> {
 		let client = config.client().await?;
@@ -224,11 +256,11 @@ impl EthereumClient {
 
 		let redis = redis::Client::open(config.indexer_redis_url.clone())
 			.expect("Unable to connect with Redis server");
-
+		let common_state = CommonClientState::from_config(&config.common);
 		Ok(Self {
 			http_rpc: client,
 			ws_uri: config.ws_rpc_url.clone(),
-			common_state: Default::default(),
+			common_state: CommonClientState { ..common_state },
 			yui,
 			client_id: Arc::new(Mutex::new(config.client_id.clone())),
 			counterparty_client_id: Arc::new(Mutex::new(None)),
@@ -236,6 +268,9 @@ impl EthereumClient {
 			channel_whitelist: Arc::new(Mutex::new(
 				config.channel_whitelist.clone().into_iter().collect(),
 			)),
+			checkpoint_stream: Arc::new(AsyncMutex::new(subscribe_to_checkpoint_stream(
+				&config.beacon_rpc_url.to_string(),
+			))),
 			config,
 			db_conn,
 			redis,

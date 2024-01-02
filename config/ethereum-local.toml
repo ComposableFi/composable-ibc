@@ -7,54 +7,55 @@ name = "ethereum-client"
 client_id = "07-tendermint-0"
 channel_whitelist = []
 commitment_prefix = "696263"
-diamond_address = "0x9ffb077b0671cb474136e6e25aa49e0b89efcd5d"
-tendermint_address = "0xfd99d3c5f7c95acd9cb5ae51befcaece978fe705"
-gov_proxy_address = "0x55b727c1dab718a1b8b79f4851da6bb2903f8765"
-ics20_transfer_bank_address = "0xe9ccb2175cec77e76eff19b7aad46564b073a4bd"
-ics20_bank_address = "0xabff4d4c9b514641f670a07d30920765231d218a"
+diamond_address = "0x56378f9b88f341b1913a2fc6ac2bcbaa1b9a9f9f"
+tendermint_address = "0x4dc31b5e0c8f0978250eea864eeba283c45c7c20"
+gov_proxy_address = "0xec2e07c3e20ea4248f663ebd4cac75aa349a0463"
+ics20_transfer_bank_address = "0x40ec3b1c0dc9332fe3202328a11b4805331e2b3a"
+ics20_bank_address = "0xce2a47f9cdd0556c71ce434c3b6f809606448ded"
 diamond_facets = [
     [
     "IBCClient",
-    "0x1f4533b3a54e24fe0b521b370d809a4de414e285",
+    "0xb7198a3674e37433579be45aa9dd09f5ab4b314a",
 ],
     [
     "IBCConnection",
-    "0x7ba7f77cb1f0c7b6499637677445a320a2cb9a88",
+    "0xb26397cfa7e111e844086bdd3da5080f9de65cb7",
 ],
     [
     "IBCChannelHandshake",
-    "0x0d383b00228730e78eeef2a27cd7bf2e41aece53",
+    "0xfbf766071d0fdee42b78ab029b97194543b6d7a5",
 ],
     [
     "IBCPacket",
-    "0xc7fa186cad3d2c497c324c5ba2375ec66099f73e",
+    "0x844d2447e6c00cf6a5fbe9ad5eebebe31e40368e",
 ],
     [
     "IBCQuerier",
-    "0x74059067e5491087196047f60d02e1931c9105bd",
+    "0x992966599e81b9d4a3ef92172b9fa162d2e50d5b",
 ],
     [
     "DiamondCutFacet",
-    "0xfd4778b3245159d26046296527dbe6422b7321c3",
+    "0x3bf46cf159422e1791d20d45683b21f34ecae4be",
 ],
     [
     "DiamondLoupeFacet",
-    "0x158535be2f870910d51f998c02877773f63c68fc",
+    "0xb16af4cfc553ae0a8f43e812e22dc6caabdf5e63",
 ],
     [
     "OwnershipFacet",
-    "0x6ce26cb40f9b7815f39e04cd3978f00f7a280cb3",
+    "0x4f6e145fbaf72be9ea283f5793e70a1c594d5ceb",
 ],
     [
     "GovernanceFacet",
-    "0x2afffbfdd5c9ee4b0f8b6de2c5d2886576a398f2",
+    "0xd0017ae5068faa14eaa547ba1c47fdc7afdf1230",
 ],
     [
     "RelayerWhitelistFacet",
-    "0xa37250103542c2103f7e2637ad0e4314467ade59",
+    "0xe566a7e344f2aef783319a76233e54e7f8b47823",
 ],
 ]
 client_type = "07-tendermint"
 jwt_secret_path = "/Users/vmark/work/eth-pos-devnet/execution/jwtsecret"
 indexer_pg_url = "pg://postgres:password@localhost/postgres"
 indexer_redis_url = "redis://localhost:6379"
+client_update_interval_sec = 300

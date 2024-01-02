@@ -13,19 +13,21 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-use crate::{client_state::ClientState, consensus_state::ConsensusState, error::Error};
-use ibc::core::ics02_client::client_consensus::ConsensusState as _;
-
 use crate::{
+	alloc::string::ToString,
 	client_message::{ClientMessage, Misbehaviour},
+	client_state::ClientState,
+	consensus_state::ConsensusState,
+	error::Error,
 	verify::verify_ibc_proof,
 };
-use alloc::vec::Vec;
+use alloc::{vec, vec::Vec};
 use anyhow::anyhow;
-use core::{fmt::Debug, marker::PhantomData};
+use core::{fmt::Debug, marker::PhantomData, str::FromStr};
 use ibc::{
 	core::{
 		ics02_client::{
+			client_consensus::ConsensusState as _,
 			client_def::{ClientDef, ConsensusUpdateResult},
 			error::Error as Ics02Error,
 		},
@@ -44,7 +46,7 @@ use ibc::{
 	},
 	Height,
 };
-use sync_committee_verifier::LightClientState;
+use sync_committee_verifier::verify_sync_committee_attestation;
 
 // TODO: move this function in a separate crate and remove the one from `light_client_common` crate
 /// This will verify that the connection delay has elapsed for a given [`ibc::Height`]
@@ -109,7 +111,8 @@ where
 	) -> Result<(), Ics02Error> {
 		match client_message {
 			ClientMessage::Header(_header) => {
-				// let _ = verify_sync_committee_attestation::<H>(client_state.inner, header.inner)
+				// TODO: should we verify twice (also in update_state)?
+				// let _ = verify_sync_committee_attestation(client_state.inner, header.inner)
 				// 	.map_err(|e| Ics02Error::implementation_specific(e.to_string()))?;
 			},
 			ClientMessage::Misbehaviour(Misbehaviour { never }) => match never {},
@@ -120,7 +123,7 @@ where
 
 	fn update_state<Ctx: ReaderContext>(
 		&self,
-		_ctx: &Ctx,
+		ctx: &Ctx,
 		_client_id: ClientId,
 		client_state: Self::ClientState,
 		client_message: Self::ClientMessage,
@@ -132,22 +135,6 @@ where
 			),
 		};
 
-		let mut css = header
-			.ancestor_blocks
-			.iter()
-			.map(|b| {
-				let height = Height::new(
-					0, // TODO: check this
-					b.execution_payload.block_number as u64,
-				);
-				let cs = Ctx::AnyConsensusState::wrap(&ConsensusState::new(
-					b.execution_payload.state_root.clone(),
-					b.execution_payload.timestamp,
-				))
-				.unwrap();
-				(height, cs)
-			})
-			.collect::<Vec<_>>();
 		let header = header.inner;
 		let height = Height::new(
 			0, // TODO: check this
@@ -158,32 +145,39 @@ where
 			header.execution_payload.timestamp,
 		))
 		.unwrap();
-		css.push((height, cs));
+		let css = vec![(height, cs)];
 
-		// let cs = client_state.inner;
-		// let new_client_state = verify_sync_committee_attestation::<H>(cs, header)
-		// 	.map_err(|e| Ics02Error::implementation_specific(e.to_string()))?;
-		let update = header;
-		let new_light_client_state =
-			if let Some(sync_committee_update) = update.sync_committee_update {
-				LightClientState {
-					finalized_header: update.finalized_header,
-					latest_finalized_epoch: update.finality_proof.epoch,
-					current_sync_committee: client_state.inner.next_sync_committee,
-					next_sync_committee: sync_committee_update.next_sync_committee,
+		let cs = &client_state.inner;
+		let latest_height = header.execution_payload.block_number;
+		if header.attested_header.slot <= cs.finalized_header.slot ||
+			header.finality_proof.epoch <= cs.latest_finalized_epoch
+		{
+			// Check if the state root matches the one in the consensus state, otherwise, freeze the
+			// client
+			let height = Height::new(0, header.execution_payload.block_number);
+			if let Ok(cs) = ctx.consensus_state(&ClientId::from_str("00-unknown").unwrap(), height)
+			{
+				if header.execution_payload.state_root.as_bytes() != cs.root().as_bytes() {
+					let mut client_state = client_state;
+					client_state.frozen_height = Some(height);
+					return Ok((client_state, ConsensusUpdateResult::Batch(vec![])))
 				}
-			} else {
-				LightClientState { finalized_header: update.finalized_header, ..client_state.inner }
-			};
+			}
+
+			return Ok((client_state, ConsensusUpdateResult::Batch(vec![])))
+		}
+		let cs = client_state.inner;
+
+		let new_light_client_state = verify_sync_committee_attestation(cs, header)
+			.map_err(|e| Ics02Error::implementation_specific(e.to_string()))?;
+		// TODO: verify ancestor blocks
 		let new_client_state = ClientState {
 			inner: new_light_client_state,
 			frozen_height: None,
-			latest_height: update.execution_payload.block_number as _,
-			// latest_height: update.attested_header.slot.into(),
+			latest_height: latest_height as _,
 			_phantom: Default::default(),
 		};
 
-		// client_state.inner = new_client_state;
 		Ok((new_client_state, ConsensusUpdateResult::Batch(css)))
 	}
 

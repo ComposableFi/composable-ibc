@@ -25,8 +25,7 @@ use crate::{
 use alloc::{string::ToString, vec::Vec};
 use anyhow::anyhow;
 use core::convert::Infallible;
-use sync_committee_primitives::types::AncestorBlock;
-use sync_committee_verifier::LightClientUpdate;
+use sync_committee_primitives::types::{AncestorBlock, VerifierStateUpdate as LightClientUpdate};
 use tendermint_proto::Protobuf;
 
 /// Protobuf type url for GRANDPA header

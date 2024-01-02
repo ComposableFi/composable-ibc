@@ -63,8 +63,8 @@ tendermint-proto = { git = "https://github.com/informalsystems/tendermint-rs", r
 sp-std = { git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.39", default-features = false }
 sp-io = { git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.39", default-features = false, features = ["disable_panic_handler", "disable_oom", "disable_allocator"] }
 
-sync-committee-verifier = { git = "https://github.com/polytope-labs/sync-committee-rs.git", rev = "106f53e045cc85c4a8d984c8e295800cebaa2475", default-features = false }
-sync-committee-primitives = { git = "https://github.com/polytope-labs/sync-committee-rs.git", rev = "106f53e045cc85c4a8d984c8e295800cebaa2475", default-features = false }
+sync-committee-verifier = { git = "https://github.com/polytope-labs/hyperbridge.git", rev = "7adb936a6fdf4a9cc418259bf0cec35a31ce35d8", default-features = false }
+sync-committee-primitives = { git = "https://github.com/polytope-labs/hyperbridge.git", rev = "7adb936a6fdf4a9cc418259bf0cec35a31ce35d8", default-features = false }
 ssz-rs = { git = "https://github.com/polytope-labs/ssz-rs", branch = "main" , default-features = false }
 
 [dev-dependencies]
@@ -80,15 +80,15 @@ serde_json = { version = "1.0.93", default-features = false }
 backtraces = ["cosmwasm-std/backtraces"]
 # use library feature to disable all instantiate/execute/query exports
 library = []
-default = ["testnet"]
+default = []
 std = [
   "sp-std/std",
 ]
 test = [
-  "icsxx-ethereum/std",
+#  "icsxx-ethereum/std",
   "std"
 ]
 testnet = [
-  "sync-committee-primitives/testnet",
-  "sync-committee-verifier/testnet",
+  "sync-committee-primitives/sepolia",
+  "sync-committee-verifier/sepolia",
 ]

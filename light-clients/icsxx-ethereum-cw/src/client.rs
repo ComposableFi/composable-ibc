@@ -43,7 +43,6 @@ use icsxx_ethereum::{
 	consensus_state::ConsensusState,
 };
 use prost::Message;
-use sp_io::hashing::sha2_256;
 use std::str::FromStr;
 
 impl<'a, H> ClientTypes for Context<'a, H>

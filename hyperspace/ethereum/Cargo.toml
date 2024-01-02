@@ -19,9 +19,9 @@ icsxx-ethereum = { path = "../../light-clients/icsxx-ethereum" }
 pallet-ibc = { path = "../../contracts/pallet-ibc" }
 hyperspace-cosmos = { path = "../cosmos" }
 
-sync-committee-primitives = { git = "https://github.com/polytope-labs/sync-committee-rs.git", rev = "106f53e045cc85c4a8d984c8e295800cebaa2475" }
-sync-committee-verifier = { git = "https://github.com/polytope-labs/sync-committee-rs.git", rev = "106f53e045cc85c4a8d984c8e295800cebaa2475" }
-sync-committee-prover = { git = "https://github.com/polytope-labs/sync-committee-rs.git", rev = "106f53e045cc85c4a8d984c8e295800cebaa2475" }
+sync-committee-primitives = { git = "https://github.com/polytope-labs/hyperbridge.git", rev = "7adb936a6fdf4a9cc418259bf0cec35a31ce35d8" }
+sync-committee-verifier = { git = "https://github.com/polytope-labs/hyperbridge.git", rev = "7adb936a6fdf4a9cc418259bf0cec35a31ce35d8" }
+sync-committee-prover = { git = "https://github.com/polytope-labs/hyperbridge.git", rev = "7adb936a6fdf4a9cc418259bf0cec35a31ce35d8" }
 #light-client-common = { path = "../common"  }
 ssz-rs = { git = "https://github.com/polytope-labs/ssz-rs", branch = "main" }
 
@@ -60,6 +60,8 @@ itertools = "0.11.0"
 redis = "0.22"
 sqlx = { version = "0.6", features = [ "runtime-tokio-native-tls" , "postgres" ] }
 ics23 = { git = "https://github.com/cosmos/ics23", rev = "74ce807b7be39a7e0afb4e2efb8e28a57965f57b", default-features = false }
+reqwest-eventsource = "0.4.0"
+derivative = "2.2.0"
 
 [dev-dependencies]
 toml = "0.7.3"
@@ -67,10 +69,10 @@ git2 = "0.17.1"
 tendermint = { git = "https://github.com/informalsystems/tendermint-rs", rev = "e81f7bf23d63ffbcd242381d1ce5e35da3515ff1", default-features = false }
 
 [features]
-default = ["testnet"]
+default = []
 testnet = [
-    "sync-committee-primitives/testnet",
-    "sync-committee-verifier/testnet",
-    "sync-committee-prover/testnet",
+    "sync-committee-primitives/sepolia",
+    "sync-committee-verifier/sepolia",
+    "sync-committee-prover/sepolia",
 ]
 no_beacon = []

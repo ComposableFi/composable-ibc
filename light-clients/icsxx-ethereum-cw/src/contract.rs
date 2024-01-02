@@ -26,12 +26,11 @@ use crate::{
 	state::get_client_state,
 	Bytes,
 };
-use core::{fmt::Debug, hash::Hasher};
+use core::fmt::Debug;
 #[cfg(not(feature = "library"))]
 use cosmwasm_std::entry_point;
 use cosmwasm_std::{to_binary, Binary, Deps, DepsMut, Env, MessageInfo, Response, StdResult};
 use cw_storage_plus::{Item, Map};
-use digest::Digest;
 use ibc::core::{
 	ics02_client::{
 		client_def::{ClientDef, ConsensusUpdateResult},
@@ -136,15 +135,14 @@ fn process_message(
 			Ok(()).map(|_| to_binary(&ContractResult::success()))
 		},
 		ExecuteMsg::VerifyClientMessage(msg) => {
-			let _client_state =
+			let client_state =
 				ctx.client_state(&client_id).map_err(|e| ContractError::Client(e.to_string()))?;
-			let _msg = VerifyClientMessage::try_from(msg)?;
+			let msg = VerifyClientMessage::try_from(msg)?;
 
-			// client
-			// 	.verify_client_message(ctx, client_id, client_state, msg.client_message)
-			// 	.map_err(|e| ContractError::Client(format!("{e:?}")))
-			// 	.map(|_| to_binary(&ContractResult::success()))
-			Ok(()).map(|_| to_binary(&ContractResult::success()))
+			client
+				.verify_client_message(ctx, client_id, client_state, msg.client_message)
+				.map_err(|e| ContractError::Client(format!("{e:?}")))
+				.map(|_| to_binary(&ContractResult::success()))
 		},
 		ExecuteMsg::CheckForMisbehaviour(msg) => {
 			let client_state =
