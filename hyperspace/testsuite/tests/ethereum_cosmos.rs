@@ -14,7 +14,17 @@
 
 use crate::utils::ETH_NODE_PORT_WS;
 use core::time::Duration;
-use ethers::{abi::Token, prelude::ContractInstance, utils::AnvilInstance};
+use ethers::{
+	abi::{Bytes, ParamType, StateMutability, Token},
+	middleware::SignerMiddleware,
+	prelude::{
+		coins_bip39::{English, Mnemonic},
+		transaction::eip2718::TypedTransaction,
+		ContractInstance, Http, LocalWallet, Middleware, MnemonicBuilder, Provider, Signer,
+	},
+	types::{Address, TransactionRequest, U256},
+	utils::{keccak256, AnvilInstance},
+};
 use ethers_solc::ProjectCompileOutput;
 use hyperspace_core::{
 	chain::{AnyAssetId, AnyChain, AnyConfig},
@@ -22,30 +32,39 @@ use hyperspace_core::{
 };
 use hyperspace_cosmos::client::{CosmosClient, CosmosClientConfig};
 use hyperspace_ethereum::{
+	client::{ClientError, EthereumClient},
+	config::{ContractName, ContractName::ICS20Bank},
+	ibc_provider,
+	ibc_provider::PublicKeyData,
 	mock::{
 		utils,
 		utils::{hyperspace_ethereum_client_fixture, ETH_NODE_PORT, USE_GETH},
 	},
-	utils::{check_code_size, deploy_contract, DeployYuiIbc, ProviderImpl},
+	utils::{check_code_size, deploy_contract, send_retrying, DeployYuiIbc, ProviderImpl},
 };
-use hyperspace_primitives::{utils::create_clients, CommonClientConfig, IbcProvider};
+use hyperspace_primitives::{utils::create_clients, Chain, CommonClientConfig, IbcProvider};
 use hyperspace_testsuite::{
 	ibc_channel_close, ibc_messaging_packet_height_timeout_with_connection_delay,
 	ibc_messaging_packet_timeout_on_channel_close,
-	ibc_messaging_packet_timestamp_timeout_with_connection_delay, setup_connection_and_channel,
+	ibc_messaging_packet_timestamp_timeout_with_connection_delay,
+	ibc_messaging_with_connection_delay, setup_connection_and_channel,
 };
-use ibc::core::ics24_host::identifier::PortId;
-use log::info;
+use ibc::core::{ics02_client::client_state::ClientState, ics24_host::identifier::PortId};
+use itertools::Itertools;
+use log::{info, warn};
+use pallet_ibc::light_clients::AnyClientState;
 use sp_core::hashing::sha2_256;
 use std::{
+	collections::{HashMap, HashSet},
 	future::Future,
 	path::PathBuf,
 	str::FromStr,
 	sync::{Arc, Mutex},
 };
+use tendermint::{validator::Set, PublicKey};
 use tokio::{task::JoinHandle, time::sleep};
 
-const USE_CONFIG: bool = false;
+const USE_CONFIG: bool = true;
 const SAVE_TO_CONFIG: bool = true;
 
 #[derive(Debug, Clone)]
@@ -98,6 +117,7 @@ pub async fn deploy_yui_ibc_and_tendermint_client_fixture() -> DeployYuiIbcTende
 	let diamond_project_output =
 		hyperspace_ethereum::utils::compile_yui(&path, "contracts/diamond");
 	let project_output1 = hyperspace_ethereum::utils::compile_yui(&path, "contracts/clients");
+	check_code_size(project_output1.artifacts());
 	let (anvil, client) = utils::spawn_anvil().await;
 	log::warn!("endpoint: {}, chain id: {}", anvil.endpoint(), anvil.chain_id());
 	let mut yui_ibc = hyperspace_ethereum::utils::deploy_yui_ibc(
@@ -106,8 +126,16 @@ pub async fn deploy_yui_ibc_and_tendermint_client_fixture() -> DeployYuiIbcTende
 		client.clone(),
 	)
 	.await;
-
-	check_code_size(project_output1.artifacts());
+	let utils_output = hyperspace_ethereum::utils::compile_yui(&path, "contracts/utils");
+	let gov_proxy = deploy_contract(
+		"GovernanceProxy",
+		&[&utils_output],
+		(yui_ibc.diamond.address(),),
+		client.clone(),
+	)
+	.await;
+	yui_ibc.gov_proxy = Some(gov_proxy.clone());
+	yui_ibc.set_gov_proxy(gov_proxy.address()).await;
 
 	let ics23_contract =
 		deploy_contract("Ics23Contract", &[&project_output1], (), client.clone()).await;
@@ -162,11 +190,14 @@ fn deploy_transfer_module_fixture(
 		let ics20_bank_contract = deploy_contract(
 			"ICS20Bank",
 			&[&project_output],
-			Token::String("ETH".to_string()),
+			(
+				Token::String("ETH".to_string()),
+				Token::Address(deploy.yui_ibc.gov_proxy.as_ref().unwrap().address()),
+			),
 			deploy.client.clone(),
 		)
 		.await;
-		println!("Bank module address: {:?}", ics20_bank_contract.address());
+		info!("Bank module address: {:?}", ics20_bank_contract.address());
 		let constructor_args = (
 			Token::Address(deploy.yui_ibc.diamond.address()),
 			Token::Address(ics20_bank_contract.address()),
@@ -178,12 +209,114 @@ fn deploy_transfer_module_fixture(
 			deploy.client.clone(),
 		)
 		.await;
+		let method = ics20_bank_contract
+			.method::<_, ()>(
+				"transferRole",
+				(keccak256("OWNER_ROLE"), ics20_bank_transfer_contract.address()),
+			)
+			.unwrap();
+		send_retrying(&method).await.unwrap();
 		(ics20_bank_contract, ics20_bank_transfer_contract)
 	}
 }
 
+async fn get_current_validator_set(cosmos_client: &CosmosClient<()>, client_b: &impl Chain) -> Set {
+	let (height, _) = client_b.latest_height_and_timestamp().await.unwrap();
+	let client_state_response =
+		client_b.query_client_state(height, cosmos_client.client_id()).await.unwrap();
+	let client_state = client_state_response
+		.client_state
+		.map(AnyClientState::try_from)
+		.unwrap()
+		.unwrap();
+
+	let height = client_state.latest_height().revision_height as u32;
+	let header = cosmos_client
+		.msg_update_client_header(height.into(), height.into(), client_state.latest_height())
+		.await
+		.unwrap()
+		.pop()
+		.unwrap()
+		.0;
+	header.validator_set
+}
+
+async fn test_call(
+	contract_name: ContractName,
+	function_name: &str,
+	function_params: &[ParamType],
+) -> Bytes {
+	let abi = contract_name.to_abi();
+	let functions = abi.functions_by_name(function_name).unwrap();
+	assert_eq!(functions.len(), 1, "Expected one function with this name");
+	let function = functions.first().unwrap();
+	let mut args = function_params.into_iter().map(default_token).collect::<Vec<_>>();
+	if contract_name == ICS20Bank && function_name == "transferFrom" {
+		*(&mut args[1]) = Token::Address(
+			Address::from_str("0x7C12ff36c44c1B10c13cC76ea8A3aEba0FFf6403").unwrap(),
+		);
+	}
+	function.encode_input(&args).unwrap()
+}
+
+async fn owner_test_tx(
+	eth_client: &EthereumClient,
+	cosmos_client: &CosmosClient<()>,
+	calldata: Bytes,
+) -> TypedTransaction {
+	use hyperspace_ethereum::ibc_provider::SimpleValidatorData;
+
+	let validator_set = get_current_validator_set(cosmos_client, eth_client).await;
+	let validators = validator_set
+		.validators()
+		.into_iter()
+		.map(|x| {
+			let pub_key = match x.pub_key {
+				PublicKey::Ed25519(pub_key) => PublicKeyData {
+					ed_25519: pub_key.as_bytes().to_vec().into(),
+					secp_25_6k_1: Default::default(),
+					sr_25519: Default::default(),
+				},
+				PublicKey::Secp256k1(pub_key) => PublicKeyData {
+					ed_25519: Default::default(),
+					secp_25_6k_1: pub_key.to_bytes().to_vec().into(),
+					sr_25519: Default::default(),
+				},
+				_ => panic!("Unsupported public key type"),
+			};
+
+			SimpleValidatorData { pub_key, voting_power: x.power.into() }
+		})
+		.collect::<Vec<_>>();
+	let method = eth_client
+		.yui
+		.method::<_, (bool, Vec<u8>)>(
+			"execute",
+			(
+				Token::Bytes(calldata),
+				Token::Uint(U256::zero()),
+				validators,
+				Token::Bytes(Bytes::new()),
+			),
+		)
+		.unwrap();
+	method.tx
+}
+
+async fn test_tx(
+	client: &EthereumClient,
+	contract_name: ContractName,
+	function_name: &str,
+	function_params: &[ParamType],
+) -> TypedTransaction {
+	let data = test_call(contract_name, function_name, function_params).await;
+	let mut method = client.yui.method::<_, ()>("addRelayer", Address::zero()).unwrap();
+	method.tx.set_data(data.to_vec().into());
+	method.tx
+}
+
 async fn setup_clients() -> (AnyChain, AnyChain, JoinHandle<()>) {
-	log::info!(target: "hyperspace", "=========================== Starting Test ===========================");
+	info!(target: "hyperspace", "=========================== Starting Test ===========================");
 	let args = Args::default();
 
 	// Create client configurations
@@ -200,13 +333,16 @@ async fn setup_clients() -> (AnyChain, AnyChain, JoinHandle<()>) {
 			mut yui_ibc,
 			..
 		} = deploy;
+		let tendermint_address = yui_ibc.tendermint.as_ref().map(|x| x.address()).unwrap();
+		yui_ibc.set_gov_tendermint_client(tendermint_address).await;
+		yui_ibc.add_relayer(deploy.client.address()).await;
 		yui_ibc.bind_port("transfer", ics20_bank_trasnfer_contract.address()).await;
+		yui_ibc.transfer_ownership(yui_ibc.gov_proxy.as_ref().unwrap().address()).await;
 		info!(target: "hyperspace", "Deployed diamond: {:?}, tendermint client: {:?}, bank: {:?}", yui_ibc.diamond.address(), tendermint_client.address(), ics20_bank_contract.address());
 		yui_ibc.ics20_transfer_bank = Some(ics20_bank_trasnfer_contract);
 		yui_ibc.ics20_bank = Some(ics20_bank_contract);
 
 		//replace the tendermint client address in hyperspace config with a real one
-		let tendermint_address = yui_ibc.tendermint.as_ref().map(|x| x.address());
 		let mut config_a = hyperspace_ethereum_client_fixture(
 			&anvil,
 			yui_ibc,
@@ -214,7 +350,7 @@ async fn setup_clients() -> (AnyChain, AnyChain, JoinHandle<()>) {
 			"redis://localhost:6379",
 		)
 		.await;
-		config_a.tendermint_address = tendermint_address;
+		config_a.tendermint_address = Some(tendermint_address);
 		if !USE_GETH {
 			config_a.ws_rpc_url = anvil.ws_endpoint().parse().unwrap();
 			config_a.anvil = Some(Arc::new(Mutex::new(anvil)));
@@ -312,28 +448,28 @@ async fn ethereum_to_cosmos_ibc_messaging_full_integration_test() {
 	let asset_str = "pica".to_string();
 	let asset_native_str = "ETH".to_string();
 	let _asset_id_a = AnyAssetId::Ethereum(asset_str.clone());
-	let _asset_id_native_a = AnyAssetId::Ethereum(asset_native_str.clone());
+	let asset_id_native_a = AnyAssetId::Ethereum(asset_native_str.clone());
 	let (mut chain_a, mut chain_b, _indexer_handle) = setup_clients().await;
-	sleep(Duration::from_secs(60)).await;
+	sleep(Duration::from_secs(12)).await;
 	let (handle, channel_a, channel_b, connection_id_a, connection_id_b) =
 		setup_connection_and_channel(&mut chain_a, &mut chain_b, Duration::from_secs(1)).await;
 	handle.abort();
-	let asset_id_a = AnyAssetId::Ethereum(asset_str.clone());
-	// let asset_id_a = AnyAssetId::Ethereum(format!("transfer/{}/{}", channel_a,
-	// asset_str.clone()));
+	// let asset_id_a = AnyAssetId::Ethereum(asset_str.clone());
+	let asset_id_a = AnyAssetId::Ethereum(format!("transfer/{}/{}", channel_a, asset_str.clone()));
 
 	log::info!(target: "hyperspace", "Conn A: {connection_id_a:?} B: {connection_id_b:?}");
 	log::info!(target: "hyperspace", "Chann A: {channel_a:?} B: {channel_b:?}");
 
-	let asset_id_b = AnyAssetId::Cosmos(format!(
-		"ibc/{}",
-		hex::encode(&sha2_256(
-			format!("{}/{channel_b}/{asset_str}", PortId::transfer()).as_bytes()
-		))
-		.to_uppercase()
-	));
+	let asset_id_b = AnyAssetId::Cosmos(asset_str.to_string());
+	// let asset_id_b = AnyAssetId::Cosmos(format!(
+	// 	"ibc/{}",
+	// 	hex::encode(&sha2_256(
+	// 		format!("{}/{channel_b}/{asset_str}", PortId::transfer()).as_bytes()
+	// 	))
+	// 	.to_uppercase()
+	// ));
 
-	let _asset_id_native_b: AnyAssetId = AnyAssetId::Cosmos(format!(
+	let asset_id_native_b: AnyAssetId = AnyAssetId::Cosmos(format!(
 		"ibc/{}",
 		hex::encode(&sha2_256(
 			format!("{}/{channel_b}/{asset_native_str}", PortId::transfer()).as_bytes()
@@ -352,69 +488,69 @@ async fn ethereum_to_cosmos_ibc_messaging_full_integration_test() {
 
 	// Run tests sequentially
 	// no timeouts + connection delay
-	// ibc_messaging_with_connection_delay(
-	// 	&mut chain_a,
-	// 	&mut chain_b,
-	// 	asset_id_native_a.clone(),
-	// 	asset_id_native_b.clone(),
-	// 	channel_a,
-	// 	channel_b,
-	// )
-	// .await;
-	//
-	// ibc_messaging_with_connection_delay(
-	// 	&mut chain_a,
-	// 	&mut chain_b,
-	// 	asset_id_a.clone(),
-	// 	asset_id_b.clone(),
-	// 	channel_a,
-	// 	channel_b,
-	// )
-	// .await;
+	ibc_messaging_with_connection_delay(
+		&mut chain_a,
+		&mut chain_b,
+		asset_id_native_a.clone(),
+		asset_id_native_b.clone(),
+		channel_a,
+		channel_b,
+	)
+	.await;
+
+	ibc_messaging_with_connection_delay(
+		&mut chain_b,
+		&mut chain_a,
+		asset_id_b.clone(),
+		asset_id_a.clone(),
+		channel_b,
+		channel_a,
+	)
+	.await;
+
+	// timeouts + connection delay
+	ibc_messaging_packet_height_timeout_with_connection_delay(
+		&mut chain_b,
+		&mut chain_a,
+		asset_id_b.clone(),
+		channel_b,
+		channel_a,
+	)
+	.await;
 
 	// timeouts + connection delay
 	ibc_messaging_packet_height_timeout_with_connection_delay(
 		&mut chain_a,
 		&mut chain_b,
-		asset_id_a.clone(),
+		asset_id_native_a.clone(),
 		channel_a,
 		channel_b,
 	)
 	.await;
 
-	// timeouts + connection delay
-	// ibc_messaging_packet_height_timeout_with_connection_delay(
-	// 	&mut chain_a,
-	// 	&mut chain_b,
-	// 	asset_id_native_a.clone(),
-	// 	channel_a,
-	// 	channel_b,
-	// )
-	// .await;
+	ibc_messaging_packet_timestamp_timeout_with_connection_delay(
+		&mut chain_b,
+		&mut chain_a,
+		asset_id_b.clone(),
+		channel_b,
+		channel_a,
+	)
+	.await;
 
 	ibc_messaging_packet_timestamp_timeout_with_connection_delay(
 		&mut chain_a,
 		&mut chain_b,
-		asset_id_a.clone(),
+		asset_id_native_a.clone(),
 		channel_a,
 		channel_b,
 	)
 	.await;
-
-	// ibc_messaging_packet_timestamp_timeout_with_connection_delay(
-	// 	&mut chain_a,
-	// 	&mut chain_b,
-	// 	asset_id_native_a.clone(),
-	// 	channel_a,
-	// 	channel_b,
-	// )
-	// .await;
 
 	// channel closing semantics
 	ibc_messaging_packet_timeout_on_channel_close(
 		&mut chain_a,
 		&mut chain_b,
-		asset_id_a.clone(),
+		asset_id_native_a.clone(),
 		channel_a,
 	)
 	.await;
@@ -788,6 +924,316 @@ mod xx {
 	}
 }
  */
+
+#[tokio::test(flavor = "multi_thread", worker_threads = 10)]
+#[ignore]
+async fn ethereum_to_cosmos_governance_and_filters_test() {
+	logging::setup_logging();
+	let (chain_a, chain_b, indexer_handle) = setup_clients().await;
+	sleep(Duration::from_secs(12)).await;
+	indexer_handle.abort();
+	use ibc_provider::{
+		DIAMONDABI_ABI, DIAMONDCUTFACETABI_ABI, DIAMONDLOUPEFACETABI_ABI, ERC20TOKENABI_ABI,
+		GOVERNANCEFACETABI_ABI, IBCCHANNELABI_ABI, IBCCLIENTABI_ABI, IBCCONNECTIONABI_ABI,
+		IBCPACKETABI_ABI, IBCQUERIERABI_ABI, ICS20BANKABI_ABI, ICS20TRANSFERBANKABI_ABI,
+		OWNERSHIPFACETABI_ABI, RELAYERWHITELISTFACETABI_ABI, TENDERMINTCLIENTABI_ABI,
+	};
+	use CallableBy::*;
+	use ContractName::*;
+	let all_abis = [
+		(Diamond, &DIAMONDABI_ABI),
+		(DiamondCutFacet, &DIAMONDCUTFACETABI_ABI),
+		(DiamondLoupeFacet, &DIAMONDLOUPEFACETABI_ABI),
+		(ERC20Token, &ERC20TOKENABI_ABI),
+		(GovernanceFacet, &GOVERNANCEFACETABI_ABI),
+		(IBCChannelHandshake, &IBCCHANNELABI_ABI),
+		(IBCClient, &IBCCLIENTABI_ABI),
+		(IBCConnection, &IBCCONNECTIONABI_ABI),
+		(IBCPacket, &IBCPACKETABI_ABI),
+		(IBCQuerier, &IBCQUERIERABI_ABI),
+		(ICS20Bank, &ICS20BANKABI_ABI),
+		(ICS20TransferBank, &ICS20TRANSFERBANKABI_ABI),
+		(OwnershipFacet, &OWNERSHIPFACETABI_ABI),
+		(RelayerWhitelistFacet, &RELAYERWHITELISTFACETABI_ABI),
+		(TendermintLightClientZK, &TENDERMINTCLIENTABI_ABI),
+	];
+
+	#[derive(Copy, Clone, Debug)]
+	#[allow(dead_code)]
+	enum CallableBy {
+		Anyone,
+		Relayer,
+		Owner,
+		Ibc,
+		Module,
+		Undefined,
+	}
+
+	let functions = [
+		(Diamond, "callBatch", Anyone),
+		(DiamondCutFacet, "diamondCut", Owner),
+		(ERC20Token, "approve", Anyone),
+		(ERC20Token, "burn", Module),
+		(ERC20Token, "decreaseAllowance", Anyone),
+		(ERC20Token, "increaseAllowance", Anyone),
+		(ERC20Token, "mint", Module),
+		(ERC20Token, "transfer", Anyone),
+		(ERC20Token, "transferFrom", Anyone),
+		(ERC20Token, "renounceRole", Owner),
+		(ERC20Token, "setDecimals", Owner),
+		(ERC20Token, "transferRole", Owner),
+		(ERC20Token, "updateRole", Module),
+		(GovernanceFacet, "execute", Anyone),
+		(GovernanceFacet, "setTendermintClient", Owner),
+		(GovernanceFacet, "setProxy", Owner),
+		(IBCChannelHandshake, "bindPort", Owner),
+		(IBCChannelHandshake, "channelCloseConfirm", Relayer),
+		(IBCChannelHandshake, "channelCloseInit", Relayer),
+		(IBCChannelHandshake, "channelOpenAck", Relayer),
+		(IBCChannelHandshake, "channelOpenConfirm", Relayer),
+		(IBCChannelHandshake, "channelOpenInit", Relayer),
+		(IBCChannelHandshake, "channelOpenTry", Relayer),
+		(IBCClient, "registerClient", Owner),
+		(IBCClient, "createClient", Relayer),
+		(IBCClient, "updateClient", Relayer),
+		(IBCConnection, "connectionOpenAck", Relayer),
+		(IBCConnection, "connectionOpenConfirm", Relayer),
+		(IBCConnection, "connectionOpenInit", Relayer),
+		(IBCConnection, "connectionOpenTry", Relayer),
+		(IBCPacket, "acknowledgePacket", Relayer),
+		(IBCPacket, "recvPacket", Relayer),
+		(IBCPacket, "sendPacket", Module),
+		(IBCPacket, "timeoutOnClose", Relayer),
+		(IBCPacket, "timeoutPacket", Relayer),
+		(IBCPacket, "writeAcknowledgement", Module),
+		(ICS20Bank, "burn", Module),
+		(ICS20Bank, "mint", Module),
+		(ICS20Bank, "transfer", Module),
+		(ICS20Bank, "transferFrom", Module), // Also Anyone, if `from` == sender
+		(ICS20Bank, "renounceRole", Module),
+		(ICS20Bank, "transferRole", Module),
+		(ICS20Bank, "updateRole", Owner),
+		(ICS20TransferBank, "onAcknowledgementPacket", Ibc),
+		(ICS20TransferBank, "onChanCloseConfirm", Ibc),
+		(ICS20TransferBank, "onChanCloseInit", Ibc),
+		(ICS20TransferBank, "onChanOpenAck", Ibc),
+		(ICS20TransferBank, "onChanOpenConfirm", Ibc),
+		(ICS20TransferBank, "onChanOpenInit", Ibc),
+		(ICS20TransferBank, "onChanOpenTry", Ibc),
+		(ICS20TransferBank, "onRecvPacket", Ibc),
+		(ICS20TransferBank, "onTimeoutPacket", Ibc),
+		(ICS20TransferBank, "sendTransfer", Anyone),
+		(ICS20TransferBank, "sendTransferNativeToken", Anyone),
+		(OwnershipFacet, "transferOwnership", Owner),
+		(RelayerWhitelistFacet, "addRelayer", Owner),
+		(RelayerWhitelistFacet, "removeRelayer", Owner),
+		(TendermintLightClientZK, "createClient", Ibc),
+		(TendermintLightClientZK, "updateClient", Ibc),
+	]
+	.into_iter()
+	.map(|(name, f_name, mode)| ((name, f_name), mode))
+	.collect::<HashMap<_, _>>();
+
+	let AnyChain::Ethereum(eth_client) = chain_a else { unreachable!() };
+	let AnyChain::Wasm(wasm_chain) = chain_b else { unreachable!() };
+	let AnyChain::Cosmos(cosmos_client) = *wasm_chain.inner else { unreachable!() };
+
+	let relayer_client = eth_client.client();
+	let user_client = {
+		let client = Provider::<Http>::try_from(eth_client.config.http_rpc_url.to_string())
+			.map_err(|_| ClientError::UriParseError(eth_client.config.http_rpc_url.clone()))
+			.unwrap();
+		let chain_id = client.get_chainid().await.unwrap();
+		let mnemonic = Mnemonic::<English>::new(&mut rand::thread_rng());
+		let wallet: LocalWallet = MnemonicBuilder::<English>::default()
+			.phrase(mnemonic.to_phrase().as_str())
+			.build()
+			.unwrap();
+		Arc::new(SignerMiddleware::new(client, wallet.with_chain_id(chain_id.as_u64())))
+	};
+	let fake_owner_client = {
+		let client = Provider::<Http>::try_from(eth_client.config.http_rpc_url.to_string())
+			.map_err(|_| ClientError::UriParseError(eth_client.config.http_rpc_url.clone()))
+			.unwrap();
+		let chain_id = client.get_chainid().await.unwrap();
+		let mnemonic = Mnemonic::<English>::new(&mut rand::thread_rng());
+		let wallet: LocalWallet = MnemonicBuilder::<English>::default()
+			.phrase(mnemonic.to_phrase().as_str())
+			.build()
+			.unwrap();
+		Arc::new(SignerMiddleware::new(client, wallet.with_chain_id(chain_id.as_u64())))
+	};
+	let transaction = TypedTransaction::Legacy(TransactionRequest {
+		to: Some(fake_owner_client.address().into()),
+		value: Some(100_000_000_000_000_000_000_u128.into()),
+		..Default::default()
+	});
+	let _receipt = relayer_client
+		.send_transaction(transaction, None)
+		.await
+		.unwrap()
+		.await
+		.unwrap()
+		.unwrap();
+
+	let path = utils::yui_ibc_solidity_path();
+	let project_output =
+		hyperspace_ethereum::utils::compile_yui(&path, "contracts/apps/20-transfer");
+	let erc20_token = deploy_contract(
+		"ERC20Token",
+		&[&project_output],
+		(
+			"Test Token".to_string(),
+			"TEST".to_string(),
+			100u32,
+			0u8,
+			eth_client.yui.gov_proxy.as_ref().unwrap().address(),
+		),
+		fake_owner_client.clone(),
+	)
+	.await;
+
+	let mut fns_to_check = functions.iter().map(|((x, y), _)| (*x, *y)).collect::<HashSet<_>>();
+	for (name, abi) in all_abis {
+		info!("{}:", name);
+		for (f_name, fs) in &abi.functions {
+			for f in fs {
+				if f.state_mutability == StateMutability::NonPayable ||
+					f.state_mutability == StateMutability::Payable
+				{
+					let mode = *functions
+						.get(&(name, &f_name))
+						.expect(format!("not defined {}:{}", name, f_name).as_str());
+					info!(
+						"\t{f_name} [{mode:?}]: {}",
+						f.inputs.iter().map(|x| format!("{}:{}", x.name, x.kind)).join(", ")
+					);
+					assert!(fns_to_check.remove(&(name, f_name)), "duplicate function");
+					let params = f.inputs.iter().map(|x| x.kind.clone()).collect::<Vec<_>>();
+					let mut tx = test_tx(&eth_client, name, f_name, &params).await;
+					let owner_tx = owner_test_tx(
+						&eth_client,
+						&cosmos_client,
+						test_call(name, f_name, &params).await,
+					)
+					.await;
+					match name {
+						ERC20Token => {
+							tx.set_to(erc20_token.address());
+						},
+						ICS20Bank => {
+							tx.set_to(eth_client.yui.ics20_bank.as_ref().unwrap().address());
+						},
+						ICS20TransferBank => {
+							tx.set_to(
+								eth_client.yui.ics20_transfer_bank.as_ref().unwrap().address(),
+							);
+						},
+						TendermintLightClientZK => {
+							tx.set_to(eth_client.yui.tendermint.as_ref().unwrap().address());
+						},
+						_ => (),
+					}
+					let not_contract_owner_err = "0xff4127cb";
+					let not_contract_owner_err2 = "caller is not the owner";
+					let not_contract_owner_err3 = "caller is not owner";
+					let not_whitelisted_err = "Relayer not whitelisted";
+					let no_capability_err = "NoCapability";
+					let unauthorized_err = "unauthorized";
+					let not_ibc_err = "caller is not the IBC contract";
+					match mode {
+						Anyone => {
+							let result = user_client.call(&tx, None).await;
+							if let Err(e) = result {
+								let string = e.to_string();
+								info!("{string}");
+								assert!(!string.contains(not_whitelisted_err));
+							}
+						},
+						Relayer => {
+							let err = relayer_client.call(&tx, None).await.unwrap_err().to_string();
+							info!("{err}");
+							assert!(!err.contains(not_whitelisted_err));
+							let err = user_client.call(&tx, None).await.unwrap_err().to_string();
+							info!("{err}");
+							assert!(err.contains(not_whitelisted_err));
+						},
+						Owner => {
+							let err = relayer_client.call(&tx, None).await.unwrap_err().to_string();
+							info!("{err}");
+							assert!(
+								err.contains(not_contract_owner_err) ||
+									err.contains(not_contract_owner_err2) ||
+									err.contains(not_contract_owner_err3)
+							);
+							let err = user_client.call(&tx, None).await.unwrap_err().to_string();
+							info!("{err}");
+							assert!(
+								err.contains(not_contract_owner_err) ||
+									err.contains(not_contract_owner_err2) ||
+									err.contains(not_contract_owner_err3)
+							);
+							let err = get_error_from_call(user_client.call(&owner_tx, None).await);
+							info!("{err}");
+							assert!(
+								!err.contains(not_whitelisted_err) &&
+									!err.contains(not_contract_owner_err) &&
+									!err.contains(not_contract_owner_err2) &&
+									!err.contains(not_contract_owner_err3) &&
+									!err.contains("message already executed") &&
+									!err.contains("validators hash mismatch")
+							);
+						},
+						Undefined | Module | Ibc => {
+							warn!("{}:{} not defined", name, f_name);
+							// At least it shouldn't be callable by basic users:
+							let err = get_error_from_call(user_client.call(&tx, None).await);
+							info!("{err}");
+							assert!(
+								err.contains(not_whitelisted_err) ||
+									err.contains(not_contract_owner_err) || err
+									.contains(not_contract_owner_err2) || err
+									.contains(not_contract_owner_err3) || err
+									.contains(no_capability_err) || err.contains(unauthorized_err) ||
+									err.contains(not_ibc_err)
+							);
+						},
+					}
+				}
+			}
+		}
+	}
+	if !fns_to_check.is_empty() {
+		panic!("not all functions checked: {:?}", fns_to_check);
+	}
+}
+
+fn default_token(param: &ParamType) -> Token {
+	match param {
+		ParamType::Address => Token::Address(Address::zero()),
+		ParamType::Bytes => Token::Bytes(vec![]),
+		ParamType::Int(_) => Token::Int(0.into()),
+		ParamType::Uint(_) => Token::Uint(0.into()),
+		ParamType::Bool => Token::Bool(false),
+		ParamType::String => Token::String("".to_string()),
+		ParamType::Array(_) => Token::Array(vec![]),
+		ParamType::FixedBytes(n) => Token::FixedBytes(vec![0u8; *n]),
+		ParamType::FixedArray(p, n) => Token::FixedArray(vec![default_token(&*p); *n]),
+		ParamType::Tuple(ps) => Token::Tuple(ps.into_iter().map(|p| default_token(p)).collect()),
+	}
+}
+
+fn get_error_from_call<E: ToString>(result: Result<ethers::types::Bytes, E>) -> String {
+	match result {
+		Ok(bytes) => format!(
+			"{}, (0x{})",
+			String::from_utf8_lossy(bytes.as_ref()).to_string(),
+			hex::encode(bytes.as_ref())
+		),
+		Err(e) => e.to_string(),
+	}
+}
+
 mod indexer {
 	use evm_indexer::{
 		chains::chains::ETHEREUM_DEVNET, configs::indexer_config::EVMIndexerConfig,

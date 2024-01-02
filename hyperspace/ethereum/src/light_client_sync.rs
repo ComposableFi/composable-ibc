@@ -15,6 +15,6 @@ impl LightClientSync for EthereumClient {
 		&self,
 		_counterparty: &C,
 	) -> Result<(Vec<Any>, Vec<IbcEvent>), Error> {
-		todo!()
+		unimplemented!()
 	}
 }

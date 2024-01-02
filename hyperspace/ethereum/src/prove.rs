@@ -61,7 +61,7 @@ pub async fn prove_fast(
 
 	let from = client_state.finalized_header.slot + 1;
 	let to = block_header.slot;
-	let mut join_set: JoinSet<Result<_, anyhow::Error>> = JoinSet::new();
+	let mut join_set: JoinSet<Result<_, Error>> = JoinSet::new();
 	// let range = vec![to];
 	let range = (from..to).collect::<Vec<_>>();
 	let delay = 5000;

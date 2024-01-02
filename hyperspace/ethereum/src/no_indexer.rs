@@ -803,8 +803,7 @@ impl IbcProvider for EthereumClient {
 			.block(BlockId::Number(BlockNumber::Number(at.revision_height.into())))
 			.call()
 			.await
-			.map_err(|err| todo!("query_connection_end: error: {err:?}"))
-			.unwrap();
+			.map_err(|err| ClientError::Other(format!("failed to query connection: {}", err)))?;
 
 		let connection = if exists {
 			let prefix = if connection_end.counterparty.prefix.key_prefix.0.is_empty() {
@@ -959,22 +958,21 @@ impl IbcProvider for EthereumClient {
 			.yui
 			.method::<_, u64>(
 				"getNextSequenceRecv",
-				(channel_id.to_string(), port_id.as_str().to_owned()),
+				(port_id.as_str().to_owned(), channel_id.to_string()),
 			)
 			.map_err(|err| {
 				ClientError::Other(format!("contract is missing getNextSequenceRecv {}", err))
 			})?;
 
-		let channel_data = binding
+		let seq = binding
 			.block(BlockId::Number(BlockNumber::Number(at.revision_height.into())))
 			.call()
 			.await
 			.map_err(|err| ClientError::Other(format!("failed to query channel_data: {}", err)))?;
-
 		Ok(QueryNextSequenceReceiveResponse {
-			next_sequence_receive: todo!(),
-			proof: todo!(),
-			proof_height: todo!(),
+			next_sequence_receive: seq,
+			proof: vec![], // TODO: implement proof for query_next_sequence_recv
+			proof_height: None,
 		})
 	}
 
@@ -1024,7 +1022,7 @@ impl IbcProvider for EthereumClient {
 			.get_block(BlockId::Number(number.into()))
 			.await
 			.map_err(|err| ClientError::MiddlewareError(err))?
-			.ok_or_else(|| ClientError::MiddlewareError(todo!()))?;
+			.ok_or_else(|| ClientError::Other("block not found".to_string()))?;
 
 		let nanoseconds = Duration::from_secs(block.timestamp.as_u64()).as_nanos() as u64;
 		let timestamp = Timestamp::from_nanoseconds(nanoseconds).map_err(|e| {
@@ -1562,7 +1560,7 @@ impl IbcProvider for EthereumClient {
 			.get_block(BlockId::Number(BlockNumber::Number(block_number.into())))
 			.await
 			.map_err(|err| ClientError::MiddlewareError(err))?
-			.ok_or_else(|| ClientError::MiddlewareError(todo!()))?;
+			.ok_or_else(|| ClientError::Other("block not found".to_string()))?;
 
 		Ok(Duration::from_secs(block.timestamp.as_u64()).as_nanos() as u64)
 	}

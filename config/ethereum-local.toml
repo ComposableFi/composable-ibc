@@ -7,42 +7,51 @@ name = "ethereum-client"
 client_id = "07-tendermint-0"
 channel_whitelist = []
 commitment_prefix = "696263"
-diamond_address = "0xb8964e5938e1b1898bfbcfc1299cdb8f2e592bbf"
-tendermint_address = "0x294aacef1ca646f96ae1d26c4b914f7c62b00a59"
-ics20_transfer_bank_address = "0x243e9f366bbd71f75e8a6b97549f35760bb7510e"
-ics20_bank_address = "0x5cb3ac30358ccb8ff80bb26fc5c30f6cec729604"
+diamond_address = "0x9ffb077b0671cb474136e6e25aa49e0b89efcd5d"
+tendermint_address = "0xfd99d3c5f7c95acd9cb5ae51befcaece978fe705"
+gov_proxy_address = "0x55b727c1dab718a1b8b79f4851da6bb2903f8765"
+ics20_transfer_bank_address = "0xe9ccb2175cec77e76eff19b7aad46564b073a4bd"
+ics20_bank_address = "0xabff4d4c9b514641f670a07d30920765231d218a"
 diamond_facets = [
     [
     "IBCClient",
-    "0xa702cb28df2fb6642c46c32e8ab8d826a21083aa",
+    "0x1f4533b3a54e24fe0b521b370d809a4de414e285",
 ],
     [
     "IBCConnection",
-    "0x2de2ce2858096a4a3e0ce01cab750293b51d4b0a",
+    "0x7ba7f77cb1f0c7b6499637677445a320a2cb9a88",
 ],
     [
     "IBCChannelHandshake",
-    "0xa99cd5fb8b1742a9cee7b73f06adeeffe3877512",
+    "0x0d383b00228730e78eeef2a27cd7bf2e41aece53",
 ],
     [
     "IBCPacket",
-    "0x1e268f47190521cd374fb04f3e93a2913fd63865",
+    "0xc7fa186cad3d2c497c324c5ba2375ec66099f73e",
 ],
     [
     "IBCQuerier",
-    "0xf60caf363d85087538bf6e43283b40760c989490",
+    "0x74059067e5491087196047f60d02e1931c9105bd",
 ],
     [
     "DiamondCutFacet",
-    "0x08563ca7c14985101fb012374e7d0c0b4210553b",
+    "0xfd4778b3245159d26046296527dbe6422b7321c3",
 ],
     [
     "DiamondLoupeFacet",
-    "0x0fb7088f3ca2d3992cea5f86162633f0e2d58d73",
+    "0x158535be2f870910d51f998c02877773f63c68fc",
 ],
     [
     "OwnershipFacet",
-    "0x3f98a1c3022628a11aa27d0c315472b319a0e669",
+    "0x6ce26cb40f9b7815f39e04cd3978f00f7a280cb3",
+],
+    [
+    "GovernanceFacet",
+    "0x2afffbfdd5c9ee4b0f8b6de2c5d2886576a398f2",
+],
+    [
+    "RelayerWhitelistFacet",
+    "0xa37250103542c2103f7e2637ad0e4314467ade59",
 ],
 ]
 client_type = "07-tendermint"

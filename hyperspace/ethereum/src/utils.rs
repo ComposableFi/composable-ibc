@@ -1,9 +1,10 @@
 use crate::{
 	client::ClientError,
-	config::ContractName,
+	config::{ContractName, ContractName::GovernanceFacet},
 	contract::UnwrapContractError,
 	ibc_provider::{
-		DIAMONDABI_ABI, ICS20BANKABI_ABI, ICS20TRANSFERBANKABI_ABI, TENDERMINTCLIENTABI_ABI,
+		DIAMONDABI_ABI, GOVERNANCEPROXYABI_ABI, ICS20BANKABI_ABI, ICS20TRANSFERBANKABI_ABI,
+		TENDERMINTCLIENTABI_ABI,
 	},
 };
 use cast::revm::primitives::hex_literal::hex;
@@ -11,9 +12,10 @@ use ethers::{
 	abi::{AbiError, Address, Detokenize, EventExt, Function, Token, Tokenize},
 	contract::{ContractFactory, ContractInstance, FunctionCall},
 	core::types::Bytes,
+	middleware::SignerMiddleware,
 	prelude::{
 		Block, ContractError, EthEvent, Event, Filter, Http, LocalWallet, Middleware, Provider,
-		TransactionReceipt, TransactionRequest, H256, U256,
+		Signer, TransactionReceipt, TransactionRequest, H256, U256,
 	},
 	types::{BlockNumber, Bloom, H160, H64, U64},
 	utils::{rlp, rlp::RlpStream},
@@ -122,6 +124,7 @@ pub struct DeployYuiIbc<B, M> {
 	pub diamond: ContractInstance<B, M>,
 	// pub storage_layout: StorageLayout,
 	pub tendermint: Option<ContractInstance<B, M>>,
+	pub gov_proxy: Option<ContractInstance<B, M>>,
 	pub ics20_transfer_bank: Option<ContractInstance<B, M>>,
 	pub ics20_bank: Option<ContractInstance<B, M>>,
 	pub contract_creation_block: Arc<Mutex<Option<BlockNumber>>>,
@@ -136,12 +139,14 @@ where
 		deployed_facets: Vec<Facet<B, M>>,
 		diamond: ContractInstance<B, M>,
 		tendermint: Option<ContractInstance<B, M>>,
+		gov_proxy: Option<ContractInstance<B, M>>,
 		ics20_transfer_bank: Option<ContractInstance<B, M>>,
 		ics20_bank: Option<ContractInstance<B, M>>,
 	) -> Result<Self, ClientError> {
 		let ibc = Self {
 			diamond,
 			tendermint,
+			gov_proxy,
 			ics20_transfer_bank,
 			ics20_bank,
 			deployed_facets,
@@ -163,6 +168,7 @@ where
 		client: B,
 		diamond_address: Address,
 		tendermint_address: Option<Address>,
+		gov_proxy_address: Option<Address>,
 		ics20_transfer_bank_address: Option<Address>,
 		ics20_bank_address: Option<Address>,
 		diamond_facets: Vec<(ContractName, Address)>,
@@ -171,6 +177,9 @@ where
 			ContractInstance::<B, M>::new(diamond_address, DIAMONDABI_ABI.clone(), client.clone());
 		let tendermint = tendermint_address.map(|addr| {
 			ContractInstance::<B, M>::new(addr, TENDERMINTCLIENTABI_ABI.clone(), client.clone())
+		});
+		let gov_proxy = gov_proxy_address.map(|addr| {
+			ContractInstance::<B, M>::new(addr, GOVERNANCEPROXYABI_ABI.clone(), client.clone())
 		});
 		let ics20_transfer_bank = ics20_transfer_bank_address.map(|addr| {
 			ContractInstance::<B, M>::new(addr, ICS20TRANSFERBANKABI_ABI.clone(), client.clone())
@@ -182,7 +191,15 @@ where
 			.into_iter()
 			.map(|(abi, addr)| Facet::from_address(addr, abi, client.clone()))
 			.collect();
-		Ok(Self::new(deployed_facets, diamond, tendermint, ics20_transfer_bank, ics20_bank).await?)
+		Ok(Self::new(
+			deployed_facets,
+			diamond,
+			tendermint,
+			gov_proxy,
+			ics20_transfer_bank,
+			ics20_bank,
+		)
+		.await?)
 	}
 
 	pub fn set_contract_creation_block(&self, number: U256) {
@@ -197,6 +214,21 @@ where
 			.clone()
 			.unwrap_or(BlockNumber::Earliest)
 	}
+
+	pub fn contract_address_by_name(&self, contract_name: ContractName) -> Option<Address> {
+		use ContractName::*;
+		match contract_name {
+			Diamond => Some(self.diamond.address()),
+			TendermintLightClientZK => self.tendermint.as_ref().map(|x| x.address()),
+			ICS20TransferBank => self.ics20_transfer_bank.as_ref().map(|x| x.address()),
+			ICS20Bank => self.ics20_bank.as_ref().map(|x| x.address()),
+			_ => self
+				.deployed_facets
+				.iter()
+				.find(|x| x.abi_name == contract_name)
+				.map(|x| x.contract.address()),
+		}
+	}
 }
 
 impl<B, M> DeployYuiIbc<B, M>
@@ -205,11 +237,48 @@ where
 	M: Middleware,
 {
 	pub async fn bind_port(&self, port_id: &str, address: Address) {
+		sleep(Duration::from_secs(12)).await;
 		let bind_port = self
 			.method::<_, ()>("bindPort", (Token::String(port_id.into()), Token::Address(address)))
 			.unwrap();
 		let () = bind_port.call().await.unwrap_contract_error();
 		let tx_recp = bind_port.send().await.unwrap_contract_error().await.unwrap().unwrap();
+		handle_gas_usage(&tx_recp);
+		assert_eq!(tx_recp.status, Some(1.into()));
+	}
+
+	pub async fn add_relayer(&self, address: Address) {
+		sleep(Duration::from_secs(12)).await;
+		let method = self.method::<_, ()>("addRelayer", Token::Address(address)).unwrap();
+		let () = method.call().await.unwrap_contract_error();
+		let tx_recp = method.send().await.unwrap_contract_error().await.unwrap().unwrap();
+		handle_gas_usage(&tx_recp);
+		assert_eq!(tx_recp.status, Some(1.into()));
+	}
+
+	pub async fn set_gov_tendermint_client(&self, address: Address) {
+		sleep(Duration::from_secs(12)).await;
+		let method = self.method::<_, ()>("setTendermintClient", Token::Address(address)).unwrap();
+		let () = method.call().await.unwrap_contract_error();
+		let tx_recp = method.send().await.unwrap_contract_error().await.unwrap().unwrap();
+		handle_gas_usage(&tx_recp);
+		assert_eq!(tx_recp.status, Some(1.into()));
+	}
+
+	pub async fn transfer_ownership(&self, address: Address) {
+		sleep(Duration::from_secs(12)).await;
+		let method = self.method::<_, ()>("transferOwnership", Token::Address(address)).unwrap();
+		let () = method.call().await.unwrap_contract_error();
+		let tx_recp = method.send().await.unwrap_contract_error().await.unwrap().unwrap();
+		handle_gas_usage(&tx_recp);
+		assert_eq!(tx_recp.status, Some(1.into()));
+	}
+
+	pub async fn set_gov_proxy(&self, address: Address) {
+		sleep(Duration::from_secs(12)).await;
+		let method = self.method::<_, ()>("setProxy", Token::Address(address)).unwrap();
+		let () = method.call().await.unwrap_contract_error();
+		let tx_recp = method.send().await.unwrap_contract_error().await.unwrap().unwrap();
 		handle_gas_usage(&tx_recp);
 		assert_eq!(tx_recp.status, Some(1.into()));
 	}
@@ -630,6 +699,7 @@ where
 			diamond: self.diamond.clone(),
 			// storage_layout: self.storage_layout.clone(),
 			tendermint: self.tendermint.clone(),
+			gov_proxy: self.gov_proxy.clone(),
 			ics20_bank: self.ics20_bank.clone(),
 			ics20_transfer_bank: self.ics20_transfer_bank.clone(),
 			contract_creation_block: self.contract_creation_block.clone(),
@@ -650,11 +720,15 @@ where
 	info!("Deploying contract {} with args {:?}, ", name, constructor_args);
 	let contract = artifacts.into_iter().filter_map(|x| x.find_first(name)).next().unwrap();
 	let (abi, bytecode, _) = contract.clone().into_parts();
-	let mut factory = ContractFactory::new(abi.unwrap(), bytecode.unwrap(), client.clone());
+	let mut factory = ContractFactory::new(
+		abi.unwrap(),
+		bytecode.expect(&format!("{name} bytecode not found")),
+		client.clone(),
+	);
 	let deployer = factory.deploy(constructor_args).unwrap();
 	let gas = client.estimate_gas(&deployer.tx, None).await.unwrap();
-	info!("Deploying contract {}, estimated gas price: {}", name, gas);
 	let (contract, receipt) = deployer.send_with_receipt().await.unwrap();
+	info!("Deployed contract {} ({:?}), estimated gas price: {}", name, contract.address(), gas);
 	handle_gas_usage(&receipt);
 	contract
 }
@@ -805,6 +879,8 @@ where
 		DiamondCutFacet,
 		DiamondLoupeFacet,
 		OwnershipFacet,
+		GovernanceFacet,
+		RelayerWhitelistFacet,
 	];
 
 	check_code_size(project_output.artifacts());
@@ -890,7 +966,7 @@ where
 	// 		acc
 	// 	});
 
-	DeployYuiIbc::<Arc<M>, M>::new(deployed_facets, diamond, None, None, None)
+	DeployYuiIbc::<Arc<M>, M>::new(deployed_facets, diamond, None, None, None, None)
 		.await
 		.unwrap()
 }
@@ -939,22 +1015,44 @@ pub async fn deploy_ibc<M: Middleware>(
 ) -> Result<DeployYuiIbc<Arc<M>, M>, ClientError> {
 	let project_output = compile_yui(&yui_solidity_path, "contracts/core");
 	let diamond_project_output = compile_yui(&yui_solidity_path, "contracts/diamond");
-	let yui_ibc = deploy_yui_ibc(&project_output, &diamond_project_output, client).await;
+	let mut yui_ibc =
+		deploy_yui_ibc(&project_output, &diamond_project_output, client.clone()).await;
+
+	let utils_output = compile_yui(&yui_solidity_path, "contracts/utils");
+	let gov_proxy = deploy_contract(
+		"GovernanceProxy",
+		&[&utils_output],
+		(yui_ibc.diamond.address(),),
+		client.clone(),
+	)
+	.await;
+	yui_ibc.gov_proxy = Some(gov_proxy.clone());
+	yui_ibc.set_gov_proxy(gov_proxy.address()).await;
+
 	Ok(yui_ibc)
 }
 
-pub async fn deploy_transfer_module<M: Middleware>(
+pub async fn deploy_transfer_module<M: Middleware, S: Signer>(
 	yui_solidity_path: &PathBuf,
-	yui_ibc: DeployYuiIbc<Arc<M>, M>,
+	yui_ibc: DeployYuiIbc<Arc<SignerMiddleware<M, S>>, SignerMiddleware<M, S>>,
 	diamond_address: Address,
-	client: Arc<M>,
-) -> Result<(ContractInstance<Arc<M>, M>, ContractInstance<Arc<M>, M>), ClientError> {
+	client: Arc<SignerMiddleware<M, S>>,
+) -> Result<
+	(
+		ContractInstance<Arc<SignerMiddleware<M, S>>, SignerMiddleware<M, S>>,
+		ContractInstance<Arc<SignerMiddleware<M, S>>, SignerMiddleware<M, S>>,
+	),
+	ClientError,
+> {
 	let project_output = compile_yui(&yui_solidity_path, "contracts/apps/20-transfer");
 
-	let bank_contract = deploy_contract::<M, _>(
+	let gov_address = yui_ibc
+		.contract_address_by_name(GovernanceFacet)
+		.ok_or_else(|| ClientError::Other("governance facet not found".to_string()))?;
+	let bank_contract = deploy_contract::<_, _>(
 		"ICS20Bank",
 		&[&project_output],
-		(Token::String("ETH".into())),
+		(Token::String("ETH".into()), Token::Address(gov_address)),
 		client.clone(),
 	)
 	.await;
@@ -966,7 +1064,19 @@ pub async fn deploy_transfer_module<M: Middleware>(
 			.await;
 	info!("Deployed ICS-20 Transfer module address: {:?}", module_contract.address());
 
+	let method = bank_contract
+		.method::<_, ()>(
+			"transferRole",
+			(ethers::utils::keccak256("OWNER_ROLE"), module_contract.address()),
+		)
+		.unwrap();
+	send_retrying(&method).await.unwrap();
+
+	let tendermint_address = yui_ibc.tendermint.as_ref().map(|x| x.address()).unwrap();
+	yui_ibc.set_gov_tendermint_client(tendermint_address).await;
+	yui_ibc.add_relayer(client.address()).await;
 	yui_ibc.bind_port("transfer", module_contract.address()).await;
+	// yui_ibc.transfer_ownership(yui_ibc.gov_proxy.as_ref().unwrap().address()).await;
 
 	Ok((module_contract, bank_contract))
 }
@@ -1180,11 +1290,12 @@ where
 	D: Detokenize,
 {
 	loop {
+		let _ = method.call().await.unwrap_contract_error();
 		let result = method.send().await;
 		match result {
 			Ok(v) => {
 				let receipt = v.await.unwrap().unwrap();
-				info!("Sent approval transfer. Tx hash: {:?}", receipt.transaction_hash);
+				handle_gas_usage(&receipt);
 				assert_eq!(receipt.status, Some(1.into()));
 				return Ok(receipt);
 			},

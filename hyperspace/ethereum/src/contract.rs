@@ -178,26 +178,6 @@ where
 }
 
 #[track_caller]
-pub fn get_contract_from_name<M>(
-	address: Address,
-	client: Arc<M>,
-	source: impl AsRef<str>,
-	s: impl AsRef<str>,
-) -> Contract<M>
-where
-	M: Middleware,
-{
-	//todo: use the artifact instead of compiling!!!
-	//but for now it is more dynamic to compile then to use the artifact
-	let path = yui_ibc_solidity_path();
-	let project = compile_yui(&path, source.as_ref());
-	let contract = project.find_first(s).unwrap();
-	let r = contract.clone();
-	let (abi, _, _) = r.into_parts();
-	Contract::new(address, abi.unwrap(), client)
-}
-
-#[track_caller]
 pub fn yui_ibc_solidity_path() -> PathBuf {
 	let base = env!("CARGO_MANIFEST_DIR");
 	let default = PathBuf::from(base).join("yui-ibc-solidity");

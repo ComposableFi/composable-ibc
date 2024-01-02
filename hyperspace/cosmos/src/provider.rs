@@ -521,7 +521,6 @@ where
 
 		let commitment_sequences: Vec<u64> =
 			response.commitments.into_iter().map(|v| v.sequence).collect();
-
 		Ok(commitment_sequences)
 	}
 

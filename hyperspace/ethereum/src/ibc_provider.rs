@@ -161,6 +161,15 @@ abigen!(
 
 	EthereumClientAbi,
 	"hyperspace/ethereum/src/abi/ethereum-client-abi.json";
+
+	GovernanceFacetAbi,
+	"hyperspace/ethereum/src/abi/governance-facet-abi.json";
+
+	GovernanceProxyAbi,
+	"hyperspace/ethereum/src/abi/governance-proxy-abi.json";
+
+	RelayerWhitelistFacetAbi,
+	"hyperspace/ethereum/src/abi/relayer-whitelist-facet-abi.json";
 );
 
 impl From<HeightData> for Height {
@@ -249,7 +258,7 @@ pub async fn parse_ethereum_event(
 		OpenInitChannelFilter,
 		OpenAckChannelFilter,
 		OpenConfirmChannelFilter,
-		SendPacketFilter, // TODO: this event might only be emitted by the ICS-20 contract
+		SendPacketFilter,
 		WriteAcknowledgementFilter,
 		AcknowledgePacketFilter,
 		TimeoutPacketFilter,
@@ -979,22 +988,21 @@ impl IbcProvider for EthereumClient {
 			.yui
 			.method::<_, u64>(
 				"getNextSequenceRecv",
-				(channel_id.to_string(), port_id.as_str().to_owned()),
+				(port_id.as_str().to_owned(), channel_id.to_string()),
 			)
 			.map_err(|err| {
 				ClientError::Other(format!("contract is missing getNextSequenceRecv {}", err))
 			})?;
 
-		let channel_data = binding
+		let seq = binding
 			.block(BlockId::Number(BlockNumber::Number(at.revision_height.into())))
 			.call()
 			.await
 			.map_err(|err| ClientError::Other(format!("failed to query channel_data: {}", err)))?;
-
 		Ok(QueryNextSequenceReceiveResponse {
-			next_sequence_receive: todo!(),
-			proof: todo!(),
-			proof_height: todo!(),
+			next_sequence_receive: seq,
+			proof: vec![], // TODO: implement proof for query_next_sequence_recv
+			proof_height: None,
 		})
 	}
 
@@ -1045,7 +1053,7 @@ impl IbcProvider for EthereumClient {
 			.get_block(BlockId::Number(number.into()))
 			.await
 			.map_err(|err| ClientError::MiddlewareError(err))?
-			.ok_or_else(|| ClientError::MiddlewareError(todo!()))?;
+			.ok_or_else(|| ClientError::Other("block not found".to_string()))?;
 
 		let nanoseconds = Duration::from_secs(block.timestamp.as_u64()).as_nanos() as u64;
 		let timestamp = Timestamp::from_nanoseconds(nanoseconds).map_err(|e| {
@@ -1379,7 +1387,7 @@ impl IbcProvider for EthereumClient {
 	}
 
 	fn expected_block_time(&self) -> Duration {
-		Duration::from_millis(120700)
+		Duration::from_millis(12070)
 	}
 
 	async fn query_client_update_time_and_height(
@@ -1502,7 +1510,7 @@ impl IbcProvider for EthereumClient {
 			.get_block(BlockId::Number(BlockNumber::Number(block_number.into())))
 			.await
 			.map_err(|err| ClientError::MiddlewareError(err))?
-			.ok_or_else(|| ClientError::MiddlewareError(todo!()))?;
+			.ok_or_else(|| ClientError::Other("block not found".to_string()))?;
 
 		Ok(Duration::from_secs(block.timestamp.as_u64()).as_nanos() as u64)
 	}

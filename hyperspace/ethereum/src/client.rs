@@ -1,6 +1,6 @@
 use crate::{
 	chain::consensus_state_abi_token,
-	config::EthereumClientConfig,
+	config::{ContractName, EthereumClientConfig},
 	contract::UnwrapContractError,
 	ibc_provider::{u256_to_bytes, ERC20TOKENABI_ABI},
 	jwt::{JwtAuth, JwtKey},
@@ -198,6 +198,9 @@ impl EthereumClient {
 					Some(config.tendermint_address.clone().ok_or_else(|| {
 						ClientError::Other("tendermint address must be provided".to_string())
 					})?),
+					Some(config.gov_proxy_address.clone().ok_or_else(|| {
+						ClientError::Other("government proxy address must be provided".to_string())
+					})?),
 					Some(config.ics20_transfer_bank_address.clone().ok_or_else(|| {
 						ClientError::Other("bank address must be provided".to_string())
 					})?),
@@ -237,6 +240,10 @@ impl EthereumClient {
 			db_conn,
 			redis,
 		})
+	}
+
+	pub fn contract_address_by_name(&self, contract_name: ContractName) -> Option<Address> {
+		self.yui.contract_address_by_name(contract_name).map(|a| a.clone())
 	}
 
 	pub fn client(&self) -> Arc<EthRpcClient> {
@@ -291,7 +298,6 @@ impl EthereumClient {
 		)?;
 		let AnyClientState::Tendermint(client_state) = latest_client_state.unpack_recursive()
 		else {
-			//TODO return error support only tendermint client state
 			return Err(ClientError::Other("create_client: unsupported client state".into()))
 		};
 		Ok(client_state.clone())
@@ -306,197 +312,6 @@ impl EthereumClient {
 			self.query_client_state_exact_token(latest_height, client_id.clone()).await?;
 
 		Ok((latest_client_state, latest_height))
-	}
-
-	pub async fn generated_channel_identifiers(
-		&self,
-		from_block: BlockNumber,
-	) -> Result<Vec<(String, String)>, ClientError> {
-		let filter = Filter::new()
-			.from_block(self.contract_creation_block())
-			//.address(ValueOrArray::Value(self.yui.diamond.address()))
-			//.from_block(self.contract_creation_block())
-			.to_block(BlockNumber::Latest)
-			.address(self.yui.diamond.address())
-			.event("OpenInitChannel(string,string)");
-
-		let logs = self.client().get_logs(&filter).await.unwrap();
-		unimplemented!();
-
-		let v = logs
-			.into_iter()
-			.map(|log| {
-				let toks =
-					ethers::abi::decode(&[ParamType::String, ParamType::String], &log.data.0)
-						.unwrap();
-				(toks[0].to_string(), toks[1].to_string())
-			})
-			.collect();
-
-		Ok(v)
-	}
-
-	pub async fn generated_client_identifiers(&self, from_block: BlockNumber) -> Vec<String> {
-		let filter = Filter::new()
-			.from_block(from_block)
-			.to_block(BlockNumber::Latest)
-			.address(self.yui.diamond.address())
-			.event("GeneratedClientIdentifier(string)");
-
-		let logs = self.client().get_logs(&filter).await.unwrap();
-		unimplemented!();
-
-		logs.into_iter()
-			.map(|log| {
-				ethers::abi::decode(&[ParamType::String], &log.data.0)
-					.unwrap()
-					.into_iter()
-					.next()
-					.unwrap()
-					.to_string()
-			})
-			.collect()
-	}
-
-	pub async fn generated_connection_identifiers(&self, from_block: BlockNumber) -> Vec<String> {
-		let filter = Filter::new()
-			.from_block(from_block)
-			.to_block(BlockNumber::Latest)
-			.address(self.yui.diamond.address())
-			.event("GeneratedConnectionIdentifier(string)");
-
-		let logs = self.client().get_logs(&filter).await.unwrap();
-		unimplemented!();
-
-		logs.into_iter()
-			.map(|log| {
-				ethers::abi::decode(&[ParamType::String], &log.data.0)
-					.unwrap()
-					.into_iter()
-					.next()
-					.unwrap()
-					.to_string()
-			})
-			.collect()
-	}
-
-	pub async fn acknowledge_packets(&self, from_block: BlockNumber) -> Vec<AckPacket> {
-		let filter = Filter::new()
-			.from_block(from_block)
-			.to_block(BlockNumber::Latest)
-			.address(self.yui.diamond.address())
-			.event("AcknowledgePacket((uint64,string,string,string,string,bytes,(uint64,uint64),uint64),bytes)");
-
-		let logs = self.client().get_logs(&filter).await.unwrap();
-		unimplemented!();
-
-		logs.into_iter()
-			.map(|log| {
-				let decoded = ethers::abi::decode(
-					&[
-						ParamType::Tuple(vec![
-							ParamType::Uint(64),
-							ParamType::String,
-							ParamType::String,
-							ParamType::String,
-							ParamType::String,
-							ParamType::Bytes,
-							ParamType::Tuple(vec![ParamType::Uint(64), ParamType::Uint(64)]),
-							ParamType::Uint(64),
-						]),
-						ParamType::Bytes,
-					],
-					&log.data.0,
-				)
-				.unwrap();
-
-				let Token::Tuple(packet) = decoded[0].clone() else {
-					panic!("expected tuple, got {:?}", decoded[0])
-				};
-
-				// use a match statement to destructure the `packet` into the fields
-				// for the `AckPacket` struct
-				let (sequence, source_port, source_channel, dest_port, dest_channel, data, timeout_height, timeout_timestamp) = match packet.as_slice() {
-					[Token::Uint(sequence),
-					Token::String(source_port), Token::String(source_channel), Token::String(dest_port), Token::String(dest_channel), Token::Bytes(data), Token::Tuple(timeout_height), Token::Uint(timeout_timestamp)] => {
-						let [Token::Uint(rev), Token::Uint(height)] = timeout_height.as_slice() else {
-							panic!("need timeout height to be a tuple of two uints, revision and height");
-						};
-
-						(sequence.as_u64(), source_port.clone(), source_channel.clone(), dest_port.clone(), dest_channel.clone(), data.clone(), (
-							rev.as_u64(),
-							height.as_u64(),
-						), timeout_timestamp.as_u64())
-					},
-					_ => panic!("expected tuple, got {:?}", packet),
-				};
-
-				let Token::Bytes(acknowledgement) = decoded[1].clone() else {
-					panic!("expected bytes, got {:?}", decoded[1])
-				};
-
-				let packet = AckPacket {
-					sequence,
-					source_port,
-					source_channel,
-					dest_port,
-					dest_channel,
-					data,
-					timeout_height,
-					timeout_timestamp,
-					acknowledgement,
-				};
-
-				packet
-			})
-			.collect()
-	}
-
-	pub async fn address_of_client_id(&self, client_id: &str) -> Address {
-		let proof = self.eth_query_proof(dbg!(client_id), None, 3).await.unwrap();
-
-		match proof.storage_proof.last() {
-			Some(proof) => todo!("{:?}", proof.value),
-			None => Address::zero(),
-		}
-	}
-
-	pub fn _query_packet_commitment(
-		&self,
-		at: Height,
-		port_id: &PortId,
-		channel_id: &ChannelId,
-		seq: u64,
-	) -> impl Future<
-		Output = Result<
-			ibc_proto::ibc::core::channel::v1::QueryPacketCommitmentResponse,
-			ClientError,
-		>,
-	> {
-		async move { todo!() }
-	}
-
-	/// produce a stream of events emitted from the contract address for the given block range
-	pub fn query_events(
-		&self,
-		event_name: &str,
-		from: BlockNumber,
-		to: BlockNumber,
-	) -> impl Stream<Item = Log> {
-		let filter = Filter::new()
-			.from_block(from)
-			.to_block(to)
-			.address(self.yui.diamond.address())
-			.event(event_name);
-		let client = self.client().clone();
-
-		unimplemented!();
-		async_stream::stream! {
-			let logs = client.get_logs(&filter).await.unwrap();
-			for log in logs {
-				yield log;
-			}
-		}
 	}
 
 	pub fn eth_query_proof(
@@ -548,10 +363,6 @@ impl EthereumClient {
 		let client = self.client().clone();
 		let address = self.yui.diamond.address().clone();
 
-		dbg!(&address);
-		dbg!(&H256::from_str(&index).unwrap());
-		dbg!(&block_height);
-
 		async move {
 			Ok(client
 				.get_proof(
@@ -600,41 +411,6 @@ impl EthereumClient {
 		}
 	}
 
-	pub fn query_client_impl_address(
-		&self,
-		client_id: ClientId,
-		at: Height,
-	) -> impl Future<Output = Result<(Vec<u8>, bool), ClientError>> + '_ {
-		let fut = self.eth_query_proof(
-			client_id.as_str(),
-			Some(at.revision_height),
-			CLIENT_IMPLS_STORAGE_INDEX,
-		);
-
-		async move {
-			let proof = fut.await?;
-
-			if let Some(storage_proof) = proof.storage_proof.first() {
-				if !storage_proof.value.is_zero() {
-					let binding = self
-						.yui
-						.method("getClientState", (client_id.as_str().to_owned(),))
-						.expect("contract is missing getClientState");
-
-					let get_client_state_fut = binding.call();
-					let client_state: (Vec<u8>, bool) =
-						get_client_state_fut.await.map_err(|err| todo!()).unwrap();
-
-					Ok(client_state)
-				} else {
-					todo!("error: client address is zero")
-				}
-			} else {
-				todo!("error: no storage proof")
-			}
-		}
-	}
-
 	#[track_caller]
 	pub fn has_packet_receipt(
 		&self,
@@ -678,7 +454,7 @@ impl EthereumClient {
 				.block(BlockId::Number(BlockNumber::Number(at.revision_height.into())))
 				.call()
 				.await
-				.map_err(|err| todo!())
+				.map_err(|err| ClientError::Other(format!("hasCommitment: {}", err.to_string())))
 				.unwrap();
 
 			Ok(receipt)
@@ -703,7 +479,9 @@ impl EthereumClient {
 				.block(BlockId::Number(BlockNumber::Number(at.revision_height.into())))
 				.call()
 				.await
-				.map_err(|err| todo!())
+				.map_err(|err| {
+					ClientError::Other(format!("hasAcknowledgement: {}", err.to_string()))
+				})
 				.unwrap();
 
 			Ok(receipt)
@@ -802,10 +580,10 @@ impl primitives::TestProvider for EthereumClient {
 
 	async fn send_ordered_packet(
 		&self,
-		channel_id: ChannelId,
-		timeout: Timeout,
+		_channel_id: ChannelId,
+		_timeout: Timeout,
 	) -> Result<(), Self::Error> {
-		todo!("send_ordered_packet")
+		unimplemented!("send_ordered_packet")
 	}
 
 	async fn subscribe_blocks(&self) -> Pin<Box<dyn Stream<Item = u64> + Send>> {

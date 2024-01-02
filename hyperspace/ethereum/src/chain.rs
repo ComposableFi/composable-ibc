@@ -73,7 +73,7 @@ use tendermint::{
 	account, block,
 	block::{header::Version, signed_header::SignedHeader, Height as TmHeight},
 	trust_threshold::TrustThresholdFraction,
-	AppHash, Hash, Time,
+	AppHash, Hash, PublicKey, Time,
 };
 use tokio::time::sleep;
 
@@ -137,9 +137,9 @@ pub fn client_state_abi_token<H: Debug>(client: &ClientState<H>) -> Token {
 			//latest_height
 			EthersToken::Int(client.latest_height.revision_height.into()),
 			//allow_update_after_expiry
-			EthersToken::Bool(true), //TODO check if this is correct
+			EthersToken::Bool(false),
 			//allow_update_after_misbehaviour
-			EthersToken::Bool(true), //TODO check if this is correct
+			EthersToken::Bool(false),
 		]
 		.to_vec(),
 	);
@@ -302,8 +302,8 @@ pub(crate) fn client_state_from_abi_token<H>(token: Token) -> Result<ClientState
 			Some(Height::new(revision_number, frozen_height))
 		},
 		latest_height: Height::new(revision_number, latest_height),
-		proof_specs: Default::default(), // TODO: proof_specs?
-		upgrade_path: vec![],            // TODO: upgrade_path?
+		proof_specs: Default::default(),
+		upgrade_path: vec![],
 		_phantom: Default::default(),
 	})
 }
@@ -417,7 +417,6 @@ fn tm_header_abi_token(header: &Header) -> Result<Token, ClientError> {
 	let block_header = header.signed_header.header.clone();
 	let last_commit = header.signed_header.commit.clone();
 
-	// TODO: convert to u128 (nanoseconds)
 	let timestamp = Timestamp::from(block_header.time);
 
 	let last_block_id = block_header
@@ -530,10 +529,38 @@ fn tm_header_abi_token(header: &Header) -> Result<Token, ClientError> {
 		.to_vec(),
 	);
 
+	let trusted_validators = header
+		.validator_set
+		.validators()
+		.iter()
+		.map(|validator| {
+			let voting_power = validator.power.value();
+			let pub_key = validator.pub_key.clone();
+			let pub_key = match pub_key {
+				PublicKey::Ed25519(pub_key) => EthersToken::Tuple(vec![
+					EthersToken::Bytes(pub_key.as_bytes().to_vec()),
+					EthersToken::Bytes(vec![]),
+					EthersToken::Bytes(vec![]),
+				]),
+				PublicKey::Secp256k1(pub_key) => EthersToken::Tuple(vec![
+					EthersToken::Bytes(vec![]),
+					EthersToken::Bytes(pub_key.to_bytes().to_vec()),
+					EthersToken::Bytes(vec![]),
+				]),
+				_ =>
+					return Err(ClientError::Other(
+						"unsupported public key type, only ed25519 is supported".to_string(),
+					)),
+			};
+			Ok(EthersToken::Tuple(vec![pub_key, EthersToken::Int(voting_power.into())]))
+		})
+		.collect::<Result<Vec<_>, _>>()?;
+
 	let ret = EthersToken::Tuple(
 		[
 			EthersToken::Tuple([signed_header_header, signed_header_commit].to_vec()),
 			EthersToken::Int(header.trusted_height.revision_height.into()),
+			EthersToken::Array(trusted_validators),
 		]
 		.to_vec(),
 	);
@@ -1187,7 +1214,7 @@ impl Chain for EthereumClient {
 		let delay = self.expected_block_time() * INDEXER_DELAY_BLOCKS as u32;
 		let stream = async_stream::stream! {
 			// TODO: is it really finalized blocks stream?
-			let mut stream = ws.subscribe_blocks().await.expect("fuck");
+			let mut stream = ws.subscribe_blocks().await.expect("failed to subscribe to blocks");
 
 			while let Some(block) = stream.next().await {
 				// Add delay for the indexer to be able to add the block in DB
@@ -1531,7 +1558,7 @@ impl Chain for EthereumClient {
 		&self,
 		update: UpdateClient,
 	) -> Result<AnyClientMessage, Self::Error> {
-		todo!("used for misbehaviour; skip for now")
+		unimplemented!("query_client_message")
 	}
 
 	async fn get_proof_height(&self, block_height: Height) -> Height {

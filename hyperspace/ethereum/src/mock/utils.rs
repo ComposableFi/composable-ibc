@@ -162,12 +162,12 @@ pub async fn hyperspace_ethereum_client_fixture(
 		connection_id: None,
 		channel_whitelist: vec![],
 		commitment_prefix: "696263".into(),
-		// commitment_prefix: "424242".into(),
 		wasm_code_id: None,
 		ics20_transfer_bank_address: yui_ibc.ics20_transfer_bank.clone().map(|b| b.address()),
 		ics20_bank_address: yui_ibc.ics20_bank.clone().map(|b| b.address()),
 		diamond_address: Some(yui_ibc.diamond.address()),
 		tendermint_address: yui_ibc.tendermint.clone().map(|x| x.address()),
+		gov_proxy_address: yui_ibc.gov_proxy.clone().map(|x| x.address()),
 		diamond_facets: yui_ibc
 			.deployed_facets
 			.iter()

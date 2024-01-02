@@ -5,6 +5,7 @@ use crate::{
 };
 use anyhow::{anyhow, bail};
 use clap::{Args, Parser, Subcommand};
+use ethers_providers::Provider;
 use std::path::PathBuf;
 
 #[derive(Debug, Clone, Parser)]
@@ -84,6 +85,7 @@ impl DeployClientCmd {
 			None,
 			None,
 			None,
+			None,
 			facets,
 		)
 		.await?;
@@ -113,6 +115,7 @@ impl DeployTransferModuleCmd {
 		mut config: EthereumClientConfig,
 	) -> anyhow::Result<EthereumClientConfig> {
 		let client = config.client().await?;
+		client.address();
 		let path = &self.yui_solidity_path;
 		let diamond_addr = config.diamond_address.ok_or_else(|| {
 			anyhow!("Diamond contract should be deployed first (use 'deploy core' subcommand)")
@@ -127,12 +130,13 @@ impl DeployTransferModuleCmd {
 			None,
 			None,
 			None,
+			None,
 			facets,
 		)
 		.await?;
 
 		let (transfer_bank_contract, bank_contract) =
-			deploy_transfer_module::<EthRpcClient>(path, yui_ibc, diamond_addr, client).await?;
+			deploy_transfer_module::<Provider<_>, _>(path, yui_ibc, diamond_addr, client).await?;
 		config.ics20_transfer_bank_address = Some(transfer_bank_contract.address());
 		config.ics20_bank_address = Some(bank_contract.address());
 		Ok(config)

@@ -130,7 +130,7 @@ pub async fn create_connection(
 
 	let mut events = timeout_future(
 		future,
-		15 * 60,
+		20 * 60,
 		format!("Didn't see OpenConfirmConnection on {}", chain_b.name()),
 	)
 	.await;
@@ -186,7 +186,7 @@ pub async fn create_channel(
 
 	let mut events = timeout_future(
 		future,
-		30 * 60,
+		35 * 60,
 		format!("Didn't see OpenConfirmChannel on {}", chain_b.name()),
 	)
 	.await;

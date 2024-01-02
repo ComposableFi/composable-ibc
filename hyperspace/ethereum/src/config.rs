@@ -14,9 +14,9 @@ use crate::{
 	client::{ClientError, EthRpcClient},
 	ibc_provider::{
 		DIAMONDABI_ABI, DIAMONDCUTFACETABI_ABI, DIAMONDLOUPEFACETABI_ABI, ERC20TOKENABI_ABI,
-		IBCCHANNELABI_ABI, IBCCLIENTABI_ABI, IBCCONNECTIONABI_ABI, IBCPACKETABI_ABI,
-		IBCQUERIERABI_ABI, ICS20BANKABI_ABI, ICS20TRANSFERBANKABI_ABI, OWNERSHIPFACETABI_ABI,
-		TENDERMINTCLIENTABI_ABI,
+		GOVERNANCEFACETABI_ABI, IBCCHANNELABI_ABI, IBCCLIENTABI_ABI, IBCCONNECTIONABI_ABI,
+		IBCPACKETABI_ABI, IBCQUERIERABI_ABI, ICS20BANKABI_ABI, ICS20TRANSFERBANKABI_ABI,
+		OWNERSHIPFACETABI_ABI, RELAYERWHITELISTFACETABI_ABI, TENDERMINTCLIENTABI_ABI,
 	},
 	utils::{DeployYuiIbc, ProviderImpl},
 };
@@ -127,6 +127,10 @@ pub struct EthereumClientConfig {
 	#[serde(deserialize_with = "address_de_opt")]
 	#[serde(default)]
 	pub tendermint_address: Option<Address>,
+	/// Government proxy contract address
+	#[serde(deserialize_with = "address_de_opt")]
+	#[serde(default)]
+	pub gov_proxy_address: Option<Address>,
 	/// ICS-20 Bank address
 	#[serde(deserialize_with = "address_de_opt")]
 	#[serde(default)]
@@ -177,7 +181,7 @@ impl Debug for EthereumClientConfig {
 	}
 }
 
-#[derive(Debug, Clone, Copy, Deserialize, Serialize, strum::EnumString)]
+#[derive(Debug, Clone, Copy, Deserialize, Serialize, strum::EnumString, PartialEq, Eq, Hash)]
 pub enum ContractName {
 	Diamond,
 	DiamondCutFacet,
@@ -192,6 +196,8 @@ pub enum ContractName {
 	OwnershipFacet,
 	TendermintLightClientZK,
 	ERC20Token,
+	GovernanceFacet,
+	RelayerWhitelistFacet,
 }
 
 impl Display for ContractName {
@@ -216,6 +222,8 @@ impl ContractName {
 			ContractName::OwnershipFacet => OWNERSHIPFACETABI_ABI.clone(),
 			ContractName::TendermintLightClientZK => TENDERMINTCLIENTABI_ABI.clone(),
 			ContractName::ERC20Token => ERC20TOKENABI_ABI.clone(),
+			ContractName::GovernanceFacet => GOVERNANCEFACETABI_ABI.clone(),
+			ContractName::RelayerWhitelistFacet => RELAYERWHITELISTFACETABI_ABI.clone(),
 		}
 	}
 }

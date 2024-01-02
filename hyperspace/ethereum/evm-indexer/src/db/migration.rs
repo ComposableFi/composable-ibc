@@ -2,7 +2,7 @@ use sqlx::{
 	migrate::{Migration, MigrationType, Migrator},
 	Pool, Postgres,
 };
-use std::path::{Path, PathBuf};
+use std::path::PathBuf;
 
 const MIGRATION_PATHS: &[&str] = &["../../migrations/20230227201309_create_tables.sql"];
 const MIGRATIONS: &[&str] = &[include_str!("../../migrations/20230227201309_create_tables.sql")];

@@ -133,15 +133,9 @@ pub async fn query_ready_and_timed_out_packets(
 			},
 		};
 
-		// TODO: query_next_sequence_recv
-		// let next_sequence_recv = sink
-		// 	.query_next_sequence_recv(sink_height, &sink_port_id, &sink_channel_id)
-		// 	.await?;
-		let next_sequence_recv = QueryNextSequenceReceiveResponse {
-			next_sequence_receive: 0,
-			proof: vec![1],
-			proof_height: None,
-		};
+		let next_sequence_recv = sink
+			.query_next_sequence_recv(sink_height, &sink_port_id, &sink_channel_id)
+			.await?;
 
 		let source_client_state_on_sink =
 			sink.query_client_state(sink_height, source.client_id()).await?;

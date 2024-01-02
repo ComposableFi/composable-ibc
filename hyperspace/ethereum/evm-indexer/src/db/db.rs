@@ -6,7 +6,6 @@ use futures::TryStreamExt;
 use log::*;
 use redis::Commands;
 use sqlx::{
-	migrate::{Migration, MigrationType},
 	postgres::{PgConnectOptions, PgPoolOptions},
 	ConnectOptions, Execute, QueryBuilder, Row,
 };
