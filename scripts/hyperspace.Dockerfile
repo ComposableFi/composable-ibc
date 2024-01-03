@@ -14,8 +14,10 @@ RUN apt update && \
 	apt install -y openssh-client
 
 RUN ssh-keygen -t rsa -N "" -f ~/.ssh/id_rsa && \
-    eval `ssh-agent -s` && \
-    ssh-add ~/.ssh/id_rsa
+    git config --global core.sshCommand "ssh -i ~/.ssh/id_rsa -F /dev/null"
+# RUN ssh-keygen -t rsa -N "" -f ~/.ssh/id_rsa && \
+#     eval `ssh-agent -s` && \
+#     ssh-add ~/.ssh/id_rsa
 
 RUN cargo build --release --locked -p hyperspace
 
