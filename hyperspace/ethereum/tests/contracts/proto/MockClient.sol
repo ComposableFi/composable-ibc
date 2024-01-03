@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: Apache-2.0
-pragma solidity ^0.8.9;
+pragma solidity ^0.8.12;
 import "./ProtoBufRuntime.sol";
 import "./GoogleProtobufAny.sol";
 import "./Client.sol";
@@ -139,8 +139,8 @@ library IbcLightclientsMockV1ClientState {
   {
     uint256 offset = p;
     uint256 pointer = p;
-    
-    
+
+
     pointer += ProtoBufRuntime._encode_key(
       1,
       ProtoBufRuntime.WireType.LengthDelim,
@@ -148,7 +148,7 @@ library IbcLightclientsMockV1ClientState {
       bs
     );
     pointer += Height._encode_nested(r.latest_height, pointer, bs);
-    
+
     return pointer - offset;
   }
   // nested encoder
@@ -200,7 +200,7 @@ library IbcLightclientsMockV1ClientState {
   function _empty(
     Data memory // r
   ) internal pure returns (bool) {
-    
+
     return true;
   }
 
@@ -357,7 +357,7 @@ library IbcLightclientsMockV1ConsensusState {
   {
     uint256 offset = p;
     uint256 pointer = p;
-    
+
     if (r.timestamp != 0) {
     pointer += ProtoBufRuntime._encode_key(
       1,
@@ -418,7 +418,7 @@ library IbcLightclientsMockV1ConsensusState {
   function _empty(
     Data memory r
   ) internal pure returns (bool) {
-    
+
   if (r.timestamp != 0) {
     return false;
   }
@@ -620,8 +620,8 @@ library IbcLightclientsMockV1Header {
   {
     uint256 offset = p;
     uint256 pointer = p;
-    
-    
+
+
     pointer += ProtoBufRuntime._encode_key(
       1,
       ProtoBufRuntime.WireType.LengthDelim,
@@ -629,7 +629,7 @@ library IbcLightclientsMockV1Header {
       bs
     );
     pointer += Height._encode_nested(r.height, pointer, bs);
-    
+
     if (r.timestamp != 0) {
     pointer += ProtoBufRuntime._encode_key(
       2,
@@ -691,7 +691,7 @@ library IbcLightclientsMockV1Header {
   function _empty(
     Data memory r
   ) internal pure returns (bool) {
-    
+
   if (r.timestamp != 0) {
     return false;
   }
