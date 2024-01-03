@@ -10,6 +10,13 @@ RUN curl -LO https://github.com/protocolbuffers/protobuf/releases/download/v21.9
 	unzip  protoc-21.9-linux-x86_64.zip -d /usr/local/protoc && \
 	protoc --version
 
+RUN apt update && \
+	apt install -y openssh-client
+
+RUN ssh-keygen -t rsa -N "" -f ~/.ssh/id_rsa && \
+    eval `ssh-agent -s` && \
+    ssh-add ~/.ssh/id_rsa
+
 RUN cargo build --release --locked -p hyperspace
 
 # =============
