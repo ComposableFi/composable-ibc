@@ -154,9 +154,9 @@
   {
     "inputs": [
       {
-        "internalType": "string",
+        "internalType": "bytes",
         "name": "id",
-        "type": "string"
+        "type": "bytes"
       }
     ],
     "name": "denomEqualsNativeToken",

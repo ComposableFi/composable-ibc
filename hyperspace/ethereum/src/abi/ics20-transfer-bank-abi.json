@@ -16,6 +16,19 @@
     "type": "constructor"
   },
   {
+    "inputs": [],
+    "name": "ICS20_VERSION",
+    "outputs": [
+      {
+        "internalType": "string",
+        "name": "",
+        "type": "string"
+      }
+    ],
+    "stateMutability": "view",
+    "type": "function"
+  },
+  {
     "inputs": [
       {
         "internalType": "address",
@@ -210,17 +223,17 @@
     "inputs": [
       {
         "internalType": "enum ChannelOrder",
-        "name": "",
+        "name": "order",
         "type": "uint8"
       },
       {
         "internalType": "string[]",
-        "name": "",
+        "name": "connectionHops",
         "type": "string[]"
       },
       {
         "internalType": "string",
-        "name": "",
+        "name": "portId",
         "type": "string"
       },
       {
@@ -242,17 +255,23 @@
           }
         ],
         "internalType": "struct ChannelCounterpartyData",
-        "name": "",
+        "name": "counterparty",
         "type": "tuple"
       },
+      {
+        "internalType": "string",
+        "name": "version",
+        "type": "string"
+      }
+    ],
+    "name": "onChanOpenInit",
+    "outputs": [
       {
         "internalType": "string",
         "name": "",
         "type": "string"
       }
     ],
-    "name": "onChanOpenInit",
-    "outputs": [],
     "stateMutability": "nonpayable",
     "type": "function"
   },
@@ -260,17 +279,17 @@
     "inputs": [
       {
         "internalType": "enum ChannelOrder",
-        "name": "",
+        "name": "order",
         "type": "uint8"
       },
       {
         "internalType": "string[]",
-        "name": "",
+        "name": "connectionHops",
         "type": "string[]"
       },
       {
         "internalType": "string",
-        "name": "",
+        "name": "portId",
         "type": "string"
       },
       {
@@ -292,22 +311,28 @@
           }
         ],
         "internalType": "struct ChannelCounterpartyData",
-        "name": "",
+        "name": "counterparty",
         "type": "tuple"
       },
       {
         "internalType": "string",
-        "name": "",
+        "name": "version",
         "type": "string"
       },
+      {
+        "internalType": "string",
+        "name": "counterpartyVersion",
+        "type": "string"
+      }
+    ],
+    "name": "onChanOpenTry",
+    "outputs": [
       {
         "internalType": "string",
         "name": "",
         "type": "string"
       }
     ],
-    "name": "onChanOpenTry",
-    "outputs": [],
     "stateMutability": "nonpayable",
     "type": "function"
   },
