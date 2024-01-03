@@ -13,6 +13,8 @@ RUN cp -R ./proto/include/* ${BASE}/include/
 
 COPY . .
 
+RUN git config --global url."https://github.com/foundry-rs/forge-std.git".insteadOf "git@github.com:foundry-rs/forge-std"
+
 RUN rustup target add wasm32-unknown-unknown
 RUN rustup +nightly target add wasm32-unknown-unknown
 RUN cargo build --release -p parachain-node --features=testing
