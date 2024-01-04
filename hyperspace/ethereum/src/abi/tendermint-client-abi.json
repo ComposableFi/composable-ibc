@@ -8,11 +8,6 @@
       },
       {
         "internalType": "address",
-        "name": "delegateTendermintUpdate",
-        "type": "address"
-      },
-      {
-        "internalType": "address",
         "name": "ics23_",
         "type": "address"
       }

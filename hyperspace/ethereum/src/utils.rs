@@ -975,18 +975,10 @@ pub async fn deploy_client<M: Middleware>(
 	yui_solidity_path: &PathBuf,
 	yui_ibc: DeployYuiIbc<Arc<M>, M>,
 	client_type: ClientType,
-	delegate_update_name: &str,
 	client_name: &str,
 	client: Arc<M>,
 ) -> Result<ContractInstance<Arc<M>, M>, ClientError> {
 	let project_output1 = compile_yui(yui_solidity_path, "contracts/clients");
-	let update_client_delegate_contract =
-		deploy_contract(delegate_update_name, &[&project_output1], (), client.clone()).await;
-
-	println!(
-		"Deployed update client delegate contract address: {:?}",
-		update_client_delegate_contract.address()
-	);
 
 	let ics23_contract =
 		deploy_contract("Ics23Contract", &[&project_output1], (), client.clone()).await;
@@ -994,11 +986,7 @@ pub async fn deploy_client<M: Middleware>(
 	let light_client = deploy_contract(
 		client_name,
 		&[&project_output1],
-		(
-			yui_ibc.diamond.address(),
-			update_client_delegate_contract.address(),
-			ics23_contract.address(),
-		),
+		(yui_ibc.diamond.address(), ics23_contract.address()),
 		client.clone(),
 	)
 	.await;

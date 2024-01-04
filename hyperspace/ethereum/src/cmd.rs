@@ -93,7 +93,6 @@ impl DeployClientCmd {
 			path,
 			yui_ibc.clone(),
 			self.client_type.clone(),
-			&self.delegate_update_name,
 			&self.client_name,
 			client,
 		)
