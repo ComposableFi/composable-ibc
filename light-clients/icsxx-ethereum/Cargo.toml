@@ -80,3 +80,4 @@ testnet = [
     "sync-committee-primitives/sepolia",
     "sync-committee-verifier/sepolia",
 ]
+no_beacon = []

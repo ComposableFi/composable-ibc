@@ -46,6 +46,9 @@ use ibc::{
 	},
 	Height,
 };
+use sync_committee_primitives::{
+	consensus_types::BeaconBlockHeader, types::VerifierState as LightClientState,
+};
 use sync_committee_verifier::verify_sync_committee_attestation;
 
 // TODO: move this function in a separate crate and remove the one from `light_client_common` crate
@@ -166,10 +169,27 @@ where
 
 			return Ok((client_state, ConsensusUpdateResult::Batch(vec![])))
 		}
-		let cs = client_state.inner;
 
-		let new_light_client_state = verify_sync_committee_attestation(cs, header)
-			.map_err(|e| Ics02Error::implementation_specific(e.to_string()))?;
+		#[cfg(not(feature = "no_beacon"))]
+		let new_light_client_state = {
+			let cs = client_state.inner;
+			verify_sync_committee_attestation(cs, header)
+				.map_err(|e| Ics02Error::implementation_specific(e.to_string()))?;
+		};
+		let update = header;
+		#[cfg(feature = "no_beacon")]
+		let new_light_client_state = if let Some(sync_committee_update) = update.sync_committee_update {
+			LightClientState {
+				finalized_header: update.finalized_header,
+				latest_finalized_epoch: update.finality_proof.epoch,
+				current_sync_committee: client_state.inner.next_sync_committee,
+				next_sync_committee: sync_committee_update.next_sync_committee,
+				state_period: 0,
+			}
+		} else {
+			LightClientState { finalized_header: update.finalized_header, ..client_state.inner }
+		};
+
 		// TODO: verify ancestor blocks
 		let new_client_state = ClientState {
 			inner: new_light_client_state,

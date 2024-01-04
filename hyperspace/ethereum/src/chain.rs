@@ -1022,6 +1022,29 @@ pub(crate) fn msg_connection_open_init_token(x: MsgConnectionOpenInit) -> Token 
 				]
 				.to_vec(),
 			),
+			// version
+			EthersToken::Tuple(
+				[
+					// identifier
+					EthersToken::String(
+						x.clone().version.map(|x| x.identifier().to_owned()).unwrap_or_default(),
+					),
+					// features
+					EthersToken::Array(
+						x.version
+							.clone()
+							.map(|x| {
+								x.features()
+									.clone()
+									.into_iter()
+									.map(EthersToken::String)
+									.collect::<Vec<_>>()
+							})
+							.unwrap_or_default(),
+					),
+				]
+				.to_vec(),
+			),
 			// delay_period
 			EthersToken::Uint(x.delay_period.as_nanos().into()),
 		]

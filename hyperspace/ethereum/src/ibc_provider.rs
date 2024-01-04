@@ -65,11 +65,14 @@ use log::info;
 use ssz_rs::{Merkleized, Node};
 use sync_committee_primitives::consensus_types::BeaconBlockHeader;
 
+#[cfg(not(feature = "no_beacon"))]
+use crate::prove::prove;
+#[cfg(feature = "no_beacon")]
+use crate::prove::prove_fast as prove;
 use crate::{
 	chain::{
 		client_state_from_abi_token, consensus_state_from_abi_token, tm_header_from_abi_token,
 	},
-	prove::{prove, prove_fast},
 	utils::{create_intervals, SEQUENCES_PER_ITER},
 };
 use ibc::{
@@ -412,7 +415,7 @@ impl EthereumClient {
 		latest_revision: u64,
 	) -> Result<Option<(Header, (Any, Height, Vec<IbcEvent>, UpdateType))>, ClientError>
 	where
-		T: primitives::Chain,
+		T: Chain,
 	{
 		let header = {
 			let maybe_header = prove(self, &client_state, 0, 0).await?;
@@ -1857,6 +1860,7 @@ impl IbcProvider for EthereumClient {
 			latest_finalized_epoch: 0,
 			current_sync_committee: Default::default(),
 			next_sync_committee: Default::default(),
+			state_period: 0,
 		};
 
 		let client_state = AnyClientState::Ethereum(ClientState {

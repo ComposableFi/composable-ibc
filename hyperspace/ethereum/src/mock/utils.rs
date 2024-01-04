@@ -22,7 +22,7 @@ use futures::SinkExt;
 use ibc::core::ics24_host::identifier::ClientId;
 use primitives::CommonClientConfig;
 
-pub const USE_GETH: bool = true;
+pub const USE_GETH: bool = false;
 
 pub const ETH_NODE_PORT: u16 = 8545;
 pub const ETH_NODE_PORT_WS: u16 = 8546;
@@ -182,6 +182,6 @@ pub async fn hyperspace_ethereum_client_fixture(
 		indexer_pg_url: db_url.parse().unwrap(),
 		indexer_redis_url: redis_url.parse().unwrap(),
 		anvil: None,
-		common: CommonClientConfig { client_update_interval_sec: 5 * 60, ..Default::default() },
+		common: CommonClientConfig { client_update_interval_sec: 10, ..Default::default() },
 	}
 }

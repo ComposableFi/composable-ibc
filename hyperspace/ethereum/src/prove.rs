@@ -4,6 +4,7 @@ use anyhow::{anyhow, Error};
 use ethers::{
 	core::{rand, rand::Rng},
 	prelude::{EthCall, H256},
+	types::BlockNumber,
 };
 use ethers_providers::Middleware;
 use icsxx_ethereum::{client_message::Header, client_state::ClientState};
@@ -17,10 +18,7 @@ use std::time::Duration;
 use sync_committee_primitives::{
 	consensus_types::BeaconBlockHeader,
 	constants::Root,
-	types::{
-		AncestorBlock, AncestryProof, BlockRootsProof, ExecutionPayloadProof,
-		VerifierStateUpdate as LightClientUpdate,
-	},
+	types::{ExecutionPayloadProof, FinalityProof, VerifierStateUpdate as LightClientUpdate},
 };
 use sync_committee_prover::prove_execution_payload;
 use tokio::{task::JoinSet, time, time::sleep};
@@ -210,19 +208,17 @@ pub async fn prove_fast(
 	eth_client_state: &ClientState<HostFunctionsManager>,
 	_block_number: u64,
 	up_to: u64,
-) -> Result<Header, ClientError> {
+) -> Result<Option<Header>, ClientError> {
 	let client = client.client();
 	// let to_block = client
 	// 	.get_block_number()
 	// 	.await
 	// 	.map_err(|e| ClientError::Other(format!("failed to get block number: {:?}", e)))?
 	// 	.as_u64();
-	let to_block = up_to;
-	let from_block = eth_client_state.latest_height as u64 + 1;
 	let latest_block = client
-		.get_block(to_block)
+		.get_block(BlockNumber::Latest)
 		.await
-		.map_err(|e| ClientError::Other(format!("failed to get block {}: {:?}", to_block, e)))?
+		.map_err(|e| ClientError::Other(format!("failed to get latest block: {:?}", e)))?
 		.expect("block not found");
 	let execution_payload_proof = ExecutionPayloadProof {
 		state_root: latest_block.state_root,
@@ -264,7 +260,10 @@ pub async fn prove_fast(
 	// 	});
 	// }
 	let mut light_client_update = LightClientUpdate {
-		attested_header: Default::default(),
+		attested_header: BeaconBlockHeader {
+			slot: eth_client_state.inner.finalized_header.slot + 1,
+			..Default::default()
+		},
 		sync_committee_update: Default::default(),
 		finalized_header: BeaconBlockHeader {
 			slot: latest_block.number.unwrap().as_u64(),
@@ -274,11 +273,14 @@ pub async fn prove_fast(
 			body_root: Node::default(),
 		},
 		execution_payload: execution_payload_proof,
-		finality_proof: Default::default(),
+		finality_proof: FinalityProof {
+			epoch: eth_client_state.inner.latest_finalized_epoch + 1,
+			..Default::default()
+		},
 		sync_aggregate: Default::default(),
 		signature_slot: Default::default(),
 	};
 	light_client_update.attested_header.slot = latest_block.number.unwrap().as_u64();
 
-	Ok(Header { inner: light_client_update, ancestor_blocks })
+	Ok(Some(Header { inner: light_client_update, ancestor_blocks }))
 }

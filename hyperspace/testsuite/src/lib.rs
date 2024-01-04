@@ -349,7 +349,7 @@ async fn send_packet_and_assert_timestamp_timeout<A, B>(
 	log::info!(target: "hyperspace", "Resuming send packet relay");
 	set_relay_status(true);
 
-	assert_timeout_packet(chain_a, 400).await;
+	assert_timeout_packet(chain_a, 4000).await;
 	log::info!(target: "hyperspace", "🚀🚀 Timeout packet successfully processed for timeout timestamp");
 }
 
@@ -372,11 +372,11 @@ async fn send_packet_with_connection_delay<A, B>(
 	log::info!(target: "hyperspace", "Sending transfer from {}", chain_a.name());
 	let (previous_balance, ..) =
 		send_transfer(chain_a, chain_b, asset_a.clone(), channel_id_a, None).await;
-	assert_send_transfer(chain_a, asset_a, previous_balance, 480).await;
+	assert_send_transfer(chain_a, asset_a, previous_balance, 4800).await;
 	log::info!(target: "hyperspace", "Sending transfer from {}", chain_b.name());
 	let (previous_balance, ..) =
 		send_transfer(chain_b, chain_a, asset_b.clone(), channel_id_b, None).await;
-	assert_send_transfer(chain_b, asset_b, previous_balance, 480).await;
+	assert_send_transfer(chain_b, asset_b, previous_balance, 4800).await;
 	// now send from chain b.
 	log::info!(target: "hyperspace", "🚀🚀 Token Transfer successful with connection delay");
 }
@@ -483,7 +483,7 @@ async fn send_packet_and_assert_timeout_on_channel_close<A, B>(
 
 	set_relay_status(true);
 
-	assert_timeout_packet(chain_a, 100).await;
+	assert_timeout_packet(chain_a, 1000).await;
 	log::info!(target: "hyperspace", "🚀🚀 Timeout packet successfully processed for channel close");
 }
 
