@@ -15058,7 +15058,7 @@ dependencies = [
  "bytes",
  "ics23 0.10.0",
  "proptest",
- "rand 0.4.6",
+ "rand 0.8.5",
  "sha2 0.10.8",
  "tendermint 0.28.0",
 ]
@@ -15342,6 +15342,7 @@ dependencies = [
 name = "solana-ibc"
 version = "0.1.0"
 dependencies = [
+ "ahash 0.8.6",
  "anchor-lang",
  "anchor-spl",
  "base64 0.21.5",
@@ -15359,6 +15360,7 @@ dependencies = [
  "serde_json",
  "solana-trie 0.0.0",
  "spl-associated-token-account",
+ "spl-token",
  "stdx 0.0.0",
  "strum 0.25.0",
  "trie-ids",
@@ -19320,9 +19322,9 @@ version = "1.6.3"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "97fee6b57c6a41524a810daee9286c02d7752c4253064d0b05472833a438f675"
 dependencies = [
- "cfg-if 0.1.10",
+ "cfg-if 1.0.0",
  "digest 0.10.7",
- "rand 0.4.6",
+ "rand 0.8.5",
  "static_assertions",
 ]
 

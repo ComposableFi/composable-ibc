@@ -549,12 +549,12 @@ pub async fn parse_events(
 					ConnectionEnd::try_from(connection_response.connection.ok_or_else(|| {
 						Error::Custom(format!("ConnectionEnd not found for {connection_id:?}"))
 					})?)?;
-				if !connection_end.delay_period().is_zero() {
-					log::debug!(target: "hyperspace", "Skipping write acknowledgement because of connection delay {:?}",
-						connection_end.delay_period());
-					// We can't send this packet immediately because of connection delays
-					continue
-				}
+				// if !connection_end.delay_period().is_zero() {
+				// 	log::debug!(target: "hyperspace", "Skipping write acknowledgement because of connection delay {:?}",
+				// 		connection_end.delay_period());
+				// 	// We can't send this packet immediately because of connection delays
+				// 	continue
+				// }
 				let seq = u64::from(write_ack.packet.sequence);
 				let packet = write_ack.packet;
 				let packet_acknowledgement_response = source

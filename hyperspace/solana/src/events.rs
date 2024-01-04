@@ -353,7 +353,7 @@ pub fn convert_new_event_to_old(
 				.collect();
 			let eve = ModuleEvent {
 				kind: e.kind,
-				module_name: ModuleId::from_str("").unwrap(),
+				module_name: ModuleId::from_str("transfer").unwrap(),
 				attributes,
 			};
 			Some(IbcEvent::AppModule(eve))

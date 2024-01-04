@@ -35,7 +35,6 @@ use anchor_client::{
 	},
 	solana_sdk::{
 		commitment_config::{CommitmentConfig, CommitmentLevel},
-		feature_set::ID,
 		signature::{Keypair, Signature},
 		signer::Signer as AnchorSigner,
 	},
@@ -44,16 +43,15 @@ use anchor_client::{
 use anchor_lang::{prelude::*, system_program};
 use error::Error;
 use ibc::{
-	applications::transfer::{Amount, BaseDenom, PrefixedCoin, PrefixedDenom, TracePath},
+	applications::transfer::{
+		msgs::transfer::MsgTransfer, Amount, BaseDenom, PrefixedCoin, PrefixedDenom, TracePath,
+	},
 	core::{
 		ics02_client::{
 			client_state::ClientType, events::UpdateClient,
 			msgs::update_client::MsgUpdateAnyClient, trust_threshold::TrustThreshold,
 		},
-		ics23_commitment::{
-			commitment::{CommitmentPrefix, CommitmentRoot},
-			specs::ProofSpecs,
-		},
+		ics23_commitment::{commitment::CommitmentPrefix, specs::ProofSpecs},
 		ics24_host::identifier::{ChainId, ChannelId, ClientId, ConnectionId, PortId},
 		ics26_routing::msgs::Ics26Envelope,
 	},
@@ -249,6 +247,12 @@ impl SolanaClient {
 		chain
 	}
 
+	pub fn get_mint_auth_key(&self) -> Pubkey {
+		let mint_auth_seeds = &[solana_ibc::MINT_ESCROW_SEED];
+		let mint_auth = Pubkey::find_program_address(mint_auth_seeds, &self.program_id).0;
+		mint_auth
+	}
+
 	pub async fn get_trie(&self) -> trie::AccountTrie<Vec<u8>> {
 		let trie_key = self.get_trie_key();
 		let rpc_client = self.rpc_client();
@@ -322,6 +326,116 @@ impl SolanaClient {
 			commitment_prefix: CommitmentPrefix::try_from(config.commitment_prefix).unwrap(),
 			channel_whitelist: Arc::new(Mutex::new(config.channel_whitelist.into_iter().collect())),
 		})
+	}
+
+	pub async fn send_transfer_inner(
+		&self,
+		msg: MsgTransfer<PrefixedCoin>,
+	) -> Result<<SolanaClient as IbcProvider>::TransactionId, Error> {
+		let keypair = self.keybase.keypair();
+		println!("submitting tx now, {}", keypair.pubkey());
+		let authority = Arc::new(keypair);
+		let program = self.program();
+
+		// Build, sign, and send program instruction
+		let solana_ibc_storage_key = self.get_ibc_storage_key();
+		let trie_key = self.get_trie_key();
+		let chain_key = self.get_chain_key();
+
+		let mint_authority = self.get_mint_auth_key();
+
+		let channel_id =
+			ibc_new::core::host::types::identifiers::ChannelId::new(msg.source_channel.sequence());
+		let port_id =
+			ibc_new::core::host::types::identifiers::PortId::from_str(msg.source_port.as_str())
+				.unwrap();
+		let prefixed_denom = ibc_new::apps::transfer::types::PrefixedDenom {
+			trace_path: ibc_new::apps::transfer::types::TracePath::default(),
+			base_denom: ibc_new::apps::transfer::types::BaseDenom::from_str(
+				msg.token.denom.base_denom.as_str(),
+			)
+			.unwrap(),
+		};
+		let packet_data = ibc_new::apps::transfer::types::packet::PacketData {
+			token: ibc_new::apps::transfer::types::PrefixedCoin {
+				denom: prefixed_denom,
+				amount: ibc_new::apps::transfer::types::Amount::from(msg.token.amount.as_u256().0),
+			},
+			sender: ibc_new::primitives::Signer::from(msg.sender.as_ref().to_string()),
+			receiver: ibc_new::primitives::Signer::from(msg.receiver.as_ref().to_string()),
+			memo: ibc_new::apps::transfer::types::Memo::from(msg.memo),
+		};
+
+		let denom = msg.token.denom.base_denom;
+		let split_denom: Vec<&str> = denom.as_str().split('/').collect();
+		let denom = split_denom.last().unwrap();
+		let token_mint = Pubkey::from_str(denom).unwrap();
+		let token_account = get_associated_token_address(&authority.pubkey(), &token_mint);
+		let seeds = [
+			port_id.as_bytes(),
+			channel_id.as_bytes(),
+			denom[..32].as_bytes(),
+			denom[32..].as_bytes(),
+		];
+		let escrow_account = Pubkey::find_program_address(&seeds, &self.program_id).0;
+
+		let new_msg_transfer = ibc_new::apps::transfer::types::msgs::transfer::MsgTransfer {
+			port_id_on_a: port_id.clone(),
+			chan_id_on_a: channel_id.clone(),
+			packet_data,
+			timeout_height_on_b: ibc_new::core::channel::types::timeout::TimeoutHeight::At(
+				ibc_new::core::client::types::Height::new(
+					msg.timeout_height.revision_number,
+					msg.timeout_height.revision_height,
+				)
+				.unwrap(),
+			),
+			timeout_timestamp_on_b: ibc_new::primitives::Timestamp::from_nanoseconds(
+				msg.timeout_timestamp.nanoseconds(),
+			)
+			.unwrap(),
+		};
+
+		let sig = program
+			.request()
+			.instruction(ComputeBudgetInstruction::set_compute_unit_limit(1_000_000u32))
+			.accounts(solana_ibc::accounts::SendTransfer {
+				sender: authority.pubkey(),
+				receiver: None,
+				storage: solana_ibc_storage_key,
+				trie: trie_key,
+				chain: chain_key,
+				system_program: system_program::ID,
+				mint_authority: Some(mint_authority),
+				token_mint: Some(token_mint),
+				escrow_account: Some(escrow_account),
+				receiver_token_account: Some(token_account),
+				associated_token_program: Some(anchor_spl::associated_token::ID),
+				token_program: Some(anchor_spl::token::ID),
+			})
+			.args(solana_ibc::instruction::SendTransfer {
+				port_id,
+				channel_id,
+				base_denom: denom.to_string(),
+				msg: new_msg_transfer,
+			})
+			// .payer(Arc::new(keypair))
+			.signer(&*authority)
+			.send_with_spinner_and_config(RpcSendTransactionConfig {
+				skip_preflight: true,
+				..RpcSendTransactionConfig::default()
+			})
+			.await
+			.unwrap();
+		let rpc = program.async_rpc();
+		let blockhash = rpc.get_latest_blockhash().await.unwrap();
+		// Wait for finalizing the transaction
+		let _ = rpc
+			.confirm_transaction_with_spinner(&sig, &blockhash, CommitmentConfig::finalized())
+			.await
+			.unwrap();
+		let signature = sig.to_string();
+		Ok(signature)
 	}
 }
 
@@ -456,8 +570,8 @@ impl IbcProvider for SolanaClient {
 		let cluster = Cluster::from_str(&self.rpc_url).unwrap();
 		tokio::task::spawn_blocking(move || {
 			let (_logs_subscription, receiver) = PubsubClient::logs_subscribe(
-				cluster.ws_url(),
-				RpcTransactionLogsFilter::Mentions(vec![ID.to_string()]),
+				"ws://127.0.0.1:8900",	
+				RpcTransactionLogsFilter::Mentions(vec![solana_ibc::ID.to_string()]),
 				RpcTransactionLogsConfig { commitment: Some(CommitmentConfig::processed()) },
 			)
 			.unwrap();
@@ -1072,9 +1186,9 @@ deserialize client state"
 			)
 			.await
 			.map_err(|e| Error::RpcError(format!("{:?}", e)))?;
-		if !sigs.is_empty() {
-			*last_sent_packet_hash = sigs[0].signature.clone();
-		}
+		// if !sigs.is_empty() {
+		// 	*last_sent_packet_hash = sigs[0].signature.clone();
+		// }
 		let mut transactions = Vec::new();
 		for sig in sigs {
 			let signature = Signature::from_str(&sig.signature).unwrap();
@@ -1116,10 +1230,11 @@ deserialize client state"
 				}
 			})
 			.collect();
+		let height = self.latest_height_and_timestamp().await.unwrap().0;
 		let packets: Vec<_> = send_packet_events
 			.iter()
 			.map(|packet| ibc_rpc::PacketInfo {
-				height: None,
+				height: Some(height.revision_height),
 				sequence: packet.seq_on_a().value(),
 				source_port: packet.port_id_on_a().to_string(),
 				source_channel: packet.chan_id_on_a().to_string(),
@@ -1271,6 +1386,7 @@ deserialize client state"
 				_ => panic!("Infallible"),
 			})
 			.collect();
+		println!("Length of packets {}", packets.len());
 		Ok(packets)
 	}
 
@@ -1347,18 +1463,20 @@ deserialize client state"
 		asset_id: Self::AssetId,
 	) -> Result<Vec<ibc::applications::transfer::PrefixedCoin>, Self::Error> {
 		let denom = &asset_id;
-		let (token_mint_key, _bump) =
-			Pubkey::find_program_address(&[denom.as_ref()], &solana_ibc::ID);
+		// let (token_mint_key, _bump) =
+		// 	Pubkey::find_program_address(&[denom.as_ref()], &solana_ibc::ID);
+		let token_mint_key = Pubkey::from_str(&asset_id).unwrap();
 		let user_token_address =
 			get_associated_token_address(&self.keybase.public_key, &token_mint_key);
 		let sol_rpc_client = self.rpc_client();
 		let balance = sol_rpc_client.get_token_account_balance(&user_token_address).await.unwrap();
+		log::info!("IBC Balance on solana {}", balance.amount);
 		Ok(vec![PrefixedCoin {
 			denom: PrefixedDenom {
 				trace_path: TracePath::default(),
 				base_denom: BaseDenom::from_str(denom).unwrap(),
 			},
-			amount: Amount::from_str(&balance.ui_amount_string).unwrap(),
+			amount: Amount::from_str(&balance.amount).unwrap(),
 		}])
 	}
 
@@ -1915,7 +2033,7 @@ impl Chain for SolanaClient {
 	}
 
 	async fn get_proof_height(&self, block_height: Height) -> Height {
-		block_height.increment()
+		block_height
 	}
 
 	async fn handle_error(&mut self, error: &anyhow::Error) -> Result<(), anyhow::Error> {

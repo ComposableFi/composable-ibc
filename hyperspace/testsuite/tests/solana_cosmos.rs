@@ -207,7 +207,7 @@ async fn setup_clients() -> (AnyChain, AnyChain) {
 async fn solana_to_cosmos_ibc_messaging_full_integration_test() {
 	logging::setup_logging();
 
-	let asset_id_a = AnyAssetId::Solana("1".to_string());
+	let asset_id_a = AnyAssetId::Solana("33WVSef9zaw49KbNdPGTmACVRnAXzN3o1fsqbUrLp2mh".to_string());
 	let asset_id_b = AnyAssetId::Cosmos(
 		"ibc/47B97D8FF01DA03FCB2F4B1FFEC931645F254E21EF465FA95CBA6888CB964DC4".to_string(),
 	);
@@ -215,7 +215,7 @@ async fn solana_to_cosmos_ibc_messaging_full_integration_test() {
 	let (handle, channel_a, channel_b, connection_id_a, connection_id_b) =
 		setup_connection_and_channel(&mut chain_a, &mut chain_b, Duration::from_secs(60 * 2)).await;
 
-	// handle.abort();
+	handle.abort();
 
 	// Set connections and channel whitelist
 	chain_a.set_connection_id(connection_id_a);

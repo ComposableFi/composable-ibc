@@ -26,8 +26,8 @@ use tokio::sync::mpsc::unbounded_channel;
 impl TestProvider for SolanaClient {
 	/// Initiate an ibc transfer on chain.
 	async fn send_transfer(&self, msg: MsgTransfer<PrefixedCoin>) -> Result<(), Self::Error> {
-		let hash = self.submit(vec![msg.to_any()]).await?;
-		log::info!(target: "hyperspace_cosmos", "🤝 Transfer transaction confirmed with hash: {:?}", hash);
+		let hash = self.send_transfer_inner(msg).await?;
+		log::info!(target: "hyperspace_cosmos", "🤝 Transfer transaction confirmed with hash: {}", hash);
 		Ok(())
 	}
 
@@ -43,10 +43,10 @@ impl TestProvider for SolanaClient {
 	/// Returns a stream that yields chain Block number
 	async fn subscribe_blocks(&self) -> Pin<Box<dyn Stream<Item = u64> + Send + Sync>> {
 		let (tx, rx) = unbounded_channel();
-		let cluster = Cluster::Devnet;
+		let cluster = Cluster::Localnet;
 		tokio::task::spawn_blocking(move || {
 			let (_logs_listener, receiver) = PubsubClient::block_subscribe(
-				"", /* Quicknode rpc should be used for devnet/mainnet and incase of localnet,
+				"ws://127.0.0.1:8900", /* Quicknode rpc should be used for devnet/mainnet and incase of localnet,
 				     * the flag `--rpc-pubsub-enable-block-subscription` has to be passed to
 				     * local validator. */
 				RpcBlockSubscribeFilter::All,
