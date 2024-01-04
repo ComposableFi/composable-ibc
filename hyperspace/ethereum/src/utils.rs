@@ -1446,33 +1446,52 @@ pub struct Header {
 
 impl rlp::Encodable for Header {
 	fn rlp_append(&self, s: &mut RlpStream) {
+		let Header {
+			parent_hash,
+			ommers_hash,
+			beneficiary,
+			state_root,
+			transactions_root,
+			receipts_root,
+			logs_bloom,
+			difficulty,
+			number,
+			gas_limit,
+			gas_used,
+			timestamp,
+			extra_data,
+			mix_hash,
+			nonce,
+			base_fee_per_gas,
+			withdrawals_root,
+		} = self;
 		let mut list_len = 15;
-		if self.base_fee_per_gas.is_some() {
+		if base_fee_per_gas.is_some() {
 			list_len += 1;
 		}
-		if self.withdrawals_root.is_some() {
+		if withdrawals_root.is_some() {
 			list_len += 1;
 		}
 		s.begin_list(list_len);
-		s.append(&self.parent_hash);
-		s.append(&self.ommers_hash);
-		s.append(&self.beneficiary);
-		s.append(&self.state_root);
-		s.append(&self.transactions_root);
-		s.append(&self.receipts_root);
-		s.append(&self.logs_bloom);
-		s.append(&self.difficulty);
-		s.append(&self.number);
-		s.append(&self.gas_limit);
-		s.append(&self.gas_used);
-		s.append(&self.timestamp);
-		s.append(&self.extra_data.as_ref());
-		s.append(&self.mix_hash);
-		s.append(&self.nonce);
-		if let Some(ref base_fee) = self.base_fee_per_gas {
+		s.append(parent_hash);
+		s.append(ommers_hash);
+		s.append(beneficiary);
+		s.append(state_root);
+		s.append(transactions_root);
+		s.append(receipts_root);
+		s.append(logs_bloom);
+		s.append(difficulty);
+		s.append(number);
+		s.append(gas_limit);
+		s.append(gas_used);
+		s.append(timestamp);
+		s.append(&extra_data.as_ref());
+		s.append(mix_hash);
+		s.append(nonce);
+		if let Some(ref base_fee) = base_fee_per_gas {
 			s.append(base_fee);
 		}
-		if let Some(ref root) = self.withdrawals_root {
+		if let Some(ref root) = withdrawals_root {
 			s.append(root);
 		}
 	}

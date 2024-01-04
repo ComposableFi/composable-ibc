@@ -215,7 +215,7 @@
   },
   {
     "type": "function",
-    "name": "getFirstClientNextValidatorsHash",
+    "name": "getGovClientNextValidatorsHash",
     "inputs": [],
     "outputs": [
       {
@@ -389,6 +389,29 @@
       }
     ],
     "stateMutability": "pure"
+  },
+  {
+    "type": "function",
+    "name": "substituteState",
+    "inputs": [
+      {
+        "name": "clientId",
+        "type": "string",
+        "internalType": "string"
+      },
+      {
+        "name": "clientStateBytes",
+        "type": "bytes",
+        "internalType": "bytes"
+      },
+      {
+        "name": "consensusStateBytes",
+        "type": "bytes",
+        "internalType": "bytes"
+      }
+    ],
+    "outputs": [],
+    "stateMutability": "nonpayable"
   },
   {
     "type": "function",
@@ -578,5 +601,21 @@
       }
     ],
     "stateMutability": "view"
+  },
+  {
+    "type": "error",
+    "name": "NotContractOwner",
+    "inputs": [
+      {
+        "name": "_user",
+        "type": "address",
+        "internalType": "address"
+      },
+      {
+        "name": "_contractOwner",
+        "type": "address",
+        "internalType": "address"
+      }
+    ]
   }
 ]

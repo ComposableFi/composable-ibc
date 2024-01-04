@@ -310,7 +310,7 @@ async fn setup_clients() -> (AnyChain, AnyChain, JoinHandle<()>) {
 			let erc20_token = deploy_contract(
 				"ERC20Token",
 				&[&project_output],
-				("Test Token".to_string(), "TST".to_string(), 100u32, 0u8),
+				("Test Token".to_string(), "TST".to_string(), 10000u32, 0u8),
 				client,
 			)
 			.await;

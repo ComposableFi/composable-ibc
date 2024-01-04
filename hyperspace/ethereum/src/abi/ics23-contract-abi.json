@@ -1,0 +1,938 @@
+[
+  {
+    "type": "function",
+    "name": "_expose_types",
+    "inputs": [
+      {
+        "name": "a",
+        "type": "tuple",
+        "internalType": "struct MerkleProofData",
+        "components": [
+          {
+            "name": "proofs",
+            "type": "tuple[]",
+            "internalType": "struct CommitmentProofData[]",
+            "components": [
+              {
+                "name": "exist",
+                "type": "tuple",
+                "internalType": "struct ExistenceProofData",
+                "components": [
+                  {
+                    "name": "key",
+                    "type": "bytes",
+                    "internalType": "bytes"
+                  },
+                  {
+                    "name": "value",
+                    "type": "bytes",
+                    "internalType": "bytes"
+                  },
+                  {
+                    "name": "leaf",
+                    "type": "tuple",
+                    "internalType": "struct LeafOpData",
+                    "components": [
+                      {
+                        "name": "hash",
+                        "type": "uint8",
+                        "internalType": "enum PROOFS_PROTO_GLOBAL_ENUMSHashOp"
+                      },
+                      {
+                        "name": "prehash_key",
+                        "type": "uint8",
+                        "internalType": "enum PROOFS_PROTO_GLOBAL_ENUMSHashOp"
+                      },
+                      {
+                        "name": "prehash_value",
+                        "type": "uint8",
+                        "internalType": "enum PROOFS_PROTO_GLOBAL_ENUMSHashOp"
+                      },
+                      {
+                        "name": "length",
+                        "type": "uint8",
+                        "internalType": "enum PROOFS_PROTO_GLOBAL_ENUMSLengthOp"
+                      },
+                      {
+                        "name": "prefix",
+                        "type": "bytes",
+                        "internalType": "bytes"
+                      }
+                    ]
+                  },
+                  {
+                    "name": "path",
+                    "type": "tuple[]",
+                    "internalType": "struct InnerOpData[]",
+                    "components": [
+                      {
+                        "name": "hash",
+                        "type": "uint8",
+                        "internalType": "enum PROOFS_PROTO_GLOBAL_ENUMSHashOp"
+                      },
+                      {
+                        "name": "prefix",
+                        "type": "bytes",
+                        "internalType": "bytes"
+                      },
+                      {
+                        "name": "suffix",
+                        "type": "bytes",
+                        "internalType": "bytes"
+                      }
+                    ]
+                  }
+                ]
+              },
+              {
+                "name": "nonexist",
+                "type": "tuple",
+                "internalType": "struct NonExistenceProofData",
+                "components": [
+                  {
+                    "name": "key",
+                    "type": "bytes",
+                    "internalType": "bytes"
+                  },
+                  {
+                    "name": "left",
+                    "type": "tuple",
+                    "internalType": "struct ExistenceProofData",
+                    "components": [
+                      {
+                        "name": "key",
+                        "type": "bytes",
+                        "internalType": "bytes"
+                      },
+                      {
+                        "name": "value",
+                        "type": "bytes",
+                        "internalType": "bytes"
+                      },
+                      {
+                        "name": "leaf",
+                        "type": "tuple",
+                        "internalType": "struct LeafOpData",
+                        "components": [
+                          {
+                            "name": "hash",
+                            "type": "uint8",
+                            "internalType": "enum PROOFS_PROTO_GLOBAL_ENUMSHashOp"
+                          },
+                          {
+                            "name": "prehash_key",
+                            "type": "uint8",
+                            "internalType": "enum PROOFS_PROTO_GLOBAL_ENUMSHashOp"
+                          },
+                          {
+                            "name": "prehash_value",
+                            "type": "uint8",
+                            "internalType": "enum PROOFS_PROTO_GLOBAL_ENUMSHashOp"
+                          },
+                          {
+                            "name": "length",
+                            "type": "uint8",
+                            "internalType": "enum PROOFS_PROTO_GLOBAL_ENUMSLengthOp"
+                          },
+                          {
+                            "name": "prefix",
+                            "type": "bytes",
+                            "internalType": "bytes"
+                          }
+                        ]
+                      },
+                      {
+                        "name": "path",
+                        "type": "tuple[]",
+                        "internalType": "struct InnerOpData[]",
+                        "components": [
+                          {
+                            "name": "hash",
+                            "type": "uint8",
+                            "internalType": "enum PROOFS_PROTO_GLOBAL_ENUMSHashOp"
+                          },
+                          {
+                            "name": "prefix",
+                            "type": "bytes",
+                            "internalType": "bytes"
+                          },
+                          {
+                            "name": "suffix",
+                            "type": "bytes",
+                            "internalType": "bytes"
+                          }
+                        ]
+                      }
+                    ]
+                  },
+                  {
+                    "name": "right",
+                    "type": "tuple",
+                    "internalType": "struct ExistenceProofData",
+                    "components": [
+                      {
+                        "name": "key",
+                        "type": "bytes",
+                        "internalType": "bytes"
+                      },
+                      {
+                        "name": "value",
+                        "type": "bytes",
+                        "internalType": "bytes"
+                      },
+                      {
+                        "name": "leaf",
+                        "type": "tuple",
+                        "internalType": "struct LeafOpData",
+                        "components": [
+                          {
+                            "name": "hash",
+                            "type": "uint8",
+                            "internalType": "enum PROOFS_PROTO_GLOBAL_ENUMSHashOp"
+                          },
+                          {
+                            "name": "prehash_key",
+                            "type": "uint8",
+                            "internalType": "enum PROOFS_PROTO_GLOBAL_ENUMSHashOp"
+                          },
+                          {
+                            "name": "prehash_value",
+                            "type": "uint8",
+                            "internalType": "enum PROOFS_PROTO_GLOBAL_ENUMSHashOp"
+                          },
+                          {
+                            "name": "length",
+                            "type": "uint8",
+                            "internalType": "enum PROOFS_PROTO_GLOBAL_ENUMSLengthOp"
+                          },
+                          {
+                            "name": "prefix",
+                            "type": "bytes",
+                            "internalType": "bytes"
+                          }
+                        ]
+                      },
+                      {
+                        "name": "path",
+                        "type": "tuple[]",
+                        "internalType": "struct InnerOpData[]",
+                        "components": [
+                          {
+                            "name": "hash",
+                            "type": "uint8",
+                            "internalType": "enum PROOFS_PROTO_GLOBAL_ENUMSHashOp"
+                          },
+                          {
+                            "name": "prefix",
+                            "type": "bytes",
+                            "internalType": "bytes"
+                          },
+                          {
+                            "name": "suffix",
+                            "type": "bytes",
+                            "internalType": "bytes"
+                          }
+                        ]
+                      }
+                    ]
+                  }
+                ]
+              },
+              {
+                "name": "batch",
+                "type": "tuple",
+                "internalType": "struct BatchProofData",
+                "components": [
+                  {
+                    "name": "entries",
+                    "type": "tuple[]",
+                    "internalType": "struct BatchEntryData[]",
+                    "components": [
+                      {
+                        "name": "exist",
+                        "type": "tuple",
+                        "internalType": "struct ExistenceProofData",
+                        "components": [
+                          {
+                            "name": "key",
+                            "type": "bytes",
+                            "internalType": "bytes"
+                          },
+                          {
+                            "name": "value",
+                            "type": "bytes",
+                            "internalType": "bytes"
+                          },
+                          {
+                            "name": "leaf",
+                            "type": "tuple",
+                            "internalType": "struct LeafOpData",
+                            "components": [
+                              {
+                                "name": "hash",
+                                "type": "uint8",
+                                "internalType": "enum PROOFS_PROTO_GLOBAL_ENUMSHashOp"
+                              },
+                              {
+                                "name": "prehash_key",
+                                "type": "uint8",
+                                "internalType": "enum PROOFS_PROTO_GLOBAL_ENUMSHashOp"
+                              },
+                              {
+                                "name": "prehash_value",
+                                "type": "uint8",
+                                "internalType": "enum PROOFS_PROTO_GLOBAL_ENUMSHashOp"
+                              },
+                              {
+                                "name": "length",
+                                "type": "uint8",
+                                "internalType": "enum PROOFS_PROTO_GLOBAL_ENUMSLengthOp"
+                              },
+                              {
+                                "name": "prefix",
+                                "type": "bytes",
+                                "internalType": "bytes"
+                              }
+                            ]
+                          },
+                          {
+                            "name": "path",
+                            "type": "tuple[]",
+                            "internalType": "struct InnerOpData[]",
+                            "components": [
+                              {
+                                "name": "hash",
+                                "type": "uint8",
+                                "internalType": "enum PROOFS_PROTO_GLOBAL_ENUMSHashOp"
+                              },
+                              {
+                                "name": "prefix",
+                                "type": "bytes",
+                                "internalType": "bytes"
+                              },
+                              {
+                                "name": "suffix",
+                                "type": "bytes",
+                                "internalType": "bytes"
+                              }
+                            ]
+                          }
+                        ]
+                      },
+                      {
+                        "name": "nonexist",
+                        "type": "tuple",
+                        "internalType": "struct NonExistenceProofData",
+                        "components": [
+                          {
+                            "name": "key",
+                            "type": "bytes",
+                            "internalType": "bytes"
+                          },
+                          {
+                            "name": "left",
+                            "type": "tuple",
+                            "internalType": "struct ExistenceProofData",
+                            "components": [
+                              {
+                                "name": "key",
+                                "type": "bytes",
+                                "internalType": "bytes"
+                              },
+                              {
+                                "name": "value",
+                                "type": "bytes",
+                                "internalType": "bytes"
+                              },
+                              {
+                                "name": "leaf",
+                                "type": "tuple",
+                                "internalType": "struct LeafOpData",
+                                "components": [
+                                  {
+                                    "name": "hash",
+                                    "type": "uint8",
+                                    "internalType": "enum PROOFS_PROTO_GLOBAL_ENUMSHashOp"
+                                  },
+                                  {
+                                    "name": "prehash_key",
+                                    "type": "uint8",
+                                    "internalType": "enum PROOFS_PROTO_GLOBAL_ENUMSHashOp"
+                                  },
+                                  {
+                                    "name": "prehash_value",
+                                    "type": "uint8",
+                                    "internalType": "enum PROOFS_PROTO_GLOBAL_ENUMSHashOp"
+                                  },
+                                  {
+                                    "name": "length",
+                                    "type": "uint8",
+                                    "internalType": "enum PROOFS_PROTO_GLOBAL_ENUMSLengthOp"
+                                  },
+                                  {
+                                    "name": "prefix",
+                                    "type": "bytes",
+                                    "internalType": "bytes"
+                                  }
+                                ]
+                              },
+                              {
+                                "name": "path",
+                                "type": "tuple[]",
+                                "internalType": "struct InnerOpData[]",
+                                "components": [
+                                  {
+                                    "name": "hash",
+                                    "type": "uint8",
+                                    "internalType": "enum PROOFS_PROTO_GLOBAL_ENUMSHashOp"
+                                  },
+                                  {
+                                    "name": "prefix",
+                                    "type": "bytes",
+                                    "internalType": "bytes"
+                                  },
+                                  {
+                                    "name": "suffix",
+                                    "type": "bytes",
+                                    "internalType": "bytes"
+                                  }
+                                ]
+                              }
+                            ]
+                          },
+                          {
+                            "name": "right",
+                            "type": "tuple",
+                            "internalType": "struct ExistenceProofData",
+                            "components": [
+                              {
+                                "name": "key",
+                                "type": "bytes",
+                                "internalType": "bytes"
+                              },
+                              {
+                                "name": "value",
+                                "type": "bytes",
+                                "internalType": "bytes"
+                              },
+                              {
+                                "name": "leaf",
+                                "type": "tuple",
+                                "internalType": "struct LeafOpData",
+                                "components": [
+                                  {
+                                    "name": "hash",
+                                    "type": "uint8",
+                                    "internalType": "enum PROOFS_PROTO_GLOBAL_ENUMSHashOp"
+                                  },
+                                  {
+                                    "name": "prehash_key",
+                                    "type": "uint8",
+                                    "internalType": "enum PROOFS_PROTO_GLOBAL_ENUMSHashOp"
+                                  },
+                                  {
+                                    "name": "prehash_value",
+                                    "type": "uint8",
+                                    "internalType": "enum PROOFS_PROTO_GLOBAL_ENUMSHashOp"
+                                  },
+                                  {
+                                    "name": "length",
+                                    "type": "uint8",
+                                    "internalType": "enum PROOFS_PROTO_GLOBAL_ENUMSLengthOp"
+                                  },
+                                  {
+                                    "name": "prefix",
+                                    "type": "bytes",
+                                    "internalType": "bytes"
+                                  }
+                                ]
+                              },
+                              {
+                                "name": "path",
+                                "type": "tuple[]",
+                                "internalType": "struct InnerOpData[]",
+                                "components": [
+                                  {
+                                    "name": "hash",
+                                    "type": "uint8",
+                                    "internalType": "enum PROOFS_PROTO_GLOBAL_ENUMSHashOp"
+                                  },
+                                  {
+                                    "name": "prefix",
+                                    "type": "bytes",
+                                    "internalType": "bytes"
+                                  },
+                                  {
+                                    "name": "suffix",
+                                    "type": "bytes",
+                                    "internalType": "bytes"
+                                  }
+                                ]
+                              }
+                            ]
+                          }
+                        ]
+                      }
+                    ]
+                  }
+                ]
+              },
+              {
+                "name": "compressed",
+                "type": "tuple",
+                "internalType": "struct CompressedBatchProofData",
+                "components": [
+                  {
+                    "name": "entries",
+                    "type": "tuple[]",
+                    "internalType": "struct CompressedBatchEntryData[]",
+                    "components": [
+                      {
+                        "name": "exist",
+                        "type": "tuple",
+                        "internalType": "struct CompressedExistenceProofData",
+                        "components": [
+                          {
+                            "name": "key",
+                            "type": "bytes",
+                            "internalType": "bytes"
+                          },
+                          {
+                            "name": "value",
+                            "type": "bytes",
+                            "internalType": "bytes"
+                          },
+                          {
+                            "name": "leaf",
+                            "type": "tuple",
+                            "internalType": "struct LeafOpData",
+                            "components": [
+                              {
+                                "name": "hash",
+                                "type": "uint8",
+                                "internalType": "enum PROOFS_PROTO_GLOBAL_ENUMSHashOp"
+                              },
+                              {
+                                "name": "prehash_key",
+                                "type": "uint8",
+                                "internalType": "enum PROOFS_PROTO_GLOBAL_ENUMSHashOp"
+                              },
+                              {
+                                "name": "prehash_value",
+                                "type": "uint8",
+                                "internalType": "enum PROOFS_PROTO_GLOBAL_ENUMSHashOp"
+                              },
+                              {
+                                "name": "length",
+                                "type": "uint8",
+                                "internalType": "enum PROOFS_PROTO_GLOBAL_ENUMSLengthOp"
+                              },
+                              {
+                                "name": "prefix",
+                                "type": "bytes",
+                                "internalType": "bytes"
+                              }
+                            ]
+                          },
+                          {
+                            "name": "path",
+                            "type": "int32[]",
+                            "internalType": "int32[]"
+                          }
+                        ]
+                      },
+                      {
+                        "name": "nonexist",
+                        "type": "tuple",
+                        "internalType": "struct CompressedNonExistenceProofData",
+                        "components": [
+                          {
+                            "name": "key",
+                            "type": "bytes",
+                            "internalType": "bytes"
+                          },
+                          {
+                            "name": "left",
+                            "type": "tuple",
+                            "internalType": "struct CompressedExistenceProofData",
+                            "components": [
+                              {
+                                "name": "key",
+                                "type": "bytes",
+                                "internalType": "bytes"
+                              },
+                              {
+                                "name": "value",
+                                "type": "bytes",
+                                "internalType": "bytes"
+                              },
+                              {
+                                "name": "leaf",
+                                "type": "tuple",
+                                "internalType": "struct LeafOpData",
+                                "components": [
+                                  {
+                                    "name": "hash",
+                                    "type": "uint8",
+                                    "internalType": "enum PROOFS_PROTO_GLOBAL_ENUMSHashOp"
+                                  },
+                                  {
+                                    "name": "prehash_key",
+                                    "type": "uint8",
+                                    "internalType": "enum PROOFS_PROTO_GLOBAL_ENUMSHashOp"
+                                  },
+                                  {
+                                    "name": "prehash_value",
+                                    "type": "uint8",
+                                    "internalType": "enum PROOFS_PROTO_GLOBAL_ENUMSHashOp"
+                                  },
+                                  {
+                                    "name": "length",
+                                    "type": "uint8",
+                                    "internalType": "enum PROOFS_PROTO_GLOBAL_ENUMSLengthOp"
+                                  },
+                                  {
+                                    "name": "prefix",
+                                    "type": "bytes",
+                                    "internalType": "bytes"
+                                  }
+                                ]
+                              },
+                              {
+                                "name": "path",
+                                "type": "int32[]",
+                                "internalType": "int32[]"
+                              }
+                            ]
+                          },
+                          {
+                            "name": "right",
+                            "type": "tuple",
+                            "internalType": "struct CompressedExistenceProofData",
+                            "components": [
+                              {
+                                "name": "key",
+                                "type": "bytes",
+                                "internalType": "bytes"
+                              },
+                              {
+                                "name": "value",
+                                "type": "bytes",
+                                "internalType": "bytes"
+                              },
+                              {
+                                "name": "leaf",
+                                "type": "tuple",
+                                "internalType": "struct LeafOpData",
+                                "components": [
+                                  {
+                                    "name": "hash",
+                                    "type": "uint8",
+                                    "internalType": "enum PROOFS_PROTO_GLOBAL_ENUMSHashOp"
+                                  },
+                                  {
+                                    "name": "prehash_key",
+                                    "type": "uint8",
+                                    "internalType": "enum PROOFS_PROTO_GLOBAL_ENUMSHashOp"
+                                  },
+                                  {
+                                    "name": "prehash_value",
+                                    "type": "uint8",
+                                    "internalType": "enum PROOFS_PROTO_GLOBAL_ENUMSHashOp"
+                                  },
+                                  {
+                                    "name": "length",
+                                    "type": "uint8",
+                                    "internalType": "enum PROOFS_PROTO_GLOBAL_ENUMSLengthOp"
+                                  },
+                                  {
+                                    "name": "prefix",
+                                    "type": "bytes",
+                                    "internalType": "bytes"
+                                  }
+                                ]
+                              },
+                              {
+                                "name": "path",
+                                "type": "int32[]",
+                                "internalType": "int32[]"
+                              }
+                            ]
+                          }
+                        ]
+                      }
+                    ]
+                  },
+                  {
+                    "name": "lookup_inners",
+                    "type": "tuple[]",
+                    "internalType": "struct InnerOpData[]",
+                    "components": [
+                      {
+                        "name": "hash",
+                        "type": "uint8",
+                        "internalType": "enum PROOFS_PROTO_GLOBAL_ENUMSHashOp"
+                      },
+                      {
+                        "name": "prefix",
+                        "type": "bytes",
+                        "internalType": "bytes"
+                      },
+                      {
+                        "name": "suffix",
+                        "type": "bytes",
+                        "internalType": "bytes"
+                      }
+                    ]
+                  }
+                ]
+              }
+            ]
+          }
+        ]
+      }
+    ],
+    "outputs": [],
+    "stateMutability": "view"
+  },
+  {
+    "type": "function",
+    "name": "verifyMembership",
+    "inputs": [
+      {
+        "name": "proofSpecs",
+        "type": "tuple[]",
+        "internalType": "struct ProofSpecData[]",
+        "components": [
+          {
+            "name": "leaf_spec",
+            "type": "tuple",
+            "internalType": "struct LeafOpData",
+            "components": [
+              {
+                "name": "hash",
+                "type": "uint8",
+                "internalType": "enum PROOFS_PROTO_GLOBAL_ENUMSHashOp"
+              },
+              {
+                "name": "prehash_key",
+                "type": "uint8",
+                "internalType": "enum PROOFS_PROTO_GLOBAL_ENUMSHashOp"
+              },
+              {
+                "name": "prehash_value",
+                "type": "uint8",
+                "internalType": "enum PROOFS_PROTO_GLOBAL_ENUMSHashOp"
+              },
+              {
+                "name": "length",
+                "type": "uint8",
+                "internalType": "enum PROOFS_PROTO_GLOBAL_ENUMSLengthOp"
+              },
+              {
+                "name": "prefix",
+                "type": "bytes",
+                "internalType": "bytes"
+              }
+            ]
+          },
+          {
+            "name": "inner_spec",
+            "type": "tuple",
+            "internalType": "struct InnerSpecData",
+            "components": [
+              {
+                "name": "child_order",
+                "type": "int32[]",
+                "internalType": "int32[]"
+              },
+              {
+                "name": "child_size",
+                "type": "int32",
+                "internalType": "int32"
+              },
+              {
+                "name": "min_prefix_length",
+                "type": "int32",
+                "internalType": "int32"
+              },
+              {
+                "name": "max_prefix_length",
+                "type": "int32",
+                "internalType": "int32"
+              },
+              {
+                "name": "empty_child",
+                "type": "bytes",
+                "internalType": "bytes"
+              },
+              {
+                "name": "hash",
+                "type": "uint8",
+                "internalType": "enum PROOFS_PROTO_GLOBAL_ENUMSHashOp"
+              }
+            ]
+          },
+          {
+            "name": "max_depth",
+            "type": "int32",
+            "internalType": "int32"
+          },
+          {
+            "name": "min_depth",
+            "type": "int32",
+            "internalType": "int32"
+          }
+        ]
+      },
+      {
+        "name": "proof",
+        "type": "bytes",
+        "internalType": "bytes"
+      },
+      {
+        "name": "root",
+        "type": "bytes32",
+        "internalType": "bytes32"
+      },
+      {
+        "name": "keys",
+        "type": "bytes[]",
+        "internalType": "bytes[]"
+      },
+      {
+        "name": "expectedValue",
+        "type": "bytes",
+        "internalType": "bytes"
+      },
+      {
+        "name": "startIndex",
+        "type": "uint256",
+        "internalType": "uint256"
+      }
+    ],
+    "outputs": [
+      {
+        "name": "",
+        "type": "bool",
+        "internalType": "bool"
+      }
+    ],
+    "stateMutability": "view"
+  },
+  {
+    "type": "function",
+    "name": "verifyNonMembership",
+    "inputs": [
+      {
+        "name": "proofSpecs",
+        "type": "tuple[]",
+        "internalType": "struct ProofSpecData[]",
+        "components": [
+          {
+            "name": "leaf_spec",
+            "type": "tuple",
+            "internalType": "struct LeafOpData",
+            "components": [
+              {
+                "name": "hash",
+                "type": "uint8",
+                "internalType": "enum PROOFS_PROTO_GLOBAL_ENUMSHashOp"
+              },
+              {
+                "name": "prehash_key",
+                "type": "uint8",
+                "internalType": "enum PROOFS_PROTO_GLOBAL_ENUMSHashOp"
+              },
+              {
+                "name": "prehash_value",
+                "type": "uint8",
+                "internalType": "enum PROOFS_PROTO_GLOBAL_ENUMSHashOp"
+              },
+              {
+                "name": "length",
+                "type": "uint8",
+                "internalType": "enum PROOFS_PROTO_GLOBAL_ENUMSLengthOp"
+              },
+              {
+                "name": "prefix",
+                "type": "bytes",
+                "internalType": "bytes"
+              }
+            ]
+          },
+          {
+            "name": "inner_spec",
+            "type": "tuple",
+            "internalType": "struct InnerSpecData",
+            "components": [
+              {
+                "name": "child_order",
+                "type": "int32[]",
+                "internalType": "int32[]"
+              },
+              {
+                "name": "child_size",
+                "type": "int32",
+                "internalType": "int32"
+              },
+              {
+                "name": "min_prefix_length",
+                "type": "int32",
+                "internalType": "int32"
+              },
+              {
+                "name": "max_prefix_length",
+                "type": "int32",
+                "internalType": "int32"
+              },
+              {
+                "name": "empty_child",
+                "type": "bytes",
+                "internalType": "bytes"
+              },
+              {
+                "name": "hash",
+                "type": "uint8",
+                "internalType": "enum PROOFS_PROTO_GLOBAL_ENUMSHashOp"
+              }
+            ]
+          },
+          {
+            "name": "max_depth",
+            "type": "int32",
+            "internalType": "int32"
+          },
+          {
+            "name": "min_depth",
+            "type": "int32",
+            "internalType": "int32"
+          }
+        ]
+      },
+      {
+        "name": "encodedProof",
+        "type": "bytes",
+        "internalType": "bytes"
+      },
+      {
+        "name": "root",
+        "type": "bytes32",
+        "internalType": "bytes32"
+      },
+      {
+        "name": "keys",
+        "type": "bytes[]",
+        "internalType": "bytes[]"
+      }
+    ],
+    "outputs": [
+      {
+        "name": "",
+        "type": "bool",
+        "internalType": "bool"
+      }
+    ],
+    "stateMutability": "view"
+  }
+]

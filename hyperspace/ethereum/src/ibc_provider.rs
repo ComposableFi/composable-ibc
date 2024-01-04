@@ -292,7 +292,7 @@ impl EthereumClient {
 		// First, we try to find an `UpdateClient` event at the given height...
 		let mut client_state = None;
 		let maybe_log = self
-			.get_logs_for_event_name::<UpdateClientHeightFilter>(
+			.get_logs_for_event_name::<UpdateClientFilter>(
 				self.contract_creation_block(),
 				at.revision_height,
 				&format!("event_data->>'client_id' = '{client_id}'"),
@@ -641,7 +641,7 @@ impl IbcProvider for EthereumClient {
 		// First, we try to find an `UpdateClient` event at the given height...
 		let mut consensus_state = None;
 		let maybe_log = self
-			.get_logs_for_event_name::<UpdateClientHeightFilter>(
+			.get_logs_for_event_name::<UpdateClientFilter>(
                 self.contract_creation_block(),
 				at.revision_height,
 				&format!(
@@ -779,7 +779,7 @@ impl IbcProvider for EthereumClient {
 		// First, we try to find an `UpdateClient` event at the given height...
 		let mut client_state = None;
 		let maybe_log = self
-			.get_logs_for_event_name::<UpdateClientHeightFilter>(
+			.get_logs_for_event_name::<UpdateClientFilter>(
 				self.contract_creation_block(),
 				at.revision_height,
 				&format!("event_data->>'client_id' = '{client_id}'"),
@@ -1494,7 +1494,7 @@ impl IbcProvider for EthereumClient {
 		info!(target: "hyperspace_ethereum", "query_client_update_time_and_height: {client_id:?}, {client_height:?}");
 
 		let result = self
-			.get_logs_for_event_name::<UpdateClientHeightFilter>(
+			.get_logs_for_event_name::<UpdateClientFilter>(
 				self.contract_creation_block(),
 				BlockNumber::Latest,
 				&format!(
@@ -1508,7 +1508,7 @@ impl IbcProvider for EthereumClient {
 			Ok(v) => v,
 			Err(_) => {
 				 self
-					.get_logs_for_event_name::<CreateClientHeightFilter>(
+					.get_logs_for_event_name::<CreateClientFilter>(
 						self.contract_creation_block(),
 						BlockNumber::Latest,
 						&format!(

@@ -370,8 +370,6 @@ fn parse_log(log: Log) -> Result<Option<String>, Error> {
 		// TimeoutOnClosePacketFilter,
 		// Client
 		CreateClientFilter,
-		CreateClientHeightFilter,
-		UpdateClientHeightFilter,
 		UpdateClientFilter,
 		// Custom
 		RegisterClientFilter,

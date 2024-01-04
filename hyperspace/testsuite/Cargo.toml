@@ -50,13 +50,14 @@ rand = "0.8.5"
 toml = "0.7.4"
 evm-indexer = { path = "../ethereum/evm-indexer" }
 itertools = "0.12.0"
+hyperspace-ethereum = { path = "../ethereum", features = ["no_beacon"] }
 
 [dev-dependencies]
 subxt = { git = "https://github.com/paritytech/subxt",  rev = "2a4da618a033bb82f768e4ef67b093b371f8b492", features = ["substrate-compat"] }
 hyperspace-core = { path = "../core", features = ["testing"] }
 hyperspace-parachain = { path = "../parachain", features = ["testing"] }
 hyperspace-cosmos = { path = "../cosmos", features = [] }
-hyperspace-ethereum = { path = "../ethereum", features = ["no_beacon"] }
+hyperspace-ethereum = { path = "../ethereum", features = [] }
 
 [features]
 parachain = [

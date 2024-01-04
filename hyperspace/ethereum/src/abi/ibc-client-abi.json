@@ -99,31 +99,6 @@
         "internalType": "string"
       },
       {
-        "name": "clientIdIndexed",
-        "type": "string",
-        "indexed": true,
-        "internalType": "string"
-      },
-      {
-        "name": "clientType",
-        "type": "string",
-        "indexed": false,
-        "internalType": "string"
-      }
-    ],
-    "anonymous": false
-  },
-  {
-    "type": "event",
-    "name": "CreateClientHeight",
-    "inputs": [
-      {
-        "name": "clientId",
-        "type": "string",
-        "indexed": false,
-        "internalType": "string"
-      },
-      {
         "name": "client_height",
         "type": "tuple",
         "indexed": false,
@@ -179,31 +154,6 @@
   {
     "type": "event",
     "name": "UpdateClient",
-    "inputs": [
-      {
-        "name": "clientId",
-        "type": "string",
-        "indexed": false,
-        "internalType": "string"
-      },
-      {
-        "name": "clientIdIndexed",
-        "type": "string",
-        "indexed": true,
-        "internalType": "string"
-      },
-      {
-        "name": "header",
-        "type": "bytes32",
-        "indexed": false,
-        "internalType": "bytes32"
-      }
-    ],
-    "anonymous": false
-  },
-  {
-    "type": "event",
-    "name": "UpdateClientHeight",
     "inputs": [
       {
         "name": "clientId",
