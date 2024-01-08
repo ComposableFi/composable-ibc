@@ -73,6 +73,7 @@ use crate::{
 	chain::{
 		client_state_from_abi_token, consensus_state_from_abi_token, tm_header_from_abi_token,
 	},
+	config::ContractName,
 	utils::{create_intervals, SEQUENCES_PER_ITER},
 };
 use ibc::{
@@ -181,6 +182,9 @@ abigen!(
 
 	RelayerWhitelistFacetAbi,
 	"hyperspace/ethereum/src/abi/relayer-whitelist-facet-abi.json";
+
+	CallBatchFacetAbi,
+	"hyperspace/ethereum/src/abi/call-batch-facet-abi.json";
 );
 
 impl From<HeightData> for Height {
@@ -591,7 +595,7 @@ impl IbcProvider for EthereumClient {
 
 	// TODO: this function is mostly used in tests and in 'fishing' mode.
 	async fn ibc_events(&self) -> Pin<Box<dyn Stream<Item = IbcEvent> + Send + 'static>> {
-		let ibc_address = self.yui.diamond.address();
+		let ibc_address = self.yui.ibc_core_diamond.address();
 		let client = self.clone();
 
 		let creation_block = self.contract_creation_block();
@@ -1532,10 +1536,7 @@ impl IbcProvider for EthereumClient {
 	) -> Result<Vec<PrefixedCoin>, Self::Error> {
 		let balance = self
 			.yui
-			.ics20_transfer_bank
-			.as_ref()
-			.ok_or(ClientError::Other("bank contract not found".to_string()))?
-			.method::<_, U256>(
+			.method_diamond::<_, U256>(
 				"balanceOf",
 				(
 					H160::from_str(&self.account_id().to_string()).map_err(|_| {
@@ -1543,6 +1544,7 @@ impl IbcProvider for EthereumClient {
 					})?,
 					asset_id.clone(),
 				),
+				ContractName::IbcTransferDiamond,
 			)?
 			.call()
 			.await?;
@@ -1610,13 +1612,18 @@ impl IbcProvider for EthereumClient {
 			.event_for_name::<GeneratedClientIdentifierFilter>("GeneratedClientIdentifier")
 			.map_err(|err| ClientError::ContractAbiError(err))?
 			.from_block(self.contract_creation_block())
-			.address(ValueOrArray::Value(self.yui.diamond.address()))
+			.address(ValueOrArray::Value(self.yui.ibc_core_diamond.address()))
 			.to_block(BlockNumber::Latest);
 
 		// TODO: filter by client type?
 
-		let logs =
-			self.yui.diamond.client().get_logs(&event_filter.filter).await.map_err(|err| {
+		let logs = self
+			.yui
+			.ibc_core_diamond
+			.client()
+			.get_logs(&event_filter.filter)
+			.await
+			.map_err(|err| {
 				ClientError::Other(format!("failed to get logs in query_clients: {}", err))
 			})?;
 
@@ -1651,11 +1658,16 @@ impl IbcProvider for EthereumClient {
 			.event_for_name::<GeneratedConnectionIdentifierFilter>("GeneratedConnectionIdentifier")
 			.map_err(|err| ClientError::ContractAbiError(err))?
 			.from_block(self.contract_creation_block())
-			.address(ValueOrArray::Value(self.yui.diamond.address())) // TODO: use contract creation height
+			.address(ValueOrArray::Value(self.yui.ibc_core_diamond.address())) // TODO: use contract creation height
 			.to_block(BlockNumber::Number(height.into()));
 
-		let logs =
-			self.yui.diamond.client().get_logs(&event_filter.filter).await.map_err(|err| {
+		let logs = self
+			.yui
+			.ibc_core_diamond
+			.client()
+			.get_logs(&event_filter.filter)
+			.await
+			.map_err(|err| {
 				ClientError::Other(format!(
 					"failed to get logs in query_connection_using_client: {}",
 					err
@@ -1706,11 +1718,16 @@ impl IbcProvider for EthereumClient {
 			.event_for_name::<GeneratedChannelIdentifierFilter>("GeneratedChannelIdentifier")
 			.map_err(|err| ClientError::ContractAbiError(err))?
 			.from_block(self.contract_creation_block())
-			.address(ValueOrArray::Value(self.yui.diamond.address()))
+			.address(ValueOrArray::Value(self.yui.ibc_core_diamond.address()))
 			.to_block(BlockNumber::Number(height.revision_height.into()));
 
-		let logs =
-			self.yui.diamond.client().get_logs(&event_filter.filter).await.map_err(|err| {
+		let logs = self
+			.yui
+			.ibc_core_diamond
+			.client()
+			.get_logs(&event_filter.filter)
+			.await
+			.map_err(|err| {
 				ClientError::Other(format!(
 					"failed to get logs in query_connection_channels: {}",
 					err
@@ -1910,12 +1927,12 @@ impl IbcProvider for EthereumClient {
 			.yui
 			.event_for_name::<GeneratedClientIdentifierFilter>("GeneratedClientIdentifier")
 			.map_err(|err| ClientError::ContractAbiError(err))?
-			.address(ValueOrArray::Value(self.yui.diamond.address()))
+			.address(ValueOrArray::Value(self.yui.ibc_core_diamond.address()))
 			.from_block(block_number)
 			.to_block(block_number);
 		let log = self
 			.yui
-			.diamond
+			.ibc_core_diamond
 			.client()
 			.get_logs(&event_filter.filter)
 			.await
@@ -1960,11 +1977,11 @@ impl IbcProvider for EthereumClient {
 			.event_for_name::<OpenInitConnectionFilter>("OpenInitConnection")
 			.map_err(|err| ClientError::ContractAbiError(err))?
 			.from_block(block_number)
-			.address(ValueOrArray::Value(self.yui.diamond.address()))
+			.address(ValueOrArray::Value(self.yui.ibc_core_diamond.address()))
 			.to_block(block_number);
 		let log = self
 			.yui
-			.diamond
+			.ibc_core_diamond
 			.client()
 			.get_logs(&event_filter.filter)
 			.await
@@ -2005,11 +2022,11 @@ impl IbcProvider for EthereumClient {
 			.event_for_name::<OpenInitChannelFilter>("OpenInitChannel")
 			.map_err(|err| ClientError::ContractAbiError(err))?
 			.from_block(block_number)
-			.address(ValueOrArray::Value(self.yui.diamond.address()))
+			.address(ValueOrArray::Value(self.yui.ibc_core_diamond.address()))
 			.to_block(block_number);
 		let log = self
 			.yui
-			.diamond
+			.ibc_core_diamond
 			.client()
 			.get_logs(&event_filter.filter)
 			.await

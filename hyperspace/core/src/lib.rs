@@ -39,7 +39,7 @@ use ibc_proto::google::protobuf::Any;
 use itertools::Itertools;
 use metrics::handler::MetricsHandler;
 use primitives::{utils::RecentStream, Chain, IbcProvider, UndeliveredType, UpdateType};
-use std::collections::HashSet;
+use std::{collections::HashSet, time::Duration};
 use tendermint_proto::Protobuf;
 
 #[derive(Copy, Debug, Clone)]

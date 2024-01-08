@@ -1,21 +1,5 @@
 [
   {
-    "inputs": [
-      {
-        "internalType": "contract IDiamond",
-        "name": "ibcHandler_",
-        "type": "address"
-      },
-      {
-        "internalType": "contract IICS20Bank",
-        "name": "bank_",
-        "type": "address"
-      }
-    ],
-    "stateMutability": "nonpayable",
-    "type": "constructor"
-  },
-  {
     "inputs": [],
     "name": "ICS20_VERSION",
     "outputs": [
@@ -63,6 +47,24 @@
       }
     ],
     "stateMutability": "view",
+    "type": "function"
+  },
+  {
+    "inputs": [
+      {
+        "internalType": "contract IDiamond",
+        "name": "ibcHandler_",
+        "type": "address"
+      },
+      {
+        "internalType": "contract IICS20Bank",
+        "name": "bank_",
+        "type": "address"
+      }
+    ],
+    "name": "init",
+    "outputs": [],
+    "stateMutability": "nonpayable",
     "type": "function"
   },
   {

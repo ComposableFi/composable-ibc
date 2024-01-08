@@ -197,7 +197,7 @@ where
 	let msg = MsgTransfer {
 		source_port: PortId::transfer(),
 		source_channel: channel_id,
-		token: coin,
+		token: coin.clone(),
 		sender: chain_a.account_id(),
 		receiver: chain_b.account_id(),
 		timeout_height,
@@ -206,6 +206,7 @@ where
 	};
 	// chain_a.query_seq_from_tx_hash();
 	chain_a.send_transfer(msg.clone()).await.expect("Failed to send transfer: ");
+	log::info!(target: "hyperspace", "🚀 Token Transfer initiated from {}: {}", chain_a.name(), coin);
 	(amount, msg)
 }
 

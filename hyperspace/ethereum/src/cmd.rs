@@ -39,9 +39,9 @@ impl DeployCoreCmd {
 		let client = config.client().await?;
 		let path = &self.yui_solidity_path;
 		let yui_ibc = deploy_ibc::<EthRpcClient>(path, client).await?;
-		config.diamond_address = Some(yui_ibc.diamond.address());
-		config.diamond_facets = yui_ibc
-			.deployed_facets
+		config.ibc_core_diamond_address = Some(yui_ibc.ibc_core_diamond.address());
+		config.ibc_core_facets = yui_ibc
+			.ibc_core_facets
 			.iter()
 			.map(|x| (x.abi_name(), x.contract().address()))
 			.collect();
@@ -72,24 +72,27 @@ impl DeployClientCmd {
 	) -> anyhow::Result<EthereumClientConfig> {
 		let client = config.client().await?;
 		let path = &self.yui_solidity_path;
-		let diamond_addr = config.diamond_address.ok_or_else(|| {
+		let diamond_addr = config.ibc_core_diamond_address.ok_or_else(|| {
 			anyhow!("Diamond contract should be deployed first (use 'deploy core' subcommand)")
 		})?;
-		let facets = config.diamond_facets.clone();
+		let facets = config.ibc_core_facets.clone();
 		if facets.is_empty() {
 			bail!("Diamond facets are empty. Make sure to deploy the core first ('deploy core')")
 		};
 		let yui_ibc = DeployYuiIbc::<_, EthRpcClient>::from_addresses(
 			client.clone(),
 			diamond_addr,
-			None,
-			None,
-			None,
-			None,
 			facets,
+			None,
+			vec![],
+			None,
+			vec![],
+			None,
+			vec![],
+			None,
 		)
 		.await?;
-		let contract = deploy_client(
+		let (contract, facets) = deploy_client(
 			path,
 			yui_ibc.clone(),
 			self.client_type.clone(),
@@ -97,7 +100,11 @@ impl DeployClientCmd {
 			client,
 		)
 		.await?;
-		config.tendermint_address = Some(contract.address());
+		config.tendermint_diamond_address = Some(contract.address());
+		config.tendermint_facets = facets
+			.into_iter()
+			.map(|contract| (contract.abi_name(), contract.contract().address()))
+			.collect();
 		Ok(config)
 	}
 }
@@ -116,28 +123,39 @@ impl DeployTransferModuleCmd {
 		let client = config.client().await?;
 		client.address();
 		let path = &self.yui_solidity_path;
-		let diamond_addr = config.diamond_address.ok_or_else(|| {
+		let diamond_addr = config.ibc_core_diamond_address.ok_or_else(|| {
 			anyhow!("Diamond contract should be deployed first (use 'deploy core' subcommand)")
 		})?;
-		let facets = config.diamond_facets.clone();
+		let facets = config.ibc_core_facets.clone();
 		if facets.is_empty() {
 			bail!("Diamond facets are empty. Make sure to deploy the core first ('deploy core')")
 		};
 		let yui_ibc = DeployYuiIbc::<_, EthRpcClient>::from_addresses(
 			client.clone(),
 			diamond_addr,
-			None,
-			None,
-			None,
-			None,
 			facets,
+			None,
+			vec![],
+			None,
+			vec![],
+			None,
+			vec![],
+			None,
 		)
 		.await?;
 
-		let (transfer_bank_contract, bank_contract) =
+		let (ibc_transfer_bank_diamond, transfer_bank_facets, bank_diamond, bank_facets) =
 			deploy_transfer_module::<Provider<_>, _>(path, yui_ibc, diamond_addr, client).await?;
-		config.ics20_transfer_bank_address = Some(transfer_bank_contract.address());
-		config.ics20_bank_address = Some(bank_contract.address());
+		config.ibc_transfer_diamond_address = Some(ibc_transfer_bank_diamond.address());
+		config.ibc_transfer_facets = transfer_bank_facets
+			.into_iter()
+			.map(|f| (f.abi_name(), f.contract().address()))
+			.collect();
+		config.bank_diamond_address = Some(bank_diamond.address());
+		config.bank_facets = bank_facets
+			.into_iter()
+			.map(|f| (f.abi_name(), f.contract().address()))
+			.collect();
 		Ok(config)
 	}
 }
