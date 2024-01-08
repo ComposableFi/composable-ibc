@@ -80,4 +80,8 @@ testnet = [
     "sync-committee-primitives/sepolia",
     "sync-committee-verifier/sepolia",
 ]
+mainnet = [
+    "sync-committee-primitives/mainnet",
+    "sync-committee-verifier/mainnet",
+]
 no_beacon = []

@@ -12,15 +12,15 @@
 // WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 // See the License for the specific language governing permissions and
 // limitations under the License.
-
 use crate::{
-	alloc::string::ToString,
 	client_message::{ClientMessage, Misbehaviour},
 	client_state::ClientState,
 	consensus_state::ConsensusState,
 	error::Error,
 	verify::verify_ibc_proof,
 };
+#[cfg(not(feature = "no_beacon"))]
+use alloc::string::ToString;
 use alloc::{vec, vec::Vec};
 use anyhow::anyhow;
 use core::{fmt::Debug, marker::PhantomData, str::FromStr};
@@ -46,9 +46,9 @@ use ibc::{
 	},
 	Height,
 };
-use sync_committee_primitives::{
-	consensus_types::BeaconBlockHeader, types::VerifierState as LightClientState,
-};
+#[cfg(feature = "no_beacon")]
+use sync_committee_primitives::types::VerifierState as LightClientState;
+#[cfg(not(feature = "no_beacon"))]
 use sync_committee_verifier::verify_sync_committee_attestation;
 
 // TODO: move this function in a separate crate and remove the one from `light_client_common` crate
@@ -174,20 +174,22 @@ where
 		let new_light_client_state = {
 			let cs = client_state.inner;
 			verify_sync_committee_attestation(cs, header)
-				.map_err(|e| Ics02Error::implementation_specific(e.to_string()))?;
+				.map_err(|e| Ics02Error::implementation_specific(e.to_string()))?
 		};
-		let update = header;
 		#[cfg(feature = "no_beacon")]
-		let new_light_client_state = if let Some(sync_committee_update) = update.sync_committee_update {
-			LightClientState {
-				finalized_header: update.finalized_header,
-				latest_finalized_epoch: update.finality_proof.epoch,
-				current_sync_committee: client_state.inner.next_sync_committee,
-				next_sync_committee: sync_committee_update.next_sync_committee,
-				state_period: 0,
+		let new_light_client_state = {
+			let update = header;
+			if let Some(sync_committee_update) = update.sync_committee_update {
+				LightClientState {
+					finalized_header: update.finalized_header,
+					latest_finalized_epoch: update.finality_proof.epoch,
+					current_sync_committee: client_state.inner.next_sync_committee,
+					next_sync_committee: sync_committee_update.next_sync_committee,
+					state_period: 0,
+				}
+			} else {
+				LightClientState { finalized_header: update.finalized_header, ..client_state.inner }
 			}
-		} else {
-			LightClientState { finalized_header: update.finalized_header, ..client_state.inner }
 		};
 
 		// TODO: verify ancestor blocks
