@@ -1,5 +1,21 @@
 [
   {
+    "inputs": [
+      {
+        "internalType": "address",
+        "name": "_user",
+        "type": "address"
+      },
+      {
+        "internalType": "address",
+        "name": "_contractOwner",
+        "type": "address"
+      }
+    ],
+    "name": "NotContractOwner",
+    "type": "error"
+  },
+  {
     "anonymous": false,
     "inputs": [
       {
@@ -26,7 +42,7 @@
   },
   {
     "inputs": [],
-    "name": "ADMIN_ROLE",
+    "name": "OWNER_ROLE",
     "outputs": [
       {
         "internalType": "bytes32",
@@ -39,7 +55,7 @@
   },
   {
     "inputs": [],
-    "name": "OWNER_ROLE",
+    "name": "TRANSFER_MODULE_ROLE",
     "outputs": [
       {
         "internalType": "bytes32",
@@ -140,6 +156,11 @@
         "internalType": "address",
         "name": "admin",
         "type": "address"
+      },
+      {
+        "internalType": "address[]",
+        "name": "whitelistTokens",
+        "type": "address[]"
       }
     ],
     "name": "init",
@@ -225,6 +246,78 @@
     "inputs": [
       {
         "internalType": "address",
+        "name": "token",
+        "type": "address"
+      },
+      {
+        "internalType": "uint8",
+        "name": "precision",
+        "type": "uint8"
+      }
+    ],
+    "name": "tokenSetDecimals",
+    "outputs": [],
+    "stateMutability": "nonpayable",
+    "type": "function"
+  },
+  {
+    "inputs": [
+      {
+        "internalType": "address",
+        "name": "token",
+        "type": "address"
+      },
+      {
+        "internalType": "string",
+        "name": "name",
+        "type": "string"
+      }
+    ],
+    "name": "tokenSetName",
+    "outputs": [],
+    "stateMutability": "nonpayable",
+    "type": "function"
+  },
+  {
+    "inputs": [
+      {
+        "internalType": "address",
+        "name": "token",
+        "type": "address"
+      },
+      {
+        "internalType": "string",
+        "name": "symbol",
+        "type": "string"
+      }
+    ],
+    "name": "tokenSetSymbol",
+    "outputs": [],
+    "stateMutability": "nonpayable",
+    "type": "function"
+  },
+  {
+    "inputs": [
+      {
+        "internalType": "address",
+        "name": "token",
+        "type": "address"
+      },
+      {
+        "internalType": "address",
+        "name": "account",
+        "type": "address"
+      }
+    ],
+    "name": "tokenUpdateOwnership",
+    "outputs": [],
+    "stateMutability": "nonpayable",
+    "type": "function"
+  },
+  {
+    "inputs": [
+      {
+        "internalType": "address",
         "name": "to",
         "type": "address"
       },
@@ -293,22 +386,25 @@
   {
     "inputs": [
       {
-        "internalType": "bytes32",
-        "name": "role",
-        "type": "bytes32"
-      },
-      {
-        "internalType": "address",
-        "name": "account",
-        "type": "address"
-      },
-      {
-        "internalType": "address",
+        "internalType": "contract IERC20",
         "name": "token",
         "type": "address"
       }
     ],
-    "name": "updateRole",
+    "name": "unwhitelistToken",
+    "outputs": [],
+    "stateMutability": "nonpayable",
+    "type": "function"
+  },
+  {
+    "inputs": [
+      {
+        "internalType": "contract IERC20",
+        "name": "token",
+        "type": "address"
+      }
+    ],
+    "name": "whitelistToken",
     "outputs": [],
     "stateMutability": "nonpayable",
     "type": "function"

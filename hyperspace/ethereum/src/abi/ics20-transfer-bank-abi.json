@@ -60,6 +60,11 @@
         "internalType": "contract IICS20Bank",
         "name": "bank_",
         "type": "address"
+      },
+      {
+        "internalType": "uint64",
+        "name": "minTimeoutTimestamp_",
+        "type": "uint64"
       }
     ],
     "name": "init",

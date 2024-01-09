@@ -1,0 +1,176 @@
+[
+  {
+    "inputs": [
+      {
+        "internalType": "address",
+        "name": "_contractAddress",
+        "type": "address"
+      },
+      {
+        "internalType": "string",
+        "name": "_message",
+        "type": "string"
+      }
+    ],
+    "name": "NoBytecodeAtAddress",
+    "type": "error"
+  },
+  {
+    "inputs": [
+      {
+        "internalType": "address",
+        "name": "_user",
+        "type": "address"
+      },
+      {
+        "internalType": "address",
+        "name": "_contractOwner",
+        "type": "address"
+      }
+    ],
+    "name": "NotContractOwner",
+    "type": "error"
+  },
+  {
+    "inputs": [
+      {
+        "internalType": "address",
+        "name": "signatory",
+        "type": "address"
+      }
+    ],
+    "name": "addSignatory",
+    "outputs": [],
+    "stateMutability": "nonpayable",
+    "type": "function"
+  },
+  {
+    "inputs": [
+      {
+        "internalType": "bytes",
+        "name": "callData",
+        "type": "bytes"
+      },
+      {
+        "internalType": "uint8",
+        "name": "nonce",
+        "type": "uint8"
+      },
+      {
+        "components": [
+          {
+            "components": [
+              {
+                "internalType": "bytes",
+                "name": "ed25519",
+                "type": "bytes"
+              },
+              {
+                "internalType": "bytes",
+                "name": "secp256k1",
+                "type": "bytes"
+              },
+              {
+                "internalType": "bytes",
+                "name": "sr25519",
+                "type": "bytes"
+              }
+            ],
+            "internalType": "struct PublicKeyData",
+            "name": "pub_key",
+            "type": "tuple"
+          },
+          {
+            "internalType": "int64",
+            "name": "voting_power",
+            "type": "int64"
+          }
+        ],
+        "internalType": "struct SimpleValidatorData[]",
+        "name": "validators",
+        "type": "tuple[]"
+      },
+      {
+        "internalType": "bytes",
+        "name": "proof",
+        "type": "bytes"
+      },
+      {
+        "components": [
+          {
+            "internalType": "uint8",
+            "name": "v",
+            "type": "uint8"
+          },
+          {
+            "internalType": "bytes32",
+            "name": "r",
+            "type": "bytes32"
+          },
+          {
+            "internalType": "bytes32",
+            "name": "s",
+            "type": "bytes32"
+          }
+        ],
+        "internalType": "struct LibGovernanceEcdsaSignature[]",
+        "name": "additionalSignatures",
+        "type": "tuple[]"
+      }
+    ],
+    "name": "execute",
+    "outputs": [
+      {
+        "internalType": "bool",
+        "name": "",
+        "type": "bool"
+      },
+      {
+        "internalType": "bytes",
+        "name": "",
+        "type": "bytes"
+      }
+    ],
+    "stateMutability": "nonpayable",
+    "type": "function"
+  },
+  {
+    "inputs": [
+      {
+        "internalType": "address",
+        "name": "signatory",
+        "type": "address"
+      }
+    ],
+    "name": "removeSignatory",
+    "outputs": [],
+    "stateMutability": "nonpayable",
+    "type": "function"
+  },
+  {
+    "inputs": [
+      {
+        "internalType": "contract IGovernanceProxy",
+        "name": "proxy",
+        "type": "address"
+      }
+    ],
+    "name": "setProxy",
+    "outputs": [],
+    "stateMutability": "nonpayable",
+    "type": "function"
+  },
+  {
+    "inputs": [
+      {
+        "internalType": "contract ITendermintLightClient",
+        "name": "client",
+        "type": "address"
+      }
+    ],
+    "name": "setTendermintClient",
+    "outputs": [],
+    "stateMutability": "nonpayable",
+    "type": "function"
+  }
+]
