@@ -235,7 +235,10 @@ async fn owner_test_tx(
 	eth_client: &EthereumClient,
 	cosmos_client: &CosmosClient<()>,
 	calldata: Bytes,
+	diamond_address: Address,
 ) -> TypedTransaction {
+	use crate::ibc_provider::LibGovernanceEcdsaSignature;
+	use ethers::abi::Tokenizable;
 	use hyperspace_ethereum::ibc_provider::SimpleValidatorData;
 
 	let validator_set = get_current_validator_set(cosmos_client, eth_client).await;
@@ -260,7 +263,14 @@ async fn owner_test_tx(
 			SimpleValidatorData { pub_key, voting_power: x.power.into() }
 		})
 		.collect::<Vec<_>>();
-	let method = eth_client
+	let data =
+		[calldata.as_slice(), 0u8.to_le_bytes().as_slice(), diamond_address.as_bytes()].concat();
+	let keccak257 = keccak256(data.clone());
+	let signature = eth_client.client().signer().sign_message(keccak257).await.unwrap();
+	let r: [u8; 32] = signature.r.into();
+	let s: [u8; 32] = signature.s.into();
+
+	let mut method = eth_client
 		.yui
 		.method::<_, (bool, Vec<u8>)>(
 			"execute",
@@ -269,9 +279,11 @@ async fn owner_test_tx(
 				Token::Uint(U256::zero()),
 				validators,
 				Token::Bytes(Bytes::new()),
+				vec![LibGovernanceEcdsaSignature { r, s, v: signature.v as _ }],
 			),
 		)
 		.unwrap();
+	method.tx.set_to(diamond_address);
 	method.tx
 }
 
@@ -302,6 +314,7 @@ async fn setup_clients() -> (AnyChain, AnyChain, JoinHandle<()>) {
 				deploy.yui_ibc.clone(),
 				deploy.yui_ibc.ibc_core_diamond.address(),
 				deploy.client.clone(),
+				1,
 			)
 			.await
 			.unwrap();
@@ -323,6 +336,7 @@ async fn setup_clients() -> (AnyChain, AnyChain, JoinHandle<()>) {
 			&deploy.path,
 			deploy.client.clone(),
 			yui_ibc.clone(),
+			&anvil.addresses()[..1],
 		)
 		.await
 		.unwrap();
@@ -991,13 +1005,17 @@ async fn ethereum_to_cosmos_governance_and_filters_test() {
 		(ERC20Token, "mint", Module),
 		(ERC20Token, "transfer", Anyone),
 		(ERC20Token, "transferFrom", Anyone),
-		(ERC20Token, "renounceRole", Owner),
-		(ERC20Token, "setDecimals", Owner),
-		(ERC20Token, "transferRole", Owner),
-		(ERC20Token, "updateRole", Module),
+		(ERC20Token, "setDecimals", Module),
+		(ERC20Token, "setName", Module),
+		(ERC20Token, "setSymbol", Module),
+		(ERC20Token, "renounceOwnership", Module),
+		(ERC20Token, "transferOwnership", Module),
+		(ERC20Token, "updateOwnership", Module),
 		(GovernanceFacet, "execute", Anyone),
 		(GovernanceFacet, "setTendermintClient", Owner),
 		(GovernanceFacet, "setProxy", Owner),
+		(GovernanceFacet, "addSignatory", Owner),
+		(GovernanceFacet, "removeSignatory", Owner),
 		(IBCChannelHandshake, "bindPort", Owner),
 		(IBCChannelHandshake, "channelCloseConfirm", Relayer),
 		(IBCChannelHandshake, "channelCloseInit", Relayer),
@@ -1026,7 +1044,13 @@ async fn ethereum_to_cosmos_governance_and_filters_test() {
 		(ICS20Bank, "transferFrom", Module), // Also Anyone, if `from` == sender
 		(ICS20Bank, "renounceRole", Module),
 		(ICS20Bank, "transferRole", Module),
-		(ICS20Bank, "updateRole", Owner),
+		(ICS20Bank, "tokenUpdateOwnership", Owner),
+		(ICS20Bank, "tokenSetDecimals", Owner),
+		(ICS20Bank, "tokenSetName", Owner),
+		(ICS20Bank, "tokenSetSymbol", Owner),
+		(ICS20Bank, "whitelistToken", Owner),
+		(ICS20Bank, "unwhitelistToken", Owner),
+		(ICS20Bank, "unwhitelistToken", Owner),
 		(ICS20TransferBank, "init", Anyone),
 		(ICS20TransferBank, "onAcknowledgementPacket", Ibc),
 		(ICS20TransferBank, "onChanCloseConfirm", Ibc),
@@ -1098,13 +1122,7 @@ async fn ethereum_to_cosmos_governance_and_filters_test() {
 	let erc20_token = deploy_contract(
 		"ERC20Token",
 		&[&project_output],
-		(
-			"Test Token".to_string(),
-			"TEST".to_string(),
-			100u32,
-			0u8,
-			eth_client.yui.gov_proxy.as_ref().unwrap().address(),
-		),
+		("Test Token".to_string(), "TEST".to_string(), 100u32, 0u8),
 		fake_owner_client.clone(),
 	)
 	.await;
@@ -1127,12 +1145,6 @@ async fn ethereum_to_cosmos_governance_and_filters_test() {
 					assert!(fns_to_check.remove(&(name, f_name)), "duplicate function");
 					let params = f.inputs.iter().map(|x| x.kind.clone()).collect::<Vec<_>>();
 					let mut tx = test_tx(&eth_client, name, f_name, &params).await;
-					let owner_tx = owner_test_tx(
-						&eth_client,
-						&cosmos_client,
-						test_call(name, f_name, &params).await,
-					)
-					.await;
 					match name {
 						ERC20Token => {
 							tx.set_to(erc20_token.address());
@@ -1152,6 +1164,16 @@ async fn ethereum_to_cosmos_governance_and_filters_test() {
 						},
 						_ => (),
 					}
+					let owner_tx = owner_test_tx(
+						&eth_client,
+						&cosmos_client,
+						test_call(name, f_name, &params).await,
+						*tx.to().unwrap().as_address().unwrap(),
+					)
+					.await;
+
+					warn!("Checking {}:{}", name, f_name);
+
 					let not_contract_owner_err = "0xff4127cb";
 					let not_contract_owner_err2 = "caller is not the owner";
 					let not_contract_owner_err3 = "caller is not owner";
@@ -1159,6 +1181,8 @@ async fn ethereum_to_cosmos_governance_and_filters_test() {
 					let no_capability_err = "NoCapability";
 					let unauthorized_err = "unauthorized";
 					let not_ibc_err = "caller is not the IBC contract";
+					let not_enough_signatories = "not enough signatories";
+					let invalid_additional_sigs = "Invalid additional signatures";
 					match mode {
 						Anyone => {
 							let result = user_client.call(&tx, None).await;
@@ -1194,6 +1218,10 @@ async fn ethereum_to_cosmos_governance_and_filters_test() {
 									err.contains(not_contract_owner_err2) ||
 									err.contains(not_contract_owner_err3)
 							);
+							if name == ERC20Token {
+								warn!("Skipping governance call to {}:{}", name, f_name);
+								continue;
+							}
 							let err = get_error_from_call(user_client.call(&owner_tx, None).await);
 							info!("{err}");
 							assert!(
@@ -1201,6 +1229,8 @@ async fn ethereum_to_cosmos_governance_and_filters_test() {
 									!err.contains(not_contract_owner_err) &&
 									!err.contains(not_contract_owner_err2) &&
 									!err.contains(not_contract_owner_err3) &&
+									!err.contains(not_enough_signatories) &&
+									!err.contains(invalid_additional_sigs) &&
 									!err.contains("message already executed") &&
 									!err.contains("validators hash mismatch")
 							);
