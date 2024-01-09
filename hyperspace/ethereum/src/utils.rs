@@ -351,6 +351,21 @@ where
 		assert_eq!(tx_recp.status, Some(1.into()));
 	}
 
+	pub async fn add_gov_signatory(&self, address: Address, diamond_name: ContractName) {
+		sleep(Duration::from_secs(12)).await;
+		let method = self
+			.method_diamond::<_, ()>("addSignatory", Token::Address(address), diamond_name)
+			.unwrap();
+		send_retrying(&method).await.unwrap();
+	}
+
+	pub async fn remove_gov_signatory(&self, address: Address, diamond_name: ContractName) {
+		let method = self
+			.method_diamond::<_, ()>("removeSignatory", Token::Address(address), diamond_name)
+			.unwrap();
+		send_retrying(&method).await.unwrap();
+	}
+
 	pub async fn connection_open_init_mock(&self, client_id: &str) -> String {
 		let connection_open_init = self
 			.method::<_, String>(
@@ -1159,6 +1174,7 @@ pub async fn deploy_governance<M: Middleware>(
 	yui_solidity_path: &PathBuf,
 	client: Arc<M>,
 	mut yui_ibc: DeployYuiIbc<Arc<M>, M>,
+	additional_signatories: &[Address],
 ) -> Result<DeployYuiIbc<Arc<M>, M>, ClientError> {
 	let utils_output = compile_yui(&yui_solidity_path, "contracts/utils");
 	let gov_proxy = deploy_contract(
@@ -1179,6 +1195,9 @@ pub async fn deploy_governance<M: Middleware>(
 			.set_gov_tendermint_client(yui_ibc.tendermint_diamond.as_ref().unwrap().address(), name)
 			.await;
 		yui_ibc.set_gov_proxy(gov_proxy.address(), name).await;
+		for signatory in additional_signatories {
+			yui_ibc.add_gov_signatory(*signatory, name).await;
+		}
 		yui_ibc
 			.transfer_ownership(yui_ibc.gov_proxy.as_ref().unwrap().address(), name)
 			.await;
@@ -1202,6 +1221,7 @@ pub async fn deploy_transfer_module<M: Middleware, S: Signer>(
 	mut yui_ibc: DeployYuiIbc<Arc<SignerMiddleware<M, S>>, SignerMiddleware<M, S>>,
 	ibc_core_diamond_address: Address,
 	client: Arc<SignerMiddleware<M, S>>,
+	min_timeout_timestamp: u64,
 ) -> Result<
 	(
 		ContractInstance<Arc<SignerMiddleware<M, S>>, SignerMiddleware<M, S>>,
@@ -1253,7 +1273,7 @@ pub async fn deploy_transfer_module<M: Middleware, S: Signer>(
 	yui_ibc.bank_facets = bank_facets.clone();
 	let method = yui_ibc.method_diamond::<_, ()>(
 		"init",
-		(Token::String("ETH".into()), Token::Address(gov_address)),
+		(Token::String("ETH".into()), Token::Address(gov_address), Vec::<Address>::new()),
 		BankDiamond,
 	)?;
 	send_retrying(&method).await.unwrap();
@@ -1271,7 +1291,11 @@ pub async fn deploy_transfer_module<M: Middleware, S: Signer>(
 	yui_ibc.ibc_transfer_facets = ibc_transfer_facets.clone();
 	let method = yui_ibc.method_diamond::<_, ()>(
 		"init",
-		(Token::Address(ibc_core_diamond_address), Token::Address(bank_diamond.address())),
+		(
+			Token::Address(ibc_core_diamond_address),
+			Token::Address(bank_diamond.address()),
+			min_timeout_timestamp,
+		),
 		IbcTransferDiamond,
 	)?;
 	send_retrying(&method).await.unwrap();
