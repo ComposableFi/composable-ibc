@@ -21,6 +21,7 @@ use alloc::{format, string::ToString, vec::Vec};
 use alloy_sol_types::SolValue;
 use compress::{compress, decompress};
 use core::{fmt::Debug, marker::PhantomData, time::Duration};
+use ethabi::Address;
 use ibc::{
 	core::{ics02_client::client_state::ClientType, ics24_host::identifier::ChainId},
 	Height,
@@ -38,6 +39,7 @@ pub struct ClientState<H> {
 	pub inner: LightClientState,
 	pub frozen_height: Option<Height>,
 	pub latest_height: u32,
+	pub ibc_core_address: Address,
 	pub _phantom: PhantomData<H>,
 }
 
@@ -47,6 +49,7 @@ impl<H> Clone for ClientState<H> {
 			inner: self.inner.clone(),
 			frozen_height: self.frozen_height,
 			latest_height: self.latest_height,
+			ibc_core_address: self.ibc_core_address,
 			_phantom: Default::default(),
 		}
 	}
@@ -87,7 +90,6 @@ impl<H: Clone> ClientState<H> {
 impl<H> ClientState<H> {
 	pub fn latest_height(&self) -> Height {
 		Height::new(0, self.latest_height.into())
-		// Height::new(self.inner.latest_finalized_epoch.into(), self.latest_height.into())
 	}
 
 	pub fn chain_id(&self) -> ChainId {

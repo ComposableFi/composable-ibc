@@ -54,3 +54,9 @@ impl From<EthereumError> for ContractError {
 		ContractError::Client(e.to_string())
 	}
 }
+
+impl From<&'_ str> for ContractError {
+	fn from(e: &'_ str) -> Self {
+		ContractError::Client(e.to_string())
+	}
+}

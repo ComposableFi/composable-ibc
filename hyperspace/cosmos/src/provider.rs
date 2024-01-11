@@ -172,7 +172,6 @@ where
 		}
 		block_events.sort_by_key(|(height, _)| *height);
 
-		let mut mandatory_updates_num = 0;
 		let mut updates = Vec::new();
 		let len = update_headers.len();
 		let has_mandatory_updates =

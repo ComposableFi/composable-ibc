@@ -374,8 +374,9 @@ async fn process_updates<A: Chain, B: Chain>(
 		parse_events(source, sink, ibc_events.clone(), mode, Some(new_height))
 			.await
 			.map_err(|e| anyhow!("Failed to parse events: {:?}", e))?;
+	let (latest_height, _) = source.latest_height_and_timestamp().await?;
 	for (msg_update_client, h) in mandatory_updates {
-		log::debug!(target: "hyperspace", "Received client update message for {}: {}", source.name(), h);
+		log::debug!(target: "hyperspace", "Received client update message for {}: {}, latest height: {latest_height}", source.name(), h);
 		msgs.push(msg_update_client);
 	}
 

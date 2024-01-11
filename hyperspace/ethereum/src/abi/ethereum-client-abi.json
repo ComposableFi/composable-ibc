@@ -109,6 +109,11 @@
             "internalType": "uint32",
             "name": "latestHeight",
             "type": "uint32"
+          },
+          {
+            "internalType": "address",
+            "name": "ibcCoreContractAddress",
+            "type": "address"
           }
         ],
         "internalType": "struct EthereumClientPrimitivesClientState",

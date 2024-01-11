@@ -534,19 +534,28 @@ impl EthereumClient {
 		let proof = self
 			.eth_query_proof(&path, Some(at.revision_height), COMMITMENTS_STORAGE_INDEX)
 			.await?;
-		// FIXME: verify account proof
 
-		let storage = proof
+		let storage_proof = proof
 			.storage_proof
 			.first()
 			.ok_or(ClientError::Other("storage proof not found".to_string()))?;
-		let bytes = u256_to_bytes(&storage.value);
 
-		let proof = encode(&[Token::Array(
-			storage.proof.clone().into_iter().map(|p| Token::Bytes(p.to_vec())).collect(),
-		)]);
+		let proof_bytes = encode(&[
+			Token::Array(
+				proof.account_proof.into_iter().map(|p| Token::Bytes(p.to_vec())).collect(),
+			),
+			Token::Array(
+				storage_proof
+					.proof
+					.clone()
+					.into_iter()
+					.map(|p| Token::Bytes(p.to_vec()))
+					.collect(),
+			),
+		]);
 
-		Ok((proof, bytes))
+		let bytes = u256_to_bytes(&storage_proof.value);
+		Ok((proof_bytes, bytes))
 	}
 }
 
@@ -557,12 +566,11 @@ impl primitives::TestProvider for EthereumClient {
 		if params.token.denom.to_string() == "ETH".to_string() {
 			return send_native_eth(&self, params).await
 		}
-		let method = self
-			.yui
-			.bank_diamond
-			.as_ref()
-			.expect("expected bank module")
-			.method::<_, Address>("queryTokenContractFromDenom", params.token.denom.to_string())?;
+		let method = self.yui.method_diamond::<_, Address>(
+			"queryTokenContractFromDenom",
+			params.token.denom.to_string(),
+			ContractName::BankDiamond,
+		)?;
 		let erc20_address = method.call().await.unwrap_contract_error();
 		assert_ne!(erc20_address, Address::zero(), "erc20 address is zero");
 

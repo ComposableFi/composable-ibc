@@ -2,7 +2,7 @@ use crate::{
 	client::{ClientError, EthereumClient},
 	contract::{IbcHandler, UnwrapContractError},
 	ibc_provider::{BlockHeight, INDEXER_DELAY_BLOCKS},
-	utils::{clear_proof_value, handle_gas_usage, Header as EthHeader},
+	utils::{clear_proof_value, handle_gas_usage, Header as EthHeader, ProviderImpl},
 	yui_types::{ics03_connection::conn_open_try::YuiMsgConnectionOpenTry, IntoToken},
 };
 use alloy_sol_types::SolValue;
@@ -15,6 +15,7 @@ use channel_msgs::{
 };
 use ethers::{
 	abi::{ParamType, Token},
+	contract::FunctionCall,
 	providers::Middleware,
 	types::H256,
 	utils::rlp,
@@ -43,6 +44,7 @@ use ibc::{
 	protobuf::{google::protobuf::Timestamp, Protobuf},
 	Height,
 };
+use ibc_proto::google::protobuf::Any;
 use ics07_tendermint::{
 	client_message::{ClientMessage, Header},
 	client_state::ClientState,
@@ -91,7 +93,6 @@ impl MisbehaviourHandler for EthereumClient {
 
 pub fn client_state_abi_token<H: Debug>(client: &ClientState<H>) -> Token {
 	use ethers::abi::{encode as ethers_encode, Token as EthersToken};
-
 	let client_state_data = EthersToken::Tuple(
 		[
 			//chain_id
@@ -110,7 +111,7 @@ pub fn client_state_abi_token<H: Debug>(client: &ClientState<H>) -> Token {
 			EthersToken::Tuple(
 				[
 					EthersToken::Int(client.trusting_period.as_secs().into()),
-					EthersToken::Int(client.trusting_period.as_nanos().into()),
+					EthersToken::Int(client.trusting_period.subsec_nanos().into()),
 				]
 				.to_vec(),
 			),
@@ -118,7 +119,7 @@ pub fn client_state_abi_token<H: Debug>(client: &ClientState<H>) -> Token {
 			EthersToken::Tuple(
 				[
 					EthersToken::Int(client.unbonding_period.as_secs().into()),
-					EthersToken::Int(client.unbonding_period.as_nanos().into()),
+					EthersToken::Int(client.unbonding_period.subsec_nanos().into()),
 				]
 				.to_vec(),
 			),
@@ -126,7 +127,7 @@ pub fn client_state_abi_token<H: Debug>(client: &ClientState<H>) -> Token {
 			EthersToken::Tuple(
 				[
 					EthersToken::Int(client.max_clock_drift.as_secs().into()),
-					EthersToken::Int(client.max_clock_drift.as_nanos().into()),
+					EthersToken::Int(client.max_clock_drift.subsec_nanos().into()),
 				]
 				.to_vec(),
 			),
@@ -146,7 +147,7 @@ pub fn client_state_abi_token<H: Debug>(client: &ClientState<H>) -> Token {
 	client_state_data
 }
 
-pub(crate) fn client_state_from_abi_token<H>(token: Token) -> Result<ClientState<H>, ClientError> {
+pub fn client_state_from_abi_token(token: Token) -> Result<ClientState<H>, ClientError> {
 	use ethers::abi::Token as EthersToken;
 
 	let Token::Bytes(bytes) = token else {
@@ -293,7 +294,7 @@ pub(crate) fn client_state_from_abi_token<H>(token: Token) -> Result<ClientState
 		chain_id,
 		trust_level: TrustThreshold::new(trust_level_numerator, trust_level_denominator)?,
 		trusting_period: Duration::new(trusting_period_secs, trusting_period_nanos as u32),
-		unbonding_period: Duration::new(unbonding_period_secs, 0u32), // TODO: check why nanos is 0
+		unbonding_period: Duration::new(unbonding_period_secs, unbonding_period_nanos as u32),
 		// unbonding_period: Duration::new(unbonding_period_secs, unbonding_piod_nanos as u32),
 		max_clock_drift: Duration::new(max_clock_drift_secs, max_clock_drift_nanos as u32),
 		frozen_height: if frozen_height == 0 {
@@ -1249,10 +1250,84 @@ impl Chain for EthereumClient {
 		Ok(stream.boxed())
 	}
 
-	async fn submit(
+	async fn submit(&self, messages: Vec<Any>) -> Result<Self::TransactionId, Self::Error> {
+		let method = self.ibc_messages_to_contract_call(messages).await?;
+		let data = method.call().await?;
+		let receipt = method
+			.send()
+			.await?
+			.await?
+			.ok_or_else(|| ClientError::Other("tx failed".into()))?;
+		handle_gas_usage(&receipt);
+		if receipt.status != Some(1.into()) {
+			return Err(ClientError::Other(format!("tx failed: {:?}", receipt)))
+		}
+
+		for (i, (success, result)) in
+			data.0.into_iter().zip(data.1.into_iter()).into_iter().enumerate()
+		{
+			if !success {
+				log::error!(target: "hyperspace_ethereum", "tx failed {i}: {}", hex::encode(&result));
+			}
+		}
+
+		let block_hash = receipt.block_hash.ok_or(ClientError::Other(format!(
+			"Block hash is missing for tx hash: {:?}",
+			receipt.transaction_hash
+		)))?;
+		Ok((block_hash, receipt.transaction_hash))
+	}
+
+	async fn query_client_message(
 		&self,
-		messages: Vec<ibc_proto::google::protobuf::Any>,
-	) -> Result<Self::TransactionId, Self::Error> {
+		update: UpdateClient,
+	) -> Result<AnyClientMessage, Self::Error> {
+		unimplemented!("query_client_message")
+	}
+
+	async fn get_proof_height(&self, block_height: Height) -> Height {
+		block_height
+	}
+
+	async fn handle_error(&mut self, error: &anyhow::Error) -> Result<(), anyhow::Error> {
+		tracing::error!(?error, "handle-error");
+		Ok(())
+	}
+
+	fn common_state(&self) -> &CommonClientState {
+		&self.common_state
+	}
+
+	fn common_state_mut(&mut self) -> &mut CommonClientState {
+		&mut self.common_state
+	}
+
+	fn rpc_call_delay(&self) -> Duration {
+		Duration::from_millis(100)
+	}
+
+	fn set_rpc_call_delay(&mut self, delay: Duration) {}
+
+	async fn reconnect(&mut self) -> anyhow::Result<()> {
+		// TODO: reconnection logic
+		Ok(())
+	}
+
+	fn set_client_id_ref(&mut self, client_id: Arc<Mutex<Option<ClientId>>>) {
+		self.counterparty_client_id = client_id;
+	}
+
+	fn get_counterparty_client_id_ref(&self) -> Arc<Mutex<Option<ClientId>>> {
+		self.client_id.clone()
+	}
+}
+
+impl EthereumClient {
+	async fn ibc_messages_to_contract_call(
+		&self,
+		messages: Vec<Any>,
+	) -> Result<FunctionCall<Arc<ProviderImpl>, ProviderImpl, (Vec<bool>, Vec<Vec<u8>>)>, ClientError>
+	{
 		use ethers::abi::{encode as ethers_encode, Token as EthersToken};
 
 		if messages.is_empty() {
@@ -1334,7 +1409,7 @@ impl Chain for EthereumClient {
 					EthersToken::String(client_id.to_string()),
 					//tm header
 					EthersToken::Bytes(tm_header_bytes),
-					//tm header
+					// previous client state
 					latest_client_state, // EthersToken::Bytes(latest_client_state),
 				]);
 
@@ -1551,72 +1626,6 @@ impl Chain for EthereumClient {
 		}
 
 		let method = self.yui.method::<_, (Vec<bool>, Vec<Vec<u8>>)>("callBatch", calls)?;
-		let data = method.call().await?;
-		let receipt = method
-			.send()
-			.await?
-			.await?
-			.ok_or_else(|| ClientError::Other("tx failed".into()))?;
-		handle_gas_usage(&receipt);
-		if receipt.status != Some(1.into()) {
-			return Err(ClientError::Other(format!("tx failed: {:?}", receipt)))
-		}
-
-		for (i, (success, result)) in
-			data.0.into_iter().zip(data.1.into_iter()).into_iter().enumerate()
-		{
-			if !success {
-				log::error!(target: "hyperspace_ethereum", "tx failed {i}: {}", hex::encode(&result));
-			}
-		}
-
-		let block_hash = receipt.block_hash.ok_or(ClientError::Other(format!(
-			"Block hash is missing for tx hash: {:?}",
-			receipt.transaction_hash
-		)))?;
-		Ok((block_hash, receipt.transaction_hash))
-	}
-
-	async fn query_client_message(
-		&self,
-		update: UpdateClient,
-	) -> Result<AnyClientMessage, Self::Error> {
-		unimplemented!("query_client_message")
-	}
-
-	async fn get_proof_height(&self, block_height: Height) -> Height {
-		block_height
-	}
-
-	async fn handle_error(&mut self, error: &anyhow::Error) -> Result<(), anyhow::Error> {
-		tracing::error!(?error, "handle-error");
-		Ok(())
-	}
-
-	fn common_state(&self) -> &CommonClientState {
-		&self.common_state
-	}
-
-	fn common_state_mut(&mut self) -> &mut CommonClientState {
-		&mut self.common_state
-	}
-
-	fn rpc_call_delay(&self) -> Duration {
-		Duration::from_millis(100)
-	}
-
-	fn set_rpc_call_delay(&mut self, delay: Duration) {}
-
-	async fn reconnect(&mut self) -> anyhow::Result<()> {
-		// TODO: reconnection logic
-		Ok(())
-	}
-
-	fn set_client_id_ref(&mut self, client_id: Arc<Mutex<Option<ClientId>>>) {
-		self.counterparty_client_id = client_id;
-	}
-
-	fn get_counterparty_client_id_ref(&self) -> Arc<Mutex<Option<ClientId>>> {
-		self.client_id.clone()
+		Ok(method)
 	}
 }

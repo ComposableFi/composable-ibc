@@ -22,7 +22,7 @@ use futures::SinkExt;
 use ibc::core::ics24_host::identifier::ClientId;
 use primitives::CommonClientConfig;
 
-pub const USE_GETH: bool = false;
+pub const USE_GETH: bool = true;
 
 pub const ETH_NODE_PORT: u16 = 8545;
 pub const ETH_NODE_PORT_WS: u16 = 8546;
@@ -46,8 +46,8 @@ pub async fn spawn_anvil() -> (AnvilInstance, Arc<SignerMiddleware<Provider<Http
 	#[cfg(not(feature = "no_beacon"))]
 	let anvil = Anvil::new().spawn();
 	#[cfg(feature = "no_beacon")]
-	// let anvil = Anvil::new().spawn();
-	let anvil = Anvil::new().port(8545u16).spawn();
+	let anvil = Anvil::new().spawn();
+	// let anvil = Anvil::new().port(8545u16).spawn();
 
 	log::info!("Anvil started at {}", anvil.endpoint());
 	println!("{:?}", std::env::current_dir().unwrap());
@@ -174,19 +174,19 @@ pub async fn hyperspace_ethereum_client_fixture(
 			.collect(),
 		ibc_transfer_diamond_address: yui_ibc.ibc_transfer_diamond.clone().map(|b| b.address()),
 		ibc_transfer_facets: yui_ibc
-			.ibc_core_facets
+			.ibc_transfer_facets
 			.iter()
 			.map(|f| (f.abi_name(), f.contract().address()))
 			.collect(),
 		bank_diamond_address: yui_ibc.bank_diamond.clone().map(|b| b.address()),
 		bank_facets: yui_ibc
-			.ibc_core_facets
+			.bank_facets
 			.iter()
 			.map(|f| (f.abi_name(), f.contract().address()))
 			.collect(),
 		tendermint_diamond_address: yui_ibc.tendermint_diamond.clone().map(|x| x.address()),
 		tendermint_facets: yui_ibc
-			.ibc_core_facets
+			.tendermint_facets
 			.iter()
 			.map(|f| (f.abi_name(), f.contract().address()))
 			.collect(),

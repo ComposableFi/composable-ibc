@@ -71,7 +71,8 @@ use crate::prove::prove;
 use crate::prove::prove_fast as prove;
 use crate::{
 	chain::{
-		client_state_from_abi_token, consensus_state_from_abi_token, tm_header_from_abi_token,
+		client_state_abi_token, client_state_from_abi_token, consensus_state_from_abi_token,
+		tm_header_from_abi_token,
 	},
 	config::ContractName,
 	utils::{create_intervals, SEQUENCES_PER_ITER},
@@ -339,8 +340,20 @@ impl EthereumClient {
 						let Token::Tuple(toks) = calldata else {
 							return Err(ClientError::Other("calldata should be bytes".to_string()))
 						};
+						let header = tm_header_from_abi_token(toks[1].clone())?;
 						let client_state_token = toks[2].clone();
-						client_state = Some(client_state_token);
+						let mut cs =
+							client_state_from_abi_token::<LocalClientTypes>(client_state_token)?;
+						if header.signed_header.header.height.value() >
+							cs.latest_height.revision_height
+						{
+							cs.latest_height = Height::new(
+								cs.latest_height.revision_number,
+								header.signed_header.header.height.into(),
+							);
+						}
+						let tok_after = client_state_abi_token(&cs);
+						client_state = Some(Token::Bytes(encode(&[tok_after])).into());
 						// TODO: figure out how to distinguish between the same function calls
 						break
 					}
@@ -818,10 +831,14 @@ impl IbcProvider for EthereumClient {
 						let client_state_token = toks[2].clone();
 						let mut cs =
 							client_state_from_abi_token::<LocalClientTypes>(client_state_token)?;
-						cs.latest_height = Height::new(
-							cs.latest_height.revision_number,
-							header.signed_header.header.height.into(),
-						);
+						if header.signed_header.header.height.value() >
+							cs.latest_height.revision_height
+						{
+							cs.latest_height = Height::new(
+								cs.latest_height.revision_number,
+								header.signed_header.header.height.into(),
+							);
+						}
 						client_state = Some(cs);
 						// TODO: figure out how to distinguish between the same function calls
 						break
@@ -1884,6 +1901,7 @@ impl IbcProvider for EthereumClient {
 			inner: client_state,
 			frozen_height: None,
 			latest_height: block_number as _,
+			ibc_core_address: self.yui.ibc_core_diamond.address(),
 			_phantom: Default::default(),
 		});
 

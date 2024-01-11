@@ -13,15 +13,14 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 use crate::{
+	alloc::string::ToString,
 	client_message::{ClientMessage, Misbehaviour},
 	client_state::ClientState,
 	consensus_state::ConsensusState,
 	error::Error,
-	verify::verify_ibc_proof,
+	verify::{verify_ibc_proof, Verified},
 };
-#[cfg(not(feature = "no_beacon"))]
-use alloc::string::ToString;
-use alloc::{vec, vec::Vec};
+use alloc::{borrow::Cow, vec, vec::Vec};
 use anyhow::anyhow;
 use core::{fmt::Debug, marker::PhantomData, str::FromStr};
 use ibc::{
@@ -192,11 +191,11 @@ where
 			}
 		};
 
-		// TODO: verify ancestor blocks
 		let new_client_state = ClientState {
 			inner: new_light_client_state,
 			frozen_height: None,
 			latest_height: latest_height as _,
+			ibc_core_address: client_state.ibc_core_address,
 			_phantom: Default::default(),
 		};
 
@@ -268,7 +267,17 @@ where
 			height: consensus_height.revision_height,
 		};
 		let value = expected_consensus_state.encode_to_vec().map_err(Ics02Error::encode)?;
-		verify_ibc_proof(prefix, proof, root, path, Some(&value))?;
+		let verified = verify_ibc_proof(
+			prefix,
+			proof,
+			root,
+			client_state.ibc_core_address,
+			path,
+			Some(Cow::Borrowed(&value)),
+		)?;
+		if verified == Verified::No {
+			return Err(Ics02Error::implementation_specific("client consensus state".to_string()))
+		}
 		Ok(())
 	}
 

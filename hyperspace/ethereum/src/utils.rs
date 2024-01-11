@@ -17,8 +17,8 @@ use ethers::{
 	core::types::Bytes,
 	middleware::SignerMiddleware,
 	prelude::{
-		Block, ContractError, EthEvent, Event, Filter, Http, LocalWallet, Middleware, Provider,
-		Signer, TransactionReceipt, TransactionRequest, H256, U256,
+		builders::Deployer, Block, ContractError, EthEvent, Event, Filter, Http, LocalWallet,
+		Middleware, Provider, Signer, TransactionReceipt, TransactionRequest, H256, U256,
 	},
 	types::{BlockNumber, Bloom, H160, H64, U64},
 	utils::{rlp, rlp::RlpStream},
@@ -839,7 +839,7 @@ where
 	);
 	let deployer = factory.deploy(constructor_args).unwrap();
 	let gas = client.estimate_gas(&deployer.tx, None).await.unwrap();
-	let (contract, receipt) = deployer.send_with_receipt().await.unwrap();
+	let (contract, receipt) = deploy_retrying(deployer).await.unwrap();
 	info!("Deployed contract {} ({:?}), estimated gas price: {}", name, contract.address(), gas);
 	handle_gas_usage(&receipt);
 	contract
@@ -1273,7 +1273,7 @@ pub async fn deploy_transfer_module<M: Middleware, S: Signer>(
 	yui_ibc.bank_facets = bank_facets.clone();
 	let method = yui_ibc.method_diamond::<_, ()>(
 		"init",
-		(Token::String("ETH".into()), Token::Address(gov_address), Vec::<Address>::new()),
+		(Token::String("ETH".into()), Token::Address(gov_address)),
 		BankDiamond,
 	)?;
 	send_retrying(&method).await.unwrap();
@@ -1528,6 +1528,32 @@ where
 				handle_gas_usage(&receipt);
 				assert_eq!(receipt.status, Some(1.into()));
 				return Ok(receipt);
+			},
+			Err(e) =>
+				if e.to_string().contains("replacement transaction underpriced") {
+					sleep(Duration::from_secs(1)).await;
+					continue;
+				} else {
+					return Err(e);
+				},
+		}
+	}
+}
+
+pub async fn deploy_retrying<B, M>(
+	deployer: Deployer<B, M>,
+) -> Result<(ContractInstance<B, M>, TransactionReceipt), ContractError<M>>
+where
+	B: Clone + Borrow<M>,
+	M: Middleware,
+{
+	loop {
+		let result = deployer.clone().send_with_receipt().await;
+		match result {
+			Ok((c, receipt)) => {
+				handle_gas_usage(&receipt);
+				assert_eq!(receipt.status, Some(1.into()));
+				return Ok((c, receipt));
 			},
 			Err(e) =>
 				if e.to_string().contains("replacement transaction underpriced") {
