@@ -26,10 +26,13 @@ use crate::{
 	state::get_client_state,
 	Bytes,
 };
+use alloc::borrow::Cow;
 use core::fmt::Debug;
 #[cfg(not(feature = "library"))]
 use cosmwasm_std::entry_point;
-use cosmwasm_std::{to_binary, Binary, Deps, DepsMut, Env, MessageInfo, Response, StdResult};
+use cosmwasm_std::{
+	ensure, to_binary, Binary, Deps, DepsMut, Env, MessageInfo, Response, StdResult,
+};
 use cw_storage_plus::{Item, Map};
 use ibc::core::{
 	ics02_client::{
@@ -44,7 +47,7 @@ use icsxx_ethereum::{
 	client_def::EthereumClient, client_state::ClientState, consensus_state::ConsensusState,
 };
 // use light_client_common::{verify_membership, verify_non_membership};
-use icsxx_ethereum::verify::verify_ibc_proof;
+use icsxx_ethereum::verify::{verify_ibc_proof, Verified};
 use std::{collections::BTreeSet, str::FromStr};
 
 /*
@@ -108,17 +111,21 @@ fn process_message(
 			let consensus_state = ctx
 				.consensus_state(&client_id, msg.height)
 				.map_err(|e| ContractError::Client(e.to_string()))?;
-			verify_ibc_proof(
+			let client_state =
+				ctx.client_state(&client_id).map_err(|e| ContractError::Client(e.to_string()))?;
+			let verified = verify_ibc_proof(
 				&msg.prefix,
 				&msg.proof,
 				&consensus_state.root,
+				client_state.ibc_core_address,
 				msg.path,
-				Some(&msg.value),
+				Some(Cow::Borrowed(&msg.value)),
 			)
 			.map_err(|e| {
 				ctx.log(&format!("VerifyMembership: error = {:?}", e));
 				ContractError::Client(e.to_string())
 			})?;
+			ensure!(verified == Verified::Yes, "failed to verify membership proof");
 			Ok(()).map(|_| to_binary(&ContractResult::success()))
 		},
 		ExecuteMsg::VerifyNonMembership(msg) => {
@@ -126,12 +133,21 @@ fn process_message(
 			let consensus_state = ctx
 				.consensus_state(&client_id, msg.height)
 				.map_err(|e| ContractError::Client(e.to_string()))?;
-
-			verify_ibc_proof(&msg.prefix, &msg.proof, &consensus_state.root, msg.path, None)
-				.map_err(|e| {
-					ctx.log(&format!("VerifyNonMembership: error = {:?}", e));
-					ContractError::Client(e.to_string())
-				})?;
+			let client_state =
+				ctx.client_state(&client_id).map_err(|e| ContractError::Client(e.to_string()))?;
+			let verified = verify_ibc_proof(
+				&msg.prefix,
+				&msg.proof,
+				&consensus_state.root,
+				client_state.ibc_core_address,
+				msg.path,
+				None,
+			)
+			.map_err(|e| {
+				ctx.log(&format!("VerifyNonMembership: error = {:?}", e));
+				ContractError::Client(e.to_string())
+			})?;
+			ensure!(verified == Verified::Yes, "failed to verify non membership proof");
 			Ok(()).map(|_| to_binary(&ContractResult::success()))
 		},
 		ExecuteMsg::VerifyClientMessage(msg) => {
@@ -187,26 +203,13 @@ fn process_message(
 			let substitute_client_state = ctx
 				.client_state_prefixed(SUBSTITUTE_PREFIX)
 				.map_err(|e| ContractError::Client(e.to_string()))?;
-
-			// Check that the substitute client state is valid:
-			// all fields should be the same as in the old state, except for the `relay_chain`,
-			// `para_id`, `latest_para_height`, `latest_relay_height`, `frozen_height`,
-			// `current_authorities`, `current_set_id`
-			// old_client_state.relay_chain = substitute_client_state.relay_chain;
-			// old_client_state.para_id = substitute_client_state.para_id;
-			// old_client_state.latest_para_height = substitute_client_state.latest_para_height;
-			// old_client_state.latest_relay_height = substitute_client_state.latest_relay_height;
-			// old_client_state.frozen_height = substitute_client_state.frozen_height;
-			// old_client_state.current_authorities =
-			// 	substitute_client_state.current_authorities.clone();
-			// old_client_state.current_set_id = substitute_client_state.current_set_id;
-
-			if old_client_state != substitute_client_state {
+			if old_client_state.ibc_core_address != substitute_client_state.ibc_core_address ||
+				old_client_state.next_upgrade_id != substitute_client_state.next_upgrade_id
+			{
 				return Err(ContractError::Client(
-					"subject client state does not match substitute client state".to_string(),
+					"ibc_core_address and next_upgrade_id should not be changed".to_string(),
 				))
 			}
-			let substitute_client_state = old_client_state;
 			let height = substitute_client_state.latest_height();
 			// consensus state should be replaced as well
 			let substitute_consensus_state =

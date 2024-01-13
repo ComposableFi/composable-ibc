@@ -1,9 +1,10 @@
 use crate::{
 	client::{ClientError, EthRpcClient},
 	config::EthereumClientConfig,
-	utils::{deploy_client, deploy_ibc, deploy_transfer_module, DeployYuiIbc},
+	utils::{deploy_client, deploy_governance, deploy_ibc, deploy_transfer_module, DeployYuiIbc},
 };
 use anyhow::{anyhow, bail};
+use cast::Address;
 use clap::{Args, Parser, Subcommand};
 use ethers_providers::Provider;
 use std::path::PathBuf;
@@ -23,6 +24,8 @@ pub enum DeployCmd {
 	TransferModule(DeployTransferModuleCmd),
 	/// Deploy client contracts
 	Client(DeployClientCmd),
+	/// Governance contracts
+	Governance(DeployGovernanceCmd),
 }
 
 #[derive(Debug, Clone, Args)]
@@ -39,9 +42,9 @@ impl DeployCoreCmd {
 		let client = config.client().await?;
 		let path = &self.yui_solidity_path;
 		let yui_ibc = deploy_ibc::<EthRpcClient>(path, client).await?;
-		config.diamond_address = Some(yui_ibc.diamond.address());
-		config.diamond_facets = yui_ibc
-			.deployed_facets
+		config.ibc_core_diamond_address = Some(yui_ibc.ibc_core_diamond.address());
+		config.ibc_core_facets = yui_ibc
+			.ibc_core_facets
 			.iter()
 			.map(|x| (x.abi_name(), x.contract().address()))
 			.collect();
@@ -65,6 +68,47 @@ pub struct DeployClientCmd {
 	pub client_name: String,
 }
 
+#[derive(Debug, Clone, Parser)]
+pub struct DeployGovernanceCmd {
+	#[clap(long)]
+	pub yui_solidity_path: PathBuf,
+	#[clap(long)]
+	pub additional_signatories: Vec<Address>,
+}
+
+impl DeployGovernanceCmd {
+	pub async fn run(
+		&self,
+		mut config: EthereumClientConfig,
+	) -> anyhow::Result<EthereumClientConfig> {
+		let client = config.client().await?;
+		let path = &self.yui_solidity_path;
+		let diamond_addr = config.ibc_core_diamond_address.ok_or_else(|| {
+			anyhow!("Diamond contract should be deployed first (use 'deploy core' subcommand)")
+		})?;
+		let facets = config.ibc_core_facets.clone();
+		if facets.is_empty() {
+			bail!("Diamond facets are empty. Make sure to deploy the core first ('deploy core')")
+		};
+		let yui_ibc = DeployYuiIbc::<_, EthRpcClient>::from_addresses(
+			client.clone(),
+			diamond_addr,
+			facets,
+			config.tendermint_diamond_address.clone(),
+			config.tendermint_facets.clone(),
+			config.ibc_transfer_diamond_address.clone(),
+			config.ibc_transfer_facets.clone(),
+			config.bank_diamond_address.clone(),
+			config.bank_facets.clone(),
+			config.gov_proxy_address.clone(),
+		)
+		.await?;
+		config.yui =
+			Some(deploy_governance(path, client, yui_ibc, &self.additional_signatories).await?);
+		Ok(config)
+	}
+}
+
 impl DeployClientCmd {
 	pub async fn run(
 		&self,
@@ -72,33 +116,39 @@ impl DeployClientCmd {
 	) -> anyhow::Result<EthereumClientConfig> {
 		let client = config.client().await?;
 		let path = &self.yui_solidity_path;
-		let diamond_addr = config.diamond_address.ok_or_else(|| {
+		let diamond_addr = config.ibc_core_diamond_address.ok_or_else(|| {
 			anyhow!("Diamond contract should be deployed first (use 'deploy core' subcommand)")
 		})?;
-		let facets = config.diamond_facets.clone();
+		let facets = config.ibc_core_facets.clone();
 		if facets.is_empty() {
 			bail!("Diamond facets are empty. Make sure to deploy the core first ('deploy core')")
 		};
 		let yui_ibc = DeployYuiIbc::<_, EthRpcClient>::from_addresses(
 			client.clone(),
 			diamond_addr,
-			None,
-			None,
-			None,
-			None,
 			facets,
+			None,
+			vec![],
+			None,
+			vec![],
+			None,
+			vec![],
+			None,
 		)
 		.await?;
-		let contract = deploy_client(
+		let (contract, facets) = deploy_client(
 			path,
 			yui_ibc.clone(),
 			self.client_type.clone(),
-			&self.delegate_update_name,
 			&self.client_name,
 			client,
 		)
 		.await?;
-		config.tendermint_address = Some(contract.address());
+		config.tendermint_diamond_address = Some(contract.address());
+		config.tendermint_facets = facets
+			.into_iter()
+			.map(|contract| (contract.abi_name(), contract.contract().address()))
+			.collect();
 		Ok(config)
 	}
 }
@@ -107,6 +157,8 @@ impl DeployClientCmd {
 pub struct DeployTransferModuleCmd {
 	#[clap(long)]
 	pub yui_solidity_path: PathBuf,
+	#[clap(long)]
+	pub min_timeout_timestamp: u64,
 }
 
 impl DeployTransferModuleCmd {
@@ -117,28 +169,46 @@ impl DeployTransferModuleCmd {
 		let client = config.client().await?;
 		client.address();
 		let path = &self.yui_solidity_path;
-		let diamond_addr = config.diamond_address.ok_or_else(|| {
+		let diamond_addr = config.ibc_core_diamond_address.ok_or_else(|| {
 			anyhow!("Diamond contract should be deployed first (use 'deploy core' subcommand)")
 		})?;
-		let facets = config.diamond_facets.clone();
+		let facets = config.ibc_core_facets.clone();
 		if facets.is_empty() {
 			bail!("Diamond facets are empty. Make sure to deploy the core first ('deploy core')")
 		};
 		let yui_ibc = DeployYuiIbc::<_, EthRpcClient>::from_addresses(
 			client.clone(),
 			diamond_addr,
-			None,
-			None,
-			None,
-			None,
 			facets,
+			None,
+			vec![],
+			None,
+			vec![],
+			None,
+			vec![],
+			None,
 		)
 		.await?;
 
-		let (transfer_bank_contract, bank_contract) =
-			deploy_transfer_module::<Provider<_>, _>(path, yui_ibc, diamond_addr, client).await?;
-		config.ics20_transfer_bank_address = Some(transfer_bank_contract.address());
-		config.ics20_bank_address = Some(bank_contract.address());
+		let (ibc_transfer_bank_diamond, transfer_bank_facets, bank_diamond, bank_facets) =
+			deploy_transfer_module::<Provider<_>, _>(
+				path,
+				yui_ibc,
+				diamond_addr,
+				client,
+				self.min_timeout_timestamp,
+			)
+			.await?;
+		config.ibc_transfer_diamond_address = Some(ibc_transfer_bank_diamond.address());
+		config.ibc_transfer_facets = transfer_bank_facets
+			.into_iter()
+			.map(|f| (f.abi_name(), f.contract().address()))
+			.collect();
+		config.bank_diamond_address = Some(bank_diamond.address());
+		config.bank_facets = bank_facets
+			.into_iter()
+			.map(|f| (f.abi_name(), f.contract().address()))
+			.collect();
 		Ok(config)
 	}
 }
@@ -150,6 +220,7 @@ impl EthereumCmd {
 				DeployCmd::Core(cmd) => cmd.run(config).await,
 				DeployCmd::Client(cmd) => cmd.run(config).await,
 				DeployCmd::TransferModule(cmd) => cmd.run(config).await,
+				DeployCmd::Governance(cmd) => cmd.run(config).await,
 			},
 		}
 	}

@@ -112,7 +112,7 @@ impl EthereumClient {
 				ClientError::Other(format!("contract is missing UpdateClient event: {}", err))
 			})?
 			.from_block(BlockNumber::Number(self.contract_creation_block().into()))
-			.address(ValueOrArray::Value(self.yui.diamond.address()))
+			.address(ValueOrArray::Value(self.yui.ibc_core_diamond.address()))
 			.to_block(at.revision_height);
 		event_filter.filter = event_filter.filter.topic1({
 			let hash = H256::from_slice(&encode(&[Token::FixedBytes(
@@ -122,7 +122,7 @@ impl EthereumClient {
 		});
 		let maybe_log = self
 			.yui
-			.diamond
+			.ibc_core_diamond
 			.client()
 			.get_logs(&event_filter.filter)
 			.await
@@ -199,9 +199,9 @@ impl EthereumClient {
 						))
 					})?
 					.from_block(BlockNumber::Number(self.contract_creation_block().into()))
-					.address(ValueOrArray::Value(self.yui.diamond.address()))
+					.address(ValueOrArray::Value(self.yui.ibc_core_diamond.address()))
 					//		.from_block(self.contract_creation_block())
-					.address(ValueOrArray::Value(self.yui.diamond.address()))
+					.address(ValueOrArray::Value(self.yui.ibc_core_diamond.address()))
 					.to_block(at.revision_height);
 				event_filter.filter = event_filter.filter.topic1({
 					let hash = H256::from_slice(&encode(&[Token::FixedBytes(
@@ -211,7 +211,7 @@ impl EthereumClient {
 				});
 				let log = self
 					.yui
-					.diamond
+					.ibc_core_diamond
 					.client()
 					.get_logs(&event_filter.filter)
 					.await
@@ -318,8 +318,10 @@ impl IbcProvider for EthereumClient {
 		let to = number.min(latest_cp_client_height + NUMBER_OF_BLOCKS_TO_PROCESS_PER_ITER / 2);
 
 		log::info!(target: "hyperspace_ethereum", "Getting blocks {}..{}", from, to);
-		let filter =
-			Filter::new().from_block(from).to_block(to).address(self.yui.diamond.address());
+		let filter = Filter::new()
+			.from_block(from)
+			.to_block(to)
+			.address(self.yui.ibc_core_diamond.address());
 		let mut logs = self
 			.client()
 			.get_logs(&filter)
@@ -396,7 +398,7 @@ impl IbcProvider for EthereumClient {
 
 	// TODO: this function is mostly used in tests and in 'fishing' mode.
 	async fn ibc_events(&self) -> Pin<Box<dyn Stream<Item = IbcEvent> + Send + 'static>> {
-		let ibc_address = self.yui.diamond.address();
+		let ibc_address = self.yui.ibc_core_diamond.address();
 		let client = self.clone();
 
 		let ws = self.websocket_provider().await.unwrap();
@@ -502,7 +504,7 @@ impl IbcProvider for EthereumClient {
 			});
 		let maybe_log = self
 			.yui
-			.diamond
+			.ibc_core_diamond
 			.client()
 			.get_logs(&event_filter.filter)
 			.await
@@ -562,7 +564,7 @@ impl IbcProvider for EthereumClient {
 			.event_for_name::<CreateClientFilter>("CreateClient")
 			.expect("contract is missing CreateClient event")
 			.from_block(BlockNumber::Number(EARLIEST_BLOCK.into()))
-			.address(ValueOrArray::Value(self.yui.diamond.address()))
+			.address(ValueOrArray::Value(self.yui.ibc_core_diamond.address()))
 			//            .from_block(BlockNumber::Earliest)
 			.to_block(at.revision_height);
 		event_filter.filter = event_filter.filter.topic1({
@@ -573,7 +575,7 @@ impl IbcProvider for EthereumClient {
 		});
 		let log = self
 			.yui
-			.diamond
+			.ibc_core_diamond
 			.client()
 			.get_logs(&event_filter.filter)
 			.await
@@ -627,7 +629,7 @@ impl IbcProvider for EthereumClient {
 				ClientError::Other(format!("contract is missing UpdateClient event: {}", err))
 			})?
 			.from_block(BlockNumber::Number(EARLIEST_BLOCK.into()))
-			.address(ValueOrArray::Value(self.yui.diamond.address()))
+			.address(ValueOrArray::Value(self.yui.ibc_core_diamond.address()))
 			.to_block(at.revision_height);
 		event_filter.filter = event_filter.filter.topic1({
 			let hash = H256::from_slice(&encode(&[Token::FixedBytes(
@@ -637,7 +639,7 @@ impl IbcProvider for EthereumClient {
 		});
 		let maybe_log = self
 			.yui
-			.diamond
+			.ibc_core_diamond
 			.client()
 			.get_logs(&event_filter.filter)
 			.await
@@ -713,7 +715,7 @@ impl IbcProvider for EthereumClient {
 						))
 					})?
 					.from_block(BlockNumber::Number(EARLIEST_BLOCK.into()))
-					.address(ValueOrArray::Value(self.yui.diamond.address()))
+					.address(ValueOrArray::Value(self.yui.ibc_core_diamond.address()))
 					//		.from_block(BlockNumber::Earliest)
 					.to_block(at.revision_height);
 				event_filter.filter = event_filter.filter.topic1({
@@ -724,7 +726,7 @@ impl IbcProvider for EthereumClient {
 				});
 				let log = self
 					.yui
-					.diamond
+					.ibc_core_diamond
 					.client()
 					.get_logs(&event_filter.filter)
 					.await
@@ -1192,7 +1194,7 @@ impl IbcProvider for EthereumClient {
 			.from_block(BlockNumber::Number(EARLIEST_BLOCK.into()))
 			.address(ValueOrArray::Array(vec![
 				self.yui.bank.as_ref().map(|x| x.address()).unwrap_or_default(),
-				self.yui.diamond.address(),
+				self.yui.ibc_core_diamond.address(),
 			]))
 			//            .address(ValueOrArray::Value(self.yui.diamond.address()))
 			//.from_block(BlockNumber::Earliest) // TODO: use contract creation height
@@ -1232,7 +1234,7 @@ impl IbcProvider for EthereumClient {
 		}
 		let mut logs = self
 			.yui
-			.diamond
+			.ibc_core_diamond
 			.client()
 			.get_logs(&event_filter.filter)
 			.await
@@ -1305,7 +1307,7 @@ impl IbcProvider for EthereumClient {
 			.event_for_name::<RecvPacketFilter>("RecvPacket")
 			.map_err(|err| ClientError::ContractAbiError(err))?
 			.from_block(BlockNumber::Number(EARLIEST_BLOCK.into()))
-			.address(ValueOrArray::Value(self.yui.diamond.address()))
+			.address(ValueOrArray::Value(self.yui.ibc_core_diamond.address()))
 			//.from_block(BlockNumber::Earliest) // TODO: use contract creation height
 			.to_block(BlockNumber::Latest)
 			.topic1(ValueOrArray::Array(
@@ -1328,8 +1330,13 @@ impl IbcProvider for EthereumClient {
 				)])))
 			});
 
-		let logs =
-			self.yui.diamond.client().get_logs(&event_filter.filter).await.map_err(|err| {
+		let logs = self
+			.yui
+			.ibc_core_diamond
+			.client()
+			.get_logs(&event_filter.filter)
+			.await
+			.map_err(|err| {
 				ClientError::Other(format!("failed to get logs in query_received_packets: {}", err))
 			})?;
 		let channel = self.query_channel_end(at, channel_id, port_id).await?;
@@ -1340,7 +1347,7 @@ impl IbcProvider for EthereumClient {
 			.event_for_name::<WriteAcknowledgementFilter>("WriteAcknowledgement")
 			.map_err(|err| ClientError::ContractAbiError(err))?
 			.from_block(BlockNumber::Number(EARLIEST_BLOCK.into()))
-			.address(ValueOrArray::Value(self.yui.diamond.address()))
+			.address(ValueOrArray::Value(self.yui.ibc_core_diamond.address()))
 			//.from_block(BlockNumber::Earliest) // TODO: use contract creation height
 			.to_block(BlockNumber::Latest)
 			.topic3(ValueOrArray::Array(
@@ -1428,7 +1435,7 @@ impl IbcProvider for EthereumClient {
 			.event_for_name::<UpdateClientHeightFilter>("UpdateClientHeight")
 			.map_err(|err| ClientError::ContractAbiError(err))?
 			.from_block(BlockNumber::Number(EARLIEST_BLOCK.into()))
-			.address(ValueOrArray::Value(self.yui.diamond.address()))
+			.address(ValueOrArray::Value(self.yui.ibc_core_diamond.address()))
 			//.from_block(BlockNumber::Earliest) // TODO: use contract creation height
 			.to_block(BlockNumber::Latest)
 			.topic1({
@@ -1448,7 +1455,7 @@ impl IbcProvider for EthereumClient {
 
 		let log = self
 			.yui
-			.diamond
+			.ibc_core_diamond
 			.client()
 			.get_logs(&event_filter.filter)
 			.await
@@ -1705,7 +1712,7 @@ impl IbcProvider for EthereumClient {
 			.to_block(block_number);
 		let log = self
 			.yui
-			.diamond
+			.ibc_core_diamond
 			.client()
 			.get_logs(&event_filter.filter)
 			.await
@@ -1753,7 +1760,7 @@ impl IbcProvider for EthereumClient {
 			.to_block(block_number);
 		let log = self
 			.yui
-			.diamond
+			.ibc_core_diamond
 			.client()
 			.get_logs(&event_filter.filter)
 			.await
@@ -1797,7 +1804,7 @@ impl IbcProvider for EthereumClient {
 			.to_block(block_number);
 		let log = self
 			.yui
-			.diamond
+			.ibc_core_diamond
 			.client()
 			.get_logs(&event_filter.filter)
 			.await

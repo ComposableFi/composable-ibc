@@ -145,7 +145,7 @@ pub async fn deploy_yui_ibc_and_mock_client_fixture() -> DeployYuiIbcMockClient 
 	let ibc_mock_client = hyperspace_ethereum::utils::deploy_contract(
 		"MockClient",
 		&[&ibc_mock_client],
-		(Token::Address(yui_ibc.diamond.address()),),
+		(Token::Address(yui_ibc.ibc_core_diamond.address()),),
 		client.clone(),
 	)
 	.await;
@@ -198,7 +198,7 @@ async fn deploy_mock_client_fixture(deploy: &DeployYuiIbcMockClient) -> ClientId
 		.create_client(utils::mock::create_client_msg("mock-client"))
 		.await;
 	println!("client id: {}", string.0);
-	println!("Diamond contract addr: {:?}", deploy.yui_ibc.diamond.address());
+	println!("Diamond contract addr: {:?}", deploy.yui_ibc.ibc_core_diamond.address());
 	ClientId(string.0)
 }
 
@@ -217,7 +217,7 @@ fn deploy_mock_module_fixture(
 				.unwrap()
 		});
 
-		let constructor_args = (Token::Address(deploy.yui_ibc.diamond.address()),);
+		let constructor_args = (Token::Address(deploy.yui_ibc.ibc_core_diamond.address()),);
 		let contract = hyperspace_ethereum::utils::deploy_contract(
 			"MockModule",
 			&[&clients],
@@ -280,7 +280,7 @@ async fn test_deploy_yui_ibc_and_create_eth_client() {
 	let factory = ContractFactory::new(abi.unwrap(), bytecode.unwrap(), client.clone());
 	let tendermint_light_client = factory
 		.deploy((
-			Token::Address(yui_ibc.diamond.address()),
+			Token::Address(yui_ibc.ibc_core_diamond.address()),
 			Token::Address(update_client_delegate_contract.address()),
 		))
 		.unwrap()
@@ -289,8 +289,8 @@ async fn test_deploy_yui_ibc_and_create_eth_client() {
 		.unwrap();
 
 	//replace the tendermint client address in hyperspace config with a real one
-	hyperspace.config.diamond_address = Some(yui_ibc.diamond.address());
-	hyperspace.config.tendermint_address = Some(tendermint_light_client.address());
+	hyperspace.config.ibc_core_diamond_address = Some(yui_ibc.ibc_core_diamond.address());
+	hyperspace.config.tendermint_diamond_address = Some(tendermint_light_client.address());
 	// yui_ibc.tendermint_client = tendermint_light_client;
 	/* ______________________________________________________________________________ */
 
@@ -299,7 +299,7 @@ async fn test_deploy_yui_ibc_and_create_eth_client() {
 	let _ = yui_ibc
 		.register_client(
 			&hyperspace.config.client_type,
-			hyperspace.config.tendermint_address.unwrap(),
+			hyperspace.config.tendermint_diamond_address.unwrap(),
 		)
 		.await;
 	/* ______________________________________________________________________________ */

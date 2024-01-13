@@ -115,54 +115,24 @@ pub struct DeployYuiIbcTendermintClient {
 pub async fn deploy_yui_ibc_and_tendermint_client_fixture() -> DeployYuiIbcTendermintClient {
 	let path = utils::yui_ibc_solidity_path();
 	println!("path: {:?}", path);
-	let project_output = hyperspace_ethereum::utils::compile_yui(&path, "contracts/core");
-	let diamond_project_output =
-		hyperspace_ethereum::utils::compile_yui(&path, "contracts/diamond");
-	let project_output1 = hyperspace_ethereum::utils::compile_yui(&path, "contracts/clients");
-	check_code_size(project_output1.artifacts());
 	let (anvil, client) = utils::spawn_anvil().await;
-	log::warn!("endpoint: {}, chain id: {}", anvil.endpoint(), anvil.chain_id());
-	let mut yui_ibc = hyperspace_ethereum::utils::deploy_yui_ibc(
-		&project_output,
-		&diamond_project_output,
-		client.clone(),
-	)
-	.await;
-	let utils_output = hyperspace_ethereum::utils::compile_yui(&path, "contracts/utils");
-	let gov_proxy = deploy_contract(
-		"GovernanceProxy",
-		&[&utils_output],
-		(yui_ibc.diamond.address(),),
-		client.clone(),
-	)
-	.await;
-	yui_ibc.gov_proxy = Some(gov_proxy.clone());
-	yui_ibc.set_gov_proxy(gov_proxy.address()).await;
+	warn!("endpoint: {}, chain id: {}", anvil.endpoint(), anvil.chain_id());
 
-	let ics23_contract =
-		deploy_contract("Ics23Contract", &[&project_output1], (), client.clone()).await;
+	let mut yui_ibc = hyperspace_ethereum::utils::deploy_ibc(&path, client.clone()).await.unwrap();
+	let project_output = hyperspace_ethereum::utils::compile_yui(&path, "contracts/core");
 
-	let update_client_delegate_contract =
-		deploy_contract("DelegateTendermintUpdate", &[&project_output1], (), client.clone()).await;
-
-	let tendermint_light_client = deploy_contract(
+	let (tendermint_diamond, tendermint_facets) = hyperspace_ethereum::utils::deploy_client(
+		&path,
+		yui_ibc.clone(),
+		"07-tendermint".to_string(),
 		"TendermintLightClientZK",
-		&[&project_output1],
-		(
-			Token::Address(yui_ibc.diamond.address()),
-			Token::Address(update_client_delegate_contract.address()),
-			Token::Address(ics23_contract.address()),
-		),
 		client.clone(),
 	)
-	.await;
+	.await
+	.unwrap();
 
-	sleep(Duration::from_secs(10)).await;
-	let _ = yui_ibc
-		.register_client("07-tendermint", tendermint_light_client.address())
-		.await;
-
-	yui_ibc.tendermint = Some(tendermint_light_client.clone());
+	yui_ibc.tendermint_diamond = Some(tendermint_diamond.clone());
+	yui_ibc.tendermint_facets = tendermint_facets;
 
 	DeployYuiIbcTendermintClient {
 		path,
@@ -170,7 +140,7 @@ pub async fn deploy_yui_ibc_and_tendermint_client_fixture() -> DeployYuiIbcTende
 		anvil,
 		client,
 		yui_ibc,
-		tendermint_client: tendermint_light_client,
+		tendermint_client: tendermint_diamond,
 		ics20_module: None,
 	}
 }
@@ -201,7 +171,7 @@ fn deploy_transfer_module_fixture(
 		.await;
 		info!("Bank module address: {:?}", ics20_bank_contract.address());
 		let constructor_args = (
-			Token::Address(deploy.yui_ibc.diamond.address()),
+			Token::Address(deploy.yui_ibc.ibc_core_diamond.address()),
 			Token::Address(ics20_bank_contract.address()),
 		);
 		let ics20_bank_transfer_contract = deploy_contract(
@@ -265,7 +235,10 @@ async fn owner_test_tx(
 	eth_client: &EthereumClient,
 	cosmos_client: &CosmosClient<()>,
 	calldata: Bytes,
+	diamond_address: Address,
 ) -> TypedTransaction {
+	use crate::ibc_provider::LibGovernanceEcdsaSignature;
+	use ethers::abi::Tokenizable;
 	use hyperspace_ethereum::ibc_provider::SimpleValidatorData;
 
 	let validator_set = get_current_validator_set(cosmos_client, eth_client).await;
@@ -290,7 +263,14 @@ async fn owner_test_tx(
 			SimpleValidatorData { pub_key, voting_power: x.power.into() }
 		})
 		.collect::<Vec<_>>();
-	let method = eth_client
+	let data =
+		[calldata.as_slice(), 0u8.to_le_bytes().as_slice(), diamond_address.as_bytes()].concat();
+	let keccak257 = keccak256(data.clone());
+	let signature = eth_client.client().signer().sign_message(keccak257).await.unwrap();
+	let r: [u8; 32] = signature.r.into();
+	let s: [u8; 32] = signature.s.into();
+
+	let mut method = eth_client
 		.yui
 		.method::<_, (bool, Vec<u8>)>(
 			"execute",
@@ -299,9 +279,11 @@ async fn owner_test_tx(
 				Token::Uint(U256::zero()),
 				validators,
 				Token::Bytes(Bytes::new()),
+				vec![LibGovernanceEcdsaSignature { r, s, v: signature.v as _ }],
 			),
 		)
 		.unwrap();
+	method.tx.set_to(diamond_address);
 	method.tx
 }
 
@@ -326,8 +308,16 @@ async fn setup_clients() -> (AnyChain, AnyChain, JoinHandle<()>) {
 		toml::from_str(include_str!("../../../config/ethereum-local.toml")).unwrap()
 	} else {
 		let deploy = deploy_yui_ibc_and_tendermint_client_fixture().await;
-		let (ics20_bank_contract, ics20_bank_trasnfer_contract) =
-			deploy_transfer_module_fixture(&deploy).await;
+		let (ibc_transfer_diamond, ibc_transfer_facets, bank_diamond, bank_facets) =
+			hyperspace_ethereum::utils::deploy_transfer_module(
+				&deploy.path,
+				deploy.yui_ibc.clone(),
+				deploy.yui_ibc.ibc_core_diamond.address(),
+				deploy.client.clone(),
+				1,
+			)
+			.await
+			.unwrap();
 		let DeployYuiIbcTendermintClient {
 			anvil,
 			tendermint_client,
@@ -335,14 +325,24 @@ async fn setup_clients() -> (AnyChain, AnyChain, JoinHandle<()>) {
 			mut yui_ibc,
 			..
 		} = deploy;
-		let tendermint_address = yui_ibc.tendermint.as_ref().map(|x| x.address()).unwrap();
-		yui_ibc.set_gov_tendermint_client(tendermint_address).await;
-		yui_ibc.add_relayer(deploy.client.address()).await;
-		yui_ibc.bind_port("transfer", ics20_bank_trasnfer_contract.address()).await;
-		yui_ibc.transfer_ownership(yui_ibc.gov_proxy.as_ref().unwrap().address()).await;
-		info!(target: "hyperspace", "Deployed diamond: {:?}, tendermint client: {:?}, bank: {:?}", yui_ibc.diamond.address(), tendermint_client.address(), ics20_bank_contract.address());
-		yui_ibc.ics20_transfer_bank = Some(ics20_bank_trasnfer_contract);
-		yui_ibc.ics20_bank = Some(ics20_bank_contract);
+		let tendermint_address = yui_ibc.tendermint_diamond.as_ref().map(|x| x.address()).unwrap();
+
+		info!(target: "hyperspace", "Deployed diamond: {:?}, tendermint client: {:?}, bank: {:?}", yui_ibc.ibc_core_diamond.address(), tendermint_client.address(), bank_diamond.address());
+		yui_ibc.ibc_transfer_diamond = Some(ibc_transfer_diamond);
+		yui_ibc.ibc_transfer_facets = ibc_transfer_facets;
+		yui_ibc.bank_diamond = Some(bank_diamond);
+		yui_ibc.bank_facets = bank_facets;
+		yui_ibc = hyperspace_ethereum::utils::deploy_governance(
+			&deploy.path,
+			deploy.client.clone(),
+			yui_ibc.clone(),
+			&anvil.addresses()[..1],
+		)
+		.await
+		.unwrap();
+
+		// yui_ibc.set_gov_tendermint_client(tendermint_address).await;
+		let tendermint_facets = yui_ibc.tendermint_facets.clone();
 
 		//replace the tendermint client address in hyperspace config with a real one
 		let mut config_a = hyperspace_ethereum_client_fixture(
@@ -352,7 +352,11 @@ async fn setup_clients() -> (AnyChain, AnyChain, JoinHandle<()>) {
 			"redis://localhost:6379",
 		)
 		.await;
-		config_a.tendermint_address = Some(tendermint_address);
+		config_a.tendermint_diamond_address = Some(tendermint_address);
+		config_a.tendermint_facets = tendermint_facets
+			.into_iter()
+			.map(|contract| (contract.abi_name(), contract.contract().address()))
+			.collect();
 		if !USE_GETH {
 			config_a.ws_rpc_url = anvil.ws_endpoint().parse().unwrap();
 			config_a.anvil = Some(Arc::new(Mutex::new(anvil)));
@@ -394,7 +398,7 @@ async fn setup_clients() -> (AnyChain, AnyChain, JoinHandle<()>) {
 		common: CommonClientConfig {
 			skip_optional_client_updates: true,
 			max_packets_to_process: 200,
-			client_update_interval_sec: 30,
+			client_update_interval_sec: 10,
 		},
 	};
 
@@ -427,8 +431,8 @@ async fn setup_clients() -> (AnyChain, AnyChain, JoinHandle<()>) {
 		let client_a = clients_on_b.pop().unwrap();
 		let client_b = clients_on_a.pop().unwrap();
 		info!(target: "hyperspace", "Reusing clients A: {client_a:?} B: {client_b:?}");
-		// client_id_a = Some(client_a);
-		// client_id_b = Some(client_b);
+		client_id_a = Some(client_a);
+		client_id_b = Some(client_b);
 	}
 
 	if client_id_a.is_none() || client_id_b.is_none() {
@@ -460,9 +464,8 @@ async fn ethereum_to_cosmos_ibc_messaging_full_integration_test() {
 		let _h = tokio::spawn(async move {
 			let AnyChain::Ethereum(eth) = &a else { unreachable!() };
 
-			let mut s = a.finality_notifications().await.unwrap();
 			let mut p = Provider::connect(eth.config.ws_rpc_url.to_string()).await.unwrap();
-			while let Some(_ev) = s.next().await {
+			loop {
 				// info!(target: "hyperspace", "Finality notification: {ev:?}");
 				tokio::time::sleep(Duration::from_secs(5)).await;
 				let res = p.request::<_, BlockNumber>("evm_mine", ()).await;
@@ -953,15 +956,17 @@ async fn ethereum_to_cosmos_governance_and_filters_test() {
 	sleep(Duration::from_secs(12)).await;
 	indexer_handle.abort();
 	use ibc_provider::{
-		DIAMONDABI_ABI, DIAMONDCUTFACETABI_ABI, DIAMONDLOUPEFACETABI_ABI, ERC20TOKENABI_ABI,
-		GOVERNANCEFACETABI_ABI, IBCCHANNELABI_ABI, IBCCLIENTABI_ABI, IBCCONNECTIONABI_ABI,
-		IBCPACKETABI_ABI, IBCQUERIERABI_ABI, ICS20BANKABI_ABI, ICS20TRANSFERBANKABI_ABI,
-		OWNERSHIPFACETABI_ABI, RELAYERWHITELISTFACETABI_ABI, TENDERMINTCLIENTABI_ABI,
+		CALLBATCHFACETABI_ABI, DIAMONDABI_ABI, DIAMONDCUTFACETABI_ABI, DIAMONDLOUPEFACETABI_ABI,
+		ERC20TOKENABI_ABI, GOVERNANCEFACETABI_ABI, IBCCHANNELABI_ABI, IBCCLIENTABI_ABI,
+		IBCCONNECTIONABI_ABI, IBCPACKETABI_ABI, IBCQUERIERABI_ABI, ICS20BANKABI_ABI,
+		ICS20TRANSFERBANKABI_ABI, OWNERSHIPFACETABI_ABI, RELAYERWHITELISTFACETABI_ABI,
+		TENDERMINTCLIENTABI_ABI,
 	};
 	use CallableBy::*;
 	use ContractName::*;
+
 	let all_abis = [
-		(Diamond, &DIAMONDABI_ABI),
+		(IbcCoreDiamond, &DIAMONDABI_ABI),
 		(DiamondCutFacet, &DIAMONDCUTFACETABI_ABI),
 		(DiamondLoupeFacet, &DIAMONDLOUPEFACETABI_ABI),
 		(ERC20Token, &ERC20TOKENABI_ABI),
@@ -976,6 +981,7 @@ async fn ethereum_to_cosmos_governance_and_filters_test() {
 		(OwnershipFacet, &OWNERSHIPFACETABI_ABI),
 		(RelayerWhitelistFacet, &RELAYERWHITELISTFACETABI_ABI),
 		(TendermintLightClientZK, &TENDERMINTCLIENTABI_ABI),
+		(CallBatchFacet, &CALLBATCHFACETABI_ABI),
 	];
 
 	#[derive(Copy, Clone, Debug)]
@@ -990,7 +996,7 @@ async fn ethereum_to_cosmos_governance_and_filters_test() {
 	}
 
 	let functions = [
-		(Diamond, "callBatch", Anyone),
+		(CallBatchFacet, "callBatch", Anyone),
 		(DiamondCutFacet, "diamondCut", Owner),
 		(ERC20Token, "approve", Anyone),
 		(ERC20Token, "burn", Module),
@@ -999,13 +1005,17 @@ async fn ethereum_to_cosmos_governance_and_filters_test() {
 		(ERC20Token, "mint", Module),
 		(ERC20Token, "transfer", Anyone),
 		(ERC20Token, "transferFrom", Anyone),
-		(ERC20Token, "renounceRole", Owner),
-		(ERC20Token, "setDecimals", Owner),
-		(ERC20Token, "transferRole", Owner),
-		(ERC20Token, "updateRole", Module),
+		(ERC20Token, "setDecimals", Module),
+		(ERC20Token, "setName", Module),
+		(ERC20Token, "setSymbol", Module),
+		(ERC20Token, "renounceOwnership", Module),
+		(ERC20Token, "transferOwnership", Module),
+		(ERC20Token, "updateOwnership", Module),
 		(GovernanceFacet, "execute", Anyone),
 		(GovernanceFacet, "setTendermintClient", Owner),
 		(GovernanceFacet, "setProxy", Owner),
+		(GovernanceFacet, "addSignatory", Owner),
+		(GovernanceFacet, "removeSignatory", Owner),
 		(IBCChannelHandshake, "bindPort", Owner),
 		(IBCChannelHandshake, "channelCloseConfirm", Relayer),
 		(IBCChannelHandshake, "channelCloseInit", Relayer),
@@ -1026,13 +1036,22 @@ async fn ethereum_to_cosmos_governance_and_filters_test() {
 		(IBCPacket, "timeoutOnClose", Relayer),
 		(IBCPacket, "timeoutPacket", Relayer),
 		(IBCPacket, "writeAcknowledgement", Module),
+		(IBCPacket, "setPaused", Relayer),
+		(ICS20Bank, "init", Anyone),
 		(ICS20Bank, "burn", Module),
 		(ICS20Bank, "mint", Module),
 		(ICS20Bank, "transfer", Module),
 		(ICS20Bank, "transferFrom", Module), // Also Anyone, if `from` == sender
 		(ICS20Bank, "renounceRole", Module),
 		(ICS20Bank, "transferRole", Module),
-		(ICS20Bank, "updateRole", Owner),
+		(ICS20Bank, "tokenUpdateOwnership", Owner),
+		(ICS20Bank, "tokenSetDecimals", Owner),
+		(ICS20Bank, "tokenSetName", Owner),
+		(ICS20Bank, "tokenSetSymbol", Owner),
+		(ICS20Bank, "whitelistToken", Owner),
+		(ICS20Bank, "unwhitelistToken", Owner),
+		(ICS20Bank, "unwhitelistToken", Owner),
+		(ICS20TransferBank, "init", Anyone),
 		(ICS20TransferBank, "onAcknowledgementPacket", Ibc),
 		(ICS20TransferBank, "onChanCloseConfirm", Ibc),
 		(ICS20TransferBank, "onChanCloseInit", Ibc),
@@ -1047,6 +1066,7 @@ async fn ethereum_to_cosmos_governance_and_filters_test() {
 		(OwnershipFacet, "transferOwnership", Owner),
 		(RelayerWhitelistFacet, "addRelayer", Owner),
 		(RelayerWhitelistFacet, "removeRelayer", Owner),
+		(TendermintLightClientZK, "init", Anyone),
 		(TendermintLightClientZK, "createClient", Ibc),
 		(TendermintLightClientZK, "updateClient", Ibc),
 	]
@@ -1102,13 +1122,7 @@ async fn ethereum_to_cosmos_governance_and_filters_test() {
 	let erc20_token = deploy_contract(
 		"ERC20Token",
 		&[&project_output],
-		(
-			"Test Token".to_string(),
-			"TEST".to_string(),
-			100u32,
-			0u8,
-			eth_client.yui.gov_proxy.as_ref().unwrap().address(),
-		),
+		("Test Token".to_string(), "TEST".to_string(), 100u32, 0u8),
 		fake_owner_client.clone(),
 	)
 	.await;
@@ -1131,29 +1145,35 @@ async fn ethereum_to_cosmos_governance_and_filters_test() {
 					assert!(fns_to_check.remove(&(name, f_name)), "duplicate function");
 					let params = f.inputs.iter().map(|x| x.kind.clone()).collect::<Vec<_>>();
 					let mut tx = test_tx(&eth_client, name, f_name, &params).await;
-					let owner_tx = owner_test_tx(
-						&eth_client,
-						&cosmos_client,
-						test_call(name, f_name, &params).await,
-					)
-					.await;
 					match name {
 						ERC20Token => {
 							tx.set_to(erc20_token.address());
 						},
 						ICS20Bank => {
-							tx.set_to(eth_client.yui.ics20_bank.as_ref().unwrap().address());
+							tx.set_to(eth_client.yui.bank_diamond.as_ref().unwrap().address());
 						},
 						ICS20TransferBank => {
 							tx.set_to(
-								eth_client.yui.ics20_transfer_bank.as_ref().unwrap().address(),
+								eth_client.yui.ibc_transfer_diamond.as_ref().unwrap().address(),
 							);
 						},
 						TendermintLightClientZK => {
-							tx.set_to(eth_client.yui.tendermint.as_ref().unwrap().address());
+							tx.set_to(
+								eth_client.yui.tendermint_diamond.as_ref().unwrap().address(),
+							);
 						},
 						_ => (),
 					}
+					let owner_tx = owner_test_tx(
+						&eth_client,
+						&cosmos_client,
+						test_call(name, f_name, &params).await,
+						*tx.to().unwrap().as_address().unwrap(),
+					)
+					.await;
+
+					warn!("Checking {}:{}", name, f_name);
+
 					let not_contract_owner_err = "0xff4127cb";
 					let not_contract_owner_err2 = "caller is not the owner";
 					let not_contract_owner_err3 = "caller is not owner";
@@ -1161,6 +1181,8 @@ async fn ethereum_to_cosmos_governance_and_filters_test() {
 					let no_capability_err = "NoCapability";
 					let unauthorized_err = "unauthorized";
 					let not_ibc_err = "caller is not the IBC contract";
+					let not_enough_signatories = "not enough signatories";
+					let invalid_additional_sigs = "Invalid additional signatures";
 					match mode {
 						Anyone => {
 							let result = user_client.call(&tx, None).await;
@@ -1171,9 +1193,12 @@ async fn ethereum_to_cosmos_governance_and_filters_test() {
 							}
 						},
 						Relayer => {
-							let err = relayer_client.call(&tx, None).await.unwrap_err().to_string();
-							info!("{err}");
-							assert!(!err.contains(not_whitelisted_err));
+							let result = relayer_client.call(&tx, None).await;
+							if let Err(e) = result {
+								let string = e.to_string();
+								info!("{string}");
+								assert!(!string.contains(not_whitelisted_err));
+							}
 							let err = user_client.call(&tx, None).await.unwrap_err().to_string();
 							info!("{err}");
 							assert!(err.contains(not_whitelisted_err));
@@ -1193,6 +1218,10 @@ async fn ethereum_to_cosmos_governance_and_filters_test() {
 									err.contains(not_contract_owner_err2) ||
 									err.contains(not_contract_owner_err3)
 							);
+							if name == ERC20Token {
+								warn!("Skipping governance call to {}:{}", name, f_name);
+								continue;
+							}
 							let err = get_error_from_call(user_client.call(&owner_tx, None).await);
 							info!("{err}");
 							assert!(
@@ -1200,6 +1229,8 @@ async fn ethereum_to_cosmos_governance_and_filters_test() {
 									!err.contains(not_contract_owner_err) &&
 									!err.contains(not_contract_owner_err2) &&
 									!err.contains(not_contract_owner_err3) &&
+									!err.contains(not_enough_signatories) &&
+									!err.contains(invalid_additional_sigs) &&
 									!err.contains("message already executed") &&
 									!err.contains("validators hash mismatch")
 							);

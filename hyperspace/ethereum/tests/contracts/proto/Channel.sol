@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: Apache-2.0
-pragma solidity ^0.8.9;
+pragma solidity ^0.8.12;
 import "./ProtoBufRuntime.sol";
 import "./GoogleProtobufAny.sol";
 import "./Client.sol";
@@ -19,7 +19,7 @@ library Channel {
 
   // Solidity enum encoder
   function encode_State(State x) internal pure returns (int32) {
-    
+
     if (x == State.STATE_UNINITIALIZED_UNSPECIFIED) {
       return 0;
     }
@@ -45,7 +45,7 @@ library Channel {
 
   // Solidity enum decoder
   function decode_State(int64 x) internal pure returns (State) {
-    
+
     if (x == 0) {
       return State.STATE_UNINITIALIZED_UNSPECIFIED;
     }
@@ -78,7 +78,7 @@ library Channel {
 
   // Solidity enum encoder
   function encode_Order(Order x) internal pure returns (int32) {
-    
+
     if (x == Order.ORDER_NONE_UNSPECIFIED) {
       return 0;
     }
@@ -96,7 +96,7 @@ library Channel {
 
   // Solidity enum decoder
   function decode_Order(int64 x) internal pure returns (Order) {
-    
+
     if (x == 0) {
       return Order.ORDER_NONE_UNSPECIFIED;
     }

@@ -1,11 +1,58 @@
 use super::node_codec::RlpNodeCodec;
 use crate::{
-	proof::ethereum_trie::{verify_proof, EIP1186Layout, KeccakHasher},
+	proof::ethereum_trie::{verify_proof, EIP1186Layout, KeccakHasher, VerifyError},
 	utils::keccak256,
+	verify::{commitment_storage_raw_key, verify_ibc_proof},
 };
+use core::str::FromStr;
 use hex_literal::hex;
-use primitive_types::H256;
-use trie_db::{node::Node, NodeCodec};
+use primitive_types::{H256, U256};
+use std::ops::Add;
+use trie_db::{
+	node::{Node, Value},
+	NodeCodec, TrieLayout,
+};
+
+#[test]
+fn test_account_proof() {
+	let contract_address = hex!("f60caf363d85087538bf6e43283b40760c989490");
+	let state_root = H256(hex!("997630cf39c5a7e08c48e090c723954001788c856ce0c35238670ccd7a0e6a7c"));
+	let storage_value = keccak256(b"baabo").to_vec();
+	let storage_key = commitment_storage_raw_key("booba");
+
+	let account_proof: Vec<Vec<u8>> = vec![
+			hex!("f90211a099a299df56418e3f98f431c80d9b604f787d4d65bcf6154d4817c7b5a1846923a0337a1359346f1a916387e10ff3eed03a8c361b22ed4cdd84f64a1eb6e7bab504a02ad849713eb263b1ecb8aa2541f2af497cd1c6e6e8ace298cba69e2c4a7a7ef2a0d9504861fe55ee77869c6701ade95aeff2c924c4082b30060de378cb483eed57a0219cd462f8609cb1606da3a89651e42d5b8583389b8d0ab1b4d822369340cd55a063dc0dfb28a17048c3a4c44f2c3df3511c9636d8e1d896d0b03a986a0cdae9b9a076948e49d37f612604d5698076c662df093eaabba5a258d367edd8d4d910ef8ca0a4bd8dff71beba165038b3bfac559c6ac87dc1e561e9d44f14252810f5537716a08696cf4d20399fc6574ee844f2f9a3c23222601717873eef9c2f80e9c4117c59a06785c57d702a45b1f31cf45ac8524a3bf3b19ee3febb17c9378cde70c1fc0406a02efefa24c7ab4a328dc064e6d077a570a990dc62b6877d9c5ba5716dc62230e1a0b9ee568cdc9823986b6caf5462e5ee37f518b0abc32c1b02bf0ec04b4f46bbf4a06a11bfe2d5d18024126319a9c34c6561741bf54fb659d9f8f06e12f7a163f04da0c391b873e95c111154cecb058dddf3cb6bc12cb76a3dbab5be3686f732fa9e4ba0b052bb76cf70244c2968f5a7e2a914ce63296c5bcf54be3c6a9e1a6ae3b18717a0697d1267ce1259e89194920ea37959dad27da713d3dbec980501a7404d81b6a380").into(),
+			hex!("f87180a0de5d0f8d14997487a666b6a3c137e46422e0c327d2bf20c87467ad7c5f5ea025808080808080a07521f9debe5398f077ba90ab9fc743108ef094d137ed25703eb409fd4a399dbe808080a0960208cde3ecafb1f78b322a61504ae544b3191f96c394bc76d7ba80a1d97f5c80808080").into(),
+			hex!("f869a0201266a7d527b7e3ef673af21e8826ce5419289ad7ae81c96ee4ba4c7b61d9d7b846f8440180a0b55025f0dd29191b204da3f222fc30f031b5ae40f690344ea5d5ee90bd583af9a01d23bbee3a6e9309aa2d69f577c40eb036a1d82fac4f359ea434b0b0ff7a16df").into(),
+		];
+	let storage_proof: Vec<Vec<u8>> = vec![
+		hex!("f90211a0f8e3466d5df8a8443977800dd7abefbccbef595e62d54b3e68fe02cba99f3ec9a0d0ee38adeb339c8aa7a5af3cbf7317e28b6f59f5d583b5a97c86fbfe0429f462a0b9a81bc3eb040842292cb57556621bac924b6a26624f417fbca1a50256da674aa08bb75f72cdd98139fca7ed214981a571edeba261480c7eebb306438d12b25821a0363c17c473559ee2315d66beddedf99ec1bd6cea4d67323876ecb2bb13164defa008840cec466bceafa195a0c711d55f58653946b52774dcaa89fcf42ea155ba94a0e0dba414862c448f7041c5b863e966821623f898611c22ffa2871e7759a03cc6a0f50d3ed667fe2131083c5b6caac6e4be242f433d610de02b553d0c92aa43a999a055c2ef613a1f4731fd3a8d02d2b1b50923e7f61da59ffc9bbf8c454c23a3b625a06b36ce0d8d02cfde3f3e86fe001bb01b9f20e1146c0039006a529cc84faa0fa4a0bd1c033b51ac06f07f47f600dbfca65fb840d8a3e1a2003e0ba43db3df540d32a0be9415ff39504d9b7d36dca59895c61fa583711feb5f0fad11c4cc3e14bf78ffa0a8c67f09de14a70241081b22e2d6120b9bfb7f29f77d3c092f8621d3a2731f37a0ca0ec25ef5ee3f730dd0fa348c185c3b09f9b7ca08cf8fa0919bca1fef997ab6a0bfc6047604d23f451baba09d882a32067c34647a4035b9f58186709ebf01aa81a0280f4124fa44ab54fc6975dfe6816c39410a3aaa2d34fb4d76fc33e455946f4f80").into(),
+		hex!("f8b180a0f49b004972fabb7e95111bdcbd2449bf7a33bedccc8bea806aaf776c0f15fbca80a0df7d4a63d17ca93e23417d4904f5c73760f7b1d30ec7a57ed525bf465ef188ec8080808080a03ffdcf4d13dd80b7ac636601184649c0f59cbfcd86f69f34aa5cad05eb07878d80808080a09755fb0696941e2c765fa65329d31623cd3e0ce170eeb4c98250023dfb1e5d91a04addce2584b1b7002e4510c9dcc838f4cd28ca66e19e467ae97abc71c6e2e4ab80").into(),
+		hex!("f8518080808080a0dd2aed3b76c0d35369f7088ce02f92cf4c37674f6b1a5bbc3ee416d2cfd57b8c80808080808080a02627bc7dec5f7d4c56449f33766ededd6ae52b452ccf898f20c92e6cf0067472808080").into(),
+		hex!("f8429f32d1ee44e142509cda35f793981dababaf5907a504ff04cb1a2fc6ca98ec06a1a0982d2b55a5ee43c03932612e7a68ac68af01ba3f7ef9e9552911b7faf0934cae").into(),
+	];
+
+	let mut stream = rlp::Rlp::new(&account_proof[2]);
+	let storage_root: Vec<u8> = stream.val_at(1).unwrap();
+	let mut stream = rlp::Rlp::new(&storage_root);
+	let storage_hash: Vec<u8> = stream.val_at(2).unwrap();
+	let storage_hash = H256::from_slice(&storage_hash);
+
+	let key = keccak256(&contract_address).to_vec();
+	verify_proof::<EIP1186Layout<KeccakHasher>>(
+		&state_root,
+		&account_proof,
+		&key,
+		Some(&account_proof.last().unwrap()),
+	)
+	.unwrap();
+
+	let key = keccak256(storage_key).to_vec();
+	let value = rlp::encode(&storage_value);
+
+	verify_proof::<EIP1186Layout<KeccakHasher>>(&storage_hash, &storage_proof, &key, Some(&value))
+		.unwrap();
+}
 
 #[test]
 fn test_verify_membership() {

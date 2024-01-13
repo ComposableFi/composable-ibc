@@ -25,7 +25,7 @@ use crate::{
 use alloc::{string::ToString, vec::Vec};
 use anyhow::anyhow;
 use core::convert::Infallible;
-use sync_committee_primitives::types::{AncestorBlock, VerifierStateUpdate as LightClientUpdate};
+use sync_committee_primitives::types::VerifierStateUpdate as LightClientUpdate;
 use tendermint_proto::Protobuf;
 
 /// Protobuf type url for GRANDPA header
@@ -36,8 +36,6 @@ pub const ETHEREUM_MISBEHAVIOUR_TYPE_URL: &str = "/ibc.lightclients.ethereum.v1.
 #[derive(Clone, Debug)]
 pub struct Header {
 	pub inner: LightClientUpdate,
-	// ancestors of the finalized block to be verified, may be empty.
-	pub ancestor_blocks: Vec<AncestorBlock>,
 }
 
 /// Misbehaviour type for GRANDPA. If both first and second proofs are valid
@@ -92,11 +90,6 @@ impl TryFrom<RawHeader> for Header {
 			.ok_or_else(|| Error::Custom("'sync_aggregate' is none".to_string()))?
 			.try_into()?;
 		let signature_slot = raw_header.signature_slot;
-		let ancestor_blocks = raw_header
-			.ancestor_blocks
-			.into_iter()
-			.map(TryInto::try_into)
-			.collect::<Result<Vec<_>, _>>()?;
 
 		let header = Header {
 			inner: LightClientUpdate {
@@ -108,7 +101,6 @@ impl TryFrom<RawHeader> for Header {
 				sync_aggregate,
 				signature_slot,
 			},
-			ancestor_blocks,
 		};
 		Ok(header)
 	}
@@ -124,8 +116,6 @@ impl From<Header> for RawHeader {
 		let finality_proof = Some(inner.finality_proof.into());
 		let sync_aggregate = Some(inner.sync_aggregate.into());
 		let signature_slot = inner.signature_slot;
-		let ancestor_blocks =
-			header.ancestor_blocks.into_iter().map(Into::into).collect::<Vec<_>>();
 
 		RawHeader {
 			attested_header,
@@ -135,7 +125,6 @@ impl From<Header> for RawHeader {
 			finality_proof,
 			sync_aggregate,
 			signature_slot,
-			ancestor_blocks,
 		}
 	}
 }

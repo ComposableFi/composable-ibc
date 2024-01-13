@@ -224,22 +224,25 @@ impl EthereumClient {
 			None =>
 				DeployYuiIbc::<_, _>::from_addresses(
 					client.clone(),
-					config.diamond_address.clone().ok_or_else(|| {
+					config.ibc_core_diamond_address.clone().ok_or_else(|| {
 						ClientError::Other("diamond address must be provided".to_string())
 					})?,
-					Some(config.tendermint_address.clone().ok_or_else(|| {
+					config.ibc_core_facets.clone(),
+					Some(config.tendermint_diamond_address.clone().ok_or_else(|| {
 						ClientError::Other("tendermint address must be provided".to_string())
 					})?),
+					config.tendermint_facets.clone(),
+					Some(config.ibc_transfer_diamond_address.clone().ok_or_else(|| {
+						ClientError::Other("bank address must be provided".to_string())
+					})?),
+					config.ibc_transfer_facets.clone(),
+					Some(config.bank_diamond_address.clone().ok_or_else(|| {
+						ClientError::Other("bank address must be provided".to_string())
+					})?),
+					config.bank_facets.clone(),
 					Some(config.gov_proxy_address.clone().ok_or_else(|| {
 						ClientError::Other("government proxy address must be provided".to_string())
 					})?),
-					Some(config.ics20_transfer_bank_address.clone().ok_or_else(|| {
-						ClientError::Other("bank address must be provided".to_string())
-					})?),
-					Some(config.ics20_bank_address.clone().ok_or_else(|| {
-						ClientError::Other("bank address must be provided".to_string())
-					})?),
-					config.diamond_facets.clone(),
 				)
 				.await?,
 			Some(yui) => yui,
@@ -366,7 +369,7 @@ impl EthereumClient {
 		.unwrap();
 
 		let client = self.client().clone();
-		let address = self.yui.diamond.address().clone();
+		let address = self.yui.ibc_core_diamond.address().clone();
 
 		async move {
 			Ok(client
@@ -396,7 +399,7 @@ impl EthereumClient {
 			cast::SimpleCast::index("bytes32", dbg!(&var_name), dbg!(&storage_index)).unwrap();
 
 		let client = self.client().clone();
-		let address = self.yui.diamond.address().clone();
+		let address = self.yui.ibc_core_diamond.address().clone();
 
 		async move {
 			Ok(client
@@ -432,7 +435,7 @@ impl EthereumClient {
 		let index = cast::SimpleCast::index("bytes32", &key2_hashed_hex, &key2_hashed_hex).unwrap();
 
 		let client = self.client().clone();
-		let address = self.yui.diamond.address().clone();
+		let address = self.yui.ibc_core_diamond.address().clone();
 
 		async move {
 			client
@@ -531,19 +534,28 @@ impl EthereumClient {
 		let proof = self
 			.eth_query_proof(&path, Some(at.revision_height), COMMITMENTS_STORAGE_INDEX)
 			.await?;
-		// FIXME: verify account proof
 
-		let storage = proof
+		let storage_proof = proof
 			.storage_proof
 			.first()
 			.ok_or(ClientError::Other("storage proof not found".to_string()))?;
-		let bytes = u256_to_bytes(&storage.value);
 
-		let proof = encode(&[Token::Array(
-			storage.proof.clone().into_iter().map(|p| Token::Bytes(p.to_vec())).collect(),
-		)]);
+		let proof_bytes = encode(&[
+			Token::Array(
+				proof.account_proof.into_iter().map(|p| Token::Bytes(p.to_vec())).collect(),
+			),
+			Token::Array(
+				storage_proof
+					.proof
+					.clone()
+					.into_iter()
+					.map(|p| Token::Bytes(p.to_vec()))
+					.collect(),
+			),
+		]);
 
-		Ok((proof, bytes))
+		let bytes = u256_to_bytes(&storage_proof.value);
+		Ok((proof_bytes, bytes))
 	}
 }
 
@@ -554,12 +566,11 @@ impl primitives::TestProvider for EthereumClient {
 		if params.token.denom.to_string() == "ETH".to_string() {
 			return send_native_eth(&self, params).await
 		}
-		let method = self
-			.yui
-			.ics20_bank
-			.as_ref()
-			.expect("expected bank module")
-			.method::<_, Address>("queryTokenContractFromDenom", params.token.denom.to_string())?;
+		let method = self.yui.method_diamond::<_, Address>(
+			"queryTokenContractFromDenom",
+			params.token.denom.to_string(),
+			ContractName::BankDiamond,
+		)?;
 		let erc20_address = method.call().await.unwrap_contract_error();
 		assert_ne!(erc20_address, Address::zero(), "erc20 address is zero");
 
@@ -570,7 +581,7 @@ impl primitives::TestProvider for EthereumClient {
 			.method::<_, ()>(
 				"approve",
 				(
-					self.yui.ics20_bank.as_ref().unwrap().clone().address(),
+					self.yui.bank_diamond.as_ref().unwrap().clone().address(),
 					params.token.amount.as_u256(),
 				),
 			)
@@ -583,7 +594,7 @@ impl primitives::TestProvider for EthereumClient {
 		// 	.method::<_, ()>(
 		// 		"approve",
 		// 		(
-		// 			self.yui.ics20_transfer_bank.as_ref().unwrap().clone().address(),
+		// 			self.yui.ibc_transfer_diamond.as_ref().unwrap().clone().address(),
 		// 			params.token.amount.as_u256(),
 		// 		),
 		// 	)
@@ -599,12 +610,11 @@ impl primitives::TestProvider for EthereumClient {
 			params.timeout_timestamp.nanoseconds(),
 			params.memo,
 		);
-		let method = self
-			.yui
-			.ics20_transfer_bank
-			.as_ref()
-			.expect("expected bank module")
-			.method::<_, ()>("sendTransfer", params)?;
+		let method = self.yui.method_diamond::<_, ()>(
+			"sendTransfer",
+			params,
+			ContractName::IbcTransferDiamond,
+		)?;
 		let _ = method.call().await.unwrap_contract_error();
 		let receipt = send_retrying(&method).await.unwrap();
 		handle_gas_usage(&receipt);
@@ -645,9 +655,6 @@ async fn send_native_eth(
 	eth_client: &EthereumClient,
 	params: MsgTransfer<PrefixedCoin>,
 ) -> Result<(), ClientError> {
-	let client = eth_client.config.client().await.unwrap().deref().clone();
-	let contract = eth_client.yui.ics20_transfer_bank.as_ref().unwrap().clone();
-
 	let amount = params.token.amount.as_u256();
 
 	let params = (
@@ -659,12 +666,11 @@ async fn send_native_eth(
 		params.memo,
 	);
 
-	let method = eth_client
-		.yui
-		.ics20_transfer_bank
-		.as_ref()
-		.expect("expected bank module")
-		.method::<_, ()>("sendTransferNativeToken", params)?;
+	let method = eth_client.yui.method_diamond::<_, ()>(
+		"sendTransferNativeToken",
+		params,
+		ContractName::IbcTransferDiamond,
+	)?;
 
 	let method = method.value(amount);
 	let _ = method.call().await.unwrap_contract_error();

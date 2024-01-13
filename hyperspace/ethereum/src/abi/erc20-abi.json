@@ -20,11 +20,6 @@
         "internalType": "uint8",
         "name": "precision",
         "type": "uint8"
-      },
-      {
-        "internalType": "address",
-        "name": "admin",
-        "type": "address"
       }
     ],
     "stateMutability": "nonpayable",
@@ -60,12 +55,6 @@
     "inputs": [
       {
         "indexed": true,
-        "internalType": "bytes32",
-        "name": "role",
-        "type": "bytes32"
-      },
-      {
-        "indexed": true,
         "internalType": "address",
         "name": "previousOwner",
         "type": "address"
@@ -77,7 +66,7 @@
         "type": "address"
       }
     ],
-    "name": "RoleTransferred",
+    "name": "OwnershipTransferred",
     "type": "event"
   },
   {
@@ -104,32 +93,6 @@
     ],
     "name": "Transfer",
     "type": "event"
-  },
-  {
-    "inputs": [],
-    "name": "ADMIN_ROLE",
-    "outputs": [
-      {
-        "internalType": "bytes32",
-        "name": "",
-        "type": "bytes32"
-      }
-    ],
-    "stateMutability": "view",
-    "type": "function"
-  },
-  {
-    "inputs": [],
-    "name": "OWNER_ROLE",
-    "outputs": [
-      {
-        "internalType": "bytes32",
-        "name": "",
-        "type": "bytes32"
-      }
-    ],
-    "stateMutability": "view",
-    "type": "function"
   },
   {
     "inputs": [
@@ -309,27 +272,8 @@
     "type": "function"
   },
   {
-    "inputs": [
-      {
-        "internalType": "bytes32",
-        "name": "id",
-        "type": "bytes32"
-      }
-    ],
-    "name": "renounceRole",
-    "outputs": [],
-    "stateMutability": "nonpayable",
-    "type": "function"
-  },
-  {
-    "inputs": [
-      {
-        "internalType": "bytes32",
-        "name": "id",
-        "type": "bytes32"
-      }
-    ],
-    "name": "role",
+    "inputs": [],
+    "name": "owner",
     "outputs": [
       {
         "internalType": "address",
@@ -341,6 +285,13 @@
     "type": "function"
   },
   {
+    "inputs": [],
+    "name": "renounceOwnership",
+    "outputs": [],
+    "stateMutability": "nonpayable",
+    "type": "function"
+  },
+  {
     "inputs": [
       {
         "internalType": "uint8",
@@ -349,6 +300,32 @@
       }
     ],
     "name": "setDecimals",
+    "outputs": [],
+    "stateMutability": "nonpayable",
+    "type": "function"
+  },
+  {
+    "inputs": [
+      {
+        "internalType": "string",
+        "name": "name",
+        "type": "string"
+      }
+    ],
+    "name": "setName",
+    "outputs": [],
+    "stateMutability": "nonpayable",
+    "type": "function"
+  },
+  {
+    "inputs": [
+      {
+        "internalType": "string",
+        "name": "symbol",
+        "type": "string"
+      }
+    ],
+    "name": "setSymbol",
     "outputs": [],
     "stateMutability": "nonpayable",
     "type": "function"
@@ -435,17 +412,12 @@
   {
     "inputs": [
       {
-        "internalType": "bytes32",
-        "name": "id",
-        "type": "bytes32"
-      },
-      {
         "internalType": "address",
         "name": "newOwner",
         "type": "address"
       }
     ],
-    "name": "transferRole",
+    "name": "transferOwnership",
     "outputs": [],
     "stateMutability": "nonpayable",
     "type": "function"
@@ -453,17 +425,12 @@
   {
     "inputs": [
       {
-        "internalType": "bytes32",
-        "name": "role",
-        "type": "bytes32"
-      },
-      {
         "internalType": "address",
         "name": "account",
         "type": "address"
       }
     ],
-    "name": "updateRole",
+    "name": "updateOwnership",
     "outputs": [],
     "stateMutability": "nonpayable",
     "type": "function"

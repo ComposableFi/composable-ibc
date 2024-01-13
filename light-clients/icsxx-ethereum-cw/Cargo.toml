@@ -88,7 +88,15 @@ test = [
 #  "icsxx-ethereum/std",
   "std"
 ]
+mainnet = [
+  "sync-committee-primitives/mainnet",
+  "sync-committee-verifier/mainnet",
+  "icsxx-ethereum/mainnet"
+]
 testnet = [
   "sync-committee-primitives/sepolia",
   "sync-committee-verifier/sepolia",
+]
+no_beacon = [
+  "icsxx-ethereum/no_beacon"
 ]

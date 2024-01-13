@@ -123,7 +123,7 @@ impl Default for CommonClientConfig {
 		Self {
 			skip_optional_client_updates: default_skip_optional_client_updates(),
 			max_packets_to_process: max_packets_to_process(),
-			client_update_interval_sec: 30,
+			client_update_interval_sec: 10,
 		}
 	}
 }

@@ -6787,6 +6787,7 @@ dependencies = [
  "ibc",
  "ibc-derive",
  "ibc-proto",
+ "ics07-tendermint",
  "jsonrpsee-ws-client",
  "log",
  "parity-scale-codec 1.3.7",

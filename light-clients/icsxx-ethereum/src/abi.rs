@@ -1,12 +1,25 @@
-use crate::{client_state::ClientState, consensus_state::ConsensusState, error::Error};
-use alloc::vec::Vec;
+use crate::{
+	abi::TendermintClientAbi::{MerkleRootData, TimestampData},
+	client_state::ClientState,
+	consensus_state::ConsensusState,
+	error::Error,
+};
+use alloc::{string::ToString, vec::Vec};
 use alloy_sol_macro::sol;
 use alloy_sol_types::private::FixedBytes;
+#[cfg(feature = "std")]
+use core::fmt::Formatter;
+use core::{fmt::Debug, time::Duration};
 use ethabi::Bytes;
 use ibc::{
 	core::{ics02_client::height::Height, ics23_commitment::commitment::CommitmentRoot},
 	timestamp::Timestamp,
 };
+use ics07_tendermint::{
+	client_state::ClientState as TendermintClientState,
+	consensus_state::ConsensusState as TendermintConsensusState,
+};
+use primitive_types::H160;
 use ssz_rs::{Node, Vector};
 use sync_committee_primitives::{
 	consensus_types::{BeaconBlockHeader, SyncCommittee},
@@ -16,6 +29,8 @@ use sync_committee_primitives::{
 use EthereumClientAbi::*;
 
 sol!(EthereumClientAbi, "../../hyperspace/ethereum/src/abi/ethereum-client-abi.json");
+sol!(TendermintClientAbi, "../../hyperspace/ethereum/src/abi/tendermint-client-abi.json");
+sol!(ChannelAbi, "../../hyperspace/ethereum/src/abi/ibc-channel-abi.json");
 
 impl HeightData {
 	fn is_zero(&self) -> bool {
@@ -127,6 +142,8 @@ impl<H> From<ClientState<H>> for EthereumClientPrimitivesClientState {
 				.map(Into::into)
 				.unwrap_or_else(|| HeightData { revision_number: 0, revision_height: 0 }),
 			latestHeight: value.latest_height,
+			ibcCoreContractAddress: value.ibc_core_address.0.into(),
+			nextUpgradeId: value.next_upgrade_id.into(),
 		}
 	}
 }
@@ -143,6 +160,8 @@ impl<H> TryFrom<EthereumClientPrimitivesClientState> for ClientState<H> {
 				Some(value.frozenHeight.into())
 			},
 			latest_height: value.latestHeight,
+			ibc_core_address: H160(value.ibcCoreContractAddress.into()),
+			next_upgrade_id: value.nextUpgradeId.into(),
 			_phantom: Default::default(),
 		})
 	}
@@ -165,6 +184,84 @@ impl From<EthereumClientPrimitivesConsensusState> for ConsensusState {
 				.into_tm_time()
 				.expect("invalid timestamp"),
 			root: CommitmentRoot::from_bytes(&value.root.0),
+		}
+	}
+}
+
+impl From<Duration> for TendermintClientAbi::DurationData {
+	fn from(value: Duration) -> Self {
+		Self { Seconds: value.as_secs() as i64, nanos: value.subsec_nanos() as i64 }
+	}
+}
+
+impl<H> From<TendermintClientState<H>> for TendermintClientAbi::ClientStateData {
+	fn from(value: TendermintClientState<H>) -> Self {
+		let mut period: TendermintClientAbi::DurationData = value.unbonding_period.into();
+		period.nanos = 0;
+		Self {
+			chain_id: value.chain_id.as_str().to_string(),
+			trust_level: TendermintClientAbi::FractionData {
+				numerator: value.trust_level.numerator(),
+				denominator: value.trust_level.denominator(),
+			},
+			trusting_period: value.trusting_period.into(),
+			unbonding_period: period,
+			max_clock_drift: value.max_clock_drift.into(),
+			frozen_height: value
+				.frozen_height
+				.map(|x| x.revision_height as i64)
+				.unwrap_or_default(),
+			latest_height: value.latest_height.revision_height as i64,
+			allow_update_after_expiry: false,
+			allow_update_after_misbehaviour: false,
+		}
+	}
+}
+
+#[cfg(feature = "std")]
+impl Debug for TendermintClientAbi::ClientStateData {
+	fn fmt(&self, f: &mut Formatter<'_>) -> core::fmt::Result {
+		f.debug_struct("ClientStateData")
+			.field("chain_id", &self.chain_id)
+			.field("trust_level", &self.trust_level)
+			.field("trusting_period", &self.trusting_period)
+			.field("unbonding_period", &self.unbonding_period)
+			.field("max_clock_drift", &self.max_clock_drift)
+			.field("frozen_height", &self.frozen_height)
+			.field("latest_height", &self.latest_height)
+			.field("allow_update_after_expiry", &self.allow_update_after_expiry)
+			.field("allow_update_after_misbehaviour", &self.allow_update_after_misbehaviour)
+			.finish()
+	}
+}
+
+#[cfg(feature = "std")]
+impl Debug for TendermintClientAbi::DurationData {
+	fn fmt(&self, f: &mut Formatter<'_>) -> core::fmt::Result {
+		f.debug_struct("DurationData")
+			.field("Seconds", &self.Seconds)
+			.field("nanos", &self.nanos)
+			.finish()
+	}
+}
+
+#[cfg(feature = "std")]
+impl Debug for TendermintClientAbi::FractionData {
+	fn fmt(&self, f: &mut Formatter<'_>) -> core::fmt::Result {
+		f.debug_struct("FractionData")
+			.field("numerator", &self.numerator)
+			.field("denominator", &self.denominator)
+			.finish()
+	}
+}
+
+impl From<TendermintConsensusState> for TendermintClientAbi::ConsensusStateData {
+	fn from(value: TendermintConsensusState) -> Self {
+		let time = tendermint_proto::google::protobuf::Timestamp::from(value.timestamp);
+		Self {
+			timestamp: TimestampData { Seconds: time.seconds, nanos: time.nanos as _ },
+			root: MerkleRootData { hash: value.root.bytes },
+			next_validators_hash: value.next_validators_hash.as_bytes().to_vec(),
 		}
 	}
 }

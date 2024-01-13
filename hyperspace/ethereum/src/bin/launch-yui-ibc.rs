@@ -20,7 +20,7 @@ async fn main() {
 	)
 	.await;
 
-	println!("diamond address: {:?}", yui_ibc.diamond.address());
+	println!("diamond address: {:?}", yui_ibc.ibc_core_diamond.address());
 
 	let _ = tokio::signal::ctrl_c().await;
 	drop(anvil);

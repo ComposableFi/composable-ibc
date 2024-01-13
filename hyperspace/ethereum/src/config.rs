@@ -13,10 +13,11 @@ use std::{
 use crate::{
 	client::{ClientError, EthRpcClient},
 	ibc_provider::{
-		DIAMONDABI_ABI, DIAMONDCUTFACETABI_ABI, DIAMONDLOUPEFACETABI_ABI, ERC20TOKENABI_ABI,
-		GOVERNANCEFACETABI_ABI, IBCCHANNELABI_ABI, IBCCLIENTABI_ABI, IBCCONNECTIONABI_ABI,
-		IBCPACKETABI_ABI, IBCQUERIERABI_ABI, ICS20BANKABI_ABI, ICS20TRANSFERBANKABI_ABI,
-		OWNERSHIPFACETABI_ABI, RELAYERWHITELISTFACETABI_ABI, TENDERMINTCLIENTABI_ABI,
+		CALLBATCHFACETABI_ABI, DIAMONDABI_ABI, DIAMONDCUTFACETABI_ABI, DIAMONDLOUPEFACETABI_ABI,
+		ERC20TOKENABI_ABI, GOVERNANCEFACETABI_ABI, IBCCHANNELABI_ABI, IBCCLIENTABI_ABI,
+		IBCCONNECTIONABI_ABI, IBCPACKETABI_ABI, IBCQUERIERABI_ABI, ICS20BANKABI_ABI,
+		ICS20TRANSFERBANKABI_ABI, OWNERSHIPFACETABI_ABI, RELAYERWHITELISTFACETABI_ABI,
+		TENDERMINTCLIENTABI_ABI,
 	},
 	utils::{DeployYuiIbc, ProviderImpl},
 };
@@ -123,25 +124,34 @@ pub struct EthereumClientConfig {
 	/// Diamond contract address
 	#[serde(deserialize_with = "address_de_opt")]
 	#[serde(default)]
-	pub diamond_address: Option<Address>,
+	pub ibc_core_diamond_address: Option<Address>,
+	/// Diamond facets (ABI file name, contract address)
+	#[serde(default)]
+	pub ibc_core_facets: Vec<(ContractName, Address)>,
 	/// ICS-07 Tendermint light-client contract address
 	#[serde(deserialize_with = "address_de_opt")]
 	#[serde(default)]
-	pub tendermint_address: Option<Address>,
+	pub tendermint_diamond_address: Option<Address>,
+	/// Tendermint Diamond facets (ABI file name, contract address)
+	#[serde(default)]
+	pub tendermint_facets: Vec<(ContractName, Address)>,
+	/// ICS-20 Bank address
+	#[serde(deserialize_with = "address_de_opt")]
+	#[serde(default)]
+	pub ibc_transfer_diamond_address: Option<Address>,
+	/// Diamond facets (ABI file name, contract address)
+	#[serde(default)]
+	pub ibc_transfer_facets: Vec<(ContractName, Address)>,
+	#[serde(deserialize_with = "address_de_opt")]
+	#[serde(default)]
+	pub bank_diamond_address: Option<Address>,
+	/// Diamond facets (ABI file name, contract address)
+	#[serde(default)]
+	pub bank_facets: Vec<(ContractName, Address)>,
 	/// Government proxy contract address
 	#[serde(deserialize_with = "address_de_opt")]
 	#[serde(default)]
 	pub gov_proxy_address: Option<Address>,
-	/// ICS-20 Bank address
-	#[serde(deserialize_with = "address_de_opt")]
-	#[serde(default)]
-	pub ics20_transfer_bank_address: Option<Address>,
-	#[serde(deserialize_with = "address_de_opt")]
-	#[serde(default)]
-	pub ics20_bank_address: Option<Address>,
-	/// Diamond facets (ABI file name, contract address)
-	#[serde(default)]
-	pub diamond_facets: Vec<(ContractName, Address)>,
 	#[serde(skip)]
 	pub yui: Option<DeployYuiIbc<Arc<ProviderImpl>, ProviderImpl>>,
 	pub client_type: String,
@@ -171,11 +181,11 @@ impl Debug for EthereumClientConfig {
 			.field("channel_whitelist", &self.channel_whitelist)
 			.field("commitment_prefix", &self.commitment_prefix)
 			.field("wasm_code_id", &self.wasm_code_id)
-			.field("diamond_address", &self.diamond_address)
-			.field("tendermint_address", &self.tendermint_address)
-			.field("ics20_transfer_bank_address", &self.ics20_transfer_bank_address)
-			.field("ics20_bank_address", &self.ics20_bank_address)
-			.field("diamond_facets", &self.diamond_facets)
+			.field("diamond_address", &self.ibc_core_diamond_address)
+			.field("tendermint_address", &self.tendermint_diamond_address)
+			.field("ibc_transfer_diamond_address", &self.ibc_transfer_diamond_address)
+			.field("ics20_bank_address", &self.bank_diamond_address)
+			.field("diamond_facets", &self.ibc_core_facets)
 			.field("yui", &self.yui)
 			.field("client_type", &self.client_type)
 			.field("jwt_secret_path", &self.jwt_secret_path)
@@ -187,9 +197,16 @@ impl Debug for EthereumClientConfig {
 
 #[derive(Debug, Clone, Copy, Deserialize, Serialize, strum::EnumString, PartialEq, Eq, Hash)]
 pub enum ContractName {
-	Diamond,
+	// Diamonds
+	IbcCoreDiamond,
+	IbcTransferDiamond,
+	BankDiamond,
+	TendermintDiamond,
+
+	// Facets and basic contracts
 	DiamondCutFacet,
 	DiamondLoupeFacet,
+	CallBatchFacet,
 	IBCChannelHandshake,
 	IBCClient,
 	IBCConnection,
@@ -213,7 +230,10 @@ impl Display for ContractName {
 impl ContractName {
 	pub fn to_abi(&self) -> Abi {
 		match self {
-			ContractName::Diamond => DIAMONDABI_ABI.clone(),
+			ContractName::IbcCoreDiamond |
+			ContractName::IbcTransferDiamond |
+			ContractName::BankDiamond |
+			ContractName::TendermintDiamond => DIAMONDABI_ABI.clone(),
 			ContractName::DiamondCutFacet => DIAMONDCUTFACETABI_ABI.clone(),
 			ContractName::DiamondLoupeFacet => DIAMONDLOUPEFACETABI_ABI.clone(),
 			ContractName::IBCChannelHandshake => IBCCHANNELABI_ABI.clone(),
@@ -228,6 +248,7 @@ impl ContractName {
 			ContractName::ERC20Token => ERC20TOKENABI_ABI.clone(),
 			ContractName::GovernanceFacet => GOVERNANCEFACETABI_ABI.clone(),
 			ContractName::RelayerWhitelistFacet => RELAYERWHITELISTFACETABI_ABI.clone(),
+			ContractName::CallBatchFacet => CALLBATCHFACETABI_ABI.clone(),
 		}
 	}
 }

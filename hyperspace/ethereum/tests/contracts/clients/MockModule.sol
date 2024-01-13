@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: Apache-2.0
-pragma solidity ^0.8.9;
+pragma solidity ^0.8.12;
 
 import {IIBCModule} from "../core/05-port/IIBCModule.sol";
 import "../proto/Channel.sol";
@@ -52,7 +52,6 @@ abstract contract IBCAppBase is IIBCModule {
     ) external virtual override onlyIBC {}
 
     function onChanOpenTry(
-        // int64 order,
         string[] calldata connectionHops,
         string calldata portId,
         string calldata channelId,

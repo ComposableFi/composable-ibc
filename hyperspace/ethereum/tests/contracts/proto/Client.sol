@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: Apache-2.0
-pragma solidity ^0.8.9;
+pragma solidity ^0.8.12;
 import "./ProtoBufRuntime.sol";
 import "./GoogleProtobufAny.sol";
 
@@ -145,7 +145,7 @@ library Height {
   {
     uint256 offset = p;
     uint256 pointer = p;
-    
+
     if (r.revision_number != 0) {
     pointer += ProtoBufRuntime._encode_key(
       1,
@@ -216,7 +216,7 @@ library Height {
   function _empty(
     Data memory r
   ) internal pure returns (bool) {
-    
+
   if (r.revision_number != 0) {
     return false;
   }

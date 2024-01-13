@@ -2,23 +2,151 @@
   {
     "inputs": [
       {
-        "internalType": "address",
-        "name": "ibcHandler_",
-        "type": "address"
+        "components": [
+          {
+            "components": [
+              {
+                "internalType": "int64",
+                "name": "Seconds",
+                "type": "int64"
+              },
+              {
+                "internalType": "int64",
+                "name": "nanos",
+                "type": "int64"
+              }
+            ],
+            "internalType": "struct TimestampData",
+            "name": "timestamp",
+            "type": "tuple"
+          },
+          {
+            "components": [
+              {
+                "internalType": "bytes",
+                "name": "hash",
+                "type": "bytes"
+              }
+            ],
+            "internalType": "struct MerkleRootData",
+            "name": "root",
+            "type": "tuple"
+          },
+          {
+            "internalType": "bytes",
+            "name": "next_validators_hash",
+            "type": "bytes"
+          }
+        ],
+        "internalType": "struct ConsensusStateData",
+        "name": "",
+        "type": "tuple"
       },
       {
-        "internalType": "address",
-        "name": "delegateTendermintUpdate",
-        "type": "address"
-      },
-      {
-        "internalType": "address",
-        "name": "ics23_",
-        "type": "address"
+        "components": [
+          {
+            "internalType": "string",
+            "name": "chain_id",
+            "type": "string"
+          },
+          {
+            "components": [
+              {
+                "internalType": "uint64",
+                "name": "numerator",
+                "type": "uint64"
+              },
+              {
+                "internalType": "uint64",
+                "name": "denominator",
+                "type": "uint64"
+              }
+            ],
+            "internalType": "struct FractionData",
+            "name": "trust_level",
+            "type": "tuple"
+          },
+          {
+            "components": [
+              {
+                "internalType": "int64",
+                "name": "Seconds",
+                "type": "int64"
+              },
+              {
+                "internalType": "int64",
+                "name": "nanos",
+                "type": "int64"
+              }
+            ],
+            "internalType": "struct DurationData",
+            "name": "trusting_period",
+            "type": "tuple"
+          },
+          {
+            "components": [
+              {
+                "internalType": "int64",
+                "name": "Seconds",
+                "type": "int64"
+              },
+              {
+                "internalType": "int64",
+                "name": "nanos",
+                "type": "int64"
+              }
+            ],
+            "internalType": "struct DurationData",
+            "name": "unbonding_period",
+            "type": "tuple"
+          },
+          {
+            "components": [
+              {
+                "internalType": "int64",
+                "name": "Seconds",
+                "type": "int64"
+              },
+              {
+                "internalType": "int64",
+                "name": "nanos",
+                "type": "int64"
+              }
+            ],
+            "internalType": "struct DurationData",
+            "name": "max_clock_drift",
+            "type": "tuple"
+          },
+          {
+            "internalType": "int64",
+            "name": "frozen_height",
+            "type": "int64"
+          },
+          {
+            "internalType": "int64",
+            "name": "latest_height",
+            "type": "int64"
+          },
+          {
+            "internalType": "bool",
+            "name": "allow_update_after_expiry",
+            "type": "bool"
+          },
+          {
+            "internalType": "bool",
+            "name": "allow_update_after_misbehaviour",
+            "type": "bool"
+          }
+        ],
+        "internalType": "struct ClientStateData",
+        "name": "",
+        "type": "tuple"
       }
     ],
-    "stateMutability": "nonpayable",
-    "type": "constructor"
+    "name": "_expose_data_types",
+    "outputs": [],
+    "stateMutability": "view",
+    "type": "function"
   },
   {
     "inputs": [
@@ -203,6 +331,25 @@
         "internalType": "string",
         "name": "clientId",
         "type": "string"
+      }
+    ],
+    "name": "getStatus",
+    "outputs": [
+      {
+        "internalType": "enum ClientStatus",
+        "name": "",
+        "type": "uint8"
+      }
+    ],
+    "stateMutability": "view",
+    "type": "function"
+  },
+  {
+    "inputs": [
+      {
+        "internalType": "string",
+        "name": "clientId",
+        "type": "string"
       },
       {
         "components": [
@@ -236,6 +383,24 @@
       }
     ],
     "stateMutability": "view",
+    "type": "function"
+  },
+  {
+    "inputs": [
+      {
+        "internalType": "address",
+        "name": "ibcHandler_",
+        "type": "address"
+      },
+      {
+        "internalType": "address",
+        "name": "ics23_",
+        "type": "address"
+      }
+    ],
+    "name": "init",
+    "outputs": [],
+    "stateMutability": "nonpayable",
     "type": "function"
   },
   {

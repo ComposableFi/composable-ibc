@@ -401,6 +401,11 @@
         "internalType": "string",
         "name": "",
         "type": "string"
+      },
+      {
+        "internalType": "string",
+        "name": "",
+        "type": "string"
       }
     ],
     "stateMutability": "nonpayable",
@@ -498,8 +503,44 @@
         "internalType": "string",
         "name": "",
         "type": "string"
+      },
+      {
+        "internalType": "string",
+        "name": "",
+        "type": "string"
       }
     ],
+    "stateMutability": "nonpayable",
+    "type": "function"
+  },
+  {
+    "inputs": [
+      {
+        "internalType": "uint64",
+        "name": "expectedTimePerBlock_",
+        "type": "uint64"
+      }
+    ],
+    "name": "setExpectedBlockTime",
+    "outputs": [],
+    "stateMutability": "nonpayable",
+    "type": "function"
+  },
+  {
+    "inputs": [
+      {
+        "internalType": "string",
+        "name": "portId",
+        "type": "string"
+      },
+      {
+        "internalType": "address",
+        "name": "moduleAddress",
+        "type": "address"
+      }
+    ],
+    "name": "unbindPort",
+    "outputs": [],
     "stateMutability": "nonpayable",
     "type": "function"
   }

@@ -1,19 +1,16 @@
 [
   {
-    "inputs": [
+    "inputs": [],
+    "name": "ICS20_VERSION",
+    "outputs": [
       {
-        "internalType": "contract IDiamond",
-        "name": "ibcHandler_",
-        "type": "address"
-      },
-      {
-        "internalType": "contract IICS20Bank",
-        "name": "bank_",
-        "type": "address"
+        "internalType": "string",
+        "name": "",
+        "type": "string"
       }
     ],
-    "stateMutability": "nonpayable",
-    "type": "constructor"
+    "stateMutability": "view",
+    "type": "function"
   },
   {
     "inputs": [
@@ -50,6 +47,29 @@
       }
     ],
     "stateMutability": "view",
+    "type": "function"
+  },
+  {
+    "inputs": [
+      {
+        "internalType": "contract IDiamond",
+        "name": "ibcHandler_",
+        "type": "address"
+      },
+      {
+        "internalType": "contract IICS20Bank",
+        "name": "bank_",
+        "type": "address"
+      },
+      {
+        "internalType": "uint64",
+        "name": "minTimeoutTimestamp_",
+        "type": "uint64"
+      }
+    ],
+    "name": "init",
+    "outputs": [],
+    "stateMutability": "nonpayable",
     "type": "function"
   },
   {
@@ -210,17 +230,17 @@
     "inputs": [
       {
         "internalType": "enum ChannelOrder",
-        "name": "",
+        "name": "order",
         "type": "uint8"
       },
       {
         "internalType": "string[]",
-        "name": "",
+        "name": "connectionHops",
         "type": "string[]"
       },
       {
         "internalType": "string",
-        "name": "",
+        "name": "portId",
         "type": "string"
       },
       {
@@ -242,17 +262,23 @@
           }
         ],
         "internalType": "struct ChannelCounterpartyData",
-        "name": "",
+        "name": "counterparty",
         "type": "tuple"
       },
+      {
+        "internalType": "string",
+        "name": "version",
+        "type": "string"
+      }
+    ],
+    "name": "onChanOpenInit",
+    "outputs": [
       {
         "internalType": "string",
         "name": "",
         "type": "string"
       }
     ],
-    "name": "onChanOpenInit",
-    "outputs": [],
     "stateMutability": "nonpayable",
     "type": "function"
   },
@@ -260,17 +286,17 @@
     "inputs": [
       {
         "internalType": "enum ChannelOrder",
-        "name": "",
+        "name": "order",
         "type": "uint8"
       },
       {
         "internalType": "string[]",
-        "name": "",
+        "name": "connectionHops",
         "type": "string[]"
       },
       {
         "internalType": "string",
-        "name": "",
+        "name": "portId",
         "type": "string"
       },
       {
@@ -292,22 +318,28 @@
           }
         ],
         "internalType": "struct ChannelCounterpartyData",
-        "name": "",
+        "name": "counterparty",
         "type": "tuple"
       },
       {
         "internalType": "string",
-        "name": "",
+        "name": "version",
         "type": "string"
       },
+      {
+        "internalType": "string",
+        "name": "counterpartyVersion",
+        "type": "string"
+      }
+    ],
+    "name": "onChanOpenTry",
+    "outputs": [
       {
         "internalType": "string",
         "name": "",
         "type": "string"
       }
     ],
-    "name": "onChanOpenTry",
-    "outputs": [],
     "stateMutability": "nonpayable",
     "type": "function"
   },

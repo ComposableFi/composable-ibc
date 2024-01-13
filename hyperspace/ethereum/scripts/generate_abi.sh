@@ -10,6 +10,7 @@ forge inspect --via-ir ../contracts/diamond/facets/OwnershipFacet.sol:OwnershipF
 forge inspect --via-ir ../contracts/diamond/facets/GovernanceFacet.sol:GovernanceFacet abi > ../../src/abi/governance-facet-abi.json
 forge inspect --via-ir ../contracts/utils/GovernanceProxy.sol:GovernanceProxy abi > ../../src/abi/governance-proxy-abi.json
 forge inspect --via-ir ../contracts/diamond/facets/RelayerWhitelistFacet.sol:RelayerWhitelistFacet abi > ../../src/abi/relayer-whitelist-facet-abi.json
+forge inspect --via-ir ../contracts/diamond/facets/CallBatchFacet.sol:CallBatchFacet abi > ../../src/abi/call-batch-facet-abi.json
 
 forge inspect --via-ir ../contracts/core/02-client/IBCClient.sol:IBCClient abi > ../../src/abi/ibc-client-abi.json
 forge inspect --via-ir ../contracts/core/03-connection/IBCConnection.sol:IBCConnection abi > ../../src/abi/ibc-connection-abi.json

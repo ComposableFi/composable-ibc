@@ -20,7 +20,8 @@ use crate::{
 use alloc::{format, string::ToString, vec::Vec};
 use alloy_sol_types::SolValue;
 use compress::{compress, decompress};
-use core::{fmt::Debug, marker::PhantomData, ops::Add, time::Duration};
+use core::{fmt::Debug, marker::PhantomData, time::Duration};
+use ethabi::Address;
 use ibc::{
 	core::{ics02_client::client_state::ClientType, ics24_host::identifier::ChainId},
 	Height,
@@ -41,6 +42,8 @@ pub struct ClientState<H> {
 	pub inner: LightClientState,
 	pub frozen_height: Option<Height>,
 	pub latest_height: u32,
+	pub ibc_core_address: Address,
+	pub next_upgrade_id: u64,
 	pub _phantom: PhantomData<H>,
 }
 
@@ -50,6 +53,8 @@ impl<H> Clone for ClientState<H> {
 			inner: self.inner.clone(),
 			frozen_height: self.frozen_height,
 			latest_height: self.latest_height,
+			ibc_core_address: self.ibc_core_address,
+			next_upgrade_id: self.next_upgrade_id,
 			_phantom: Default::default(),
 		}
 	}
@@ -128,7 +133,7 @@ impl<H> ClientState<H> {
 		let duration_sync_commitee_change = Duration::from_secs(
 			beacon_slot_time * EPOCHS_PER_SYNC_COMMITTEE_PERIOD * SLOTS_PER_EPOCH,
 		);
-		elapsed < duration_sync_commitee_change
+		elapsed > duration_sync_commitee_change
 	}
 
 	pub fn with_frozen_height(self, h: Height) -> Result<Self, Error> {
@@ -142,15 +147,11 @@ impl<H> ClientState<H> {
 
 	pub fn abi_encode(self) -> Vec<u8> {
 		let data = EthereumClientPrimitivesClientState::from(self).abi_encode();
-		let x = compress(data, 16);
-		// info!("COMP={}", hex::encode(&x));
-		x
+		compress(data, 16)
 	}
 
 	pub fn abi_decode(bytes: &[u8]) -> Result<Self, Error> {
-		// panic!("compressed = {}", hex::encode(&bytes));
 		let decompressed = decompress(&mut &bytes[..], 16);
-		// panic!("decompressed = {}", hex::encode(&decompressed));
 		let value = EthereumClientPrimitivesClientState::abi_decode(&decompressed, true)?;
 		value.try_into()
 	}

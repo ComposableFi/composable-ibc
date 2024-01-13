@@ -43,7 +43,7 @@ impl EthereumClient {
 				)),
 		};
 		let signature = T::abi_signature();
-		let contract_address = self.yui.diamond.address();
+		let contract_address = self.yui.ibc_core_diamond.address();
 		let address_val = format!("decode('{}', 'hex')", hex::encode(contract_address.as_bytes()));
 		trace!(target: "hyperspace_ethereum", "get_logs_for_event_name: from_block: {}, to_block: {}, signature: {}", from_block, to_block, signature);
 		let topic0 = format!("decode('{}', 'hex')", hex::encode(&keccak256(signature.as_bytes())));
@@ -82,7 +82,7 @@ impl EthereumClient {
 					"The given BlockNumber variant is not supported".to_owned(),
 				)),
 		};
-		let contract_address = self.yui.diamond.address();
+		let contract_address = self.yui.ibc_core_diamond.address();
 		let address_val = format!("decode('{}', 'hex')", hex::encode(contract_address.as_bytes()));
 		trace!(target: "hyperspace_ethereum", "get_logs: from_block: {}, to_block: {}", from_block, to_block);
 		let mut string = format!("SELECT raw_log FROM ibc_events WHERE block_number >= {from_block} AND block_number <= {to_block} AND address = {address_val}");

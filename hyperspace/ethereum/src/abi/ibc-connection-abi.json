@@ -232,7 +232,7 @@
           },
           {
             "internalType": "string",
-            "name": "counterpartyConnectionID",
+            "name": "counterpartyConnectionId",
             "type": "string"
           },
           {
@@ -373,6 +373,23 @@
             ],
             "internalType": "struct CounterpartyData",
             "name": "counterparty",
+            "type": "tuple"
+          },
+          {
+            "components": [
+              {
+                "internalType": "string",
+                "name": "identifier",
+                "type": "string"
+              },
+              {
+                "internalType": "string[]",
+                "name": "features",
+                "type": "string[]"
+              }
+            ],
+            "internalType": "struct VersionData",
+            "name": "version",
             "type": "tuple"
           },
           {
@@ -536,6 +553,31 @@
         "internalType": "bytes",
         "name": "",
         "type": "bytes"
+      }
+    ],
+    "stateMutability": "pure",
+    "type": "function"
+  },
+  {
+    "inputs": [],
+    "name": "getCompatibleVersions",
+    "outputs": [
+      {
+        "components": [
+          {
+            "internalType": "string",
+            "name": "identifier",
+            "type": "string"
+          },
+          {
+            "internalType": "string[]",
+            "name": "features",
+            "type": "string[]"
+          }
+        ],
+        "internalType": "struct VersionData[]",
+        "name": "",
+        "type": "tuple[]"
       }
     ],
     "stateMutability": "pure",

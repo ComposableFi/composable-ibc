@@ -16,7 +16,7 @@ fn parse_config() {
 	assert_eq!(config.mnemonic, Some("1337".into()));
 	assert_eq!(config.channel_whitelist, &[]);
 	assert_eq!(
-		config.diamond_address.unwrap(),
+		config.ibc_core_diamond_address.unwrap(),
 		"0xdc64a140aa3e981100a9beca4e685f962f0cf6c9".parse().unwrap()
 	);
 }

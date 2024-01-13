@@ -48,7 +48,6 @@ message LightClientUpdate {
   FinalityProof finality_proof = 5;
   SyncAggregate sync_aggregate = 6;
   uint64 signature_slot = 7;
-  repeated AncestorBlock ancestor_blocks = 8;
 }
 
 /*

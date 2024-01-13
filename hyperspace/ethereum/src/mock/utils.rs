@@ -46,8 +46,8 @@ pub async fn spawn_anvil() -> (AnvilInstance, Arc<SignerMiddleware<Provider<Http
 	#[cfg(not(feature = "no_beacon"))]
 	let anvil = Anvil::new().spawn();
 	#[cfg(feature = "no_beacon")]
-	// let anvil = Anvil::new().spawn();
-	let anvil = Anvil::new().port(8545u16).spawn();
+	let anvil = Anvil::new().spawn();
+	// let anvil = Anvil::new().port(8545u16).spawn();
 
 	log::info!("Anvil started at {}", anvil.endpoint());
 	println!("{:?}", std::env::current_dir().unwrap());
@@ -166,22 +166,37 @@ pub async fn hyperspace_ethereum_client_fixture(
 		channel_whitelist: vec![],
 		commitment_prefix: "696263".into(),
 		wasm_code_id: None,
-		ics20_transfer_bank_address: yui_ibc.ics20_transfer_bank.clone().map(|b| b.address()),
-		ics20_bank_address: yui_ibc.ics20_bank.clone().map(|b| b.address()),
-		diamond_address: Some(yui_ibc.diamond.address()),
-		tendermint_address: yui_ibc.tendermint.clone().map(|x| x.address()),
-		gov_proxy_address: yui_ibc.gov_proxy.clone().map(|x| x.address()),
-		diamond_facets: yui_ibc
-			.deployed_facets
+		ibc_core_diamond_address: Some(yui_ibc.ibc_core_diamond.address()),
+		ibc_core_facets: yui_ibc
+			.ibc_core_facets
 			.iter()
 			.map(|f| (f.abi_name(), f.contract().address()))
 			.collect(),
+		ibc_transfer_diamond_address: yui_ibc.ibc_transfer_diamond.clone().map(|b| b.address()),
+		ibc_transfer_facets: yui_ibc
+			.ibc_transfer_facets
+			.iter()
+			.map(|f| (f.abi_name(), f.contract().address()))
+			.collect(),
+		bank_diamond_address: yui_ibc.bank_diamond.clone().map(|b| b.address()),
+		bank_facets: yui_ibc
+			.bank_facets
+			.iter()
+			.map(|f| (f.abi_name(), f.contract().address()))
+			.collect(),
+		tendermint_diamond_address: yui_ibc.tendermint_diamond.clone().map(|x| x.address()),
+		tendermint_facets: yui_ibc
+			.tendermint_facets
+			.iter()
+			.map(|f| (f.abi_name(), f.contract().address()))
+			.collect(),
+		gov_proxy_address: yui_ibc.gov_proxy.clone().map(|x| x.address()),
 		yui: Some(yui_ibc),
 		client_type: "07-tendermint".into(),
 		jwt_secret_path,
 		indexer_pg_url: db_url.parse().unwrap(),
 		indexer_redis_url: redis_url.parse().unwrap(),
 		anvil: None,
-		common: CommonClientConfig { client_update_interval_sec: 5 * 60, ..Default::default() },
+		common: CommonClientConfig { client_update_interval_sec: 10, ..Default::default() },
 	}
 }

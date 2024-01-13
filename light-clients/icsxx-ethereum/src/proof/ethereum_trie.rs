@@ -313,9 +313,11 @@ where
 		(Some(Value::Inline(inline_data)), _, None) =>
 			Err(VerifyError::ExistingValue(inline_data.to_vec())),
 		(Some(Value::Node(plain_hash)), Some(next_proof_item), Some(value)) => {
+			// println!("3: {} != {}", hex::encode(&plain_hash), hex::encode(&value));
 			let value_hash = L::Hash::hash(value);
 			let node_hash = decode_hash::<L::Hash>(plain_hash)
 				.ok_or_else(|| VerifyError::HashDecodeError(plain_hash))?;
+			// println!("3': {} != {}", hex::encode(&node_hash), hex::encode(&value_hash));
 			if node_hash != value_hash {
 				Err(VerifyError::HashMismatch(node_hash))
 			} else if next_proof_item != value {
