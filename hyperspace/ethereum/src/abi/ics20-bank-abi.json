@@ -151,11 +151,6 @@
         "internalType": "string",
         "name": "nativeTokenDenom",
         "type": "string"
-      },
-      {
-        "internalType": "address",
-        "name": "admin",
-        "type": "address"
       }
     ],
     "name": "init",

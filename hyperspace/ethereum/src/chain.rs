@@ -147,7 +147,7 @@ pub fn client_state_abi_token<H: Debug>(client: &ClientState<H>) -> Token {
 	client_state_data
 }
 
-pub fn client_state_from_abi_token(token: Token) -> Result<ClientState<H>, ClientError> {
+pub fn client_state_from_abi_token<H>(token: Token) -> Result<ClientState<H>, ClientError> {
 	use ethers::abi::Token as EthersToken;
 
 	let Token::Bytes(bytes) = token else {

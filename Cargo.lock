@@ -1592,15 +1592,6 @@ dependencies = [
 ]
 
 [[package]]
-name = "cast"
-version = "0.2.7"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "4c24dab4283a142afa2fdca129b80ad2c6284e073930f964c3a1293c225ee39a"
-dependencies = [
- "rustc_version 0.4.0",
-]
-
-[[package]]
 name = "cc"
 version = "1.0.79"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -6290,7 +6281,7 @@ dependencies = [
  "anyhow",
  "async-stream",
  "async-trait",
- "cast 0.2.0",
+ "cast",
  "clap 4.4.3",
  "derivative",
  "ecdsa 0.16.7",
@@ -6453,7 +6444,6 @@ dependencies = [
  "futures",
  "grandpa-light-client-primitives",
  "grandpa-light-client-verifier",
- "h2",
  "hex",
  "hyperspace-core",
  "hyperspace-cosmos",
@@ -6784,7 +6774,6 @@ dependencies = [
  "alloy-sol-macro",
  "alloy-sol-types",
  "anyhow",
- "cast 0.2.7",
  "compress",
  "deflate",
  "derive_more",
