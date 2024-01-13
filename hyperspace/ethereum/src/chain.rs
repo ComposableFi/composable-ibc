@@ -1221,13 +1221,13 @@ impl Chain for EthereumClient {
 		self.config.max_block_weight
 	}
 
-	async fn estimate_weight(
-		&self,
-		msg: Vec<ibc_proto::google::protobuf::Any>,
-	) -> Result<u64, Self::Error> {
-		// TODO: estimate gas for the tx. Convert any to another type (see `wrap_any_msg_into_wasm`
-		// for an example)
-		Ok(1)
+	async fn estimate_weight(&self, msg: Vec<Any>) -> Result<u64, Self::Error> {
+		let method = self.ibc_messages_to_contract_call(msg).await?;
+		let gas = method
+			.estimate_gas()
+			.await
+			.map_err(|e| ClientError::Other(format!("failed to estimate gas for tx: {:?}", e)))?;
+		Ok(gas.as_u64())
 	}
 
 	async fn finality_notifications(
