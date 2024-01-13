@@ -20,7 +20,7 @@ use crate::{
 	error::Error,
 	verify::{verify_ibc_proof, Verified},
 };
-use alloc::{borrow::Cow, vec, vec::Vec};
+use alloc::{borrow::Cow, format, vec, vec::Vec};
 use anyhow::anyhow;
 use core::{fmt::Debug, marker::PhantomData, str::FromStr};
 use ibc::{
@@ -40,11 +40,13 @@ use ibc::{
 		ics24_host::{
 			identifier::{ChannelId, ClientId, ConnectionId, PortId},
 			path::ClientConsensusStatePath,
+			ClientUpgradePath, Path,
 		},
 		ics26_routing::context::ReaderContext,
 	},
 	Height,
 };
+use primitive_types::H256;
 #[cfg(feature = "no_beacon")]
 use sync_committee_primitives::types::VerifierState as LightClientState;
 #[cfg(not(feature = "no_beacon"))]
@@ -196,6 +198,7 @@ where
 			frozen_height: None,
 			latest_height: latest_height as _,
 			ibc_core_address: client_state.ibc_core_address,
+			next_upgrade_id: client_state.next_upgrade_id,
 			_phantom: Default::default(),
 		};
 
@@ -226,15 +229,81 @@ where
 
 	fn verify_upgrade_and_update_state<Ctx: ReaderContext>(
 		&self,
-		_ctx: &Ctx,
-		_client_id: ClientId,
-		_old_client_state: &Self::ClientState,
-		_upgrade_client_state: &Self::ClientState,
-		_upgrade_consensus_state: &Self::ConsensusState,
-		_proof_upgrade_client: Vec<u8>,
-		_proof_upgrade_consensus_state: Vec<u8>,
+		ctx: &Ctx,
+		client_id: ClientId,
+		old_client_state: &Self::ClientState,
+		upgrade_client_state: &Self::ClientState,
+		upgrade_consensus_state: &Self::ConsensusState,
+		proof_upgrade_client: Vec<u8>,
+		proof_upgrade_consensus_state: Vec<u8>,
 	) -> Result<(Self::ClientState, ConsensusUpdateResult<Ctx>), Ics02Error> {
-		unimplemented!("verify_upgrade_and_update_state")
+		let height = old_client_state.latest_height();
+
+		let consenus_state = ctx.consensus_state(&client_id, height)?
+			.downcast::<Self::ConsensusState>()
+			.ok_or_else(|| Error::Custom(format!("Wrong consensus state type stored for Grandpa client with {client_id} at {height}")))?;
+
+		let root = H256::from_slice(consenus_state.root.as_bytes());
+
+		if upgrade_client_state.next_upgrade_id != old_client_state.next_upgrade_id + 1 {
+			return Err(Ics02Error::implementation_specific(
+				"client state upgrade id mismatch".to_string(),
+			))
+		}
+
+		// verify client state upgrade proof
+		{
+			let encoded = upgrade_client_state.clone().abi_encode();
+
+			let verified = verify_ibc_proof(
+				&CommitmentPrefix::try_from(b"ibc".to_vec()).unwrap(),
+				&CommitmentProofBytes::try_from(proof_upgrade_client).map_err(|e| {
+					Ics02Error::implementation_specific(format!("client state proof: {}", e))
+				})?,
+				&CommitmentRoot::from_bytes(&root.as_bytes()),
+				old_client_state.ibc_core_address,
+				Path::Upgrade(ClientUpgradePath::UpgradedClientState(
+					old_client_state.next_upgrade_id,
+				)),
+				Some(Cow::Borrowed(&encoded)),
+			)?;
+			if verified == Verified::No {
+				return Err(Ics02Error::implementation_specific(
+					"client state proof verification failed".to_string(),
+				))
+			}
+		}
+
+		// verify consensus state upgrade proof
+		{
+			let encoded = upgrade_consensus_state.encode_to_vec().map_err(Ics02Error::encode)?;
+
+			let verified = verify_ibc_proof(
+				&CommitmentPrefix::try_from(b"ibc".to_vec()).unwrap(),
+				&CommitmentProofBytes::try_from(proof_upgrade_consensus_state).map_err(|e| {
+					Ics02Error::implementation_specific(format!("consensus state proof: {}", e))
+				})?,
+				&CommitmentRoot::from_bytes(&root.as_bytes()),
+				old_client_state.ibc_core_address,
+				Path::Upgrade(ClientUpgradePath::UpgradedClientConsensusState(
+					old_client_state.next_upgrade_id,
+				)),
+				Some(Cow::Borrowed(&encoded)),
+			)?;
+			if verified == Verified::No {
+				return Err(Ics02Error::implementation_specific(
+					"consensus state proof verification failed".to_string(),
+				))
+			}
+		}
+
+		Ok((
+			upgrade_client_state.clone(),
+			ConsensusUpdateResult::Single(
+				Ctx::AnyConsensusState::wrap(upgrade_consensus_state)
+					.expect("AnyConsensusState is type-checked; qed"),
+			),
+		))
 	}
 
 	fn check_substitute_and_update_state<Ctx: ReaderContext>(

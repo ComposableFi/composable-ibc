@@ -1,5 +1,5 @@
 use crate::{
-	abi::{ChannelAbi, TendermintClientAbi},
+	abi::TendermintClientAbi,
 	alloc::string::ToString,
 	error::Error,
 	proof::ethereum_trie::{verify_proof, EIP1186Layout, KeccakHasher, VerifyError},
@@ -7,27 +7,26 @@ use crate::{
 };
 use alloc::{borrow::Cow, boxed::Box, format, vec::Vec};
 use alloy_sol_types::SolValue;
-use core::{ops::Add, str::FromStr};
-use ethabi::{encode, Address, ParamType, Token};
-use hex_literal::hex;
+use core::ops::Add;
+use ethabi::{Address, ParamType, Token};
 use ibc::core::{
 	ics23_commitment::commitment::{CommitmentPrefix, CommitmentProofBytes, CommitmentRoot},
 	ics24_host::{
-		identifier::ClientId,
 		path::{ClientConsensusStatePath, ClientStatePath},
 		Path,
 	},
 };
 use ibc_proto::google::protobuf::Any;
-use primitive_types::{H160, H256, U256};
+use primitive_types::{H256, U256};
 use prost::Message;
 use tendermint_proto::Protobuf;
 
-const IBC_CORE_STORAGE_PREFIX: &[u8] = b"ibc.core";
+const IBC_CORE_STORAGE_PREFIX: &[u8] = b".core";
 const IBC_COMMITMENT_STORAGE_INDEX: u32 = 0;
 
-pub(crate) fn commitment_storage_raw_key(key: &str) -> H256 {
-	let slot_index = U256::from_big_endian(&keccak256(IBC_CORE_STORAGE_PREFIX)[..]);
+pub(crate) fn commitment_storage_raw_key(key: &str, prefix: &[u8]) -> H256 {
+	let slot_index =
+		U256::from_big_endian(&keccak256([prefix, IBC_CORE_STORAGE_PREFIX].concat())[..]);
 	let key = keccak256(key.as_bytes());
 	let encoded = ethabi::encode(&[
 		Token::FixedBytes(key.to_vec()),
@@ -45,7 +44,7 @@ pub enum Verified {
 }
 
 pub fn verify_ibc_proof<P>(
-	_prefix: &CommitmentPrefix, // TODO: use prefix
+	prefix: &CommitmentPrefix,
 	proof: &CommitmentProofBytes,
 	root: &CommitmentRoot,
 	contract_address: Address,
@@ -121,7 +120,7 @@ where
 	}
 	let string = path.to_string();
 
-	let storage_key = commitment_storage_raw_key(string.as_str());
+	let storage_key = commitment_storage_raw_key(string.as_str(), prefix.as_bytes());
 
 	let stream = rlp::Rlp::new(&account_proof.last().unwrap());
 	let storage_root: Vec<u8> = stream.val_at(1).unwrap();
@@ -142,8 +141,8 @@ where
 		Err(err) => match err {
 			NonExistingValue(_) | ExistingValue(_) | ValueMismatch(_) | HashMismatch(_) =>
 				return Ok(Verified::No),
-			e => @ IncompleteProof | e @ DecodeError(_) | e @ HashDecodeError(_) =>
-				return Err(Error::Custom(format!("FIRST: {e}"))),
+			e @ IncompleteProof | e @ DecodeError(_) | e @ HashDecodeError(_) =>
+				return Err(Error::Custom(format!("{e}"))),
 		},
 	};
 
@@ -172,8 +171,8 @@ where
 		Err(err) => match err {
 			NonExistingValue(_) | ExistingValue(_) | ValueMismatch(_) | HashMismatch(_) =>
 				Ok(Verified::No),
-			e => @ IncompleteProof | e @ DecodeError(_) | e @ HashDecodeError(_) =>
-				return Err(Error::Custom(format!("SECOND: {e}"))),
+			e @ IncompleteProof | e @ DecodeError(_) | e @ HashDecodeError(_) =>
+				return Err(Error::Custom(format!("{e}"))),
 		},
 	}
 }

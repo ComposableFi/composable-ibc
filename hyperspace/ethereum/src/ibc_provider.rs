@@ -86,6 +86,7 @@ use ibc::{
 			events::SendPacket,
 		},
 		ics23_commitment::commitment::CommitmentRoot,
+		ics24_host::path::SeqRecvsPath,
 	},
 	events::IbcEvent,
 	protobuf::Protobuf,
@@ -745,7 +746,7 @@ impl IbcProvider for EthereumClient {
 				let calldata = func.decode_input(&input[4..])?.pop().unwrap();
 				let Token::Tuple(toks) = calldata else { panic!() };
 				let consensus_state_token = toks[2].clone();
-				// TODO: check that tht state satisfies `consensus_height`
+				// TODO: check that the state satisfies `consensus_height`
 				consensus_state = Some(consensus_state_from_abi_token(consensus_state_token)?);
 				break
 			}
@@ -1085,6 +1086,9 @@ impl IbcProvider for EthereumClient {
 				ClientError::Other(format!("contract is missing getNextSequenceRecv {}", err))
 			})?;
 
+		let path = Path::SeqRecvs(SeqRecvsPath(port_id.clone(), channel_id.clone())).to_string();
+		let proof = self.query_proof(at, vec![path.into_bytes()]).await?;
+
 		let seq = binding
 			.block(BlockId::Number(BlockNumber::Number(at.revision_height.into())))
 			.call()
@@ -1092,7 +1096,7 @@ impl IbcProvider for EthereumClient {
 			.map_err(|err| ClientError::Other(format!("failed to query channel_data: {}", err)))?;
 		Ok(QueryNextSequenceReceiveResponse {
 			next_sequence_receive: seq,
-			proof: vec![], // TODO: implement proof for query_next_sequence_recv
+			proof,
 			proof_height: None,
 		})
 	}
@@ -1674,8 +1678,8 @@ impl IbcProvider for EthereumClient {
 			.yui
 			.event_for_name::<GeneratedConnectionIdentifierFilter>("GeneratedConnectionIdentifier")
 			.map_err(|err| ClientError::ContractAbiError(err))?
+			.address(ValueOrArray::Value(self.yui.ibc_core_diamond.address()))
 			.from_block(self.contract_creation_block())
-			.address(ValueOrArray::Value(self.yui.ibc_core_diamond.address())) // TODO: use contract creation height
 			.to_block(BlockNumber::Number(height.into()));
 
 		let logs = self
@@ -1902,6 +1906,7 @@ impl IbcProvider for EthereumClient {
 			frozen_height: None,
 			latest_height: block_number as _,
 			ibc_core_address: self.yui.ibc_core_diamond.address(),
+			next_upgrade_id: 0,
 			_phantom: Default::default(),
 		});
 

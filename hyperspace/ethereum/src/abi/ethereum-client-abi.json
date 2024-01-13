@@ -114,6 +114,11 @@
             "internalType": "address",
             "name": "ibcCoreContractAddress",
             "type": "address"
+          },
+          {
+            "internalType": "uint64",
+            "name": "nextUpgradeId",
+            "type": "uint64"
           }
         ],
         "internalType": "struct EthereumClientPrimitivesClientState",

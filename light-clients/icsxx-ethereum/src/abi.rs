@@ -7,17 +7,12 @@ use crate::{
 use alloc::{string::ToString, vec::Vec};
 use alloy_sol_macro::sol;
 use alloy_sol_types::private::FixedBytes;
-use core::{
-	fmt::{Debug, Formatter},
-	time::Duration,
-};
+#[cfg(feature = "std")]
+use core::fmt::Formatter;
+use core::{fmt::Debug, time::Duration};
 use ethabi::Bytes;
 use ibc::{
-	core::{
-		ics02_client::height::Height,
-		ics04_channel::channel::{ChannelEnd, Counterparty},
-		ics23_commitment::commitment::CommitmentRoot,
-	},
+	core::{ics02_client::height::Height, ics23_commitment::commitment::CommitmentRoot},
 	timestamp::Timestamp,
 };
 use ics07_tendermint::{
@@ -148,6 +143,7 @@ impl<H> From<ClientState<H>> for EthereumClientPrimitivesClientState {
 				.unwrap_or_else(|| HeightData { revision_number: 0, revision_height: 0 }),
 			latestHeight: value.latest_height,
 			ibcCoreContractAddress: value.ibc_core_address.0.into(),
+			nextUpgradeId: value.next_upgrade_id.into(),
 		}
 	}
 }
@@ -165,6 +161,7 @@ impl<H> TryFrom<EthereumClientPrimitivesClientState> for ClientState<H> {
 			},
 			latest_height: value.latestHeight,
 			ibc_core_address: H160(value.ibcCoreContractAddress.into()),
+			next_upgrade_id: value.nextUpgradeId.into(),
 			_phantom: Default::default(),
 		})
 	}

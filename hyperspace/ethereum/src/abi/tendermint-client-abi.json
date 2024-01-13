@@ -1,49 +1,5 @@
 [
   {
-    "anonymous": false,
-    "inputs": [
-      {
-        "indexed": false,
-        "internalType": "bytes",
-        "name": "",
-        "type": "bytes"
-      }
-    ],
-    "name": "CSBytes",
-    "type": "event"
-  },
-  {
-    "anonymous": false,
-    "inputs": [
-      {
-        "indexed": false,
-        "internalType": "bytes",
-        "name": "",
-        "type": "bytes"
-      },
-      {
-        "indexed": false,
-        "internalType": "bytes",
-        "name": "",
-        "type": "bytes"
-      },
-      {
-        "indexed": false,
-        "internalType": "int64",
-        "name": "",
-        "type": "int64"
-      },
-      {
-        "indexed": false,
-        "internalType": "int64",
-        "name": "",
-        "type": "int64"
-      }
-    ],
-    "name": "CSUpdate",
-    "type": "event"
-  },
-  {
     "inputs": [
       {
         "components": [

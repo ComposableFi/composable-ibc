@@ -252,7 +252,6 @@ where
 
 	pub fn contract_address_by_name(&self, contract_name: ContractName) -> Option<Address> {
 		use ContractName::*;
-		// | BankDiamond | IbcTransferDiamond | TendermintDiamond
 		match contract_name {
 			IbcCoreDiamond => Some(self.ibc_core_diamond.address()),
 			BankDiamond => self.bank_diamond.as_ref().map(|x| x.address()),
@@ -1300,11 +1299,6 @@ pub async fn deploy_transfer_module<M: Middleware, S: Signer>(
 	)?;
 	send_retrying(&method).await.unwrap();
 
-	let tendermint_address = yui_ibc.tendermint_diamond.as_ref().map(|x| x.address()).unwrap();
-	yui_ibc.set_gov_tendermint_client(tendermint_address, IbcCoreDiamond).await;
-	yui_ibc.set_gov_tendermint_client(tendermint_address, IbcTransferDiamond).await;
-	yui_ibc.set_gov_tendermint_client(tendermint_address, BankDiamond).await;
-	yui_ibc.set_gov_tendermint_client(tendermint_address, TendermintDiamond).await;
 	yui_ibc.add_relayer(client.address()).await;
 	yui_ibc.bind_port("transfer", ibc_transfer_diamond.address()).await;
 
