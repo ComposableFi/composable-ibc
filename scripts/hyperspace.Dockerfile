@@ -13,11 +13,10 @@ RUN curl -LO https://github.com/protocolbuffers/protobuf/releases/download/v21.9
 RUN apt update && \
 	apt install -y openssh-client
 
-RUN ssh-keygen -t rsa -N "" -f ~/.ssh/id_rsa && \
-    eval `ssh-agent -s` && \
-    ssh-add ~/.ssh/id_rsa
 
-RUN cargo build --release --locked -p hyperspace
+RUN git config --global url."https://github.com/foundry-rs/forge-std.git".insteadOf "git@github.com:foundry-rs/forge-std"
+
+RUN cargo build --release -p hyperspace
 
 # =============
 

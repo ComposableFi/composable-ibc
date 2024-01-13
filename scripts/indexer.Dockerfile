@@ -10,7 +10,9 @@ RUN curl -LO https://github.com/protocolbuffers/protobuf/releases/download/v21.9
 	unzip  protoc-21.9-linux-x86_64.zip -d /usr/local/protoc && \
 	protoc --version
 
-RUN cargo build --release --locked --bin evm-indexer
+RUN git config --global url."https://github.com/foundry-rs/forge-std.git".insteadOf "git@github.com:foundry-rs/forge-std"
+
+RUN cargo build --release --bin evm-indexer
 
 # =============
 

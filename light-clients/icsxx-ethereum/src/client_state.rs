@@ -28,7 +28,10 @@ use ibc::{
 };
 use ibc_proto::google::protobuf::Any;
 use serde::{Deserialize, Serialize};
-use sync_committee_primitives::types::VerifierState as LightClientState;
+use sync_committee_primitives::{
+	constants::{EPOCHS_PER_SYNC_COMMITTEE_PERIOD, SLOTS_PER_EPOCH},
+	types::VerifierState as LightClientState,
+};
 use tendermint_proto::Protobuf;
 
 /// Protobuf type url for GRANDPA ClientState
@@ -92,6 +95,7 @@ impl<H: Clone> ClientState<H> {
 impl<H> ClientState<H> {
 	pub fn latest_height(&self) -> Height {
 		Height::new(0, self.latest_height.into())
+		// Height::new(self.inner.latest_finalized_epoch.into(), self.latest_height.into())
 	}
 
 	pub fn chain_id(&self) -> ChainId {
@@ -121,10 +125,15 @@ impl<H> ClientState<H> {
 
 	/// Check if the state is expired when `elapsed` time has passed since the latest consensus
 	/// state timestamp
-	pub fn expired(&self, _elapsed: Duration) -> bool {
-		// elapsed > self.relay_chain.trusting_period()
-		// TODO
-		false
+	pub fn expired(&self, elapsed: Duration) -> bool {
+		// we consider a client to be expired when the client update is after a
+		// sync_committee_change but less than the unbonding period (which is 256 epochs + 5epochs)
+		// https://consensys.io/shanghai-capella-upgrade
+		let beacon_slot_time = 12; // in seconds
+		let duration_sync_commitee_change = Duration::from_secs(
+			beacon_slot_time * EPOCHS_PER_SYNC_COMMITTEE_PERIOD * SLOTS_PER_EPOCH,
+		);
+		elapsed > duration_sync_commitee_change
 	}
 
 	pub fn with_frozen_height(self, h: Height) -> Result<Self, Error> {
