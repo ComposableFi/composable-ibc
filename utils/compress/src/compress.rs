@@ -20,8 +20,7 @@ pub fn compress(data: Vec<u8>, chunk_size: usize) -> Vec<u8> {
 	let indices_encoded = indices
 		.into_iter()
 		.rev()
-		.map(|x| (x as u16).to_be_bytes())
-		.flatten()
+		.flat_map(|x| (x as u16).to_be_bytes())
 		.collect::<Vec<_>>();
 
 	[(len as u16).to_be_bytes().to_vec(), indices_encoded, out_data]
@@ -51,11 +50,11 @@ pub fn decompress(compressed: &mut &[u8], chunk_size: usize) -> Vec<u8> {
 	let mut decompressed = vec![0; data.len() + indices_count * chunk_size];
 
 	let mut idx = decompressed.len();
-	for i in 0..indices_count {
-		let index = indices[i] * chunk_size;
+	for i in indices.iter().take(indices_count) {
+		let index = i * chunk_size;
 		let non_zero = data.drain(index..).collect::<Vec<_>>();
 		idx -= non_zero.len();
-		(&mut decompressed[idx..idx + non_zero.len()]).copy_from_slice(&non_zero);
+		decompressed[idx..idx + non_zero.len()].copy_from_slice(&non_zero);
 		idx -= chunk_size;
 	}
 

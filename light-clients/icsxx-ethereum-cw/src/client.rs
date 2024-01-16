@@ -150,8 +150,7 @@ where
 			.load(self.storage(), client_id.as_bytes().to_owned())
 			.unwrap_or_default()
 			.range(..height)
-			.rev()
-			.next()
+			.next_back()
 			.map(|height| self.consensus_state(client_id, *height))
 			.transpose()
 	}
