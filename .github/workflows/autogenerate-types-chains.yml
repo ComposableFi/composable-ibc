@@ -1,18 +1,18 @@
 name: "Autogenerate types after chain upgrades"
 
 on:
-    workflow_dispatch:
-      inputs:
-        chain:
-          description: "Chain to run the action for"
-          required: true
-          type: choice
-          options:
-            - composable
-            - picasso
-    push: 
-        branches:
-            - automation_types
+  workflow_dispatch:
+    inputs:
+      chain:
+        description: "Chain to run the action for"
+        required: true
+        type: choice
+        options:
+          - composable
+          - picasso
+#   push: 
+#     branches:
+#       - automation_types
 
 jobs:
   generate-types-and-open-pr:
