@@ -210,7 +210,7 @@ where
 	(amount, msg)
 }
 
-async fn assert_send_transfer<A>(
+pub async fn assert_send_transfer<A>(
 	chain: &A,
 	asset_id: A::AssetId,
 	previous_balance: u128,
@@ -252,6 +252,7 @@ async fn send_packet_and_assert_height_timeout<A, B>(
 	chain_b: &B,
 	asset_a: A::AssetId,
 	channel_id: ChannelId,
+	is_native_asset: bool,
 ) where
 	A: TestProvider,
 	A::FinalityEvent: Send + Sync,
@@ -263,7 +264,7 @@ async fn send_packet_and_assert_height_timeout<A, B>(
 	log::info!(target: "hyperspace", "Suspending send packet relay");
 	set_relay_status(false);
 
-	let (.., msg) = send_transfer(
+	let (initial_balance, msg) = send_transfer(
 		chain_a,
 		chain_b,
 		asset_a.clone(),
@@ -271,6 +272,16 @@ async fn send_packet_and_assert_height_timeout<A, B>(
 		Some(Timeout::Offset { timestamp: Some(60 * 60), height: Some(20) }),
 	)
 	.await;
+
+	let balance_after_send = chain_a
+		.query_ibc_balance(asset_a.clone())
+		.await
+		.expect("Can't query ibc balance")
+		.pop()
+		.expect("No Ibc balances")
+		.amount;
+
+	assert!(balance_after_send.as_u256().as_u128() < initial_balance);
 
 	// Wait for timeout height to elapse then resume packet relay
 	let future = chain_b
@@ -294,6 +305,21 @@ async fn send_packet_and_assert_height_timeout<A, B>(
 	set_relay_status(true);
 
 	assert_timeout_packet(chain_a, 75).await;
+
+	let balance_after_timeout = chain_a
+		.query_ibc_balance(asset_a)
+		.await
+		.expect("Can't query ibc balance")
+		.pop()
+		.expect("No Ibc balances")
+		.amount;
+	if is_native_asset {
+		let half_sent = (initial_balance * 10) / 100;
+		assert!(balance_after_timeout.as_u256().as_u128() > initial_balance - half_sent);
+	} else {
+		assert_eq!(balance_after_timeout.as_u256().as_u128(), initial_balance);
+	}
+
 	log::info!(target: "hyperspace", "🚀🚀 Timeout packet successfully processed for height timeout");
 }
 
@@ -304,6 +330,7 @@ async fn send_packet_and_assert_timestamp_timeout<A, B>(
 	chain_b: &B,
 	asset_a: A::AssetId,
 	channel_id: ChannelId,
+	is_native_asset: bool,
 ) where
 	A: TestProvider,
 	A::FinalityEvent: Send + Sync,
@@ -315,14 +342,24 @@ async fn send_packet_and_assert_timestamp_timeout<A, B>(
 	log::info!(target: "hyperspace", "Suspending send packet relay");
 	set_relay_status(false);
 
-	let (.., msg) = send_transfer(
+	let (initial_balance, msg) = send_transfer(
 		chain_a,
 		chain_b,
-		asset_a,
+		asset_a.clone(),
 		channel_id,
 		Some(Timeout::Offset { timestamp: Some(60 * 2), height: Some(400) }),
 	)
 	.await;
+
+	let balance_after_send = chain_a
+		.query_ibc_balance(asset_a.clone())
+		.await
+		.expect("Can't query ibc balance")
+		.pop()
+		.expect("No Ibc balances")
+		.amount;
+
+	assert!(balance_after_send.as_u256().as_u128() < initial_balance);
 
 	// Wait for timeout timestamp to elapse then resume packet relay
 	let future = chain_b
@@ -351,6 +388,22 @@ async fn send_packet_and_assert_timestamp_timeout<A, B>(
 	set_relay_status(true);
 
 	assert_timeout_packet(chain_a, 4000).await;
+
+	let balance_after_timeout = chain_a
+		.query_ibc_balance(asset_a)
+		.await
+		.expect("Can't query ibc balance")
+		.pop()
+		.expect("No Ibc balances")
+		.amount;
+
+	if is_native_asset {
+		let half_sent = (initial_balance * 10) / 100;
+		assert!(balance_after_timeout.as_u256().as_u128() > initial_balance - half_sent);
+	} else {
+		assert_eq!(balance_after_timeout.as_u256().as_u128(), initial_balance);
+	}
+
 	log::info!(target: "hyperspace", "🚀🚀 Timeout packet successfully processed for timeout timestamp");
 }
 
@@ -440,14 +493,24 @@ async fn send_packet_and_assert_timeout_on_channel_close<A, B>(
 	log::info!(target: "hyperspace", "Suspending send packet relay");
 	set_relay_status(false);
 
-	let (.., msg_transfer) = send_transfer(
+	let (initial_balance, msg_transfer) = send_transfer(
 		chain_a,
 		chain_b,
-		asset_a,
+		asset_a.clone(),
 		channel_id,
 		Some(Timeout::Offset { timestamp: Some(60 * 2), height: Some(400) }),
 	)
 	.await;
+
+	let balance_after_send = chain_a
+		.query_ibc_balance(asset_a.clone())
+		.await
+		.expect("Can't query ibc balance")
+		.pop()
+		.expect("No Ibc balances")
+		.amount;
+
+	assert!(balance_after_send.as_u256().as_u128() < initial_balance);
 
 	let msg = MsgChannelCloseInit {
 		port_id: PortId::transfer(),
@@ -485,6 +548,17 @@ async fn send_packet_and_assert_timeout_on_channel_close<A, B>(
 	set_relay_status(true);
 
 	assert_timeout_packet(chain_a, 1000).await;
+
+	let balance_after_timeout = chain_a
+		.query_ibc_balance(asset_a)
+		.await
+		.expect("Can't query ibc balance")
+		.pop()
+		.expect("No Ibc balances")
+		.amount;
+
+	assert_eq!(balance_after_timeout.as_u256().as_u128(), initial_balance);
+
 	log::info!(target: "hyperspace", "🚀🚀 Timeout packet successfully processed for channel close");
 }
 
@@ -510,7 +584,33 @@ pub async fn ibc_messaging_packet_height_timeout_with_connection_delay<A, B>(
 			.await
 			.unwrap()
 	});
-	send_packet_and_assert_height_timeout(chain_a, chain_b, asset_a, channel_a).await;
+	send_packet_and_assert_height_timeout(chain_a, chain_b, asset_a, channel_a, false).await;
+	handle.abort()
+}
+
+///
+pub async fn ibc_messaging_packet_height_timeout_with_connection_delay_native<A, B>(
+	chain_a: &mut A,
+	chain_b: &mut B,
+	asset_a: A::AssetId,
+	channel_a: ChannelId,
+	_channel_b: ChannelId,
+) where
+	A: TestProvider,
+	A::FinalityEvent: Send + Sync,
+	A::Error: From<B::Error>,
+	B: TestProvider,
+	B::FinalityEvent: Send + Sync,
+	B::Error: From<A::Error>,
+{
+	let client_a_clone = chain_a.clone();
+	let client_b_clone = chain_b.clone();
+	let handle = tokio::task::spawn(async move {
+		hyperspace_core::relay(client_a_clone, client_b_clone, None, None, None)
+			.await
+			.unwrap()
+	});
+	send_packet_and_assert_height_timeout(chain_a, chain_b, asset_a, channel_a, true).await;
 	handle.abort()
 }
 
@@ -536,7 +636,33 @@ pub async fn ibc_messaging_packet_timestamp_timeout_with_connection_delay<A, B>(
 			.await
 			.unwrap()
 	});
-	send_packet_and_assert_timestamp_timeout(chain_a, chain_b, asset_a, channel_a).await;
+	send_packet_and_assert_timestamp_timeout(chain_a, chain_b, asset_a, channel_a, false).await;
+	handle.abort()
+}
+
+///
+pub async fn ibc_messaging_packet_timestamp_timeout_with_connection_delay_native<A, B>(
+	chain_a: &mut A,
+	chain_b: &mut B,
+	asset_a: A::AssetId,
+	channel_a: ChannelId,
+	_channel_b: ChannelId,
+) where
+	A: TestProvider,
+	A::FinalityEvent: Send + Sync,
+	A::Error: From<B::Error>,
+	B: TestProvider,
+	B::FinalityEvent: Send + Sync,
+	B::Error: From<A::Error>,
+{
+	let client_a_clone = chain_a.clone();
+	let client_b_clone = chain_b.clone();
+	let handle = tokio::task::spawn(async move {
+		hyperspace_core::relay(client_a_clone, client_b_clone, None, None, None)
+			.await
+			.unwrap()
+	});
+	send_packet_and_assert_timestamp_timeout(chain_a, chain_b, asset_a, channel_a, true).await;
 	handle.abort()
 }
 

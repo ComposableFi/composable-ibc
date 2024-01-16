@@ -15,13 +15,13 @@
 use crate::utils::{BEACON_NODE_PORT, ETH_NODE_PORT_WS};
 use core::time::Duration;
 use ethers::{
-	abi::{Bytes, ParamType, StateMutability, Token},
+	abi::{ethabi, Bytes, ParamType, StateMutability, Token},
 	middleware::SignerMiddleware,
 	prelude::{
 		coins_bip39::{English, Mnemonic},
 		transaction::eip2718::TypedTransaction,
 		ContractInstance, Http, JsonRpcClient, LocalWallet, Middleware, MnemonicBuilder, Provider,
-		Signer,
+		Signer, H256,
 	},
 	types::{Address, BlockNumber, TransactionRequest, U256},
 	utils::{keccak256, AnvilInstance},
@@ -34,7 +34,8 @@ use hyperspace_core::{
 };
 use hyperspace_cosmos::client::{CosmosClient, CosmosClientConfig};
 use hyperspace_ethereum::{
-	client::{ClientError, EthereumClient},
+	chain::client_state_from_abi_token,
+	client::{ClientError, EthereumClient, COMMITMENTS_STORAGE_INDEX},
 	config::{ContractName, ContractName::ICS20Bank},
 	ibc_provider,
 	ibc_provider::PublicKeyData,
@@ -46,10 +47,12 @@ use hyperspace_ethereum::{
 };
 use hyperspace_primitives::{utils::create_clients, Chain, CommonClientConfig, IbcProvider};
 use hyperspace_testsuite::{
-	ibc_channel_close, ibc_messaging_packet_height_timeout_with_connection_delay,
+	assert_send_transfer, ibc_channel_close,
+	ibc_messaging_packet_height_timeout_with_connection_delay,
+	ibc_messaging_packet_height_timeout_with_connection_delay_native,
 	ibc_messaging_packet_timeout_on_channel_close,
 	ibc_messaging_packet_timestamp_timeout_with_connection_delay,
-	ibc_messaging_with_connection_delay, setup_connection_and_channel,
+	ibc_messaging_with_connection_delay, send_transfer, setup_connection_and_channel,
 };
 use ibc::core::{ics02_client::client_state::ClientState, ics24_host::identifier::PortId};
 use itertools::Itertools;
@@ -328,6 +331,7 @@ async fn setup_clients() -> (AnyChain, AnyChain, JoinHandle<()>) {
 		let tendermint_address = yui_ibc.tendermint_diamond.as_ref().map(|x| x.address()).unwrap();
 
 		info!(target: "hyperspace", "Deployed diamond: {:?}, tendermint client: {:?}, bank: {:?}", yui_ibc.ibc_core_diamond.address(), tendermint_client.address(), bank_diamond.address());
+		info!(target: "hyperspace", "Using addr = {:?}", deploy.client.address());
 		yui_ibc.ibc_transfer_diamond = Some(ibc_transfer_diamond);
 		yui_ibc.ibc_transfer_facets = ibc_transfer_facets;
 		yui_ibc.bank_diamond = Some(bank_diamond);
@@ -336,12 +340,11 @@ async fn setup_clients() -> (AnyChain, AnyChain, JoinHandle<()>) {
 			&deploy.path,
 			deploy.client.clone(),
 			yui_ibc.clone(),
-			&anvil.addresses()[..1],
+			&[deploy.client.address()],
 		)
 		.await
 		.unwrap();
 
-		// yui_ibc.set_gov_tendermint_client(tendermint_address).await;
 		let tendermint_facets = yui_ibc.tendermint_facets.clone();
 
 		//replace the tendermint client address in hyperspace config with a real one
@@ -455,7 +458,7 @@ async fn ethereum_to_cosmos_ibc_messaging_full_integration_test() {
 
 	let asset_str = "pica".to_string();
 	let asset_native_str = "ETH".to_string();
-	let _asset_id_a = AnyAssetId::Ethereum(asset_str.clone());
+	let asset_id_a = AnyAssetId::Ethereum("TST".to_string());
 	let asset_id_native_a = AnyAssetId::Ethereum(asset_native_str.clone());
 	let (mut chain_a, mut chain_b, _indexer_handle) = setup_clients().await;
 	sleep(Duration::from_secs(12)).await;
@@ -466,7 +469,6 @@ async fn ethereum_to_cosmos_ibc_messaging_full_integration_test() {
 
 			let mut p = Provider::connect(eth.config.ws_rpc_url.to_string()).await.unwrap();
 			loop {
-				// info!(target: "hyperspace", "Finality notification: {ev:?}");
 				tokio::time::sleep(Duration::from_secs(5)).await;
 				let res = p.request::<_, BlockNumber>("evm_mine", ()).await;
 				info!(target: "hyperspace", "Mined: {res:?}");
@@ -474,23 +476,52 @@ async fn ethereum_to_cosmos_ibc_messaging_full_integration_test() {
 		});
 	}
 
+	let AnyChain::Ethereum(eth) = &chain_a else { unreachable!() };
+	let addr = eth
+		.yui
+		.method_diamond::<_, Address>(
+			"queryTokenContractFromDenom",
+			"TST".to_string(),
+			ContractName::BankDiamond,
+		)
+		.unwrap()
+		.call()
+		.await
+		.unwrap();
+
+	if addr == Address::zero() {
+		let client = eth.client().clone();
+		let path = utils::yui_ibc_solidity_path();
+		let project_output =
+			hyperspace_ethereum::utils::compile_yui(&path, "contracts/apps/20-transfer");
+		let erc20_token = deploy_contract(
+			"ERC20Token",
+			&[&project_output],
+			("Test Token".to_string(), "TST".to_string(), 100u32, 0u8),
+			client,
+		)
+		.await;
+
+		let method = eth
+			.yui
+			.method_diamond::<_, ()>(
+				"whitelistToken",
+				(erc20_token.address(), "TST".to_string()),
+				ContractName::BankDiamond,
+			)
+			.unwrap();
+		send_retrying(&method).await.unwrap();
+	}
+
 	let (handle, channel_a, channel_b, connection_id_a, connection_id_b) =
 		setup_connection_and_channel(&mut chain_a, &mut chain_b, Duration::from_secs(1)).await;
-	handle.abort();
-	// let asset_id_a = AnyAssetId::Ethereum(asset_str.clone());
-	let asset_id_a = AnyAssetId::Ethereum(format!("transfer/{}/{}", channel_a, asset_str.clone()));
+
+	let asset_id_b_on_a =
+		AnyAssetId::Ethereum(format!("transfer/{}/{}", channel_a, asset_str.clone()));
+	let asset_id_b = AnyAssetId::Cosmos(asset_str.to_string());
 
 	log::info!(target: "hyperspace", "Conn A: {connection_id_a:?} B: {connection_id_b:?}");
 	log::info!(target: "hyperspace", "Chann A: {channel_a:?} B: {channel_b:?}");
-
-	let asset_id_b = AnyAssetId::Cosmos(asset_str.to_string());
-	// let asset_id_b = AnyAssetId::Cosmos(format!(
-	// 	"ibc/{}",
-	// 	hex::encode(&sha2_256(
-	// 		format!("{}/{channel_b}/{asset_str}", PortId::transfer()).as_bytes()
-	// 	))
-	// 	.to_uppercase()
-	// ));
 
 	let asset_id_native_b: AnyAssetId = AnyAssetId::Cosmos(format!(
 		"ibc/{}",
@@ -498,6 +529,11 @@ async fn ethereum_to_cosmos_ibc_messaging_full_integration_test() {
 			format!("{}/{channel_b}/{asset_native_str}", PortId::transfer()).as_bytes()
 		))
 		.to_uppercase()
+	));
+	let asset_id_a_on_b: AnyAssetId = AnyAssetId::Cosmos(format!(
+		"ibc/{}",
+		hex::encode(&sha2_256(format!("{}/{channel_b}/TST", PortId::transfer()).as_bytes()))
+			.to_uppercase()
 	));
 
 	log::info!(target: "hyperspace", "Asset A: {asset_id_a:?} B: {asset_id_b:?}");
@@ -508,6 +544,11 @@ async fn ethereum_to_cosmos_ibc_messaging_full_integration_test() {
 
 	chain_a.set_channel_whitelist(vec![(channel_a, PortId::transfer())].into_iter().collect());
 	chain_b.set_channel_whitelist(vec![(channel_b, PortId::transfer())].into_iter().collect());
+
+	let (previous_balance, _) =
+		send_transfer(&chain_b, &chain_a, asset_id_b.clone(), channel_b, None).await;
+	assert_send_transfer(&chain_b, asset_id_b.clone(), previous_balance, 4800).await;
+	handle.abort();
 
 	// Run tests sequentially
 	// no timeouts + connection delay
@@ -522,10 +563,20 @@ async fn ethereum_to_cosmos_ibc_messaging_full_integration_test() {
 	.await;
 
 	ibc_messaging_with_connection_delay(
-		&mut chain_b,
 		&mut chain_a,
-		asset_id_b.clone(),
+		&mut chain_b,
 		asset_id_a.clone(),
+		asset_id_a_on_b.clone(),
+		channel_a,
+		channel_b,
+	)
+	.await;
+
+	ibc_messaging_with_connection_delay(
+		&mut chain_b,
+		&mut chain_a,
+		asset_id_b.clone(),
+		asset_id_b_on_a.clone(),
 		channel_b,
 		channel_a,
 	)
@@ -542,10 +593,28 @@ async fn ethereum_to_cosmos_ibc_messaging_full_integration_test() {
 	.await;
 
 	// timeouts + connection delay
-	ibc_messaging_packet_height_timeout_with_connection_delay(
+	ibc_messaging_packet_height_timeout_with_connection_delay_native(
 		&mut chain_a,
 		&mut chain_b,
 		asset_id_native_a.clone(),
+		channel_a,
+		channel_b,
+	)
+	.await;
+
+	ibc_messaging_packet_height_timeout_with_connection_delay(
+		&mut chain_a,
+		&mut chain_b,
+		asset_id_b_on_a.clone(),
+		channel_a,
+		channel_b,
+	)
+	.await;
+
+	ibc_messaging_packet_height_timeout_with_connection_delay(
+		&mut chain_a,
+		&mut chain_b,
+		asset_id_a.clone(),
 		channel_a,
 		channel_b,
 	)
@@ -1017,6 +1086,8 @@ async fn ethereum_to_cosmos_governance_and_filters_test() {
 		(GovernanceFacet, "addSignatory", Owner),
 		(GovernanceFacet, "removeSignatory", Owner),
 		(IBCChannelHandshake, "bindPort", Owner),
+		(IBCChannelHandshake, "unbindPort", Owner),
+		(IBCChannelHandshake, "setExpectedBlockTime", Owner),
 		(IBCChannelHandshake, "channelCloseConfirm", Relayer),
 		(IBCChannelHandshake, "channelCloseInit", Relayer),
 		(IBCChannelHandshake, "channelOpenAck", Relayer),

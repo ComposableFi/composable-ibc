@@ -1845,6 +1845,8 @@ impl IbcProvider for EthereumClient {
 			inner: client_state,
 			frozen_height: None,
 			latest_height: execution_header.block_number as _,
+			ibc_core_address: self.yui.ibc_core_diamond.address(),
+			next_upgrade_id: 0,
 			_phantom: Default::default(),
 		});
 

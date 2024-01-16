@@ -26,7 +26,7 @@ use tokio::{task::JoinSet, time, time::sleep};
 #[cfg(not(feature = "no_beacon"))]
 pub async fn prove_fast(
 	client: &EthereumClient,
-	eth_client_state: &ClientState<HostFunctionsManager>,
+	_eth_client_state: &ClientState<HostFunctionsManager>,
 	mut block_number: u64,
 	up_to: u64,
 ) -> Result<Header, ClientError> {
@@ -34,7 +34,6 @@ pub async fn prove_fast(
 	let sync_committee_prover = client.prover();
 
 	let mut block_id = format!("{block_number:?}");
-	let client_state = &eth_client_state.inner;
 
 	let block = loop {
 		let block = sync_committee_prover.fetch_block(&block_id).await?;
@@ -51,12 +50,6 @@ pub async fn prove_fast(
 		block_id = format!("{block_number:?}");
 	};
 	let block_header = sync_committee_prover.fetch_header(&block_id).await?;
-
-	let from = client_state.finalized_header.slot + 1;
-	let to = block_header.slot;
-	let mut join_set: JoinSet<Result<_, Error>> = JoinSet::new();
-	// let range = vec![to];
-	let range = (from..to).collect::<Vec<_>>();
 
 	let ep = block.body.execution_payload;
 	let execution_payload_proof = ExecutionPayloadProof {
@@ -140,6 +133,7 @@ pub async fn prove(
 		return Ok(None)
 		// return Err(ClientError::Other("No update 4".to_string()))
 	}
+
 	let light_client_update = upd.unwrap();
 
 	Ok(Some(Header { inner: light_client_update }))
