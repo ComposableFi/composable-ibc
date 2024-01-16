@@ -10,6 +10,9 @@ on:
           options:
             - composable
             - picasso
+    push: 
+        branches:
+            - automation_types
 
 jobs:
   generate-types-and-open-pr:
