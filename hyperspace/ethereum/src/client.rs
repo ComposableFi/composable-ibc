@@ -88,10 +88,6 @@ pub struct EthereumClient {
 	pub redis: redis::Client,
 	/// Indexer Postgres database
 	pub db_conn: sqlx::Pool<sqlx::Postgres>,
-	/// Checkpoint stream
-	#[derivative(Debug = "ignore")]
-	pub checkpoint_stream:
-		Arc<AsyncMutex<Pin<Box<dyn Stream<Item = Checkpoint> + Send + 'static>>>>,
 }
 
 pub type MiddlewareErrorType =
@@ -271,9 +267,6 @@ impl EthereumClient {
 			channel_whitelist: Arc::new(Mutex::new(
 				config.channel_whitelist.clone().into_iter().collect(),
 			)),
-			checkpoint_stream: Arc::new(AsyncMutex::new(subscribe_to_checkpoint_stream(
-				&config.beacon_rpc_url.to_string(),
-			))),
 			config,
 			db_conn,
 			redis,
