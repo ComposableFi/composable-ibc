@@ -18,6 +18,8 @@ jobs:
   generate-types-and-open-pr:
     runs-on: ubuntu-latest
 
+    if: github.event_name == 'workflow_dispatch' 
+
     steps:
         - name: Checkout Repository
           uses: actions/checkout@v2
