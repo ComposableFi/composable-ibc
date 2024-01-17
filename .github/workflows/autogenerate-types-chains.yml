@@ -10,9 +10,6 @@ on:
         options:
           - composable
           - picasso
-  push: 
-    branches:
-      - '*'
 
 jobs:
   generate-types-and-open-pr:
