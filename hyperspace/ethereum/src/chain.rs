@@ -2,7 +2,9 @@ use crate::{
 	client::{ClientError, EthereumClient},
 	contract::{IbcHandler, UnwrapContractError},
 	ibc_provider::{BlockHeight, INDEXER_DELAY_BLOCKS},
-	utils::{clear_proof_value, handle_gas_usage, Header as EthHeader, ProviderImpl},
+	utils::{
+		clear_proof_value, handle_gas_usage, send_retrying, Header as EthHeader, ProviderImpl,
+	},
 	yui_types::{ics03_connection::conn_open_try::YuiMsgConnectionOpenTry, IntoToken},
 };
 use alloy_sol_types::SolValue;
@@ -13,13 +15,15 @@ use channel_msgs::{
 	chan_open_try::MsgChannelOpenTry, recv_packet::MsgRecvPacket, timeout::MsgTimeout,
 	timeout_on_close::MsgTimeoutOnClose,
 };
+use elliptic_curve::bigint::Pow;
 use ethers::{
 	abi::{ParamType, Token},
 	contract::FunctionCall,
 	providers::Middleware,
-	types::H256,
+	types::{H256, U256},
 	utils::rlp,
 };
+use ethers_providers::EscalationPolicy;
 use futures::{Stream, StreamExt};
 use ibc::{
 	core::{
@@ -1253,11 +1257,26 @@ impl Chain for EthereumClient {
 	async fn submit(&self, messages: Vec<Any>) -> Result<Self::TransactionId, Self::Error> {
 		let method = self.ibc_messages_to_contract_call(messages).await?;
 		let data = method.call().await?;
-		let receipt = method
-			.send()
-			.await?
-			.await?
-			.ok_or_else(|| ClientError::Other("tx failed".into()))?;
+		let mut tx = method.tx;
+		let client = self.client();
+		client
+			.fill_transaction(&mut tx, None)
+			.await
+			.map_err(|e| ClientError::Other(format!("failed to fill transaction: {:?}", e)))?;
+		let receipt = client
+			.send_escalating(
+				&tx,
+				5,
+				Box::new(|start, escalation_index| {
+					let escalation_index = escalation_index as u32;
+					start * U256::from(1120u32).pow(U256::from(escalation_index)) /
+						U256::from(1000u32).pow(escalation_index.into())
+				}),
+			)
+			.await
+			.map_err(|e| ClientError::Other(format!("failed to send transaction: {:?}", e)))?
+			.await
+			.map_err(|e| ClientError::Other(format!("failed to send transaction: {:?}", e)))?;
 		handle_gas_usage(&receipt);
 		if receipt.status != Some(1.into()) {
 			return Err(ClientError::Other(format!("tx failed: {:?}", receipt)))
