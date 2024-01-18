@@ -432,37 +432,16 @@ impl EthereumClient {
 		client_id: ClientId,
 		client_state: &ClientState<HostFunctionsManager>,
 		latest_revision: u64,
+		header: Header,
 	) -> Result<Option<(Header, (Any, Height, Vec<IbcEvent>, UpdateType))>, ClientError>
 	where
 		T: Chain,
 	{
-		let mut guard = self.updates.lock().await;
-		if guard.is_empty() {
-			log::debug!(target: "hyperspace_ethereum", "No more updates");
-			return Ok(None)
-		}
-		let header = guard.remove(0);
-		drop(guard);
 		let update = &header.inner;
-		let latest_cp_client_height = client_state.latest_height().revision_height;
-		let from = latest_cp_client_height + 1;
-		let to = header.inner.execution_payload.block_number;
 
 		let update_height =
 			Height::new(latest_revision, update.execution_payload.block_number.into());
 		let mut events = vec![];
-
-		let logs = self.get_logs(from, to.into(), None).await?;
-
-		for log in logs {
-			if let Some(event) = parse_ethereum_event(&self, log).await? {
-				events.push(event);
-			}
-		}
-
-		events.iter().for_each(|x| {
-			info!("ev height = {}", x.height());
-		});
 
 		let update_client_header = {
 			info!(target: "hyperspace_ethereum", "update client header height: {}, finalized slot: {}",
@@ -500,23 +479,45 @@ impl EthereumClient {
 		T: primitives::Chain,
 	{
 		let mut client_state = client_state.clone();
-		let mut updates = vec![];
-		let mut i = 0;
-		let mut latest_cp_client_height = client_state.latest_height().revision_height;
-		while i < max_updates {
+		let mut updates_with_events = vec![];
+
+		let mut updates = self.updates.lock().await;
+		let idx = updates.iter().enumerate().find_map(|(idx, h)| {
+			if h.inner.finalized_header.slot > client_state.inner.finalized_header.slot {
+				Some(idx)
+			} else {
+				None
+			}
+		});
+		if let Some(remove_up_to) = idx {
+			updates.drain(0..remove_up_to);
+		}
+
+		if updates.is_empty() {
+			log::debug!(target: "hyperspace_ethereum", "No new updates");
+			return Ok(vec![])
+		}
+		let headers = updates.clone();
+		drop(updates);
+
+		let latest_cp_client_height = client_state.latest_height().revision_height;
+		let from = latest_cp_client_height + 1;
+		let to = headers.last().map(|h| h.inner.execution_payload.block_number);
+
+		for header in headers.into_iter().take(max_updates) {
 			let maybe_update = self
-				.fetch_next_update(counterparty, client_id.clone(), &client_state, latest_revision)
+				.fetch_next_update(
+					counterparty,
+					client_id.clone(),
+					&client_state,
+					latest_revision,
+					header,
+				)
 				.await?;
 			match maybe_update {
 				Some((header, update)) => {
 					info!(target: "hyperspace_ethereum", "Got update at slot {}", header.inner.finalized_header.slot);
-					updates.push(update);
-					client_state.inner.latest_finalized_epoch = header.inner.finality_proof.epoch;
-					if header.inner.sync_committee_update.is_some() {
-						client_state.inner.state_period = client_state.inner.state_period + 1;
-					}
-					latest_cp_client_height = header.inner.execution_payload.block_number;
-					i += 1;
+					updates_with_events.push(update);
 				},
 				None => {
 					log::debug!(target: "hyperspace_ethereum", "No more updates");
@@ -524,7 +525,23 @@ impl EthereumClient {
 				},
 			}
 		}
-		Ok(updates)
+		if !updates_with_events.is_empty() {
+			let to = to.unwrap();
+			let mut events = vec![];
+			let logs = self.get_logs(from, to.into(), None).await?;
+
+			for log in logs {
+				if let Some(event) = parse_ethereum_event(&self, log).await? {
+					events.push(event);
+				}
+			}
+
+			events.iter().for_each(|x| {
+				info!("ev height = {}", x.height());
+			});
+			updates_with_events.last_mut().unwrap().2.extend(events);
+		}
+		Ok(updates_with_events)
 	}
 }
 
