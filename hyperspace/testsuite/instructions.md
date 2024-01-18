@@ -1,10 +1,12 @@
 ## Running Solana-Cosmos Integration tests on Localnet
 
+Clone [composable-ibc](https://github.com/ComposableFi/composable-ibc) with branch `hyperspace-cosmos`.
+
 ### i. Setting up solana program
 
 1. Install [Solana CLI](https://docs.solana.com/cli/install-solana-cli-tools). Used for running the local validator
 2. Install [Anchor CLI](https://www.anchor-lang.com/docs/installation) . Used for buliding and deploying the program.
-3. Clone the [solana-ibc program](https://github.com/ComposableFi/emulated-light-client)
+3. Clone the [solana-ibc program](https://github.com/ComposableFi/emulated-light-client) with branch `test-relayer`.
 4. Start local validator with block subscription
 ```
 solana-test-validator -r --rpc-pubsub-enable-block-subscription
