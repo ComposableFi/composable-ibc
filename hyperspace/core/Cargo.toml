@@ -82,7 +82,7 @@ cosmos = ["dep:cosmos"]
 parachain = ["subxt-generated"]
 ethereum = ["dep:ethereum"]
 ethereum-mainnet = [
-    "hyperspace-ethereum/mainnet"
+    "ethereum/mainnet"
 ]
 
 testing = ["primitives/testing", "parachain/testing", "cosmos/testing"]
