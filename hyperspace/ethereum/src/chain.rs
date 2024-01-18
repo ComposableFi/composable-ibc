@@ -1257,12 +1257,6 @@ impl Chain for EthereumClient {
 	async fn submit(&self, messages: Vec<Any>) -> Result<Self::TransactionId, Self::Error> {
 		let method = self.ibc_messages_to_contract_call(messages).await?;
 		let data = method.call().await?;
-		let mut tx = method.tx;
-		let client = self.client();
-		client
-			.fill_transaction(&mut tx, None)
-			.await
-			.map_err(|e| ClientError::Other(format!("failed to fill transaction: {:?}", e)))?;
 		let receipt = method
 			.send()
 			.await?
