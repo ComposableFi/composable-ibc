@@ -12,3 +12,6 @@ hyperspace-core = { path = "./core" }
 toml = "0.7.3"
 
 [features]
+ethereum-mainnet = [
+    "hyperspace-core/ethereum-mainnet",
+]

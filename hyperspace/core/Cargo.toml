@@ -81,6 +81,10 @@ build-metadata-from-ws = []
 cosmos = ["dep:cosmos"]
 parachain = ["subxt-generated"]
 ethereum = ["dep:ethereum"]
+ethereum-mainnet = [
+    "hyperspace-ethereum/mainnet"
+]
+
 testing = ["primitives/testing", "parachain/testing", "cosmos/testing"]
 default = ["cosmos", "ethereum"]
 composable-beefy = []
