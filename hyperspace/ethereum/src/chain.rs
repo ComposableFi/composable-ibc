@@ -1263,32 +1263,17 @@ impl Chain for EthereumClient {
 			.fill_transaction(&mut tx, None)
 			.await
 			.map_err(|e| ClientError::Other(format!("failed to fill transaction: {:?}", e)))?;
-		let receipt = client
-			.send_escalating(
-				&tx,
-				5,
-				Box::new(|start, escalation_index| {
-					let escalation_index = escalation_index as u32;
-					start * U256::from(1120u32).pow(U256::from(escalation_index)) /
-						U256::from(1000u32).pow(escalation_index.into())
-				}),
-			)
-			.await
-			.map_err(|e| ClientError::Other(format!("failed to send transaction: {:?}", e)))?
-			.await
-			.map_err(|e| ClientError::Other(format!("failed to send transaction: {:?}", e)))?;
+		let receipt = method
+			.send()
+			.await?
+			.await?
+			.ok_or_else(|| ClientError::Other("tx failed".into()))?;
 		handle_gas_usage(&receipt);
 		if receipt.status != Some(1.into()) {
 			return Err(ClientError::Other(format!("tx failed: {:?}", receipt)))
 		}
 
-		for (i, (success, result)) in
-			data.0.into_iter().zip(data.1.into_iter()).into_iter().enumerate()
-		{
-			if !success {
-				log::error!(target: "hyperspace_ethereum", "tx failed {i}: {}", hex::encode(&result));
-			}
-		}
+		tokio::time::sleep(Duration::from_secs(15)).await;
 
 		let block_hash = receipt.block_hash.ok_or(ClientError::Other(format!(
 			"Block hash is missing for tx hash: {:?}",
