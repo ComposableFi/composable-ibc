@@ -77,8 +77,9 @@ use tendermint_rpc::{
 };
 use tokio::{task::JoinSet, time::sleep};
 
-pub const NUMBER_OF_BLOCKS_TO_PROCESS_PER_ITER: u64 = 250;
-pub const MANDATORY_UPDATES_PERIOD: usize = 50;
+// At least one *mandatory* update should happen during that period
+// TODO: make it configurable
+pub const NUMBER_OF_BLOCKS_TO_PROCESS_PER_ITER: u64 = 370;
 
 #[derive(Clone, Debug)]
 pub enum FinalityEvent {
@@ -173,19 +174,13 @@ where
 		block_events.sort_by_key(|(height, _)| *height);
 
 		let mut updates = Vec::new();
-		let len = update_headers.len();
-		let has_mandatory_updates =
-			update_headers.iter().any(|(_h, ty)| matches!(ty, UpdateType::Mandatory));
-		for (i, (events, (update_header, mut update_type))) in block_events
+		for (_i, (events, (update_header, mut update_type))) in block_events
 			.into_iter()
 			.map(|(_, events)| events)
 			.zip(update_headers)
 			.enumerate()
 		{
 			let height = update_header.height();
-			if !has_mandatory_updates && len >= MANDATORY_UPDATES_PERIOD && i >= len - 1 {
-				update_type = UpdateType::Mandatory;
-			}
 			let update_client_header = {
 				let msg = MsgUpdateAnyClient::<LocalClientTypes> {
 					client_id: client_id.clone(),
