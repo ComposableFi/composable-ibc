@@ -4,7 +4,7 @@ use crate::{
 	contract::UnwrapContractError,
 	ibc_provider::{u256_to_bytes, ERC20TOKENABI_ABI},
 	jwt::{JwtAuth, JwtKey},
-	prove::EventResponse,
+	prove::{prove, EventResponse},
 	utils::{handle_gas_usage, send_retrying, DeployYuiIbc, ProviderImpl},
 };
 use anyhow::Error;
@@ -32,6 +32,7 @@ use ibc::{
 	Height,
 };
 use ibc_primitives::Timeout;
+use icsxx_ethereum::{client_message::Header, client_state::ClientState};
 use log::info;
 use once_cell::sync::Lazy;
 use pallet_ibc::light_clients::{AnyClientState, HostFunctionsManager};
@@ -49,11 +50,12 @@ use std::{
 	pin::Pin,
 	str::FromStr,
 	sync::{Arc, Mutex},
+	time::Duration,
 };
 use sync_committee_primitives::consensus_types::Checkpoint;
 use sync_committee_prover::SyncCommitteeProver;
 use thiserror::Error;
-use tokio::sync::Mutex as AsyncMutex;
+use tokio::{sync::Mutex as AsyncMutex, task::JoinHandle};
 
 pub type EthRpcClient = SignerMiddleware<Provider<Http>, Wallet<k256::ecdsa::SigningKey>>;
 pub(crate) type WsEth = Provider<Ws>;
@@ -88,6 +90,8 @@ pub struct EthereumClient {
 	pub redis: redis::Client,
 	/// Indexer Postgres database
 	pub db_conn: sqlx::Pool<sqlx::Postgres>,
+	pub updates: Arc<AsyncMutex<Vec<Header>>>,
+	pub updates_fetcher_handle: Arc<JoinHandle<()>>,
 }
 
 pub type MiddlewareErrorType =
@@ -185,31 +189,60 @@ pub struct DatabaseLog {
 	pub topics: Vec<Option<String>>,
 }
 
-pub fn subscribe_to_checkpoint_stream(
-	node_url: &str,
-) -> Pin<Box<dyn Stream<Item = Checkpoint> + Send>> {
-	use futures::{Stream, StreamExt};
-	let es = EventSource::get(format!("{}/eth/v1/events?topics=finalized_checkpoint", node_url))
-		.filter_map(|ev| match ev {
-			Ok(reqwest_eventsource::Event::Message(msg)) => {
-				info!("Event stream: {:?}", msg);
-				let message: EventResponse = serde_json::from_str(&msg.data).unwrap();
-				info!("Event stream': {:?}", message);
-				ready(Some(Checkpoint {
-					epoch: message.epoch.parse().unwrap(),
-					root: message.block,
-				}))
-			},
-			Ok(v) => {
-				log::error!("Unexpected event: {:?}", v);
-				ready(None)
-			},
-			Err(e) => {
-				log::error!("Error in event stream: {:?}", e);
-				ready(None)
-			},
-		});
-	RecentStream::new(es.boxed()).boxed()
+// pub fn subscribe_to_checkpoint_stream(
+// 	node_url: &str,
+// ) -> Pin<Box<dyn Stream<Item = Checkpoint> + Send>> {
+// 	use futures::{Stream, StreamExt};
+// 	let es = EventSource::get(format!("{}/eth/v1/events?topics=finalized_checkpoint", node_url))
+// 		.filter_map(|ev| match ev {
+// 			Ok(reqwest_eventsource::Event::Message(msg)) => {
+// 				info!("Event stream: {:?}", msg);
+// 				let message: EventResponse = serde_json::from_str(&msg.data).unwrap();
+// 				info!("Event stream': {:?}", message);
+// 				ready(Some(Checkpoint {
+// 					epoch: message.epoch.parse().unwrap(),
+// 					root: message.block,
+// 				}))
+// 			},
+// 			Ok(v) => {
+// 				log::error!("Unexpected event: {:?}", v);
+// 				ready(None)
+// 			},
+// 			Err(e) => {
+// 				log::error!("Error in event stream: {:?}", e);
+// 				ready(None)
+// 			},
+// 		});
+// 	RecentStream::new(es.boxed()).boxed()
+// }
+
+pub fn run_updates_fetcher(
+	mut client_state: ClientState<HostFunctionsManager>,
+	prover: SyncCommitteeProver,
+	updates: Arc<AsyncMutex<Vec<Header>>>,
+) -> JoinHandle<()> {
+	tokio::spawn(async move {
+		loop {
+			let mut latest_cp_client_height = client_state.latest_height().revision_height;
+			let maybe_header = prove(&prover, &client_state, 0, 0).await.unwrap();
+
+			match maybe_header {
+				Some(header) => {
+					info!(target: "hyperspace_ethereum", "Got update at slot {}", header.inner.finalized_header.slot);
+					client_state.inner.latest_finalized_epoch = header.inner.finality_proof.epoch;
+					if header.inner.sync_committee_update.is_some() {
+						client_state.inner.state_period = client_state.inner.state_period + 1;
+					}
+					latest_cp_client_height = header.inner.execution_payload.block_number;
+					updates.lock().await.push(header);
+				},
+				None => {
+					log::debug!(target: "hyperspace_ethereum", "No more updates");
+					tokio::time::sleep(Duration::from_secs(15)).await;
+				},
+			}
+		}
+	})
 }
 
 impl EthereumClient {
@@ -256,6 +289,9 @@ impl EthereumClient {
 		let redis = redis::Client::open(config.indexer_redis_url.clone())
 			.expect("Unable to connect with Redis server");
 		let common_state = CommonClientState::from_config(&config.common);
+
+		let updates_fetcher_handle = tokio::spawn(async move {});
+
 		Ok(Self {
 			http_rpc: client,
 			ws_uri: config.ws_rpc_url.clone(),
@@ -269,7 +305,9 @@ impl EthereumClient {
 			)),
 			config,
 			db_conn,
+			updates: Arc::new(Default::default()),
 			redis,
+			updates_fetcher_handle: Arc::new(updates_fetcher_handle),
 		})
 	}
 
@@ -296,8 +334,8 @@ impl EthereumClient {
 			let secret = std::fs::read_to_string(secret_path).map_err(|e| {
 				ClientError::Other(format!("jwtsecret not found. Search for 'execution/jwtsecret' in the code and replace it with your local path. {e}"))
 			})?;
-			let secret =
-				JwtKey::from_slice(&hex::decode(&secret[2..].trim()).unwrap()).expect("oops");
+			let secret = secret.trim().trim_start_matches("0x");
+			let secret = JwtKey::from_hex(&secret).expect("oops");
 			let jwt_auth = JwtAuth::new(secret, None, None);
 			let token = jwt_auth.generate_token().unwrap();
 

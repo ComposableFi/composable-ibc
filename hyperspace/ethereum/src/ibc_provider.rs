@@ -53,6 +53,7 @@ use std::{
 	iter,
 	pin::Pin,
 	str::FromStr,
+	sync::Arc,
 	time::Duration,
 };
 
@@ -74,6 +75,7 @@ use crate::{
 		client_state_abi_token, client_state_from_abi_token, consensus_state_from_abi_token,
 		tm_header_from_abi_token,
 	},
+	client::run_updates_fetcher,
 	config::ContractName,
 	utils::{create_intervals, SEQUENCES_PER_ITER},
 };
@@ -429,52 +431,29 @@ impl EthereumClient {
 		counterparty: &T,
 		client_id: ClientId,
 		client_state: &ClientState<HostFunctionsManager>,
-		latest_cp_client_height: u64,
 		latest_revision: u64,
 	) -> Result<Option<(Header, (Any, Height, Vec<IbcEvent>, UpdateType))>, ClientError>
 	where
 		T: Chain,
 	{
-		let header = {
-			let maybe_header = prove(self, &client_state, 0, 0).await?;
-			match maybe_header {
-				Some(x) => x,
-				None => {
-					log::debug!(target: "hyperspace_ethereum", "No more updates");
-					return Ok(None)
-				},
-			}
-		};
+		let mut guard = self.updates.lock().await;
+		if guard.is_empty() {
+			log::debug!(target: "hyperspace_ethereum", "No more updates");
+			return Ok(None)
+		}
+		let header = guard.remove(0);
+		drop(guard);
+		let update = &header.inner;
+		let latest_cp_client_height = client_state.latest_height().revision_height;
 		let from = latest_cp_client_height + 1;
 		let to = header.inner.execution_payload.block_number;
-		if to < from {
-			return Ok(None)
-		}
 
-		info!(target: "hyperspace_ethereum", "Getting blocks {}..{}", from, to);
-
-		let logs = self.get_logs(from, to.into(), None).await?;
-
-		let update = &header.inner;
-
-		info!(target: "hyperspace_ethereum",
-			"proven: state root = {}, body root = {}, slot = {}, block number = {}",
-			update.finalized_header.state_root,
-			update.finalized_header.body_root,
-			update.finalized_header.slot,
-			update.execution_payload.block_number
-		);
-
-		if update.execution_payload.block_number <= client_state.latest_height().revision_height ||
-			update.attested_header.slot <= client_state.inner.finalized_header.slot ||
-			update.finality_proof.epoch <= client_state.inner.latest_finalized_epoch
-		{
-			info!(target: "hyperspace_ethereum", "no new events");
-			return Ok(None)
-		}
 		let update_height =
 			Height::new(latest_revision, update.execution_payload.block_number.into());
 		let mut events = vec![];
+
+		let logs = self.get_logs(from, to.into(), None).await?;
+
 		for log in logs {
 			if let Some(event) = parse_ethereum_event(&self, log).await? {
 				events.push(event);
@@ -514,7 +493,6 @@ impl EthereumClient {
 		counterparty: &T,
 		client_id: ClientId,
 		client_state: &ClientState<HostFunctionsManager>,
-		mut latest_cp_client_height: u64,
 		latest_revision: u64,
 		max_updates: usize,
 	) -> Result<Vec<(Any, Height, Vec<IbcEvent>, UpdateType)>, ClientError>
@@ -524,15 +502,10 @@ impl EthereumClient {
 		let mut client_state = client_state.clone();
 		let mut updates = vec![];
 		let mut i = 0;
+		let mut latest_cp_client_height = client_state.latest_height().revision_height;
 		while i < max_updates {
 			let maybe_update = self
-				.fetch_next_update(
-					counterparty,
-					client_id.clone(),
-					&client_state,
-					latest_cp_client_height,
-					latest_revision,
-				)
+				.fetch_next_update(counterparty, client_id.clone(), &client_state, latest_revision)
 				.await?;
 			match maybe_update {
 				Some((header, update)) => {
@@ -574,35 +547,46 @@ impl IbcProvider for EthereumClient {
 		T: primitives::Chain,
 	{
 		let client_id = self.client_id();
-		let latest_cp_height = counterparty.latest_height_and_timestamp().await?.0;
-		let latest_cp_client_state =
-			counterparty.query_client_state(latest_cp_height, client_id.clone()).await?;
-		let client_state_response = latest_cp_client_state.client_state.ok_or_else(|| {
-			ClientError::Other("counterparty returned empty client state".to_string())
-		})?;
+		let latest_cp_height = counterparty.latest_height_and_timestamp().await.unwrap().0;
+		let latest_cp_client_state = counterparty
+			.query_client_state(latest_cp_height, client_id.clone())
+			.await
+			.unwrap();
+		let client_state_response = latest_cp_client_state
+			.client_state
+			.ok_or_else(|| {
+				ClientError::Other("counterparty returned empty client state".to_string())
+			})
+			.unwrap();
 		let AnyClientState::Ethereum(client_state) =
 			AnyClientState::decode_recursive(client_state_response, |c| {
 				matches!(c, AnyClientState::Ethereum(_))
 			})
-			.ok_or_else(|| ClientError::Other(format!("Could not decode client state")))?
+			.unwrap()
 		else {
 			unreachable!()
 		};
-		let latest_cp_client_height = client_state.latest_height().revision_height;
 
-		let latest_height = self.latest_height_and_timestamp().await?.0;
+		let latest_height = self.latest_height_and_timestamp().await.unwrap().0;
 		let latest_revision = latest_height.revision_number;
 
+		let sync_committee_prover = self.prover();
+		if self.updates_fetcher_handle.is_finished() {
+			// let res = self.updates_fetcher_handle.await;
+			// if let Err(e) = res {
+			// 	log::error!(target: "hyperspace_ethereum", "updates fetcher failed: {}", e);
+			// }
+			self.updates_fetcher_handle = Arc::new(run_updates_fetcher(
+				client_state.clone(),
+				sync_committee_prover,
+				self.updates.clone(),
+			));
+		}
+
 		let updates = self
-			.fetch_next_updates(
-				counterparty,
-				client_id,
-				&client_state,
-				latest_cp_client_height,
-				latest_revision,
-				MAX_UPDATES_PER_ITER,
-			)
-			.await?;
+			.fetch_next_updates(counterparty, client_id, &client_state, latest_revision, 1)
+			.await
+			.unwrap();
 
 		Ok(updates)
 	}
@@ -1817,12 +1801,15 @@ impl IbcProvider for EthereumClient {
 			))
 		})?;
 
-		let state = sync_committee_prover.fetch_beacon_state(block_id).await.map_err(|err| {
-			ClientError::Other(format!(
-				"failed to fetch beacon state in initialize_client_state: {}",
-				err
-			))
-		})?;
+		let state = sync_committee_prover
+			.fetch_beacon_state(&block_header.slot.to_string())
+			.await
+			.map_err(|err| {
+				ClientError::Other(format!(
+					"failed to fetch beacon state in initialize_client_state: {}",
+					err
+				))
+			})?;
 		// TODO: query `at` block
 		// let finality_checkpoint =
 		// sync_committee_prover.fetch_finalized_checkpoint().await.unwrap();

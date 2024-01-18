@@ -20,7 +20,7 @@ use sync_committee_primitives::{
 	constants::Root,
 	types::{ExecutionPayloadProof, FinalityProof, VerifierStateUpdate as LightClientUpdate},
 };
-use sync_committee_prover::prove_execution_payload;
+use sync_committee_prover::{prove_execution_payload, SyncCommitteeProver};
 use tokio::{task::JoinSet, time, time::sleep};
 
 #[cfg(not(feature = "no_beacon"))]
@@ -84,13 +84,11 @@ pub struct EventResponse {
 
 #[cfg(not(feature = "no_beacon"))]
 pub async fn prove(
-	client: &EthereumClient,
+	sync_committee_prover: &SyncCommitteeProver,
 	eth_client_state: &ClientState<HostFunctionsManager>,
 	_block_number: u64,
 	_up_to: u64,
 ) -> Result<Option<Header>, ClientError> {
-	let sync_committee_prover = client.prover();
-
 	info!("waiting for the checkpoint");
 	info!("state_period = {}", eth_client_state.inner.state_period);
 	info!("state = {}", eth_client_state.inner.finalized_header.slot);
@@ -109,8 +107,7 @@ pub async fn prove(
 			None, // Some(&eth_client_state.inner.finalized_header.slot.to_string()),
 			"hyperspace_ethereum",
 		)
-		.await
-		.unwrap()
+		.await?
 	{
 		info!("got update");
 		if update.execution_payload.block_number > eth_client_state.latest_height as u64 {
@@ -135,6 +132,33 @@ pub async fn prove(
 	}
 
 	let light_client_update = upd.unwrap();
+
+	let latest_cp_client_height = eth_client_state.latest_height().revision_height;
+	let from = latest_cp_client_height + 1;
+	let to = light_client_update.execution_payload.block_number;
+	if to < from {
+		return Ok(None)
+	}
+
+	info!(target: "hyperspace_ethereum", "Getting blocks {}..{}", from, to);
+
+	let update = &light_client_update;
+
+	info!(target: "hyperspace_ethereum",
+		"proven: state root = {}, body root = {}, slot = {}, block number = {}",
+		update.finalized_header.state_root,
+		update.finalized_header.body_root,
+		update.finalized_header.slot,
+		update.execution_payload.block_number
+	);
+
+	if update.execution_payload.block_number <= eth_client_state.latest_height().revision_height ||
+		update.attested_header.slot <= eth_client_state.inner.finalized_header.slot ||
+		update.finality_proof.epoch <= eth_client_state.inner.latest_finalized_epoch
+	{
+		info!(target: "hyperspace_ethereum", "no new events");
+		return Ok(None)
+	}
 
 	Ok(Some(Header { inner: light_client_update }))
 }
