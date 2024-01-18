@@ -106,3 +106,9 @@ To run the integration tests between two parachain nodes:
    `cargo run --bin codegen -- --path ./utils/subxt/generated/src/default`
 6. run the test
    `cargo test -p hyperspace-testsuite`
+
+## Running Solana tests
+
+To run the integration tests between solana and cosmos chains
+
+1. 

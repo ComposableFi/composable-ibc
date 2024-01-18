@@ -86,6 +86,7 @@ use std::{
 	collections::{BTreeMap, HashSet},
 	result::Result,
 	sync::{Arc, Mutex, RwLock},
+	thread::sleep,
 };
 use tendermint_rpc::{endpoint::consensus_state::ValidatorInfo, Url};
 use tokio_stream::{Stream, StreamExt};
@@ -570,7 +571,7 @@ impl IbcProvider for SolanaClient {
 		let cluster = Cluster::from_str(&self.rpc_url).unwrap();
 		tokio::task::spawn_blocking(move || {
 			let (_logs_subscription, receiver) = PubsubClient::logs_subscribe(
-				"ws://127.0.0.1:8900",	
+				"wss://icy-wispy-tab.solana-devnet.quiknode.pro/584c25117b46df54bf9dab1e5836abfb2dfeba9f/",	
 				RpcTransactionLogsFilter::Mentions(vec![solana_ibc::ID.to_string()]),
 				RpcTransactionLogsConfig { commitment: Some(CommitmentConfig::processed()) },
 			)
@@ -1850,7 +1851,7 @@ impl Chain for SolanaClient {
 		let cluster = Cluster::Devnet;
 		tokio::task::spawn_blocking(move || {
 			let (_logs_listener, receiver) = PubsubClient::block_subscribe(
-				"ws://127.0.0.1:8900", /* Quicknode rpc should be used for devnet/mainnet and
+				"wss://icy-wispy-tab.solana-devnet.quiknode.pro/584c25117b46df54bf9dab1e5836abfb2dfeba9f/", /* Quicknode rpc should be used for devnet/mainnet and
 				                        * incase of localnet,
 				                        * the flag `--rpc-pubsub-enable-block-subscription` has
 				                        * to be passed to
@@ -1917,68 +1918,114 @@ impl Chain for SolanaClient {
 			let length = any_message.value.len();
 			let chunk_size = 500;
 			let mut offset = 4;
+			let max_tries = 5;
 
 			for i in any_message.value.chunks(chunk_size) {
+				let mut tries = 0;
+				while tries < max_tries {
+					println!("Try For chunks: {}", tries);
+					let mut status = true;
+					let sig = program
+						.request()
+						.instruction(ComputeBudgetInstruction::set_compute_unit_price(50000000))
+						.accounts(solana_ibc::accounts::FormMessageChunks {
+							sender: authority.pubkey(),
+							msg_chunks,
+							system_program: system_program::ID,
+						})
+						.args(solana_ibc::instruction::FormMsgChunks {
+							total_len: length as u32,
+							offset: offset as u32,
+							bytes: i.to_vec(),
+							type_url: any_message.type_url.clone(),
+						})
+						.payer(authority.clone())
+						.signer(&*authority)
+						.send_with_spinner_and_config(RpcSendTransactionConfig {
+							skip_preflight: true,
+							..RpcSendTransactionConfig::default()
+						})
+						.await
+						.or_else(|e| {
+							println!("This is error {:?}", e);
+							status = false;
+							ibc::prelude::Err("Error".to_owned())
+						});
+
+					if status {
+						println!("  Signature for message chunks : {}", sig.unwrap());
+						offset += chunk_size;
+						break
+					}
+					sleep(Duration::from_millis(500));
+				  tries += 1;	
+				}
+				if tries == max_tries {
+					panic!("Max retries reached for chunks in solana");
+				}
+			}
+			let mut tries = 0;
+			let rpc = program.async_rpc();
+			while tries < max_tries {
+				println!("Try For Tx: {}", tries);
+				let mut status = true;
 				let sig = program
 					.request()
-					.accounts(solana_ibc::accounts::FormMessageChunks {
+					.instruction(ComputeBudgetInstruction::set_compute_unit_limit(1_000_000u32))
+					.instruction(ComputeBudgetInstruction::request_heap_frame(128 * 1024))
+					.instruction(ComputeBudgetInstruction::set_compute_unit_price(50000000))
+					.accounts(solana_ibc::accounts::DeliverWithChunks {
 						sender: authority.pubkey(),
-						msg_chunks,
+						receiver: None,
+						storage: solana_ibc_storage_key,
+						trie: trie_key,
+						chain: chain_key,
 						system_program: system_program::ID,
+						mint_authority: None,
+						token_mint: None,
+						escrow_account: None,
+						receiver_token_account: None,
+						associated_token_program: None,
+						token_program: None,
+						msg_chunks,
 					})
-					.args(solana_ibc::instruction::FormMsgChunks {
-						total_len: length as u32,
-						offset: offset as u32,
-						bytes: i.to_vec(),
-						type_url: any_message.type_url.clone(),
-					})
-					.payer(authority.clone())
+					.args(solana_ibc::instruction::DeliverWithChunks {})
+					// .payer(Arc::new(keypair))
 					.signer(&*authority)
 					.send_with_spinner_and_config(RpcSendTransactionConfig {
 						skip_preflight: true,
+						// max_retries: Some(10),
 						..RpcSendTransactionConfig::default()
 					})
 					.await
-					.unwrap();
-				println!("  Signature for message chunks : {sig}");
-				offset += chunk_size;
-			}
+					.or_else(|e| {
+						println!("This is error {:?}", e);
+						status = false;
+						ibc::prelude::Err("Error".to_owned())
+					});
 
-			let sig = program
-				.request()
-				.instruction(ComputeBudgetInstruction::set_compute_unit_limit(1_000_000u32))
-				.accounts(solana_ibc::accounts::DeliverWithChunks {
-					sender: authority.pubkey(),
-					receiver: None,
-					storage: solana_ibc_storage_key,
-					trie: trie_key,
-					chain: chain_key,
-					system_program: system_program::ID,
-					mint_authority: None,
-					token_mint: None,
-					escrow_account: None,
-					receiver_token_account: None,
-					associated_token_program: None,
-					token_program: None,
-					msg_chunks,
-				})
-				.args(solana_ibc::instruction::DeliverWithChunks {})
-				// .payer(Arc::new(keypair))
-				.signer(&*authority)
-				.send_with_spinner_and_config(RpcSendTransactionConfig {
-					skip_preflight: true,
-					..RpcSendTransactionConfig::default()
-				})
-				.await
-				.unwrap();
-			let rpc = program.async_rpc();
-			let blockhash = rpc.get_latest_blockhash().await.unwrap();
-			// Wait for finalizing the transaction
-			let _ = rpc
-				.confirm_transaction_with_spinner(&sig, &blockhash, CommitmentConfig::finalized())
-				.await
-				.unwrap();
-			signature = sig.to_string();
+				if status {
+					let blockhash = rpc.get_latest_blockhash().await.unwrap();
+
+					let blockhash = rpc.get_latest_blockhash().await.unwrap();
+					// Wait for finalizing the transaction
+					let _ = rpc
+						.confirm_transaction_with_spinner(
+							&sig.clone().unwrap(),
+							&blockhash,
+							CommitmentConfig::finalized(),
+						)
+						.await
+						.unwrap();
+					signature = sig.unwrap().to_string();
+					break
+				}
+				sleep(Duration::from_millis(500));
+				tries += 1;
+			}
+			if tries == max_tries {
+				panic!("Max retries reached for normal tx in solana");
+			}
 			// } else {
 			// 	let sig = program
 			// 		.request()

@@ -367,13 +367,13 @@ async fn send_packet_with_connection_delay<A, B>(
 	let (previous_balance, ..) =
 		send_transfer(chain_a, chain_b, asset_a.clone(), channel_id_a, None).await;
   println!("Send packet on solana done");
-	assert_send_transfer(chain_a, asset_a, previous_balance, 520).await;
+	assert_send_transfer(chain_a, asset_a, previous_balance, 1520).await;
   println!("assert send packet on solana done");
 	log::info!(target: "hyperspace", "Sending transfer from {}", chain_b.name());
 	let (previous_balance, ..) =
 		send_transfer(chain_b, chain_a, asset_b.clone(), channel_id_b, None).await;
   println!("send packet on cosmos done");
-	assert_send_transfer(chain_b, asset_b, previous_balance, 520).await;
+	assert_send_transfer(chain_b, asset_b, previous_balance, 1520).await;
   println!("assert send packet on cosmos done");
 	// now send from chain b.
 	log::info!(target: "hyperspace", "🚀🚀 Token Transfer successful with connection delay");

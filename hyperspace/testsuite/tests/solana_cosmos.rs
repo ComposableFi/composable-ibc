@@ -56,6 +56,7 @@ impl Default for Args {
 		});
 
 		Args {
+			// chain_a: format!("https://api.devnet.solana.com"),
 			chain_a: format!("http://{solana}:8899"),
 			chain_b: format!("http://{cosmos}:26657"),
 			relay_chain: format!("ws://{relay}:9944"),
