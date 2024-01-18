@@ -1,0 +1,51 @@
+name: "Autogenerate types after chain upgrades"
+
+on:
+  workflow_dispatch:
+    inputs:
+      chain:
+        description: "Chain to run the action for"
+        required: true
+        type: choice
+        options:
+          - composable
+          - picasso
+
+jobs:
+  generate-types-and-open-pr:
+    runs-on: ubuntu-latest
+
+    if: github.event_name == 'workflow_dispatch' 
+
+    steps:
+        - name: Checkout Repository
+          uses: actions/checkout@v2
+    
+        - name: Create Branch
+          run: |
+            git checkout -b ${{ github.actor }}-branch
+            git push --set-upstream origin ${{ github.actor }}-branch
+    
+        - name: Set Environment Variables
+          run: |
+            echo "CHAIN=${{ github.event.inputs.chain }}" >> $GITHUB_ENV
+            echo "RELAY_URL=wss://$CHAIN-unrpc-lb.composable/relay" >> $GITHUB_ENV
+            echo "PARA_URL=wss://$CHAIN-unrpc-lb.composable" >> $GITHUB_ENV
+    
+        - name: Generate Types
+          run: |
+            cargo run -p codegen --bin codegen -- --path ./utils/subxt/generated/src/$CHAIN --relay-url $RELAY_URL --para-url $PARA_URL
+    
+        - name: Commit Changes
+          run: |
+            git add .
+            git commit -m "Auto-generate types for $CHAIN"
+            git push origin ${{ github.actor }}-branch
+    
+        - name: Open Pull Request
+          uses: peter-evans/create-pull-request@v3
+          with:
+            token: ${{ secrets.GITHUB_TOKEN }}
+            commit-message: "Auto-generate types for $CHAIN"
+            branch: ${{ github.actor }}-branch
+            base: main
