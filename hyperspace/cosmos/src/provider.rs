@@ -138,7 +138,7 @@ where
 		let update_headers =
 			self.msg_update_client_header(from, to, client_state.latest_height).await?;
 		let mut block_events = Vec::new();
-		block_events.push((0, Vec::new()));
+		// block_events.push((0, Vec::new()));
 		let mut join_set: JoinSet<Result<_, anyhow::Error>> = JoinSet::new();
 		let range = (from.value()..to.value()).collect::<Vec<_>>();
 		let to = self.rpc_call_delay().as_millis();

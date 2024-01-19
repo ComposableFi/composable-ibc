@@ -17,7 +17,7 @@ use channel_msgs::{
 };
 use elliptic_curve::bigint::Pow;
 use ethers::{
-	abi::{ParamType, Token},
+	abi::{ethabi, ParamType, Token},
 	contract::FunctionCall,
 	providers::Middleware,
 	types::{H256, U256},
@@ -1336,6 +1336,8 @@ impl EthereumClient {
 
 		info!(target: "hyperspace_ethereum", "Submitting messages: {:?}", messages.iter().map(|x| x.type_url.clone()).collect::<Vec<_>>().join(", "));
 
+		let mut temp_client_state: Option<ClientState<()>> = None;
+
 		let mut calls = vec![];
 		for msg in messages {
 			if msg.type_url == ibc::core::ics02_client::msgs::create_client::TYPE_URL {
@@ -1387,10 +1389,6 @@ impl EthereumClient {
 					return Err(ClientError::Other("update_client: unsupported Client Message. Should be ClientMessage::Header".into()))
 				};
 
-				//get abi token to update client
-				let tm_header_abi_token = tm_header_abi_token(header)?;
-				let tm_header_bytes = ethers_encode(&[tm_header_abi_token]);
-
 				let client_id = msg.client_id.clone();
 				{
 					//update arc mutex with a new client id
@@ -1398,8 +1396,22 @@ impl EthereumClient {
 					*m = Some(client_id.clone());
 				}
 
-				let (latest_client_state, _) =
-					self.get_latest_client_state_exact_token(client_id.clone()).await?;
+				let latest_client_state = if let Some(cs) = &temp_client_state {
+					Token::Bytes(ethabi::encode(&[client_state_abi_token(cs)]))
+				} else {
+					let (state, _) =
+						self.get_latest_client_state_exact_token(client_id.clone()).await?;
+					temp_client_state = Some(client_state_from_abi_token::<()>(state.clone())?);
+					state
+				};
+
+				if let Some(cs) = &mut temp_client_state {
+					cs.latest_height.revision_height = header.signed_header.header.height.value();
+				}
+
+				//get abi token to update client
+				let tm_header_abi_token = tm_header_abi_token(header)?;
+				let tm_header_bytes = ethers_encode(&[tm_header_abi_token]);
 
 				let token = EthersToken::Tuple(vec![
 					//should be the same that we use to create client

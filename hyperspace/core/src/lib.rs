@@ -288,7 +288,15 @@ async fn process_updates<A: Chain, B: Chain>(
 	let has_events = updates.iter().any(|(_, _, events, ..)| !events.is_empty());
 	let mut mandatory_updates = updates
 		.iter()
-		.filter(|(_, _, _, update_type)| !skip_optional_updates || !update_type.is_optional())
+		.filter(|(_, h, _, update_type)| {
+			log::info!(
+				"Received updated from {} at {}, is_mandatory: {}",
+				source.name(),
+				h.revision_height,
+				!update_type.is_optional()
+			);
+			!skip_optional_updates || !update_type.is_optional()
+		})
 		.map(|(upd, height, ..)| (upd.clone(), *height))
 		.collect::<Vec<_>>();
 
