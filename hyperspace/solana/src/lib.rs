@@ -131,6 +131,8 @@ pub struct SolanaClient {
 	pub name: String,
 	/// rpc url for solana
 	pub rpc_url: String,
+	/// websocket url for solana
+	pub ws_url: String,
 	/// Solana chain Id
 	pub chain_id: String,
 	/// Light client id on counterparty chain
@@ -160,8 +162,10 @@ pub struct SolanaClient {
 pub struct SolanaClientConfig {
 	/// Chain name
 	pub name: String,
-	/// rpc url for cosmos
+	/// rpc url for solana
 	pub rpc_url: Url,
+	/// websocket url for solana
+	pub ws_url: Url,
 	/// Solana chain Id
 	pub chain_id: String,
 	/// Light client id on counterparty chain
@@ -307,6 +311,7 @@ impl SolanaClient {
 		Ok(Self {
 			name: config.name,
 			rpc_url: config.rpc_url.to_string(),
+			ws_url: config.ws_url.to_string(),
 			chain_id: config.chain_id,
 			client_id: config.client_id,
 			connection_id: config.connection_id,
@@ -571,7 +576,7 @@ impl IbcProvider for SolanaClient {
 		let cluster = Cluster::from_str(&self.rpc_url).unwrap();
 		tokio::task::spawn_blocking(move || {
 			let (_logs_subscription, receiver) = PubsubClient::logs_subscribe(
-				"wss://icy-wispy-tab.solana-devnet.quiknode.pro/584c25117b46df54bf9dab1e5836abfb2dfeba9f/",	
+				&self.ws_url,	
 				RpcTransactionLogsFilter::Mentions(vec![solana_ibc::ID.to_string()]),
 				RpcTransactionLogsConfig { commitment: Some(CommitmentConfig::processed()) },
 			)
@@ -1851,7 +1856,7 @@ impl Chain for SolanaClient {
 		let cluster = Cluster::Devnet;
 		tokio::task::spawn_blocking(move || {
 			let (_logs_listener, receiver) = PubsubClient::block_subscribe(
-				"wss://icy-wispy-tab.solana-devnet.quiknode.pro/584c25117b46df54bf9dab1e5836abfb2dfeba9f/", /* Quicknode rpc should be used for devnet/mainnet and
+				&self.ws_url, /* Quicknode rpc should be used for devnet/mainnet and
 				                        * incase of localnet,
 				                        * the flag `--rpc-pubsub-enable-block-subscription` has
 				                        * to be passed to

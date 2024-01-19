@@ -46,7 +46,7 @@ impl TestProvider for SolanaClient {
 		let cluster = Cluster::Localnet;
 		tokio::task::spawn_blocking(move || {
 			let (_logs_listener, receiver) = PubsubClient::block_subscribe(
-				"wss://icy-wispy-tab.solana-devnet.quiknode.pro/584c25117b46df54bf9dab1e5836abfb2dfeba9f/", /* Quicknode rpc should be used for devnet/mainnet and incase of localnet,
+				&self.ws_url, /* Quicknode rpc should be used for devnet/mainnet and incase of localnet,
 				     * the flag `--rpc-pubsub-enable-block-subscription` has to be passed to
 				     * local validator. */
 				RpcBlockSubscribeFilter::All,

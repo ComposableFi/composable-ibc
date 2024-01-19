@@ -32,7 +32,7 @@ use crate::{
 #[cfg(not(feature = "library"))]
 use cosmwasm_std::entry_point;
 use cosmwasm_std::{to_binary, Binary, Deps, DepsMut, Env, MessageInfo, Response, StdResult, Event};
-use ed25519_consensus::VerificationKey;
+// use ed25519_consensus::VerificationKey;
 use ibc::core::{
 	ics02_client::{
 		client_def::{ClientDef, ConsensusUpdateResult},

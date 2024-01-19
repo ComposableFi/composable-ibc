@@ -43,6 +43,7 @@ pub struct Args {
 	pub connection_prefix_b: String,
 	pub cosmos_grpc: String,
 	pub cosmos_ws: String,
+	pub solana_ws: String,
 	pub wasm_path: String,
 }
 
@@ -65,6 +66,7 @@ impl Default for Args {
 			connection_prefix_b: "ibc".to_string(),
 			cosmos_grpc: format!("http://{cosmos}:9090"),
 			cosmos_ws: format!("ws://{cosmos}:26657/websocket"),
+			solana_ws: format!("ws://{solana}:8900"),
 			wasm_path,
 		}
 	}
@@ -82,6 +84,7 @@ async fn setup_clients() -> (AnyChain, AnyChain) {
 		commitment_prefix: args.connection_prefix_a.as_bytes().to_vec(),
 		wasm_code_id: None,
 		rpc_url: args.chain_a.clone().parse().unwrap(),
+		ws_url: args.solana_ws.clone().parse().unwrap(),
 		chain_id: "solana-1".to_string(),
 		account_prefix: args.connection_prefix_a.clone(),
 		fee_denom: "stake".to_string(),

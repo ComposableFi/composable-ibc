@@ -51,7 +51,7 @@ ibc-proto-new = { version = "0.38.0", default-features = false, package="ibc-pro
 ibc = { path = "../../ibc/modules", features = [] }
 ibc-proto = { path = "../../ibc/proto", package="ibc-proto" }
 ibc-primitives = { path = "../../contracts/pallet-ibc/primitives" }
-ics07-tendermint = { path = "../../light-clients/ics07-tendermint" }
+ics07-tendermint = { path = "../../light-clients/ics07-tendermint", features = ["mocks"] }
 ics08-wasm = { path = "../../light-clients/ics08-wasm" }
 ibc-rpc = { path = "../../contracts/pallet-ibc/rpc" }
 pallet-ibc = { path = "../../contracts/pallet-ibc", features = ["testing"]}

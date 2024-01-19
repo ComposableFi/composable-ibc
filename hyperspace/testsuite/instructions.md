@@ -31,8 +31,12 @@ anchor test --skip-local-validator -- --features mocks
 ```
 
 ### iii. Running the testsuite
-1. Set the appropriate rpc url for solana and cosmos.
-2. Run the following command to run the integration test.
+1. Run the command below to compile the wasm contract.
+```
+cargo +nightly-2023-02-07 build -p icsxx-solana-cw --release --target wasm32-unknown-unknown --lib --no-default-features
+```
+2. Set the appropriate rpc url for solana and cosmos.
+3. Run the following command to run the integration test.
 ```
 RUST_BACKTRACE=1 cargo test --package hyperspace-testsuite --test solana_cosmos --  --nocapture
 ```

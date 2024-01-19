@@ -3760,21 +3760,6 @@ dependencies = [
 
 [[package]]
 name = "ed25519-consensus"
-version = "1.2.1"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "758e2a0cd8a6cdf483e1d369e7d081647e00b88d8953e34d8f2cbba05ae28368"
-dependencies = [
- "curve25519-dalek-ng",
- "hex",
- "rand_core 0.6.4",
- "serde",
- "sha2 0.9.9",
- "thiserror",
- "zeroize",
-]
-
-[[package]]
-name = "ed25519-consensus"
 version = "2.1.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "3c8465edc8ee7436ffea81d21a019b16676ee3db267aa8d5a8d729581ecf998b"
@@ -6376,7 +6361,7 @@ dependencies = [
  "derive_more",
  "digest 0.10.7",
  "ed25519 1.5.3",
- "ed25519-consensus 2.1.0",
+ "ed25519-consensus",
  "ed25519-zebra",
  "hex",
  "hyperspace-primitives",
@@ -6611,7 +6596,7 @@ dependencies = [
  "derive_more",
  "digest 0.10.7",
  "ed25519 1.5.3",
- "ed25519-consensus 2.1.0",
+ "ed25519-consensus",
  "ed25519-zebra",
  "hex",
  "hyperspace-primitives",
@@ -15058,7 +15043,7 @@ dependencies = [
  "bytes",
  "ics23 0.10.0",
  "proptest",
- "rand 0.8.5",
+ "rand 0.4.6",
  "sha2 0.10.8",
  "tendermint 0.28.0",
 ]
@@ -15342,25 +15327,21 @@ dependencies = [
 name = "solana-ibc"
 version = "0.1.0"
 dependencies = [
- "ahash 0.8.6",
  "anchor-lang",
  "anchor-spl",
  "base64 0.21.5",
  "blockchain",
  "bytemuck",
  "derive_more",
- "ed25519-consensus 1.2.1",
  "ibc 0.48.1",
  "ibc-testkit",
  "lib 0.0.0",
  "memory 0.0.0",
  "primitive-types",
- "prost 0.12.3",
  "serde",
  "serde_json",
  "solana-trie 0.0.0",
  "spl-associated-token-account",
- "spl-token",
  "stdx 0.0.0",
  "strum 0.25.0",
  "trie-ids",
@@ -18281,7 +18262,7 @@ dependencies = [
  "bytes",
  "digest 0.10.7",
  "ed25519 1.5.3",
- "ed25519-consensus 2.1.0",
+ "ed25519-consensus",
  "flex-error",
  "futures",
  "k256 0.11.6",
@@ -18307,10 +18288,11 @@ dependencies = [
 name = "tendermint"
 version = "0.34.0"
 dependencies = [
+ "bytemuck",
  "bytes",
  "digest 0.10.7",
  "ed25519 2.2.3",
- "ed25519-consensus 2.1.0",
+ "ed25519-consensus",
  "flex-error",
  "futures",
  "num-traits",
@@ -18458,7 +18440,7 @@ name = "tendermint-testgen"
 version = "0.28.0"
 source = "git+https://github.com/informalsystems/tendermint-rs?rev=e81f7bf23d63ffbcd242381d1ce5e35da3515ff1#e81f7bf23d63ffbcd242381d1ce5e35da3515ff1"
 dependencies = [
- "ed25519-consensus 2.1.0",
+ "ed25519-consensus",
  "gumdrop",
  "serde",
  "serde_json",
@@ -18472,7 +18454,7 @@ dependencies = [
 name = "tendermint-testgen"
 version = "0.34.0"
 dependencies = [
- "ed25519-consensus 2.1.0",
+ "ed25519-consensus",
  "gumdrop",
  "serde",
  "serde_json",
@@ -19322,9 +19304,9 @@ version = "1.6.3"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "97fee6b57c6a41524a810daee9286c02d7752c4253064d0b05472833a438f675"
 dependencies = [
- "cfg-if 1.0.0",
+ "cfg-if 0.1.10",
  "digest 0.10.7",
- "rand 0.8.5",
+ "rand 0.4.6",
  "static_assertions",
 ]
 
