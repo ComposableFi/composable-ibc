@@ -235,6 +235,11 @@ pub async fn parse_events(
 				if let Some(connection_id) = open_ack.connection_id() {
 					let connection_id = connection_id.clone();
 					log::info!("CID = {connection_id:?}");
+					log::info!(
+						"event height = {}, consensus_height = {}",
+						open_init.height(),
+						consensus_height.unwrap()
+					);
 					// Get connection end with proof
 					let height = consensus_height.unwrap_or(open_ack.height());
 					let connection_response =
