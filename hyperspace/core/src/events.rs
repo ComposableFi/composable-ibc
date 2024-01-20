@@ -237,7 +237,7 @@ pub async fn parse_events(
 					log::info!("CID = {connection_id:?}");
 					log::info!(
 						"event height = {}, consensus_height = {}",
-						open_init.height(),
+						open_ack.height(),
 						consensus_height.unwrap()
 					);
 					// Get connection end with proof
