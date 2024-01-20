@@ -497,6 +497,7 @@ impl EthereumClient {
 			log::debug!(target: "hyperspace_ethereum", "No new updates");
 			return Ok(vec![])
 		}
+		updates.sort_by_key(|h| h.inner.finalized_header.slot);
 		let headers = updates.clone();
 		drop(updates);
 
@@ -601,7 +602,7 @@ impl IbcProvider for EthereumClient {
 		}
 
 		let updates = self
-			.fetch_next_updates(counterparty, client_id, &client_state, latest_revision, 1)
+			.fetch_next_updates(counterparty, client_id, &client_state, latest_revision, 10)
 			.await
 			.unwrap();
 
