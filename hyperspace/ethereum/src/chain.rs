@@ -1482,9 +1482,8 @@ impl EthereumClient {
 				msg.proofs.client_proof = Some(clear_proof_value(commitment_proof)?);
 
 				let mut token = msg_connection_open_ack_token(msg)?;
-				let Token::Tuple(ref mut tokens) = token else {
-					return Err(ClientError::Other(format!("Token should be tuple")))
-				};
+				// log::info!("tok={token:?}");
+				std::fs::write("token.txt", format!("{:?}", token)).unwrap();
 
 				calls.push(self.yui.connection_open_ack_calldata(token).await);
 			} else if msg.type_url == ibc::core::ics03_connection::msgs::conn_open_try::TYPE_URL {

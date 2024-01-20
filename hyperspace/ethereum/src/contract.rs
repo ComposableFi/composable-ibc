@@ -36,6 +36,7 @@ where
 				if bytes.len() < 4 {
 					panic!("contract-error: {:?}", bytes);
 				}
+				log::error!("contract-error: {:?}", hex::encode(&bytes));
 				let bytes = &bytes[4..];
 				let tokens = ethers::abi::decode(&[ethers::abi::ParamType::String], bytes).unwrap();
 				panic!("contract-error: {tokens:#?}")

@@ -43,6 +43,22 @@ pub enum Verified {
 	No,
 }
 
+#[cfg(feature = "no_beacon")]
+pub fn verify_ibc_proof<P>(
+	_prefix: &CommitmentPrefix,
+	_proof: &CommitmentProofBytes,
+	_root: &CommitmentRoot,
+	_contract_address: Address,
+	_path: P,
+	_value: Option<Cow<[u8]>>,
+) -> Result<Verified, Error>
+where
+	P: Into<Path>,
+{
+	return Ok(Verified::Yes);
+}
+
+#[cfg(not(feature = "no_beacon"))]
 pub fn verify_ibc_proof<P>(
 	prefix: &CommitmentPrefix,
 	proof: &CommitmentProofBytes,
