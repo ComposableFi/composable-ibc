@@ -503,7 +503,6 @@ impl EthereumClient {
 
 		let latest_cp_client_height = client_state.latest_height().revision_height;
 		let from = latest_cp_client_height + 1;
-		let to = headers.last().map(|h| h.inner.execution_payload.block_number);
 
 		for header in headers.into_iter().take(max_updates) {
 			let maybe_update = self
@@ -527,7 +526,7 @@ impl EthereumClient {
 			}
 		}
 		if !updates_with_events.is_empty() {
-			let to = to.unwrap();
+			let to = updates_with_events.last().map(|(_, h, ..)| h.revision_height).unwrap();
 			let mut events = vec![];
 			let logs = self.get_logs(from, to.into(), None).await?;
 
