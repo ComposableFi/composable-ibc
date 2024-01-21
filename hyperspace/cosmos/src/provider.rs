@@ -79,7 +79,7 @@ use tokio::{task::JoinSet, time::sleep};
 
 // At least one *mandatory* update should happen during that period
 // TODO: make it configurable
-pub const NUMBER_OF_BLOCKS_TO_PROCESS_PER_ITER: u64 = 370;
+pub const NUMBER_OF_BLOCKS_TO_PROCESS_PER_ITER: u64 = 500;
 
 #[derive(Clone, Debug)]
 pub enum FinalityEvent {
@@ -174,12 +174,15 @@ where
 		block_events.sort_by_key(|(height, _)| *height);
 
 		let mut updates = Vec::new();
-		for (_i, (events, (update_header, mut update_type))) in block_events
+		for (i, (events, (update_header, mut update_type))) in block_events
 			.into_iter()
 			.map(|(_, events)| events)
 			.zip(update_headers)
 			.enumerate()
 		{
+			if i == NUMBER_OF_BLOCKS_TO_PROCESS_PER_ITER - 2 {
+				update_type = UpdateType::Mandatory;
+			}
 			let height = update_header.height();
 			let update_client_header = {
 				let msg = MsgUpdateAnyClient::<LocalClientTypes> {
