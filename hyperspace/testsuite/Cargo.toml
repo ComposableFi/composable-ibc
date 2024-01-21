@@ -56,7 +56,7 @@ subxt = { git = "https://github.com/paritytech/subxt",  rev = "2a4da618a033bb82f
 hyperspace-core = { path = "../core", features = ["testing"] }
 hyperspace-parachain = { path = "../parachain", features = ["testing"] }
 hyperspace-cosmos = { path = "../cosmos", features = [] }
-hyperspace-ethereum = { path = "../ethereum", features = [] }
+hyperspace-ethereum = { path = "../ethereum", features = ["mainnet"] }
 
 [features]
 parachain = [

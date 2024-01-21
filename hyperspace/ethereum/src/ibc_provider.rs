@@ -595,6 +595,7 @@ impl IbcProvider for EthereumClient {
 			// }
 			self.updates_fetcher_handle = Arc::new(run_updates_fetcher(
 				client_state.clone(),
+				self.clone(),
 				sync_committee_prover,
 				self.updates.clone(),
 			));

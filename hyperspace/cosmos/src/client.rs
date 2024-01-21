@@ -433,8 +433,6 @@ where
 					let trusted_light_block =
 						client.fetch_light_block_with_cache(height.increment(), duration).await?;
 
-					log::info!(target: "hyperspace_cosmos", "valhash {:?} =? {:?}", latest_light_block.validators.hash(), latest_light_block.next_validators.hash());
-
 					let update_type = match is_validators_equal(
 						&latest_light_block.validators,
 						&latest_light_block.next_validators,

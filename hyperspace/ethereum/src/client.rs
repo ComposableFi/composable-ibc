@@ -218,20 +218,37 @@ pub struct DatabaseLog {
 
 pub fn run_updates_fetcher(
 	mut client_state: ClientState<HostFunctionsManager>,
+	client: EthereumClient,
 	prover: SyncCommitteeProver,
 	updates: Arc<AsyncMutex<Vec<Header>>>,
 ) -> JoinHandle<()> {
+	log::info!(target: "hyperspace_ethereum", "Update fetcher started");
 	tokio::spawn(async move {
 		loop {
 			let mut latest_cp_client_height = client_state.latest_height().revision_height;
-			let maybe_header = prove(&prover, &client_state, 0, 0).await.unwrap();
+			let result = prove(&client, &prover, &client_state, 0, 0).await;
+			let maybe_header = match result {
+				Ok(x) => x,
+				Err(e) => {
+					log::warn!(target: "hyperspace_ethereum", "Error while proving: {:?}", e);
+					continue;
+				},
+			};
 
 			match maybe_header {
 				Some(header) => {
 					info!(target: "hyperspace_ethereum", "Got update at slot {}", header.inner.finalized_header.slot);
 					client_state.inner.latest_finalized_epoch = header.inner.finality_proof.epoch;
+					client_state.inner.finalized_header = header.inner.finalized_header.clone();
 					if header.inner.sync_committee_update.is_some() {
 						client_state.inner.state_period = client_state.inner.state_period + 1;
+						client_state.inner.next_sync_committee = header
+							.inner
+							.sync_committee_update
+							.as_ref()
+							.unwrap()
+							.next_sync_committee
+							.clone();
 					}
 					latest_cp_client_height = header.inner.execution_payload.block_number;
 					updates.lock().await.push(header);
