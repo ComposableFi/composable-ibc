@@ -131,6 +131,7 @@ pub struct CosmosClient<H> {
 	pub name: String,
 	/// Chain rpc client
 	pub rpc_client: WebSocketClient,
+	pub rpc_client2: WebSocketClient,
 	/// Chain http rpc client
 	pub rpc_http_client: HttpClient,
 	/// Reusable GRPC client
@@ -252,9 +253,14 @@ where
 		let (rpc_client, rpc_driver) = WebSocketClient::new(config.websocket_url.clone())
 			.await
 			.map_err(|e| Error::RpcError(format!("{:?}", e)))?;
+		let (rpc_client2, rpc_driver2) =
+			WebSocketClient::new("ws://34.116.194.171:26657/websocket")
+				.await
+				.map_err(|e| Error::RpcError(format!("{:?}", e)))?;
 		let rpc_http_client = HttpClient::new(config.rpc_url.clone())
 			.map_err(|e| Error::RpcError(format!("{:?}", e)))?;
 		let ws_driver_jh = tokio::spawn(rpc_driver.run());
+		let ws_driver_jh2 = tokio::spawn(rpc_driver2.run());
 		let grpc_client = tonic::transport::Endpoint::new(config.grpc_url.to_string())
 			.map_err(|e| Error::RpcError(format!("{:?}", e)))?
 			.connect()
@@ -279,6 +285,7 @@ where
 			name: config.name,
 			chain_id,
 			rpc_client,
+			rpc_client2,
 			rpc_http_client,
 			grpc_client,
 			rpc_url: config.rpc_url,
@@ -306,7 +313,7 @@ where
 				ignored_timeouted_sequences: Arc::new(Default::default()),
 				..common_state
 			},
-			join_handles: Arc::new(TokioMutex::new(vec![ws_driver_jh])),
+			join_handles: Arc::new(TokioMutex::new(vec![ws_driver_jh, ws_driver_jh2])),
 		})
 	}
 
@@ -369,11 +376,11 @@ where
 			.map(|r| log::debug!(target: "hyperspace_cosmos", "Simulated transaction: events: {:?}\nlogs: {}", r.events, r.log));
 
 		// Broadcast transaction
-		let hash = broadcast_tx(&self.rpc_client, tx_bytes).await?;
+		let hash = broadcast_tx(&self.rpc_client2, tx_bytes).await?;
 		log::debug!(target: "hyperspace_cosmos", "🤝 Transaction sent with hash: {:?}", hash);
 
 		// wait for confirmation
-		confirm_tx(&self.rpc_client, hash).await
+		confirm_tx(&self.rpc_client2, hash).await
 	}
 
 	pub async fn fetch_light_block_with_cache(
