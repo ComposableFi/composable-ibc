@@ -180,7 +180,7 @@ where
 			.zip(update_headers)
 			.enumerate()
 		{
-			if i == NUMBER_OF_BLOCKS_TO_PROCESS_PER_ITER - 2 {
+			if i == NUMBER_OF_BLOCKS_TO_PROCESS_PER_ITER as usize - 2 {
 				update_type = UpdateType::Mandatory;
 			}
 			let height = update_header.height();
