@@ -361,7 +361,8 @@ async fn setup_clients() -> (AnyChain, AnyChain, JoinHandle<()>) {
 			.map(|contract| (contract.abi_name(), contract.contract().address()))
 			.collect();
 		if !USE_GETH {
-			config_a.ws_rpc_url = anvil.ws_endpoint().parse().unwrap();
+			config_a.ws_rpc_url = "ws://localhost:8545/".parse().unwrap(); //anvil.ws_endpoint().parse().unwrap();
+			config_a.http_rpc_url = "http://localhost:8545/".parse().unwrap(); //anvil.ws_endpoint().parse().unwrap();
 			config_a.anvil = Some(Arc::new(Mutex::new(anvil)));
 		}
 
@@ -373,10 +374,20 @@ async fn setup_clients() -> (AnyChain, AnyChain, JoinHandle<()>) {
 		config_a
 	};
 
+	let url = config_a.ws_rpc_url.to_string();
+	let _h = tokio::spawn(async move {
+		let mut p = Provider::connect(url).await.unwrap();
+		loop {
+			tokio::time::sleep(Duration::from_secs(5)).await;
+			let res = p.request::<_, BlockNumber>("evm_mine", ()).await;
+			info!(target: "hyperspace", "Mined: {res:?}");
+		}
+	});
+
 	let db_url = config_a.indexer_pg_url.clone();
 	let redis_url = config_a.indexer_redis_url.clone();
 	let indexer_handle = tokio::spawn(async move {
-		indexer::run_indexer(db_url, redis_url).await;
+		indexer::run_indexer(db_url, redis_url, config_a.ibc_core_diamond_address).await;
 	});
 
 	let mut config_b = CosmosClientConfig {
@@ -388,7 +399,7 @@ async fn setup_clients() -> (AnyChain, AnyChain, JoinHandle<()>) {
 		client_id: None,
 		connection_id: None,
 		account_prefix: "centauri".to_string(),
-		fee_denom: "stake".to_string(),
+		fee_denom: "pica".to_string(),
 		fee_amount: "4000".to_string(),
 		gas_limit: (i64::MAX - 1) as u64,
 		store_prefix: args.connection_prefix_b,
@@ -1357,13 +1368,14 @@ fn get_error_from_call<E: ToString>(result: Result<ethers::types::Bytes, E>) -> 
 }
 
 mod indexer {
+	use ethers::types::Address;
 	use evm_indexer::{
 		chains::chains::ETHEREUM_DEVNET, configs::indexer_config::EVMIndexerConfig,
 		db::db::Database, rpc::rpc::Rpc,
 	};
 	use log::info;
 
-	pub async fn run_indexer(db_url: String, redis_url: String) {
+	pub async fn run_indexer(db_url: String, redis_url: String, contract_address: Option<Address>) {
 		let config = EVMIndexerConfig {
 			start_block: 0,
 			db_url,
@@ -1374,7 +1386,7 @@ mod indexer {
 			reset: false,
 			rpcs: vec!["http://localhost:8545".to_string()],
 			recalc_blocks_indexer: false,
-			contract_addresses: vec![],
+			contract_addresses: contract_address.into_iter().collect(),
 			block_confirmation_length: 14,
 		};
 

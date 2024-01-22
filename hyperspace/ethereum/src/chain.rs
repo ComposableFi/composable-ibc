@@ -1269,11 +1269,20 @@ impl Chain for EthereumClient {
 
 		tokio::time::sleep(Duration::from_secs(15)).await;
 
+		for (i, (success, result)) in
+			data.0.into_iter().zip(data.1.into_iter()).into_iter().enumerate()
+		{
+			if !success {
+				log::error!(target: "hyperspace_ethereum", "tx failed {i}: {}", hex::encode(&result));
+			}
+		}
+
 		let block_hash = receipt.block_hash.ok_or(ClientError::Other(format!(
 			"Block hash is missing for tx hash: {:?}",
 			receipt.transaction_hash
 		)))?;
 		Ok((block_hash, receipt.transaction_hash))
+		// Ok(Default::default())
 	}
 
 	async fn query_client_message(

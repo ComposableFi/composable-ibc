@@ -376,11 +376,11 @@ where
 			.map(|r| log::debug!(target: "hyperspace_cosmos", "Simulated transaction: events: {:?}\nlogs: {}", r.events, r.log));
 
 		// Broadcast transaction
-		let hash = broadcast_tx(&self.rpc_client2, tx_bytes).await?;
+		let hash = broadcast_tx(&self.rpc_client, tx_bytes).await?;
 		log::debug!(target: "hyperspace_cosmos", "🤝 Transaction sent with hash: {:?}", hash);
 
 		// wait for confirmation
-		confirm_tx(&self.rpc_client2, hash).await
+		confirm_tx(&self.rpc_client, hash).await
 	}
 
 	pub async fn fetch_light_block_with_cache(

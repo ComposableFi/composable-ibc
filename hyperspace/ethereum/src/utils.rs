@@ -77,7 +77,7 @@ impl FacetCut {
 	pub fn into_token(self) -> Token {
 		Token::Tuple(vec![
 			Token::Address(self.address),
-			Token::Uint((FacetCutAction::Add as u32).into()),
+			Token::Uint((self.action as u32).into()),
 			Token::Array(
 				self.selectors.into_iter().map(|(_, x)| Token::FixedBytes(x.to_vec())).collect(),
 			),
