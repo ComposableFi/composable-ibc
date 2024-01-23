@@ -33,7 +33,7 @@ use sync_committee_prover::{
 };
 use tokio::{task::JoinSet, time, time::sleep};
 
-#[cfg(not(feature = "no_beacon"))]
+// #[cfg(not(feature = "no_beacon"))]
 pub async fn prove_fast(
 	client: &EthereumClient,
 	_eth_client_state: &ClientState<HostFunctionsManager>,

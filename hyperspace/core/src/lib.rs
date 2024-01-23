@@ -221,10 +221,11 @@ async fn process_some_finality_event<A: Chain, B: Chain>(
 	mode: Option<Mode>,
 	finality_event: <A as IbcProvider>::FinalityEvent,
 ) -> anyhow::Result<()> {
+	let name_n = source.name().to_string();
 	let updates = source
 		.query_latest_ibc_events(finality_event, &*sink)
 		.await
-		.map_err(|e| anyhow!("Failed to fetch IBC events for finality event {e}"))?;
+		.map_err(|e| anyhow!("Failed to fetch IBC events from {name_n} for finality event {e}"))?;
 	log::trace!(target: "hyperspace", "Received updates count: {}", updates.len());
 	// query packets that can now be sent, at this sink height because of connection
 	// delay.
