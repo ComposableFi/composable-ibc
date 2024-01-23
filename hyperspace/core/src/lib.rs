@@ -343,12 +343,26 @@ async fn process_updates<A: Chain, B: Chain>(
 		)
 	});
 
+	//filter of instance event . filter(match from prev statement^ | ) 
+	//filter iclude any of the following:
+	/*
+		SendPacket,
+		ReceivePacket,
+		WriteAck,
+		Timeout,
+		TimeoutOnClose,
+	 */
+	//max_event_height
+	
+	
 	log::debug!(target: "hyperspace", "Received'' {}, has_instant_events = {has_instant_events}, update_delay_passed = {update_delay_passed}, need_to_update = {need_to_update}", mandatory_updates.len(), );
 
 	if !updates.is_empty() &&
 		(mandatory_updates.is_empty() && update_delay_passed && need_to_update) ||
 		has_instant_events
-	{
+	{	
+		
+
 		let (forced_update, height) = updates.last().map(|(msg, h, ..)| (msg.clone(), h)).unwrap();
 		if !mandatory_updates.is_empty() {
 			let (_, last_height) =

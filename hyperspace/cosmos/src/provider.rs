@@ -173,7 +173,18 @@ where
 		}
 		block_events.sort_by_key(|(height, _)| *height);
 
+		//replace updates.last() -> max_event_height
+		//replace mandatory_updates.last() -> max_event_height
+		//use the filter from prev fn in process_updates()
+		let max_event_height =
+    	block_events.iter().map(|ev| ev.1.height()).max().unwrap_or_else(|| Height::zero());
+		//max_event_height never should be ZERO!!!
+		//panic unreachable
+		//fi let. max_event_height could be zero
+		// if let some max_event_height => ask zk proof from remote api service!!!
+
 		let mut updates = Vec::new();
+		let continew = false;
 		for (i, (events, (update_header, mut update_type))) in block_events
 			.into_iter()
 			.map(|(_, events)| events)
@@ -184,6 +195,34 @@ where
 				update_type = UpdateType::Mandatory;
 			}
 			let height = update_header.height();
+
+			if update_type == UpdateType::Mandatory || height == max_event_height {
+				//h1, h2, h3, h4, h5, h6, h7, h8, h9, h10
+				//?-      ?        +           ?
+				log::debug!(target: "hyperspace_cosmos", "update: {:?}", update_type);
+
+				//ask generate the proof or poll the proof from remote api service
+				
+				//ask about proof from remote api service or poll resp from remote api service
+				//if prove does not exist then break the for loop
+
+				//if proof does not exsits then continue the loop.
+				continew = true;
+
+				
+			};
+
+			if continew {
+				continue;
+			}
+
+			//push will into updates updates
+			/*
+				 non mumdatary #1 updates -> push.
+				 mundatary #5 push but not metter if other next mandatory without proof #6
+
+			*/
+
 			let update_client_header = {
 				let msg = MsgUpdateAnyClient::<LocalClientTypes> {
 					client_id: client_id.clone(),
@@ -197,7 +236,14 @@ where
 				})?;
 				Any { value, type_url: msg.type_url() }
 			};
+			//if proof does not exist then do not add into the updates
 			updates.push((update_client_header, height, events, update_type));
+
+		}
+
+		for update in updates.iter() {
+			
+			log::debug!(target: "hyperspace_cosmos", "update: {:?}", update);
 		}
 		Ok(updates)
 	}

@@ -177,6 +177,7 @@ pub struct CosmosClient<H> {
 	pub common_state: CommonClientState,
 	/// Join handles for spawned tasks
 	pub join_handles: Arc<TokioMutex<Vec<JoinHandle<Result<(), tendermint_rpc::Error>>>>>,
+	// heigth -> proof (HashMap)
 }
 
 /// config options for [`ParachainClient`]
