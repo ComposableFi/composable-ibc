@@ -8,7 +8,7 @@ all-features = true
 
 [features]
 default = ["std", "rust-crypto"]
-mocks = ["default"]
+dummy = ["default"]
 rust-crypto = ["sha2"]
 std = [
 	"bytes/std",

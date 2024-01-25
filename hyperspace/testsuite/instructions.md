@@ -6,7 +6,7 @@ Clone [composable-ibc](https://github.com/ComposableFi/composable-ibc) with bran
 
 1. Install [Solana CLI](https://docs.solana.com/cli/install-solana-cli-tools). Used for running the local validator
 2. Install [Anchor CLI](https://www.anchor-lang.com/docs/installation) . Used for buliding and deploying the program.
-3. Clone the [solana-ibc program](https://github.com/ComposableFi/emulated-light-client) with branch `test-relayer`.
+3. Clone the [solana-ibc program](https://github.com/ComposableFi/emulated-light-client) with branch `relayer-testing`.
 4. Start local validator with block subscription
 ```
 solana-test-validator -r --rpc-pubsub-enable-block-subscription

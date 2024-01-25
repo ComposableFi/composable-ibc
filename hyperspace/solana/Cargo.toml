@@ -35,7 +35,7 @@ ripemd = "0.1.3"
 digest = "0.10.6"
 quick_cache = "0.3.0"
 rand = "0.8.5"
-anchor-client = {path = "../../../anchor/client", features = ["async"] }
+anchor-client = {version = "0.29.0", features = ["async"] }
 anchor-lang = "0.29.0"
 anchor-spl = "0.29.0"
 solana-transaction-status = "1.16.18"
@@ -51,7 +51,7 @@ ibc-proto-new = { version = "0.38.0", default-features = false, package="ibc-pro
 ibc = { path = "../../ibc/modules", features = [] }
 ibc-proto = { path = "../../ibc/proto", package="ibc-proto" }
 ibc-primitives = { path = "../../contracts/pallet-ibc/primitives" }
-ics07-tendermint = { path = "../../light-clients/ics07-tendermint", features = ["mocks"] }
+ics07-tendermint = { path = "../../light-clients/ics07-tendermint", features = ["dummy"] }
 ics08-wasm = { path = "../../light-clients/ics08-wasm" }
 ibc-rpc = { path = "../../contracts/pallet-ibc/rpc" }
 pallet-ibc = { path = "../../contracts/pallet-ibc", features = ["testing"]}

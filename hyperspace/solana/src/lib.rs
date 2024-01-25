@@ -574,9 +574,10 @@ impl IbcProvider for SolanaClient {
 	async fn ibc_events(&self) -> Pin<Box<dyn Stream<Item = IbcEvent> + Send + 'static>> {
 		let (tx, rx) = unbounded_channel();
 		let cluster = Cluster::from_str(&self.rpc_url).unwrap();
+		let ws_url = self.ws_url.clone();
 		tokio::task::spawn_blocking(move || {
 			let (_logs_subscription, receiver) = PubsubClient::logs_subscribe(
-				&self.ws_url,	
+				&ws_url,	
 				RpcTransactionLogsFilter::Mentions(vec![solana_ibc::ID.to_string()]),
 				RpcTransactionLogsConfig { commitment: Some(CommitmentConfig::processed()) },
 			)
@@ -1854,9 +1855,10 @@ impl Chain for SolanaClient {
 	> {
 		let (tx, rx) = unbounded_channel();
 		let cluster = Cluster::Devnet;
+		let ws_url = self.ws_url.clone();
 		tokio::task::spawn_blocking(move || {
 			let (_logs_listener, receiver) = PubsubClient::block_subscribe(
-				&self.ws_url, /* Quicknode rpc should be used for devnet/mainnet and
+				&ws_url, /* Quicknode rpc should be used for devnet/mainnet and
 				                        * incase of localnet,
 				                        * the flag `--rpc-pubsub-enable-block-subscription` has
 				                        * to be passed to
@@ -2031,48 +2033,6 @@ impl Chain for SolanaClient {
 			if tries == max_tries {
 				panic!("Max retries reached for normal tx in solana");
 			}
-			// } else {
-			// 	let sig = program
-			// 		.request()
-			// 		.instruction(ComputeBudgetInstruction::set_compute_unit_limit(1_000_000u32))
-			// 		.accounts(solana_ibc::accounts::Deliver {
-			// 			sender: authority.pubkey(),
-			// 			receiver: None,
-			// 			storage: solana_ibc_storage_key,
-			// 			trie: trie_key,
-			// 			chain: chain_key,
-			// 			system_program: system_program::ID,
-			// 			mint_authority: None,
-			// 			token_mint: None,
-			// 			escrow_account: None,
-			// 			receiver_token_account: None,
-			// 			associated_token_program: None,
-			// 			token_program: None,
-			// 		})
-			// 		.args(solana_ibc::instruction::Deliver { message: messages[0].clone() })
-			// 		// .payer(Arc::new(keypair))
-			// 		.signer(&*authority)
-			// 		.send_with_spinner_and_config(RpcSendTransactionConfig {
-			// 			skip_preflight: true,
-			// 			..RpcSendTransactionConfig::default()
-			// 		})
-			// 		.await
-			// 		.unwrap();
-			// 	let rpc = program.async_rpc();
-			// 	let blockhash = rpc.get_latest_blockhash().await.unwrap();
-			// 	// Wait for finalizing the transaction
-			// 	let _ = rpc
-			// 		.confirm_transaction_with_spinner(
-			// 			&sig,
-			// 			&blockhash,
-			// 			CommitmentConfig::finalized(),
-			// 		)
-			// 		.await
-			// 		.unwrap();
-			// 	signature = sig.to_string();
-			// }
-
-			// Ok(sig.to_string())
 		}
 		Ok(signature)
 	}

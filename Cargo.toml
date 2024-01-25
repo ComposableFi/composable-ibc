@@ -58,18 +58,18 @@ jsonrpsee = { version = "0.16.3" }
 [patch.crates-io]
 aes-gcm-siv = { git = "https://github.com/dhruvja/AEADs", branch = "main-aes-gcm-siv-v0.10.3" }
 curve25519-dalek = { git = "https://github.com/dhruvja/curve25519-dalek", branch = "master" }
-anchor-client = { path = "../anchor/client" }
-anchor-lang = { path = "../anchor/lang" }
-ibc-new = { path = "../ibc-rs/ibc", package = "ibc" }
-ibc-testkit = { path = "../ibc-rs/ibc-testkit" }
-ibc-core-channel-types = { path = "../ibc-rs/ibc-core/ics04-channel/types" }
-ibc-core-client-types = { path = "../ibc-rs/ibc-core/ics02-client/types" }
-ibc-core-commitment-types = { path = "../ibc-rs/ibc-core/ics23-commitment/types" }
-ibc-core-connection-types = { path = "../ibc-rs/ibc-core/ics03-connection/types" }
-ibc-core-host-types = { path = "../ibc-rs/ibc-core/ics24-host/types" }
+anchor-client = { git = "https://github.com/dhruvja/anchor" }
+anchor-lang = { git = "https://github.com/dhruvja/anchor" }
+ibc-testkit = { git = "https://github.com/dhruvja/ibc-rs", branch = "mock-sig-verification"}
+ibc = { git = "https://github.com/dhruvja/ibc-rs", branch = "mock-sig-verification" }
+ibc-core-channel-types = { git = "https://github.com/dhruvja/ibc-rs", branch = "mock-sig-verification"}
+ibc-core-client-types = { git = "https://github.com/dhruvja/ibc-rs", branch = "mock-sig-verification"}
+ibc-core-commitment-types = { git = "https://github.com/dhruvja/ibc-rs", branch = "mock-sig-verification"}
+ibc-core-connection-types = { git = "https://github.com/dhruvja/ibc-rs", branch = "mock-sig-verification"}
+ibc-core-host-types = { git = "https://github.com/dhruvja/ibc-rs", branch = "mock-sig-verification"}
 bip39 = { git="https://github.com/dhruvja/rust-bip39.git" }
-tendermint = { path = "../tendermint-rs/tendermint" }
-tendermint-proto = { path = "../tendermint-rs/proto" }
+tendermint = { git = "https://github.com/dhruvja/tendermint-rs", branch = "skip-sig-verification" }
+tendermint-proto = { git = "https://github.com/dhruvja/tendermint-rs", branch = "skip-sig-verification" }
 # cfg-expr = { git = "https://github.com/EmbarkStudios/cfg-expr", tag="0.15.0" }
 
 

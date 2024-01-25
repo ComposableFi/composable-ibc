@@ -44,9 +44,10 @@ impl TestProvider for SolanaClient {
 	async fn subscribe_blocks(&self) -> Pin<Box<dyn Stream<Item = u64> + Send + Sync>> {
 		let (tx, rx) = unbounded_channel();
 		let cluster = Cluster::Localnet;
+		let ws_url = self.ws_url.clone();
 		tokio::task::spawn_blocking(move || {
 			let (_logs_listener, receiver) = PubsubClient::block_subscribe(
-				&self.ws_url, /* Quicknode rpc should be used for devnet/mainnet and incase of localnet,
+				&ws_url, /* Quicknode rpc should be used for devnet/mainnet and incase of localnet,
 				     * the flag `--rpc-pubsub-enable-block-subscription` has to be passed to
 				     * local validator. */
 				RpcBlockSubscribeFilter::All,

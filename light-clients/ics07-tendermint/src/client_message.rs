@@ -242,7 +242,7 @@ impl From<Header> for RawHeader {
 	}
 }
 
-#[cfg(any(test, feature = "mocks"))]
+#[cfg(any(test, feature = "dummy"))]
 pub mod test_util {
 	use alloc::vec;
 
