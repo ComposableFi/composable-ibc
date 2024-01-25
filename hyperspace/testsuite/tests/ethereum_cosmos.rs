@@ -1394,7 +1394,7 @@ mod indexer {
 			chain: ETHEREUM_DEVNET,
 			batch_size: 200,
 			reset: false,
-			rpcs: vec!["http://localhost:8545".to_string()],
+			rpcs: vec!["http://127.0.0.1:8545".to_string()],
 			recalc_blocks_indexer: false,
 			contract_addresses: contract_address.into_iter().collect(),
 			block_confirmation_length: 14,

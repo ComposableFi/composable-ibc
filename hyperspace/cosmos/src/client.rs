@@ -293,7 +293,7 @@ where
 			.await
 			.map_err(|e| Error::RpcError(format!("{:?}", e)))?;
 		let (rpc_client2, rpc_driver2) =
-			WebSocketClient::new("ws://34.116.194.171:26657/websocket")
+			WebSocketClient::new(config.websocket_url.clone())
 				.await
 				.map_err(|e| Error::RpcError(format!("{:?}", e)))?;
 		let rpc_http_client = HttpClient::new(config.rpc_url.clone())
