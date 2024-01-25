@@ -27,7 +27,7 @@ use ibc::{
 			},
 		},
 	},
-	events::IbcEvent,
+	events::{IbcEvent, IbcEventType},
 	protobuf::Protobuf,
 	timestamp::Timestamp,
 	tx_msg::Msg,
@@ -176,8 +176,35 @@ where
 		//replace updates.last() -> max_event_height
 		//replace mandatory_updates.last() -> max_event_height
 		//use the filter from prev fn in process_updates()
-		let max_event_height =
-    	block_events.iter().map(|ev| ev.1.height()).max().unwrap_or_else(|| Height::zero());
+		let all_ibc_events =
+    	block_events.iter().map(|ev| ev.1.clone()).flatten().collect::<Vec<_>>();
+
+		let _max_event_height = all_ibc_events.iter().filter(|ev| {
+			matches!(
+				&ev.event_type(),
+				&IbcEventType::OpenInitConnection |
+					&IbcEventType::OpenInitChannel |
+					&IbcEventType::OpenTryConnection |
+					&IbcEventType::OpenTryChannel |
+					&IbcEventType::OpenAckChannel |
+					&IbcEventType::OpenAckConnection |
+					&IbcEventType::CloseInitChannel | 
+
+					&IbcEventType::SendPacket |
+					&IbcEventType::ReceivePacket |
+					&IbcEventType::WriteAck |
+					&IbcEventType::Timeout | 
+					&IbcEventType::TimeoutOnClose
+			)
+		}).map(|ev| ev.height()).max().unwrap_or_else(|| Height::zero());
+
+		//we can leave max_event_height as a zero in for inside if statement will be ignore all height if it is not max_event_height or mandatory
+
+		// .max().unwrap_or_else(|| Height::zero());
+
+		// .map(|(_, _, events, ..)| events.clone())
+		// .flatten()
+		// .collect::<Vec<_>>();
 		//max_event_height never should be ZERO!!!
 		//panic unreachable
 		//fi let. max_event_height could be zero
@@ -196,21 +223,21 @@ where
 			}
 			let height = update_header.height();
 
-			if update_type == UpdateType::Mandatory || height == max_event_height {
-				//h1, h2, h3, h4, h5, h6, h7, h8, h9, h10
-				//?-      ?        +           ?
-				log::debug!(target: "hyperspace_cosmos", "update: {:?}", update_type);
+			// if update_type == UpdateType::Mandatory || height == max_event_height {
+			// 	//h1, h2, h3, h4, h5, h6, h7, h8, h9, h10
+			// 	//?-      ?        +           ?
+			// 	log::debug!(target: "hyperspace_cosmos", "update: {:?}", update_type);
 
-				//ask generate the proof or poll the proof from remote api service
+			// 	//ask generate the proof or poll the proof from remote api service
 				
-				//ask about proof from remote api service or poll resp from remote api service
-				//if prove does not exist then break the for loop
+			// 	//ask about proof from remote api service or poll resp from remote api service
+			// 	//if prove does not exist then break the for loop
 
-				//if proof does not exsits then continue the loop.
-				continew = true;
+			// 	//if proof does not exsits then continue the loop.
+			// 	continew = true;
 
 				
-			};
+			// };
 
 			if continew {
 				continue;

@@ -361,7 +361,12 @@ async fn process_updates<A: Chain, B: Chain>(
 		(mandatory_updates.is_empty() && update_delay_passed && need_to_update) ||
 		has_instant_events
 	{	
-		
+		//replace updates.last() -> max_event_height
+		//replace mandatory_updates.last() -> max_event_height
+		// let max_event_height =
+    	// ibc_events.iter().map(|ev| ev.height()).max().unwrap_or_else(|| Height::zero());
+		//max_event_height never should be ZERO!!!
+		//panic unreachable
 
 		let (forced_update, height) = updates.last().map(|(msg, h, ..)| (msg.clone(), h)).unwrap();
 		if !mandatory_updates.is_empty() {
