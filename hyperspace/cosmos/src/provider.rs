@@ -179,7 +179,7 @@ where
 		let all_ibc_events =
     	block_events.iter().map(|ev| ev.1.clone()).flatten().collect::<Vec<_>>();
 
-		let _max_event_height = all_ibc_events.iter().filter(|ev| {
+		let max_event_height = all_ibc_events.iter().filter(|ev| {
 			matches!(
 				&ev.event_type(),
 				&IbcEventType::OpenInitConnection |
@@ -223,21 +223,24 @@ where
 			}
 			let height = update_header.height();
 
-			// if update_type == UpdateType::Mandatory || height == max_event_height {
-			// 	//h1, h2, h3, h4, h5, h6, h7, h8, h9, h10
-			// 	//?-      ?        +           ?
-			// 	log::debug!(target: "hyperspace_cosmos", "update: {:?}", update_type);
+			if update_type == UpdateType::Mandatory || height == max_event_height {
+				//h1, h2, h3, h4, h5, h6, h7, h8, h9, h10
+				//?-      ?        +           ?
+				log::debug!(target: "hyperspace_cosmos", "update: {:?}", update_type);
 
-			// 	//ask generate the proof or poll the proof from remote api service
+				//ask generate the proof or poll the proof from remote api service
 				
-			// 	//ask about proof from remote api service or poll resp from remote api service
-			// 	//if prove does not exist then break the for loop
+				//ask about proof from remote api service or poll resp from remote api service
+				//if prove does not exist then break the for loop
 
-			// 	//if proof does not exsits then continue the loop.
-			// 	continew = true;
-
+				//if proof does not exsits then continue the loop.
+				// continew = true;
+				let mut zk_proover = self.zk_proover.lock().unwrap();
+				zk_proover.request(height);
+				let _is_request_ready = zk_proover.poll(height);
+				log::warn!(target: "hyperspace_cosmos", "requested proof: {:?}", update_type);
 				
-			// };
+			};
 
 			if continew {
 				continue;

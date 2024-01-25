@@ -7,7 +7,7 @@ use super::{
 use crate::error::Error;
 use bech32::ToBase32;
 use bip32::{DerivationPath, ExtendedPrivateKey, XPrv, XPub as ExtendedPublicKey};
-use core::convert::{From, Into, TryFrom};
+use core::{convert::{From, Into, TryFrom}, time};
 use digest::Digest;
 use ibc::core::{
 	ics02_client::height::Height,
@@ -35,7 +35,7 @@ use rand::Rng;
 use ripemd::Ripemd160;
 use serde::{Deserialize, Serialize};
 use std::{
-	collections::HashSet,
+	collections::{HashMap, HashSet},
 	str::FromStr,
 	sync::{Arc, Mutex},
 	time::Duration,
@@ -178,6 +178,44 @@ pub struct CosmosClient<H> {
 	/// Join handles for spawned tasks
 	pub join_handles: Arc<TokioMutex<Vec<JoinHandle<Result<(), tendermint_rpc::Error>>>>>,
 	// heigth -> proof (HashMap)
+	pub zk_proover: Arc<Mutex<ZkProover>>,
+}
+
+
+#[derive(Clone, Default)]
+pub struct ZkProover {
+	pub map_height_time : HashMap<Height, std::time::SystemTime>,
+}
+
+impl ZkProover{
+	fn new() -> Self {
+		Self {
+			map_height_time : HashMap::new(),
+		}
+	}
+
+	pub fn request(&mut self, height: Height) {
+		if self.map_height_time.contains_key(&height){
+			return;
+		}
+
+		let t = std::time::SystemTime::now();
+		self.map_height_time.insert(height, t);
+	}
+	pub fn poll(&mut self, height: Height) -> bool {
+		let d = self.map_height_time.get(&height);
+		if d.is_none() {
+			return false;
+		}
+
+		let t = std::time::SystemTime::now();
+		let diff = t.duration_since(d.unwrap().clone()).unwrap();
+		if diff.as_secs() > 30 {
+			return true;
+		}
+		return false;
+	}
+
 }
 
 /// config options for [`ParachainClient`]
@@ -315,6 +353,7 @@ where
 				..common_state
 			},
 			join_handles: Arc::new(TokioMutex::new(vec![ws_driver_jh, ws_driver_jh2])),
+			zk_proover: Arc::new(Mutex::new(ZkProover::new())),
 		})
 	}
 
