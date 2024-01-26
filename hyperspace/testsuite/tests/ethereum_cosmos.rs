@@ -469,7 +469,9 @@ async fn setup_clients() -> (AnyChain, AnyChain, JoinHandle<()>) {
 #[ignore]
 async fn ethereum_to_cosmos_ibc_messaging_full_integration_test() {
 	std::env::set_var("KEY_PASS", "mybullishpassword ^_^");
+	std::env::set_var("RUST_LOG", "hyperspace_cosmos=trace,hyperspace_ethereum=trace,hyperspace=trace,prover=debug,info");
 	logging::setup_logging();
+	
 
 	let asset_str = "pica".to_string();
 	let asset_native_str = "ETH".to_string();

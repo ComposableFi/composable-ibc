@@ -1344,6 +1344,9 @@ impl EthereumClient {
 		sleep(self.expected_block_time() * INDEXER_DELAY_BLOCKS as u32).await;
 
 		info!(target: "hyperspace_ethereum", "Submitting messages: {:?}", messages.iter().map(|x| x.type_url.clone()).collect::<Vec<_>>().join(", "));
+		error!(target: "hyperspace_ethereum", "all messages ____________________________________________");
+		error!(target: "hyperspace_ethereum", "Submitting messages to ethereum: {:?}", messages.iter().map(|x| x.type_url.clone()).collect::<Vec<_>>().join(", "));
+		
 
 		let mut temp_client_state: Option<ClientState<()>> = None;
 
@@ -1421,6 +1424,9 @@ impl EthereumClient {
 				//get abi token to update client
 				let tm_header_abi_token = tm_header_abi_token(header)?;
 				let tm_header_bytes = ethers_encode(&[tm_header_abi_token]);
+
+				error!(target: "hyperspace_ethereum", "client update msg ____________________________________________");
+				error!(target: "hyperspace_ethereum", "Submitting client_update to ethereum: {:?}", header.height());
 
 				let token = EthersToken::Tuple(vec![
 					//should be the same that we use to create client
