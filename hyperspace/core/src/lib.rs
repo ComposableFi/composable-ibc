@@ -368,6 +368,32 @@ async fn process_updates<A: Chain, B: Chain>(
 		//max_event_height never should be ZERO!!!
 		//panic unreachable
 
+		// let max_event_height = ibc_events.iter().filter(|ev| {
+		// 	matches!(
+		// 		&ev.event_type(),
+		// 		&IbcEventType::OpenInitConnection |
+		// 			&IbcEventType::OpenInitChannel |
+		// 			&IbcEventType::OpenTryConnection |
+		// 			&IbcEventType::OpenTryChannel |
+		// 			&IbcEventType::OpenAckChannel |
+		// 			&IbcEventType::OpenAckConnection |
+		// 			&IbcEventType::CloseInitChannel | 
+
+		// 			&IbcEventType::SendPacket |
+		// 			&IbcEventType::ReceivePacket |
+		// 			&IbcEventType::WriteAck |
+		// 			&IbcEventType::Timeout | 
+		// 			&IbcEventType::TimeoutOnClose
+		// 	)
+		// }).map(|ev| ev.height()).max().unwrap_or_else(|| Height::zero());
+		// log::error!(target: "hyperspace", "max_event_height is : {:#?}", max_event_height);
+
+		// if max_event_height == Height::zero() {
+		// 	log::error!(target: "hyperspace", "max_event_height is ZERO");
+		// 	return Ok(())
+		// }
+
+		// .filter(|e| e.1 == max_event_height)
 		let (forced_update, height) = updates.last().map(|(msg, h, ..)| (msg.clone(), h)).unwrap();
 		if !mandatory_updates.is_empty() {
 			let (_, last_height) =
@@ -405,6 +431,8 @@ async fn process_updates<A: Chain, B: Chain>(
 	let (latest_height, _) = source.latest_height_and_timestamp().await?;
 	for (msg_update_client, h) in mandatory_updates {
 		log::debug!(target: "hyperspace", "Received client update message for {}: {}, latest height: {latest_height}", source.name(), h);
+		// log::error!(target: "hyperspace", "___________________________________________________________________________________________");
+		// log::error!(target: "hyperspace", "Received client update message for {}: {}, latest height: {latest_height}", source.name(), h);
 		msgs.push(msg_update_client);
 	}
 

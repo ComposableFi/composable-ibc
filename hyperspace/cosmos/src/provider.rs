@@ -132,6 +132,7 @@ where
 				.expect("should not overflow"),
 		);
 		log::info!(target: "hyperspace_cosmos", "Getting blocks {}..{}", from, to);
+		let to2 = to.clone();
 
 		// query (exclusively) up to `to`, because the proof for the event at `to - 1` will be
 		// contained at `to` and will be fetched below by `msg_update_client_header`
@@ -140,13 +141,14 @@ where
 		let mut block_events = Vec::new();
 		// block_events.push((0, Vec::new()));
 		let mut join_set: JoinSet<Result<_, anyhow::Error>> = JoinSet::new();
+		// let range = (from.value()..to.value()).collect::<Vec<_>>();
 		let range = (from.value()..to.value()).collect::<Vec<_>>();
-		let to = self.rpc_call_delay().as_millis();
+		let delay_to = self.rpc_call_delay().as_millis();
 		for heights in range.chunks(100) {
 			for height in heights.iter().copied() {
 				log::trace!(target: "hyperspace_cosmos", "Parsing events at height {:?}", height);
 				let client = self.clone();
-				let duration = Duration::from_millis(rand::thread_rng().gen_range(0..to) as u64);
+				let duration = Duration::from_millis(rand::thread_rng().gen_range(0..delay_to) as u64);
 				let counterparty = counterparty.clone();
 				join_set.spawn(async move {
 					sleep(duration).await;
@@ -155,6 +157,7 @@ where
 						client.parse_ibc_events_at(&counterparty, latest_revision, height),
 					)
 					.await??;
+				log::info!("Parsed events {:#?} at {:?}", xs.iter().map(|x| x.event_type()).collect::<Vec<_>>(), height);
 					Ok((height, xs))
 				});
 			}
@@ -163,6 +166,8 @@ where
 				block_events.push(out);
 			}
 		}
+
+		// block_events.push((to.increment().value(), Vec::new()));
 
 		if block_events.len() != update_headers.len() {
 			return Err(anyhow::anyhow!(
@@ -196,7 +201,9 @@ where
 					&IbcEventType::Timeout | 
 					&IbcEventType::TimeoutOnClose
 			)
-		}).map(|ev| ev.height()).max().unwrap_or_else(|| Height::zero());
+		}).map(|ev| ev.height().increment() ).max().unwrap_or_else(|| Height::zero());
+		log::error!(target: "hyperspace", "++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++");
+		log::error!(target: "hyperspace_cosmos", "max_event_height blocks {}..{}. h :{}", from, to2, max_event_height);
 
 		//we can leave max_event_height as a zero in for inside if statement will be ignore all height if it is not max_event_height or mandatory
 
@@ -211,23 +218,24 @@ where
 		// if let some max_event_height => ask zk proof from remote api service!!!
 
 		let mut updates = Vec::new();
-		let continew = false;
+		let mut continew = false;
 		for (i, (events, (update_header, mut update_type))) in block_events
 			.into_iter()
 			.map(|(_, events)| events)
 			.zip(update_headers)
 			.enumerate()
 		{
-			if i == NUMBER_OF_BLOCKS_TO_PROCESS_PER_ITER as usize - 2 {
+			//todo check the that we do not have mandatory updates and only then add this one as a mandatory
+			if i == NUMBER_OF_BLOCKS_TO_PROCESS_PER_ITER as usize - 1 /* -2 */ {
 				update_type = UpdateType::Mandatory;
 			}
 			let height = update_header.height();
 
+			let mut is_request_ready = false;
+
 			if update_type == UpdateType::Mandatory || height == max_event_height {
 				//h1, h2, h3, h4, h5, h6, h7, h8, h9, h10
 				//?-      ?        +           ?
-				log::debug!(target: "hyperspace_cosmos", "update: {:?}", update_type);
-
 				//ask generate the proof or poll the proof from remote api service
 				
 				//ask about proof from remote api service or poll resp from remote api service
@@ -237,12 +245,19 @@ where
 				// continew = true;
 				let mut zk_proover = self.zk_proover.lock().unwrap();
 				zk_proover.request(height);
-				let _is_request_ready = zk_proover.poll(height);
-				log::warn!(target: "hyperspace_cosmos", "requested proof: {:?}", update_type);
+				is_request_ready = zk_proover.poll(height);
+				log::error!(target: "hyperspace", "!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!");
+				log::error!(target: "hyperspace_cosmos", "requested proof: {:?}, {:?}, {}", update_type, height, is_request_ready);
+				println!("requested proof: {:?}", height);
+
+				if !is_request_ready{
+					continew = true;
+				}
 				
 			};
 
-			if continew {
+			if continew || (update_type.is_optional() && height > max_event_height /* && !height.is_zero()*/) {
+				log::error!(target: "hyperspace_cosmos", "skiped: {:?}", height);
 				continue;
 			}
 
@@ -269,11 +284,6 @@ where
 			//if proof does not exist then do not add into the updates
 			updates.push((update_client_header, height, events, update_type));
 
-		}
-
-		for update in updates.iter() {
-			
-			log::debug!(target: "hyperspace_cosmos", "update: {:?}", update);
 		}
 		Ok(updates)
 	}
