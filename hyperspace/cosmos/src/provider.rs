@@ -282,6 +282,9 @@ where
 				Any { value, type_url: msg.type_url() }
 			};
 			//if proof does not exist then do not add into the updates
+			for i in events.iter(){
+				log::error!(target: "hyperspace_cosmos", "i: {:?}", i);
+			}
 			updates.push((update_client_header, height, events, update_type));
 
 		}

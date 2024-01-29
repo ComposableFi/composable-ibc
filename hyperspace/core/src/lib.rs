@@ -276,13 +276,16 @@ async fn process_updates<A: Chain, B: Chain>(
 	updates: Vec<(Any, Height, Vec<IbcEvent>, UpdateType)>,
 	msgs: &mut Vec<Any>,
 ) -> anyhow::Result<()> {
+	let sink_recvs = sink.has_undelivered_sequences(UndeliveredType::Recvs);
+	let sink_acks = sink.has_undelivered_sequences(UndeliveredType::Acks);
+	let sink_timeouts = sink.has_undelivered_sequences(UndeliveredType::Timeouts);
 	// for timeouts we need both chains to be up to date
-	let sink_has_undelivered_acks = sink.has_undelivered_sequences(UndeliveredType::Recvs) ||
-		sink.has_undelivered_sequences(UndeliveredType::Acks) ||
-		sink.has_undelivered_sequences(UndeliveredType::Timeouts);
+	let sink_has_undelivered_acks =  sink_recvs || 
+	sink_acks ||
+	sink_timeouts;
 
 	let need_to_update = sink_has_undelivered_acks;
-	log::info!(target: "hyperspace", "Received {} client updates from {}", updates.len(), source.name(),);
+	log::error!(target: "hyperspace", "Received {} client updates from {}", updates.len(), source.name(),);
 
 	let common_state = source.common_state();
 	let skip_optional_updates = common_state.skip_optional_client_updates;
@@ -290,7 +293,7 @@ async fn process_updates<A: Chain, B: Chain>(
 	let mut mandatory_updates = updates
 		.iter()
 		.filter(|(_, h, _, update_type)| {
-			log::info!(
+			log::error!(
 				"Received updated from {} at {}, is_mandatory: {}",
 				source.name(),
 				h.revision_height,
@@ -313,14 +316,14 @@ async fn process_updates<A: Chain, B: Chain>(
 	);
 	if let Some(not_updated_during) = Timestamp::now().duration_since(&update_time) {
 		if not_updated_during < source.common_state().client_update_interval {
-			log::debug!(target: "hyperspace", "Sending only mandatory updates, not updated during {} seconds, need {}", not_updated_during.as_secs(), sink.common_state().client_update_interval.as_secs());
+			log::error!(target: "hyperspace", "Sending only mandatory updates, not updated during {} seconds, need {}", not_updated_during.as_secs(), sink.common_state().client_update_interval.as_secs());
 			update_delay_passed = false;
 		}
 	} else {
-		log::warn!(target: "hyperspace", "Update time is from the future: {}", update_time);
+		log::error!(target: "hyperspace", "Update time is from the future: {}", update_time);
 	}
 
-	log::debug!(target: "hyperspace", "Received' {} client updates from {}", mandatory_updates.len(), source.name(),);
+	log::error!(target: "hyperspace", "Received' {} client updates from {}", mandatory_updates.len(), source.name(),);
 
 	let ibc_events = updates
 		.iter()
@@ -355,7 +358,7 @@ async fn process_updates<A: Chain, B: Chain>(
 	//max_event_height
 	
 	
-	log::debug!(target: "hyperspace", "Received'' {}, has_instant_events = {has_instant_events}, update_delay_passed = {update_delay_passed}, need_to_update = {need_to_update}", mandatory_updates.len(), );
+	log::error!(target: "hyperspace", "Received'' {}, has_instant_events = {has_instant_events}, update_delay_passed = {update_delay_passed}, need_to_update = {need_to_update}, sink_recvs = {sink_recvs}, sink_acks = {sink_acks}, sink_timeouts = {sink_timeouts}", mandatory_updates.len(), );
 
 	if !updates.is_empty() &&
 		(mandatory_updates.is_empty() && update_delay_passed && need_to_update) ||
@@ -405,19 +408,21 @@ async fn process_updates<A: Chain, B: Chain>(
 			mandatory_updates.push((forced_update, *height));
 		}
 	}
+
+	log::error!(target: "hyperspace", "Received finalized events from: {} {event_types:#?}", source.name());
 	if mandatory_updates.is_empty() && !has_events {
-		log::info!(target: "hyperspace", "No messages to send");
+		log::error!(target: "hyperspace", "No messages to send");
 		return Ok(())
 	}
 
 	let latest_update_height = if !mandatory_updates.is_empty() {
 		mandatory_updates.last().map(|(_, height)| *height).unwrap()
 	} else {
-		log::warn!(target: "hyperspace", "Expected at least one update");
+		log::error!(target: "hyperspace", "Expected at least one update");
 		return Ok(())
 	};
 
-	log::info!(target: "hyperspace", "Received finalized events from: {} {event_types:#?}", source.name());
+	log::error!(target: "hyperspace", "Received finalized events from: {} {event_types:#?}", source.name());
 	let mut new_height = source.get_proof_height(latest_update_height).await;
 	if new_height != latest_update_height {
 		new_height.revision_height -=
@@ -430,7 +435,7 @@ async fn process_updates<A: Chain, B: Chain>(
 			.map_err(|e| anyhow!("Failed to parse events: {:?}", e))?;
 	let (latest_height, _) = source.latest_height_and_timestamp().await?;
 	for (msg_update_client, h) in mandatory_updates {
-		log::debug!(target: "hyperspace", "Received client update message for {}: {}, latest height: {latest_height}", source.name(), h);
+		log::error!(target: "hyperspace", "Received client update message for {}: {}, latest height: {latest_height}", source.name(), h);
 		// log::error!(target: "hyperspace", "___________________________________________________________________________________________");
 		// log::error!(target: "hyperspace", "Received client update message for {}: {}, latest height: {latest_height}", source.name(), h);
 		msgs.push(msg_update_client);
