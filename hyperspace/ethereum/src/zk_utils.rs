@@ -64,7 +64,7 @@ impl ZKProver {
 
 		// TOOD: handle some edge cases
 		match resp.status.as_str() {
-			"COMPLETED" => Ok(Some(resp.proof.unwrap())),
+			"COMPLETED" => Ok(resp.proof),
 			_ => Ok(None),
 		}
 	}
