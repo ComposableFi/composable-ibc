@@ -488,7 +488,8 @@ async fn zk_prover_integration_test() {
 #[ignore]
 async fn ethereum_to_cosmos_ibc_messaging_full_integration_test() {
 	std::env::set_var("KEY_PASS", "mybullishpassword ^_^");
-	std::env::set_var("RUST_LOG", "hyperspace_cosmos=debug,hyperspace_ethereum=debug,hyperspace=trace,prover=debug");
+	std::env::set_var("RUST_LOG", "hyperspace_cosmos=error,hyperspace_ethereum=error,hyperspace=error,prover=error");
+	// std::env::set_var("RUST_LOG", "hyperspace_cosmos=debug,hyperspace_ethereum=debug,hyperspace=trace,prover=debug");
 	// std::env::set_var("RUST_LOG", "hyperspace_cosmos=trace,hyperspace_ethereum=trace,hyperspace=trace,prover=debug,info");
 	logging::setup_logging();
 	

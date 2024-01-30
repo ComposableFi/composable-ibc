@@ -60,7 +60,7 @@ use primitives::{
 };
 use prost::Message;
 use rand::Rng;
-use std::{collections::HashSet, pin::Pin, str::FromStr, time::Duration};
+use std::{collections::HashSet, f32::consts::E, pin::Pin, str::FromStr, time::Duration};
 use tendermint::block::Height as TmHeight;
 pub use tendermint::Hash;
 use tendermint_rpc::{
@@ -236,28 +236,79 @@ where
 				//if prove does not exist then break the for loop
 
 				//if proof does not exsits then continue the loop.
-				// continew = true;
-				let zk_input = update_header.get_zk_input(1).unwrap();
-
-				// for i in zk_input{
-
-				// }
-				let zk_prover = self.zk_prover.clone();
-				let result = zk_prover.create_proof(CreateProofInput::new(
-					vec![], vec![], vec![]
-				)).unwrap();
-
-				let mut zk_proover = self.mock_zk_proover.lock().unwrap();
-				zk_proover.request(height);
-				is_request_ready = zk_proover.poll(height);
-				log::error!(target: "hyperspace", "!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!");
-				log::error!(target: "hyperspace_cosmos", "requested proof: {:?}, {:?}, {}", update_type, height, is_request_ready);
-				println!("requested proof: {:?}", height);
-
-				if !is_request_ready{
-					continew = true;
-				}
+				// let zk_input = update_header.get_zk_input(1).unwrap();
 				
+
+				let mock_zk_prover = true;
+				if mock_zk_prover{
+					let mut zk_proover = self.mock_zk_proover.lock().unwrap();
+					zk_proover.request(height);
+					is_request_ready = zk_proover.poll(height);
+					log::error!(target: "hyperspace", "!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!");
+					log::error!(target: "hyperspace_cosmos", "requested proof: {:?}, {:?}, {}", update_type, height, is_request_ready);
+					println!("requested proof: {:?}", height);
+
+					if !is_request_ready{
+						continew = true;
+					}
+				}
+				else{
+					let mut zk_height_proof_id_map = self.zk_proofs_id.lock().unwrap();
+					let zk_prover = self.zk_prover.clone();
+					let proof_id = zk_height_proof_id_map.get(&height);
+					if let Some(proof_id) = proof_id{
+						let proof_id = proof_id.clone();
+						drop(zk_height_proof_id_map);
+						let proof = zk_prover.poll_proof(&proof_id);
+						match proof{
+							Ok(proof) => {
+								if let Some(proof) = proof{
+									//todo put the proof into the protobuf object to be catched by eth side
+									let proof = proof;
+									is_request_ready = true;
+								}
+								else{
+									log::error!(target: "hyperspace", "proof not ready Yet. proof is None. proof_id: {:?}, height: {:?}", proof_id, height);
+								}
+							},
+							Err(e) => {
+								log::error!(target: "hyperspace", "failed to poll proof_id: {:?}, height: {:?}. error: {:?}", proof_id, height, e);
+							}
+						}
+					}
+					else{
+						//todo get input. uncomment
+						// let zk_input = update_header.get_zk_input(1);
+						// match zk_input {
+						// 	Ok(_) => {
+								
+						// 	},
+						// 	Err(e) => {
+						// 		log::error!(target: "hyperspace", "=========================================================================");
+						// 		log::error!(target: "hyperspace", "failed to get zk input error: {:?}", e);
+						// 	}
+						// }
+						let result = zk_prover.create_proof(CreateProofInput::new(
+							vec![], vec![], vec![]
+						));
+						match result{
+							Ok(resp) => {
+								let proof_id = resp.proof_id;
+								zk_height_proof_id_map.insert(height, proof_id);
+							},
+							Err(e) => {
+								log::error!(target: "hyperspace", "failed to create_proof. height: {:?}. error: {:?}", height, e);
+							}
+						}
+						
+					}
+
+					log::error!(target: "hyperspace", "!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!");
+					log::error!(target: "hyperspace", "real zk proover was requested proof: {:?}, {:?}, {}", update_type, height, is_request_ready);
+					if !is_request_ready{
+						continew = true;
+					}
+				}
 			};
 
 			if continew || (update_type.is_optional() && height > max_event_height /* && !height.is_zero()*/) {
