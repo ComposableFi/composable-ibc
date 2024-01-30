@@ -5,7 +5,7 @@ use super::{
 		ibc_event_try_from_abci_event, IbcEventWithHeight,
 	},
 };
-use crate::error::Error;
+use crate::{error::Error, eth_zk_utils::CreateProofInput};
 use futures::{
 	stream::{self, select_all},
 	Stream, StreamExt,
@@ -237,8 +237,17 @@ where
 
 				//if proof does not exsits then continue the loop.
 				// continew = true;
+				let zk_input = update_header.get_zk_input(1).unwrap();
+
+				// for i in zk_input{
+
+				// }
+				let zk_prover = self.zk_prover.clone();
+				let result = zk_prover.create_proof(CreateProofInput::new(
+					vec![], vec![], vec![]
+				)).unwrap();
+
 				let mut zk_proover = self.mock_zk_proover.lock().unwrap();
-				let zk_input = update_header.get_zk_input(1);
 				zk_proover.request(height);
 				is_request_ready = zk_proover.poll(height);
 				log::error!(target: "hyperspace", "!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!");

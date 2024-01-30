@@ -356,7 +356,7 @@ where
 			},
 			join_handles: Arc::new(TokioMutex::new(vec![ws_driver_jh, ws_driver_jh2])),
 			mock_zk_proover: Arc::new(Mutex::new(MockZkProover::new())),
-			zk_prover: ZKProver::new("http://localhost:8080".to_string(), Duration::from_secs(60)),
+			zk_prover: ZKProver::new("http://127.0.0.1:8000".to_string(), Duration::from_secs(60)),
 		})
 	}
 

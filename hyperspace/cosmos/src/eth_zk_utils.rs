@@ -28,6 +28,12 @@ pub struct CreateProofInput {
 	pub public_keys: Vec<Vec<u8>>,
 }
 
+impl CreateProofInput{
+	pub fn new(signatures: Vec<Vec<u8>>, msgs: Vec<Vec<u8>>, public_keys: Vec<Vec<u8>>) -> Self {
+		Self { signatures, msgs, public_keys }
+	}
+}
+
 impl ZKProver {
 	pub fn new(prover_url: String, proof_timeout: Duration) -> Self {
 		Self { prover_url, /* proof_timeout */}
