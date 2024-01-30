@@ -1,4 +1,5 @@
 use anyhow::{anyhow, Error};
+use tracing_subscriber::fmt::format;
 use std::{
 	thread,
 	time::{Duration, SystemTime},
@@ -6,25 +7,25 @@ use std::{
 use ureq;
 
 pub struct ZKProver {
-	prover_url: String,
+	pub prover_url: String,
 }
 
 #[derive(Debug, serde::Deserialize)]
-struct Response {
-	proof_id: String,
+pub struct Response {
+	pub proof_id: String,
 }
 
 #[derive(Debug, serde::Deserialize)]
-struct ResponseProofRequest {
+pub struct ResponseProofRequest {
 	pub status: String,
 	pub proof: Option<Vec<u8>>,
 }
 
 #[derive(Debug, serde::Serialize)]
 pub struct CreateProofInput {
-	signatures: Vec<Vec<u8>>,
-	msgs: Vec<Vec<u8>>,
-	public_keys: Vec<Vec<u8>>,
+	pub signatures: Vec<Vec<u8>>,
+	pub msgs: Vec<Vec<u8>>,
+	pub public_keys: Vec<Vec<u8>>,
 }
 
 impl ZKProver {
@@ -33,10 +34,13 @@ impl ZKProver {
 	}
 
 	pub fn create_proof(&self, proof_input: CreateProofInput) -> Result<Response, Error> {
-		let r= ureq::post(self.prover_url.as_str())
+        //concat prover_url and create_proof
+        let url = format!("{}{}", self.prover_url, "/create_proof");
+		let result= ureq::post(url.as_str())
 			.send_json(ureq::json!(proof_input))?
 			.into_string();
-        match r {
+        println!("result: {:?}", result);
+        match result {
             Ok(r) => {
                 let resp: Response = serde_json::from_str(&r)?;
                 Ok(resp)
@@ -47,14 +51,16 @@ impl ZKProver {
         }
 	}
 
-	fn poll_proof(&self, proof_id: &str) -> Result<Option<Vec<u8>>, Error> {
+	pub fn poll_proof(&self, proof_id: &str) -> Result<Option<Vec<u8>>, Error> {
 		let url = self.prover_url.clone() + "/get_proof";
-		let resp = ureq::post(self.prover_url.as_str())
+		let resp = ureq::post(url.as_str())
 			.send_json(ureq::json!({
 				"proof_id": proof_id
 			}))?
 			.into_string()?;
+
         let resp: ResponseProofRequest = serde_json::from_str(&resp)?;
+        println!("resp: {:?}", resp);
 
 		// TOOD: handle some edge cases
 		match resp.status.as_str() {

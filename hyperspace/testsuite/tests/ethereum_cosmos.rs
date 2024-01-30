@@ -34,16 +34,10 @@ use hyperspace_core::{
 };
 use hyperspace_cosmos::client::{CosmosClient, CosmosClientConfig};
 use hyperspace_ethereum::{
-	chain::client_state_from_abi_token,
-	client::{ClientError, EthereumClient, COMMITMENTS_STORAGE_INDEX},
-	config::{ContractName, ContractName::ICS20Bank},
-	ibc_provider,
-	ibc_provider::PublicKeyData,
-	mock::{
+	chain::client_state_from_abi_token, client::{ClientError, EthereumClient, COMMITMENTS_STORAGE_INDEX}, config::{ContractName, ContractName::ICS20Bank}, ibc_provider, ibc_provider::PublicKeyData, mock::{
 		utils,
 		utils::{hyperspace_ethereum_client_fixture, ETH_NODE_PORT, USE_GETH},
-	},
-	utils::{check_code_size, deploy_contract, send_retrying, DeployYuiIbc, ProviderImpl},
+	}, utils::{check_code_size, deploy_contract, send_retrying, DeployYuiIbc, ProviderImpl}, zk_utils::{CreateProofInput, ZKProver}
 };
 use hyperspace_primitives::{utils::create_clients, Chain, CommonClientConfig, IbcProvider};
 use hyperspace_testsuite::{
@@ -463,6 +457,27 @@ async fn setup_clients() -> (AnyChain, AnyChain, JoinHandle<()>) {
 	chain_a_wrapped.set_client_id(client_id_a.unwrap());
 	chain_b_wrapped.set_client_id(client_id_b.unwrap());
 	(chain_a_wrapped, chain_b_wrapped, indexer_handle)
+}
+
+#[tokio::test(flavor = "multi_thread", worker_threads = 10)]
+#[ignore]
+async fn zk_prover_integration_test() {
+	let zk_prover = ZKProver::new("http://127.0.0.1:8000".to_string(), Duration::from_secs(60));
+	let proof_input = CreateProofInput {
+		signatures: vec![],
+		msgs: vec![],
+		public_keys: vec![]
+	};
+	let resp = zk_prover.create_proof(proof_input).unwrap();
+	println!("resp: {:?}", resp);
+
+	let proof = zk_prover.poll_proof(&resp.proof_id).unwrap();
+	assert!(proof.is_none());
+	std::thread::sleep(Duration::from_secs(33));
+	let proof = zk_prover.poll_proof(&resp.proof_id).unwrap();
+	assert!(proof.is_some());
+	println!("proof: {:?}", proof.unwrap());
+	return;
 }
 
 #[tokio::test(flavor = "multi_thread", worker_threads = 10)]
