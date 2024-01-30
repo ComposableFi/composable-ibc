@@ -11,8 +11,7 @@ use futures::{
 	Stream, StreamExt,
 };
 use ibc::{
-	applications::transfer::{Amount, BaseDenom, PrefixedCoin, PrefixedDenom, TracePath},
-	core::{
+	applications::transfer::{Amount, BaseDenom, PrefixedCoin, PrefixedDenom, TracePath}, core::{
 		ics02_client::{
 			client_state::ClientType, events as ClientEvents,
 			msgs::update_client::MsgUpdateAnyClient, trust_threshold::TrustThreshold,
@@ -26,12 +25,7 @@ use ibc::{
 				CommitmentsPath, ConnectionsPath, Path, ReceiptsPath, SeqRecvsPath, SeqSendsPath,
 			},
 		},
-	},
-	events::{IbcEvent, IbcEventType},
-	protobuf::Protobuf,
-	timestamp::Timestamp,
-	tx_msg::Msg,
-	Height,
+	}, events::{IbcEvent, IbcEventType}, protobuf::Protobuf, timestamp::Timestamp, tx_msg::Msg, Height
 };
 use ibc_primitives::PacketInfo as IbcPacketInfo;
 use ibc_proto::{
@@ -244,6 +238,7 @@ where
 				//if proof does not exsits then continue the loop.
 				// continew = true;
 				let mut zk_proover = self.zk_proover.lock().unwrap();
+				let zk_input = update_header.get_zk_input(1);
 				zk_proover.request(height);
 				is_request_ready = zk_proover.poll(height);
 				log::error!(target: "hyperspace", "!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!");
