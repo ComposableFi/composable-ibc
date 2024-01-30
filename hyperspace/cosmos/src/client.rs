@@ -4,7 +4,7 @@ use super::{
 	light_client::LightClient,
 	tx::{broadcast_tx, confirm_tx, sign_tx, simulate_tx},
 };
-use crate::error::Error;
+use crate::{error::Error, eth_zk_utils::ZKProver};
 use bech32::ToBase32;
 use bip32::{DerivationPath, ExtendedPrivateKey, XPrv, XPub as ExtendedPublicKey};
 use core::{convert::{From, Into, TryFrom}, time};
@@ -180,7 +180,7 @@ pub struct CosmosClient<H> {
 	// heigth -> proof (HashMap)
 	pub mock_zk_proover: Arc<Mutex<MockZkProover>>,
 
-	// pub zk_prover: ZKProver,
+	pub zk_prover: ZKProver,
 }
 
 
@@ -356,6 +356,7 @@ where
 			},
 			join_handles: Arc::new(TokioMutex::new(vec![ws_driver_jh, ws_driver_jh2])),
 			mock_zk_proover: Arc::new(Mutex::new(MockZkProover::new())),
+			zk_prover: ZKProver::new("http://localhost:8080".to_string(), Duration::from_secs(60)),
 		})
 	}
 

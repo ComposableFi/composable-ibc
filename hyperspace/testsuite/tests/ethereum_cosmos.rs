@@ -463,6 +463,7 @@ async fn setup_clients() -> (AnyChain, AnyChain, JoinHandle<()>) {
 #[tokio::test(flavor = "multi_thread", worker_threads = 10)]
 #[ignore]
 async fn zk_prover_integration_test() {
+	//branch rustninja/compatibility
 	let zk_prover = ZKProver::new("http://127.0.0.1:8000".to_string(), Duration::from_secs(60));
 	let proof_input = CreateProofInput {
 		signatures: vec![],
