@@ -181,6 +181,10 @@ pub struct CosmosClient<H> {
 	pub mock_zk_proover: Arc<Mutex<MockZkProover>>,
 
 	pub zk_prover: ZKProver,
+	//hashmap of height -> proof_id
+	//means: did we already request proof for this height
+	//if yes then need to ask about the actual proof
+	pub zk_proofs_id: Arc<Mutex<HashMap<Height, String>>>,
 }
 
 
@@ -356,6 +360,8 @@ where
 			},
 			join_handles: Arc::new(TokioMutex::new(vec![ws_driver_jh, ws_driver_jh2])),
 			mock_zk_proover: Arc::new(Mutex::new(MockZkProover::new())),
+			zk_proofs_id: Arc::new(Mutex::new(HashMap::new())),
+			//todo need to read from config
 			zk_prover: ZKProver::new("http://127.0.0.1:8000".to_string(), Duration::from_secs(60)),
 		})
 	}
