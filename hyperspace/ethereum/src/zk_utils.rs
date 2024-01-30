@@ -33,6 +33,18 @@ impl ZKProver {
 		Self { prover_url, /* proof_timeout */}
 	}
 
+    pub fn status(&self) -> Result<String, Error> {
+        //concat prover_url and create_proof
+        let url = format!("{}{}", self.prover_url, "/status");
+		let result= ureq::get(url.as_str())
+            .call()?
+            .into_string()?;
+        println!("result: {:?}", result);
+        Ok(result)
+	}
+
+
+
 	pub fn create_proof(&self, proof_input: CreateProofInput) -> Result<Response, Error> {
         //concat prover_url and create_proof
         let url = format!("{}{}", self.prover_url, "/create_proof");

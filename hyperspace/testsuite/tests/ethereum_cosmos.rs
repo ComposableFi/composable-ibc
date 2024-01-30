@@ -468,6 +468,8 @@ async fn zk_prover_integration_test() {
 		msgs: vec![],
 		public_keys: vec![]
 	};
+	let status = zk_prover.status().unwrap();
+	println!("status: {:?}", status);
 	let resp = zk_prover.create_proof(proof_input).unwrap();
 	println!("resp: {:?}", resp);
 
