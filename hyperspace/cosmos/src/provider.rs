@@ -237,7 +237,7 @@ where
 
 				//if proof does not exsits then continue the loop.
 				// continew = true;
-				let mut zk_proover = self.zk_proover.lock().unwrap();
+				let mut zk_proover = self.mock_zk_proover.lock().unwrap();
 				let zk_input = update_header.get_zk_input(1);
 				zk_proover.request(height);
 				is_request_ready = zk_proover.poll(height);

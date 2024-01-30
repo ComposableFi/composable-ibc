@@ -32,12 +32,13 @@ use hyperspace_core::{
 	chain::{AnyAssetId, AnyChain, AnyConfig},
 	logging,
 };
-use hyperspace_cosmos::client::{CosmosClient, CosmosClientConfig};
+use hyperspace_cosmos::{client::{CosmosClient, CosmosClientConfig}, eth_zk_utils::CreateProofInput};
+use hyperspace_cosmos::eth_zk_utils::ZKProver;
 use hyperspace_ethereum::{
 	chain::client_state_from_abi_token, client::{ClientError, EthereumClient, COMMITMENTS_STORAGE_INDEX}, config::{ContractName, ContractName::ICS20Bank}, ibc_provider, ibc_provider::PublicKeyData, mock::{
 		utils,
 		utils::{hyperspace_ethereum_client_fixture, ETH_NODE_PORT, USE_GETH},
-	}, utils::{check_code_size, deploy_contract, send_retrying, DeployYuiIbc, ProviderImpl}, zk_utils::{CreateProofInput, ZKProver}
+	}, utils::{check_code_size, deploy_contract, send_retrying, DeployYuiIbc, ProviderImpl}
 };
 use hyperspace_primitives::{utils::create_clients, Chain, CommonClientConfig, IbcProvider};
 use hyperspace_testsuite::{

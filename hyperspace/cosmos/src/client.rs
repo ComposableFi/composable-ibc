@@ -178,16 +178,18 @@ pub struct CosmosClient<H> {
 	/// Join handles for spawned tasks
 	pub join_handles: Arc<TokioMutex<Vec<JoinHandle<Result<(), tendermint_rpc::Error>>>>>,
 	// heigth -> proof (HashMap)
-	pub zk_proover: Arc<Mutex<ZkProover>>,
+	pub mock_zk_proover: Arc<Mutex<MockZkProover>>,
+
+	// pub zk_prover: ZKProver,
 }
 
 
 #[derive(Clone, Default)]
-pub struct ZkProover {
+pub struct MockZkProover {
 	pub map_height_time : HashMap<Height, std::time::SystemTime>,
 }
 
-impl ZkProover{
+impl MockZkProover{
 	fn new() -> Self {
 		Self {
 			map_height_time : HashMap::new(),
@@ -353,7 +355,7 @@ where
 				..common_state
 			},
 			join_handles: Arc::new(TokioMutex::new(vec![ws_driver_jh, ws_driver_jh2])),
-			zk_proover: Arc::new(Mutex::new(ZkProover::new())),
+			mock_zk_proover: Arc::new(Mutex::new(MockZkProover::new())),
 		})
 	}
 

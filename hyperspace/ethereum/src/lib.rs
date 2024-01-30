@@ -18,4 +18,4 @@ pub mod prove;
 pub mod query;
 pub mod utils;
 pub mod yui_types;
-pub mod zk_utils;
+// pub mod zk_utils;
