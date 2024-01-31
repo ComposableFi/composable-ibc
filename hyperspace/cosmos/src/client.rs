@@ -202,7 +202,7 @@ impl ZkProofRequest{
 			bitmask,
 		}
 	}
-	pub fn is_expired(&self) -> bool {
+	pub fn is_waiting_for_proof_too_long(&self) -> bool {
 		let t = std::time::SystemTime::now();
 		let diff = t.duration_since(self.request_time.clone()).unwrap();
 		if diff.as_secs() > 30 {

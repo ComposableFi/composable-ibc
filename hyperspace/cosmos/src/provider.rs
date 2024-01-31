@@ -273,7 +273,7 @@ where
 								}
 								else{
 									log::info!(target: "hyperspace", "proof not ready Yet. proof is None. proof_id: {:?}, height: {:?}", proof_request, height);
-									if proof_request.is_expired(){
+									if proof_request.is_waiting_for_proof_too_long(){
 										log::error!(target: "hyperspace", "Proof not ready too long. proof_id: {:?}, height: {:?}, requested proof at : {:?}", proof_request, height, proof_request.request_time);
 									}
 
