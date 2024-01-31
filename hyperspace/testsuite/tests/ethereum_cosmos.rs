@@ -462,6 +462,34 @@ async fn setup_clients() -> (AnyChain, AnyChain, JoinHandle<()>) {
 
 #[tokio::test(flavor = "multi_thread", worker_threads = 10)]
 #[ignore]
+async fn zk_prover_bitmask() {
+	let validators = vec![0, 1, 1, 0, 1, 1, 0];
+    let mut bitmask: u64 = 0;
+
+    for (index, &validator) in validators.iter().enumerate() {
+        if validator == 1 {
+            bitmask |= 1 << index;
+        }
+    }
+
+    println!("Bitmask: {}", bitmask);
+    println!("Bitmask: {:064b}", bitmask);
+
+
+	// let bitmask: u64 = 0b00000000000001100110; 
+    let mut validators = vec![0; 7]; // Assuming 7-bit bitmask
+    
+    for i in 0..7 {
+        if (bitmask >> i) & 1 == 1 {
+            validators[i] = 1;
+        }
+    }
+
+    println!("Validators: {:?}", validators);
+}
+
+#[tokio::test(flavor = "multi_thread", worker_threads = 10)]
+#[ignore]
 async fn zk_prover_integration_test() {
 	//branch rustninja/compatibility
 	let zk_prover = ZKProver::new("http://127.0.0.1:8000".to_string(), Duration::from_secs(60));
