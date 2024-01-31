@@ -215,6 +215,7 @@ where
 
 		let mut updates = Vec::new();
 		let mut continew = false;
+		let mut exist_at_least_one_proof = false;
 		for (i, (events, (update_header, mut update_type))) in block_events
 			.into_iter()
 			.map(|(_, events)| events)
@@ -268,6 +269,7 @@ where
 									//todo put the proof into the protobuf object to be catched by eth side
 									let proof = proof;
 									is_request_ready = true;
+									exist_at_least_one_proof = true;
 								}
 								else{
 									//todo we need extra log to erorro that it does not exists to long!!!
@@ -347,6 +349,16 @@ where
 			updates.push((update_client_header, height, events, update_type));
 
 		}
+
+		//this is the case when we do not have any proof.
+		//not allowed to remove this logic
+		//for example there is no events at all and no mandatary but if we put at least 1 header without events and proof 
+		//the caller code could decide to submit the update client to eth even there is no reason for it.
+		//if you remove this logic then relayer will try submit the header without proof to eth. do not remove it.
+		if !exist_at_least_one_proof{
+			updates.clear();
+		}
+
 		Ok(updates)
 	}
 
