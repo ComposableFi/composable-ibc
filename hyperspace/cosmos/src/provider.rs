@@ -241,7 +241,7 @@ where
 				// let zk_input = update_header.get_zk_input(1).unwrap();
 				
 
-				let mock_zk_prover = true;
+				let mock_zk_prover = false;
 				if mock_zk_prover{
 					let mut zk_proover = self.mock_zk_proover.lock().unwrap();
 					zk_proover.request(height);
