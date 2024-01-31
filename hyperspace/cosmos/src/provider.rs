@@ -5,7 +5,7 @@ use super::{
 		ibc_event_try_from_abci_event, IbcEventWithHeight,
 	},
 };
-use crate::{error::Error, eth_zk_utils::CreateProofInput};
+use crate::{client::ZkProofRequest, error::Error, eth_zk_utils::CreateProofInput};
 use futures::{
 	stream::{self, select_all},
 	Stream, StreamExt,
@@ -244,7 +244,7 @@ where
 
 				let mock_zk_prover = false;
 				if mock_zk_prover{
-					let mut zk_proover = self.mock_zk_proover.lock().unwrap();
+					let mut zk_proover = self.mock_zk_prover.lock().unwrap();
 					zk_proover.request(height);
 					is_request_ready = zk_proover.poll(height);
 					log::error!(target: "hyperspace", "!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!");
@@ -256,13 +256,13 @@ where
 					}
 				}
 				else{
-					let mut zk_height_proof_id_map = self.zk_proofs_id.lock().unwrap();
-					let zk_prover = self.zk_prover.clone();
+					let mut zk_height_proof_id_map = self.zk_proof_requests.lock().unwrap();
+					let zk_prover = self.zk_prover_api.clone();
 					let proof_id = zk_height_proof_id_map.get(&height);
-					if let Some(proof_id) = proof_id{
-						let proof_id = proof_id.clone();
+					if let Some(proof_request) = proof_id{
+						let proof_request = proof_request.clone();
 						drop(zk_height_proof_id_map);
-						let proof = zk_prover.poll_proof(&proof_id);
+						let proof = zk_prover.poll_proof(&proof_request.proof_id);
 						match proof{
 							Ok(proof) => {
 								if let Some(proof) = proof{
@@ -272,12 +272,15 @@ where
 									exist_at_least_one_proof = true;
 								}
 								else{
-									//todo we need extra log to erorro that it does not exists to long!!!
-									log::error!(target: "hyperspace", "proof not ready Yet. proof is None. proof_id: {:?}, height: {:?}", proof_id, height);
+									log::info!(target: "hyperspace", "proof not ready Yet. proof is None. proof_id: {:?}, height: {:?}", proof_request, height);
+									if proof_request.is_expired(){
+										log::error!(target: "hyperspace", "Proof not ready too long. proof_id: {:?}, height: {:?}, requested proof at : {:?}", proof_request, height, proof_request.request_time);
+									}
+
 								}
 							},
 							Err(e) => {
-								log::error!(target: "hyperspace", "failed to poll proof_id: {:?}, height: {:?}. error: {:?}", proof_id, height, e);
+								log::error!(target: "hyperspace", "failed to poll proof_id: {:?}, height: {:?}. error: {:?}", proof_request, height, e);
 							}
 						}
 					}
@@ -299,7 +302,7 @@ where
 						));
 						match result{
 							Ok(resp) => {
-								let proof_id = resp.proof_id;
+								let proof_id = ZkProofRequest::new(resp.proof_id, 0);
 								zk_height_proof_id_map.insert(height, proof_id);
 							},
 							Err(e) => {

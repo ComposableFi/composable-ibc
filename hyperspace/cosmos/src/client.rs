@@ -178,13 +178,38 @@ pub struct CosmosClient<H> {
 	/// Join handles for spawned tasks
 	pub join_handles: Arc<TokioMutex<Vec<JoinHandle<Result<(), tendermint_rpc::Error>>>>>,
 	// heigth -> proof (HashMap)
-	pub mock_zk_proover: Arc<Mutex<MockZkProover>>,
+	pub mock_zk_prover: Arc<Mutex<MockZkProover>>,
 
-	pub zk_prover: ZKProver,
+	pub zk_prover_api: ZKProver,
 	//hashmap of height -> proof_id
 	//means: did we already request proof for this height
 	//if yes then need to ask about the actual proof
-	pub zk_proofs_id: Arc<Mutex<HashMap<Height, String>>>,
+	pub zk_proof_requests: Arc<Mutex<HashMap<Height, ZkProofRequest>>>,
+}
+
+#[derive(Clone, Debug)]
+pub struct ZkProofRequest{
+	pub proof_id: String,
+	pub request_time: std::time::SystemTime,
+	pub bitmask: u32,
+}
+
+impl ZkProofRequest{
+	pub fn new(proof_id: String, bitmask: u32) -> Self {
+		Self {
+			proof_id,
+			request_time: std::time::SystemTime::now(),
+			bitmask,
+		}
+	}
+	pub fn is_expired(&self) -> bool {
+		let t = std::time::SystemTime::now();
+		let diff = t.duration_since(self.request_time.clone()).unwrap();
+		if diff.as_secs() > 30 {
+			return true;
+		}
+		return false;
+	}
 }
 
 
@@ -359,10 +384,10 @@ where
 				..common_state
 			},
 			join_handles: Arc::new(TokioMutex::new(vec![ws_driver_jh, ws_driver_jh2])),
-			mock_zk_proover: Arc::new(Mutex::new(MockZkProover::new())),
-			zk_proofs_id: Arc::new(Mutex::new(HashMap::new())),
+			mock_zk_prover: Arc::new(Mutex::new(MockZkProover::new())),
+			zk_proof_requests: Arc::new(Mutex::new(HashMap::new())),
 			//todo need to read from config
-			zk_prover: ZKProver::new("http://127.0.0.1:8000".to_string(), Duration::from_secs(60)),
+			zk_prover_api: ZKProver::new("http://127.0.0.1:8000".to_string(), Duration::from_secs(60)),
 		})
 	}
 
