@@ -270,6 +270,7 @@ where
 									is_request_ready = true;
 								}
 								else{
+									//todo we need extra log to erorro that it does not exists to long!!!
 									log::error!(target: "hyperspace", "proof not ready Yet. proof is None. proof_id: {:?}, height: {:?}", proof_id, height);
 								}
 							},
@@ -279,7 +280,8 @@ where
 						}
 					}
 					else{
-						//todo get input. uncomment
+						// //todo get input. uncomment
+						// //todo size should be 32 for prodauction
 						// let zk_input = update_header.get_zk_input(1);
 						// match zk_input {
 						// 	Ok(_) => {
@@ -329,7 +331,7 @@ where
 				let msg = MsgUpdateAnyClientProof::<LocalClientTypes> {
 					client_id: client_id.clone(),
 					client_message: AnyClientMessage::Tendermint(ClientMessage::Header(
-						update_header,
+						update_header, //todo use another tipe that will be able to hold the proof as well
 					)),
 					signer: counterparty.account_id(),
 				};

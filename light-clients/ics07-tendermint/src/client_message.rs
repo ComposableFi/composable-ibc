@@ -278,6 +278,10 @@ impl Header {
 			// return Err(Error::validation("voting power is not > 2/3 + 1".to_string()))
 		}
 
+		//extra return parameter for eth to verify zk proof after we got response from remote prover
+		//bitmask preserving order of validators that is initial order not sorted by voting power
+		//todo create some input for zk prover as bitmask
+
 		Ok(pre_input
 			.into_iter()
 			.take(size)

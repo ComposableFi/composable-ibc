@@ -349,7 +349,10 @@ pub enum AnyClientMessage {
 	#[ibc(proto_url = "BEEFY_CLIENT_MESSAGE_TYPE_URL")]
 	Beefy(ics11_beefy::client_message::ClientMessage),
 	#[ibc(proto_url = "TENDERMINT_CLIENT_MESSAGE_TYPE_URL")]
-	Tendermint(ics07_tendermint::client_message::ClientMessage),
+	Tendermint(ics07_tendermint::client_message::ClientMessage), // or use the new wrapper crate here 
+	//todo probably need to add ethereum client message with zk  ^
+	// #[ibc(proto_url = "TENDERMINT_CLIENT_MESSAGE_TYPE_URL")]
+	// TendermintZk(ics07_new_blabla::client_message::ClientMessageWithZkProof),
 	#[cfg(feature = "ethereum")]
 	#[ibc(proto_url = "ETHEREUM_CLIENT_MESSAGE_TYPE_URL")]
 	Ethereum(icsxx_ethereum::client_message::ClientMessage),
