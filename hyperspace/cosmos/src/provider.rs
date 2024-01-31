@@ -14,7 +14,9 @@ use ibc::{
 	applications::transfer::{Amount, BaseDenom, PrefixedCoin, PrefixedDenom, TracePath}, core::{
 		ics02_client::{
 			client_state::ClientType, events as ClientEvents,
-			msgs::update_client::MsgUpdateAnyClient, trust_threshold::TrustThreshold,
+			msgs::update_client::MsgUpdateAnyClient, 
+			msgs::update_client_zk::MsgUpdateAnyClientProof,
+			trust_threshold::TrustThreshold,
 		},
 		ics04_channel::packet::Sequence,
 		ics23_commitment::{commitment::CommitmentPrefix, specs::ProofSpecs},
@@ -324,7 +326,7 @@ where
 			*/
 
 			let update_client_header = {
-				let msg = MsgUpdateAnyClient::<LocalClientTypes> {
+				let msg = MsgUpdateAnyClientProof::<LocalClientTypes> {
 					client_id: client_id.clone(),
 					client_message: AnyClientMessage::Tendermint(ClientMessage::Header(
 						update_header,

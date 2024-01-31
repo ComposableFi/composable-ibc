@@ -29,6 +29,7 @@ use crate::core::ics02_client::{
 pub mod create_client;
 pub mod update_client;
 pub mod upgrade_client;
+pub mod update_client_zk;
 
 #[allow(clippy::large_enum_variant)]
 #[derive(Clone, Debug)]
