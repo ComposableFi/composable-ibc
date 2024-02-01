@@ -287,29 +287,29 @@ where
 					else{
 						// //todo get input. uncomment
 						// //todo size should be 32 for prodauction
-						// let zk_input = update_header.get_zk_input(1);
-						// match zk_input {
-						// 	Ok(_) => {
-								
-						// 	},
-						// 	Err(e) => {
-						// 		log::error!(target: "hyperspace", "=========================================================================");
-						// 		log::error!(target: "hyperspace", "failed to get zk input error: {:?}", e);
-						// 	}
-						// }
-						let result = zk_prover.create_proof(CreateProofInput::new(
-							vec![], vec![], vec![]
-						));
-						match result{
-							Ok(resp) => {
-								let proof_id = ZkProofRequest::new(resp.proof_id, 0);
-								zk_height_proof_id_map.insert(height, proof_id);
+						let size = 1;
+						let zk_input = update_header.get_zk_input(size);
+						
+						match zk_input {
+							Ok((_input, bitmask)) => {
+								let result = zk_prover.create_proof(CreateProofInput::new(
+									vec![], vec![], vec![] //pass the input
+								));
+								match result{
+									Ok(resp) => {
+										let proof_id = ZkProofRequest::new(resp.proof_id, bitmask);
+										zk_height_proof_id_map.insert(height, proof_id);
+									},
+									Err(e) => {
+										log::error!(target: "hyperspace", "failed to create_proof. height: {:?}. error: {:?}", height, e);
+									}
+								}
 							},
 							Err(e) => {
-								log::error!(target: "hyperspace", "failed to create_proof. height: {:?}. error: {:?}", height, e);
+								log::error!(target: "hyperspace", "=========================================================================");
+								log::error!(target: "hyperspace", "failed to get zk input for heigth : {:?}, size: {}, error: {:?}", update_header.height(), size, e);
 							}
 						}
-						
 					}
 
 					log::error!(target: "hyperspace", "!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!");

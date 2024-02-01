@@ -181,7 +181,8 @@ impl Header {
 		headers_compatible(&self.signed_header, &other_header.signed_header)
 	}
 
-	pub fn get_zk_input(&self, size: usize) -> Result<Vec<(Vec<u8>, Vec<u8>, Vec<u8>)>, Error> {
+	pub fn get_zk_input(&self, size: usize) -> Result<(Vec<(Vec<u8>, Vec<u8>, Vec<u8>)>, u64), Error> {
+		#[derive(Clone)]
 		struct ZKInput {
 			pub_key: Vec<u8>,
 			signature: Vec<u8>,
@@ -259,6 +260,8 @@ impl Header {
 			))
 		}
 
+		let not_sorted_pre_input = pre_input.clone();
+
 		// sort by voting power increased
 		pre_input.sort_by(
 			|ZKInput { voting_power: voting_power_1, .. },
@@ -278,15 +281,41 @@ impl Header {
 			// return Err(Error::validation("voting power is not > 2/3 + 1".to_string()))
 		}
 
+		
+
+
+		let ret: Vec::<(Vec<u8>, Vec<u8>, Vec<u8>)> = pre_input
+			.into_iter()
+			.take(size)
+			.map(|ZKInput { pub_key, signature, message, .. }| (pub_key, signature, message))
+			.collect();
+
+		let mut validators = vec![0; size];
+
+		let validators: Vec<u64> = not_sorted_pre_input
+			.iter()
+			.map(|element| {
+				if ret.iter().any(|x| x.0 == element.pub_key) {
+					1
+				} else {
+					0
+				}
+			})
+			.collect();
+
+		let mut bitmask: u64 = 0;
+		for (index, &validator) in validators.iter().enumerate() {
+			if validator == 1 {
+				bitmask |= 1 << index;
+			}
+		}
+
+
 		//extra return parameter for eth to verify zk proof after we got response from remote prover
 		//bitmask preserving order of validators that is initial order not sorted by voting power
 		//todo create some input for zk prover as bitmask
 
-		Ok(pre_input
-			.into_iter()
-			.take(size)
-			.map(|ZKInput { pub_key, signature, message, .. }| (pub_key, signature, message))
-			.collect())
+		Ok((ret, bitmask))
 	}
 }
 
