@@ -24,6 +24,13 @@ use ics07_tendermint::{
 	client_state::TENDERMINT_CLIENT_STATE_TYPE_URL,
 	consensus_state::TENDERMINT_CONSENSUS_STATE_TYPE_URL,
 };
+use ics07_tendermint_zk::{
+	client_message::{
+		TENDERMINT_CLIENT_MESSAGE_TYPE_URL as TENDERMINT_CLIENT_MESSAGE_ZK_TYPE_URL,
+		TENDERMINT_HEADER_TYPE_URL as TENDERMINT_HEADER_ZK_TYPE_URL,
+		TENDERMINT_MISBEHAVIOUR_TYPE_URL as TENDERMINT_MISBEHAVIOUR_ZK_TYPE_URL,
+	},
+};
 use ics08_wasm::{
 	client_message::{
 		WASM_CLIENT_MESSAGE_TYPE_URL, WASM_HEADER_TYPE_URL, WASM_MISBEHAVIOUR_TYPE_URL,
@@ -350,6 +357,8 @@ pub enum AnyClientMessage {
 	Beefy(ics11_beefy::client_message::ClientMessage),
 	#[ibc(proto_url = "TENDERMINT_CLIENT_MESSAGE_TYPE_URL")]
 	Tendermint(ics07_tendermint::client_message::ClientMessage), // or use the new wrapper crate here 
+	#[ibc(proto_url = "TENDERMINT_CLIENT_MESSAGE_ZK_TYPE_URL")]
+	TendermintZk(ics07_tendermint_zk::client_message::ZkClientMessage), // or use the new wrapper crate here 
 	//todo probably need to add ethereum client message with zk  ^
 	// #[ibc(proto_url = "TENDERMINT_CLIENT_MESSAGE_TYPE_URL")]
 	// TendermintZk(ics07_new_blabla::client_message::ClientMessageWithZkProof),
@@ -369,6 +378,10 @@ impl AnyClientMessage {
 			Self::Tendermint(inner) => match inner {
 				ics07_tendermint::client_message::ClientMessage::Header(h) => Some(h.height()),
 				ics07_tendermint::client_message::ClientMessage::Misbehaviour(_) => None,
+			},
+			Self::TendermintZk(inner) => match inner {
+				ics07_tendermint_zk::client_message::ZkClientMessage::Header(h) => Some(h.height()),
+				ics07_tendermint_zk::client_message::ZkClientMessage::Misbehaviour(_) => None,
 			},
 			Self::Beefy(inner) => match inner {
 				ics11_beefy::client_message::ClientMessage::Header(_) =>
@@ -478,6 +491,23 @@ impl TryFrom<Any> for AnyClientMessage {
 					ics07_tendermint::client_message::Misbehaviour::decode_vec(&value.value)
 						.map_err(ics02_client::error::Error::decode_raw_header)?,
 				))),
+
+			TENDERMINT_CLIENT_MESSAGE_ZK_TYPE_URL => Ok(Self::TendermintZk(
+				ics07_tendermint_zk::client_message::ZkClientMessage::decode_vec(&value.value)
+					.map_err(ics02_client::error::Error::decode_raw_header)?,
+			)),
+			TENDERMINT_HEADER_ZK_TYPE_URL =>
+				Ok(Self::TendermintZk(ics07_tendermint_zk::client_message::ZkClientMessage::Header(
+					ics07_tendermint_zk::client_message::ZkHeader::decode_vec(&value.value)
+						.map_err(ics02_client::error::Error::decode_raw_header)?,
+				))),
+			TENDERMINT_MISBEHAVIOUR_ZK_TYPE_URL =>
+				Ok(Self::TendermintZk(ics07_tendermint_zk::client_message::ZkClientMessage::Misbehaviour(
+					ics07_tendermint::client_message::Misbehaviour::decode_vec(&value.value)
+						.map_err(ics02_client::error::Error::decode_raw_header)?,
+				))),
+
+
 			#[cfg(feature = "ethereum")]
 			ETHEREUM_CLIENT_MESSAGE_TYPE_URL => Ok(Self::Ethereum(
 				icsxx_ethereum::client_message::ClientMessage::decode_vec(&value.value)
@@ -543,6 +573,10 @@ impl From<AnyClientMessage> for Any {
 			},
 			AnyClientMessage::Tendermint(msg) => Any {
 				type_url: TENDERMINT_CLIENT_MESSAGE_TYPE_URL.to_string(),
+				value: msg.encode_vec().expect("encode_vec failed"),
+			},
+			AnyClientMessage::TendermintZk(msg) => Any {
+				type_url: TENDERMINT_CLIENT_MESSAGE_ZK_TYPE_URL.to_string(),
 				value: msg.encode_vec().expect("encode_vec failed"),
 			},
 			#[cfg(feature = "ethereum")]

@@ -417,7 +417,7 @@ pub(crate) fn consensus_state_from_abi_token(token: Token) -> Result<ConsensusSt
 	})
 }
 
-fn tm_header_abi_token(header: &Header) -> Result<Token, ClientError> {
+fn tm_header_abi_token(header: &ics07_tendermint_zk::client_message::ZkHeader) -> Result<Token, ClientError> {
 	use ethers::abi::{encode as ethers_encode, Token as EthersToken};
 	let block_header = header.signed_header.header.clone();
 	let last_commit = header.signed_header.commit.clone();
@@ -1392,12 +1392,12 @@ impl EthereumClient {
 					|_| ClientError::Other("update_client: failed to decode_vec".into()),
 				)?;
 
-				let AnyClientMessage::Tendermint(client_state) =
+				let AnyClientMessage::TendermintZk(client_state) =
 					msg.client_message.unpack_recursive()
 				else {
 					return Err(ClientError::Other(format!("update_client: unsupported client_state. Should be AnyClientMessage::Tendermint")))
 				};
-				let ClientMessage::Header(header) = client_state else {
+				let ics07_tendermint_zk::client_message::ZkClientMessage::Header(header) = client_state else {
 					return Err(ClientError::Other("update_client: unsupported Client Message. Should be ClientMessage::Header".into()))
 				};
 

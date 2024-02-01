@@ -332,11 +332,20 @@ where
 
 			*/
 
+			let zk_update_header = ics07_tendermint_zk::client_message::ZkHeader{
+				signed_header: update_header.signed_header.clone(),
+				validator_set: update_header.validator_set.clone(),
+				trusted_height: update_header.trusted_height.clone(),
+				trusted_validator_set: update_header.trusted_validator_set.clone(),
+			};
+
 			let update_client_header = {
 				let msg = MsgUpdateAnyClientProof::<LocalClientTypes> {
 					client_id: client_id.clone(),
-					client_message: AnyClientMessage::Tendermint(ClientMessage::Header(
-						update_header, //todo use another tipe that will be able to hold the proof as well
+					// client_message: AnyClientMessage::Tendermint(ClientMessage::Header(
+					client_message: AnyClientMessage::TendermintZk(ics07_tendermint_zk::client_message::ZkClientMessage::Header(
+						// update_header, //todo use another tipe that will be able to hold the proof as well
+						zk_update_header, 
 					)),
 					signer: counterparty.account_id(),
 				};
