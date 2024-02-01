@@ -15,6 +15,7 @@ ibc-primitives = { path = "../../contracts/pallet-ibc/primitives" }
 ibc-proto = { path = "../../ibc/proto" }
 ibc-rpc = { path = "../../contracts/pallet-ibc/rpc" }
 ics07-tendermint = { path = "../../light-clients/ics07-tendermint" }
+ics07-tendermint-zk = { path = "../../light-clients/ics07-tendermint-zk" }
 icsxx-ethereum = { path = "../../light-clients/icsxx-ethereum" }
 pallet-ibc = { path = "../../contracts/pallet-ibc" }
 hyperspace-cosmos = { path = "../cosmos" }
