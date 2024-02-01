@@ -42,6 +42,7 @@ ics08-wasm = { path = "../../light-clients/ics08-wasm", default-features = false
 ics10-grandpa = { path = "../../light-clients/ics10-grandpa", default-features = false }
 ics11-beefy = { path = "../../light-clients/ics11-beefy", default-features = false }
 ics07-tendermint = { path = "../../light-clients/ics07-tendermint", default-features = false }
+ics07-tendermint-zk = { path = "../../light-clients/ics07-tendermint-zk", default-features = false }
 icsxx-ethereum = { path = "../../light-clients/icsxx-ethereum", default-features = false, optional = true }
 hex = { version = "0.4.3", default-features = false }
 # local deps

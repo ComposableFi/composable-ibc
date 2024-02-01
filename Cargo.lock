@@ -6655,6 +6655,20 @@ dependencies = [
 ]
 
 [[package]]
+name = "ics07-tendermint-zk"
+version = "0.1.0"
+dependencies = [
+ "bytes",
+ "ibc",
+ "ibc-proto",
+ "ics07-tendermint",
+ "prost 0.11.6",
+ "serde",
+ "tendermint",
+ "tendermint-proto",
+]
+
+[[package]]
 name = "ics08-wasm"
 version = "0.1.0"
 dependencies = [
@@ -9682,6 +9696,7 @@ dependencies = [
  "ibc-primitives",
  "ibc-proto",
  "ics07-tendermint",
+ "ics07-tendermint-zk",
  "ics08-wasm",
  "ics10-grandpa",
  "ics11-beefy",
