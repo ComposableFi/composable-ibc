@@ -462,6 +462,41 @@ async fn setup_clients() -> (AnyChain, AnyChain, JoinHandle<()>) {
 
 #[tokio::test(flavor = "multi_thread", worker_threads = 10)]
 #[ignore]
+async fn zk_prover_bitmask() {
+	//bitmask indicates which validators were included into voting power calculation
+
+	//0 was not included into voting power calculation
+	//1 was included into voting power calculation
+	let expected_validators = vec![0, 1, 1, 0, 1, 1, 0]; //all validators
+	let size = expected_validators.len();
+    let mut bitmask: u64 = 0;
+
+    for (index, &validator) in expected_validators.iter().enumerate() {
+        if validator == 1 {
+            bitmask |= 1 << index;
+        }
+    }
+
+    println!("Bitmask: {}", bitmask);
+    println!("Bitmask: {:064b}", bitmask);
+	//bitmask will be sent to eth side together with zk proof
+
+
+	// let bitmask: u64 = 0b00000000000001100110; 
+    let mut actual_validators = vec![0; size]; // Assuming 7-bit bitmask
+    
+    for i in 0..size {
+        if (bitmask >> i) & 1 == 1 {
+            actual_validators[i] = 1;
+        }
+    }
+
+    println!("Validators: {:?}", actual_validators);
+	assert_eq!(actual_validators, expected_validators);
+}
+
+#[tokio::test(flavor = "multi_thread", worker_threads = 10)]
+#[ignore]
 async fn zk_prover_integration_test() {
 	//branch rustninja/compatibility
 	let zk_prover = ZKProver::new("http://127.0.0.1:8000".to_string(), Duration::from_secs(60));
