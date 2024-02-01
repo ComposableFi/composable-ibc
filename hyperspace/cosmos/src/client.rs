@@ -191,11 +191,11 @@ pub struct CosmosClient<H> {
 pub struct ZkProofRequest{
 	pub proof_id: String,
 	pub request_time: std::time::SystemTime,
-	pub bitmask: u32,
+	pub bitmask: u64,
 }
 
 impl ZkProofRequest{
-	pub fn new(proof_id: String, bitmask: u32) -> Self {
+	pub fn new(proof_id: String, bitmask: u64) -> Self {
 		Self {
 			proof_id,
 			request_time: std::time::SystemTime::now(),
