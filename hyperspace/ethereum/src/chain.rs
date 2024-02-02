@@ -1439,6 +1439,10 @@ impl EthereumClient {
 					EthersToken::Bytes(tm_header_bytes),
 					// previous client state
 					latest_client_state, // EthersToken::Bytes(latest_client_state),
+					//zk proof
+					EthersToken::Bytes(header.zk_proof.clone()),
+					//zk bitmask
+					EthersToken::Uint(header.zk_bitmask.into()),
 				]);
 
 				calls.push(self.yui.update_client_calldata(token).await);
