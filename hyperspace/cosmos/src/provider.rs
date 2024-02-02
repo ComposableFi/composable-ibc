@@ -229,6 +229,8 @@ where
 			let height = update_header.height();
 
 			let mut is_request_ready = false;
+			let mut zk_proof = Vec::new();
+			let mut zk_bitmask = 0;
 
 			if update_type == UpdateType::Mandatory || height == max_event_height {
 				//h1, h2, h3, h4, h5, h6, h7, h8, h9, h10
@@ -267,7 +269,8 @@ where
 							Ok(proof) => {
 								if let Some(proof) = proof{
 									//todo put the proof into the protobuf object to be catched by eth side
-									let proof = proof;
+									zk_proof = proof;
+									zk_bitmask = proof_request.bitmask;
 									is_request_ready = true;
 									exist_at_least_one_proof = true;
 								}
@@ -337,6 +340,8 @@ where
 				validator_set: update_header.validator_set.clone(),
 				trusted_height: update_header.trusted_height.clone(),
 				trusted_validator_set: update_header.trusted_validator_set.clone(),
+				zk_proof: zk_proof, //todo put the proof here
+				zk_bitmask: zk_bitmask, //todo put the bitmask here
 			};
 
 			let update_client_header = {
