@@ -50,6 +50,8 @@ pub struct ZkHeader {
 	                                  * or equal to Header */
 	// TODO(thane): Rename this to trusted_next_validator_set?
 	pub trusted_validator_set: ValidatorSet, // the last trusted validator set at trusted height
+    pub zk_proof: Vec<u8>, 
+    pub zk_bitmask: u64,
 }
 
 impl ZkHeader {
@@ -92,6 +94,8 @@ impl TryFrom<RawZkHeader> for ZkHeader {
 				.ok_or_else(Error::missing_trusted_validator_set)?
 				.try_into()
 				.map_err(Error::invalid_raw_header)?,
+            zk_proof: raw.zk_proof.iter().map(|x| x.clone()).collect(),
+            zk_bitmask: raw.zk_bitmask,
 		};
 
 		Ok(header)
@@ -109,6 +113,8 @@ impl From<ZkHeader> for RawZkHeader {
 			validator_set: Some(value.validator_set.into()),
 			trusted_height: Some(value.trusted_height.into()),
 			trusted_validators: Some(value.trusted_validator_set.into()),
+            zk_proof: value.zk_proof.into(),
+            zk_bitmask: value.zk_bitmask,
 		}
 	}
 }

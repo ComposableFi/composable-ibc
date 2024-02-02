@@ -1421,6 +1421,9 @@ impl EthereumClient {
 					cs.latest_height.revision_height = header.signed_header.header.height.value();
 				}
 
+				assert!(header.zk_proof.len() > 0, "zk_proof is missing");
+				assert!(header.zk_bitmask > 0, "zk_proof is missing");
+
 				//get abi token to update client
 				let tm_header_abi_token = tm_header_abi_token(header)?;
 				let tm_header_bytes = ethers_encode(&[tm_header_abi_token]);

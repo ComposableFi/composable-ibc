@@ -132,6 +132,10 @@ pub struct ZkHeader {
     pub trusted_validators: ::core::option::Option<
         ::tendermint_proto::types::ValidatorSet,
     >,
+    #[prost(bytes = "vec", tag = "5")]
+    pub zk_proof: ::prost::alloc::vec::Vec<u8>,
+    #[prost(uint64, tag = "6")]
+    pub zk_bitmask: u64,
 }
 
 /// Fraction defines the protobuf message type for tmmath.Fraction that only
