@@ -474,17 +474,17 @@ async fn ethereum_to_cosmos_ibc_messaging_full_integration_test() {
 	let (mut chain_a, mut chain_b, _indexer_handle) = setup_clients().await;
 	sleep(Duration::from_secs(12)).await;
 	if !USE_GETH {
-		let a = chain_a.clone();
-		let _h = tokio::spawn(async move {
-			let AnyChain::Ethereum(eth) = &a else { unreachable!() };
-
-			let mut p = Provider::connect(eth.config.ws_rpc_url.to_string()).await.unwrap();
-			loop {
-				tokio::time::sleep(Duration::from_secs(5)).await;
-				let res = p.request::<_, BlockNumber>("evm_mine", ()).await;
-				info!(target: "hyperspace", "Mined: {res:?}");
-			}
-		});
+		// let a = chain_a.clone();
+		// let _h = tokio::spawn(async move {
+		// 	let AnyChain::Ethereum(eth) = &a else { unreachable!() };
+		//
+		// 	let mut p = Provider::connect(eth.config.ws_rpc_url.to_string()).await.unwrap();
+		// 	loop {
+		// 		tokio::time::sleep(Duration::from_secs(5)).await;
+		// 		let res = p.request::<_, BlockNumber>("evm_mine", ()).await;
+		// 		info!(target: "hyperspace", "Mined: {res:?}");
+		// 	}
+		// });
 	}
 
 	let AnyChain::Ethereum(eth) = &chain_a else { unreachable!() };
@@ -593,6 +593,16 @@ async fn ethereum_to_cosmos_ibc_messaging_full_integration_test() {
 	)
 	.await;
 
+	ibc_messaging_with_connection_delay(
+		&mut chain_a,
+		&mut chain_b,
+		asset_id_b_on_a.clone(),
+		asset_id_b.clone(),
+		channel_a,
+		channel_b,
+	)
+	.await;
+
 	// timeouts + connection delay
 	ibc_messaging_packet_height_timeout_with_connection_delay(
 		&mut chain_b,
@@ -617,6 +627,33 @@ async fn ethereum_to_cosmos_ibc_messaging_full_integration_test() {
 		&mut chain_a,
 		&mut chain_b,
 		asset_id_b_on_a.clone(),
+		channel_a,
+		channel_b,
+	)
+	.await;
+
+	ibc_messaging_packet_height_timeout_with_connection_delay(
+		&mut chain_a,
+		&mut chain_b,
+		asset_id_a.clone(),
+		channel_a,
+		channel_b,
+	)
+	.await;
+
+	ibc_messaging_packet_timestamp_timeout_with_connection_delay(
+		&mut chain_b,
+		&mut chain_a,
+		asset_id_b.clone(),
+		channel_b,
+		channel_a,
+	)
+	.await;
+
+	ibc_messaging_packet_timestamp_timeout_with_connection_delay_native(
+		&mut chain_a,
+		&mut chain_b,
+		asset_id_native_a.clone(),
 		channel_a,
 		channel_b,
 	)

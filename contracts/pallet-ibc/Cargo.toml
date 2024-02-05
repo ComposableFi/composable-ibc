@@ -83,7 +83,7 @@ rev = "e81f7bf23d63ffbcd242381d1ce5e35da3515ff1"
 default-features = false
 
 [dev-dependencies]
-chrono = "0.4.19"
+chrono = "0.4.33"
 hex = "0.4.3"
 hex-literal = { version = "0.3.4" }
 orml-tokens = { git = "https://github.com/open-web3-stack/open-runtime-module-library", branch = "polkadot-v0.9.39" }

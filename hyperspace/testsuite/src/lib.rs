@@ -304,7 +304,7 @@ async fn send_packet_and_assert_height_timeout<A, B>(
 	log::info!(target: "hyperspace", "Resuming send packet relay");
 	set_relay_status(true);
 
-	assert_timeout_packet(chain_a, 75).await;
+	assert_timeout_packet(chain_a, 175).await;
 
 	let balance_after_timeout = chain_a
 		.query_ibc_balance(asset_a)

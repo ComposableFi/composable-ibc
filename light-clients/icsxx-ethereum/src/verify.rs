@@ -7,7 +7,6 @@ use crate::{
 };
 use alloc::{borrow::Cow, boxed::Box, format, vec::Vec};
 use alloy_sol_types::SolValue;
-use core::ops::Add;
 use ethabi::{Address, ParamType, Token};
 use ibc::core::{
 	ics23_commitment::commitment::{CommitmentPrefix, CommitmentProofBytes, CommitmentRoot},
@@ -17,24 +16,9 @@ use ibc::core::{
 	},
 };
 use ibc_proto::google::protobuf::Any;
-use primitive_types::{H256, U256};
+use primitive_types::H256;
 use prost::Message;
 use tendermint_proto::Protobuf;
-
-const IBC_CORE_STORAGE_PREFIX: &[u8] = b".core";
-const IBC_COMMITMENT_STORAGE_INDEX: u32 = 0;
-
-pub(crate) fn commitment_storage_raw_key(key: &str, prefix: &[u8]) -> H256 {
-	let slot_index =
-		U256::from_big_endian(&keccak256([prefix, IBC_CORE_STORAGE_PREFIX].concat())[..]);
-	let key = keccak256(key.as_bytes());
-	let encoded = ethabi::encode(&[
-		Token::FixedBytes(key.to_vec()),
-		Token::Uint(slot_index.add(IBC_COMMITMENT_STORAGE_INDEX)),
-	]);
-	let index = keccak256(&encoded).to_vec();
-	H256::from_slice(&index)
-}
 
 #[derive(PartialEq, Eq, Debug, Clone, Copy)]
 #[must_use]
@@ -70,6 +54,7 @@ pub fn verify_ibc_proof<P>(
 where
 	P: Into<Path>,
 {
+	use crate::utils;
 	use VerifyError::*;
 
 	let mut tokens = ethabi::decode(
@@ -136,7 +121,7 @@ where
 	}
 	let string = path.to_string();
 
-	let storage_key = commitment_storage_raw_key(string.as_str(), prefix.as_bytes());
+	let storage_key = utils::commitment_storage_raw_key(string.as_str(), prefix.as_bytes());
 
 	let stream = rlp::Rlp::new(&account_proof.last().unwrap());
 	let storage_root: Vec<u8> = stream.val_at(1).unwrap();

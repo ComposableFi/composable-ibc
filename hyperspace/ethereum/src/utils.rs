@@ -10,9 +10,10 @@ use crate::{
 		TENDERMINTCLIENTABI_ABI,
 	},
 };
-use cast::revm::primitives::hex_literal::hex;
 use ethers::{
-	abi::{AbiError, Address, Detokenize, EventExt, Function, Token, Tokenizable, Tokenize},
+	abi::{
+		AbiEncode, AbiError, Address, Detokenize, EventExt, Function, Token, Tokenizable, Tokenize,
+	},
 	contract::{ContractFactory, ContractInstance, FunctionCall},
 	core::types::Bytes,
 	middleware::SignerMiddleware,
@@ -26,18 +27,19 @@ use ethers::{
 use ethers_solc::{
 	artifacts::{
 		output_selection::OutputSelection, Libraries, Optimizer, OptimizerDetails, Settings,
-		StorageLayout,
 	},
-	report::{BasicStdoutReporter, Report},
 	Artifact, ArtifactOutput, ConfigurableContractArtifact, EvmVersion, Project,
 	ProjectCompileOutput, ProjectPathsConfig, SolcConfig,
 };
+use hex_literal::hex;
 use ibc::core::{
 	ics02_client::client_state::ClientType,
 	ics04_channel::packet::Packet,
 	ics23_commitment::{commitment::CommitmentProofBytes, merkle::MerkleProof},
 };
-use ics23::commitment_proof::Proof;
+use ics23::{
+	commitment_proof::Proof, CommitmentProof, ExistenceProof, InnerOp, LeafOp, NonExistenceProof,
+};
 use icsxx_ethereum::utils::keccak256;
 use log::info;
 use pallet_ibc::light_clients::HostFunctionsManager;
@@ -45,7 +47,6 @@ use std::{
 	borrow::Borrow,
 	collections::{HashMap, HashSet},
 	iter::once,
-	ops::Mul,
 	path::{Path, PathBuf},
 	str::FromStr,
 	sync::{Arc, Mutex},
@@ -1056,7 +1057,6 @@ pub async fn cut_diamond<M: Middleware>(
 	let mut deployed_facets = vec![];
 	for facet_name in facet_names {
 		let facet_name_str = facet_name.to_string();
-
 		let facet = deploy_contract(&facet_name_str, &[project_output], (), client.clone()).await;
 		let facet_address = facet.address();
 		println!("Deployed {facet_name} on {facet_address:?}");
@@ -1083,7 +1083,11 @@ pub async fn cut_diamond<M: Middleware>(
 		let f = yui
 			.method_diamond::<_, ()>(
 				"diamondCut",
-				(cuts.clone(), Address::zero(), Token::Bytes(vec![].into())),
+				Token::Tuple(vec![
+					cuts.clone(),
+					Token::Address(Address::zero()),
+					Token::Bytes(vec![].into()),
+				]),
 				diamond,
 			)
 			.unwrap();
@@ -1116,7 +1120,16 @@ where
 	let mut sigs = HashMap::<[u8; 4], (ContractName, String)>::new();
 	let mut facet_cuts = vec![];
 	let mut deployed_facets = vec![];
-	for facet_name in facet_names {
+	let mut code = format!(
+		r#"
+		address addr;
+        bytes4[] memory selectors;
+        IDiamondCut.FacetCut[] memory diamondCut = new IDiamondCut.FacetCut[]({});
+		DiamondInit init = new DiamondInit();
+	"#,
+		facet_names.len()
+	);
+	for (i, facet_name) in facet_names.into_iter().enumerate() {
 		let facet_name_str = facet_name.to_string();
 
 		let facet = if let Some(facet) =
@@ -1132,10 +1145,35 @@ where
 			)
 			.await
 		};
+
 		let facet_address = facet.address();
 		println!("Deployed {facet_name} on {facet_address:?}");
 		let selectors = get_selectors(&facet);
 		deployed_facets.push(NamedContract::new(facet, facet_name));
+
+		code += &format!(
+			r#"
+			addr = address(new {facet_name}());
+			bytes4[{}] memory selectors{facet_name}Fixed = [
+				{}
+			];
+			selectors = new bytes4[](selectors{facet_name}Fixed.length);
+			for (uint i = 0; i < selectors{facet_name}Fixed.length; i++) {{
+				selectors[i] = selectors{facet_name}Fixed[i];
+			}}
+			diamondCut[{i}] = IDiamond.FacetCut({{
+				facetAddress: address(addr),
+				action: IDiamond.FacetCutAction.Add,
+				functionSelectors: selectors
+			}});
+		"#,
+			selectors.len(),
+			selectors
+				.iter()
+				.map(|(_, selector)| format!("bytes4(hex\"{}\")", hex::encode(selector)))
+				.collect::<Vec<_>>()
+				.join(",\n"),
+		);
 
 		for (name, selector) in &selectors {
 			if sigs.contains_key(selector) {
@@ -1152,6 +1190,8 @@ where
 		facet_cuts.push(facet_cut);
 	}
 	let init_calldata = diamond_init.method::<_, ()>("init", ()).unwrap().calldata().unwrap();
+
+	debug!(target: "hyperspace-sol-codegen", "{code}");
 
 	let diamond = deploy_contract(
 		"Diamond",
@@ -1488,10 +1528,13 @@ fn test_block_header_rlp_encoding() {
 		))),
 		nonce: Some(H64(hex!("6af23caae95692ef"))),
 		base_fee_per_gas: None,
+		blob_gas_used: None,
+		excess_blob_gas: None,
 		withdrawals_root: None,
 		withdrawals: None,
 		size: None,
 		other: Default::default(),
+		parent_beacon_block_root: None,
 	};
 	let header: Header = block.clone().into();
 	let rlp_encoded_header = rlp::encode(&header).to_vec();
@@ -1549,12 +1592,111 @@ pub fn clear_proof_value(
 					if i == 0 {
 						p.value.clear();
 					},
+				Proof::Nonexist(_) => (),
 				p => return Err(ClientError::Other(format!("unexpected proof type: {:?}", p))),
 			}
 		}
 	}
 	let new_raw_proof = RawMerkleProof::from(merkle_proof.clone());
 	Ok(CommitmentProofBytes::try_from(new_raw_proof).unwrap())
+}
+
+pub fn redecode_proof(
+	commitment_proof: &CommitmentProofBytes,
+) -> Result<CommitmentProofBytes, ClientError> {
+	use ibc_proto::ibc::core::commitment::v1::MerkleProof as RawMerkleProof;
+
+	let proof = commitment_proof.as_bytes();
+	let merkle_proof: MerkleProof<HostFunctionsManager> =
+		RawMerkleProof::try_from(CommitmentProofBytes::try_from(proof.to_vec()).unwrap())
+			.unwrap()
+			.into();
+	let result = [
+		hex!("0000000000000000000000000000000000000000000000000000000000000020").to_vec(), // indicates an offset to the start of the data part
+		MerkleProofData::from(merkle_proof).encode(),
+	]
+	.concat();
+	Ok(CommitmentProofBytes::try_from(result).unwrap())
+}
+
+use crate::ibc_provider::{
+	CommitmentProofData, ExistenceProofData, InnerOpData, LeafOpData, MerkleProofData,
+	NonExistenceProofData,
+};
+
+impl<H> From<MerkleProof<H>> for MerkleProofData {
+	fn from(value: MerkleProof<H>) -> Self {
+		MerkleProofData { proofs: value.proofs.into_iter().map(|x| x.into()).collect() }
+	}
+}
+
+impl From<CommitmentProof> for CommitmentProofData {
+	fn from(value: CommitmentProof) -> Self {
+		let value = value.proof.expect("proof not found");
+		match value {
+			Proof::Exist(p) => CommitmentProofData {
+				exist: p.into(),
+				nonexist: Default::default(),
+				batch: Default::default(),
+				compressed: Default::default(),
+			},
+			Proof::Nonexist(p) => CommitmentProofData {
+				exist: Default::default(),
+				nonexist: p.into(),
+				batch: Default::default(),
+				compressed: Default::default(),
+			},
+			Proof::Batch(_) => {
+				unimplemented!("batch proof is not supported")
+			},
+			Proof::Compressed(_) => {
+				unimplemented!("compressed proof is not supported")
+			},
+		}
+	}
+}
+
+impl From<ExistenceProof> for ExistenceProofData {
+	fn from(value: ExistenceProof) -> Self {
+		ExistenceProofData {
+			key: value.key.into(),
+			value: value.value.into(),
+			leaf: value.leaf.map(|x| x.into()).unwrap_or_default(),
+			path: value.path.into_iter().map(|x| x.into()).collect(),
+		}
+	}
+}
+
+impl From<NonExistenceProof> for NonExistenceProofData {
+	fn from(value: NonExistenceProof) -> Self {
+		NonExistenceProofData {
+			key: value.key.into(),
+			left: value.left.map(Into::into).unwrap_or_default(),
+			right: value.right.map(Into::into).unwrap_or_default(),
+		}
+	}
+}
+
+impl From<LeafOp> for LeafOpData {
+	fn from(value: LeafOp) -> Self {
+		LeafOpData {
+			hash: value.hash as _,
+			prehash_key: value.prehash_key as _,
+			prehash_value: value.prehash_value as _,
+			length: value.length as _,
+			prefix: value.prefix.into(),
+		}
+	}
+}
+
+impl From<InnerOp> for InnerOpData {
+	fn from(value: InnerOp) -> Self {
+		InnerOpData {
+			hash: value.hash as _,
+			prefix: value.prefix.into(),
+			suffix: value.suffix.into(),
+		}
+	}
 }
 
 pub async fn send_retrying<B, M, D>(

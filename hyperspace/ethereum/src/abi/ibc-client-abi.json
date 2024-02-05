@@ -1,251 +1,251 @@
 [
   {
+    "type": "constructor",
     "inputs": [],
-    "stateMutability": "nonpayable",
-    "type": "constructor"
+    "stateMutability": "nonpayable"
   },
   {
-    "inputs": [
-      {
-        "internalType": "address",
-        "name": "_user",
-        "type": "address"
-      },
-      {
-        "internalType": "address",
-        "name": "_contractOwner",
-        "type": "address"
-      }
-    ],
-    "name": "NotContractOwner",
-    "type": "error"
-  },
-  {
-    "anonymous": false,
-    "inputs": [
-      {
-        "indexed": false,
-        "internalType": "string",
-        "name": "clientId",
-        "type": "string"
-      },
-      {
-        "indexed": true,
-        "internalType": "string",
-        "name": "clientIdIndexed",
-        "type": "string"
-      },
-      {
-        "indexed": false,
-        "internalType": "string",
-        "name": "clientType",
-        "type": "string"
-      }
-    ],
-    "name": "CreateClient",
-    "type": "event"
-  },
-  {
-    "anonymous": false,
-    "inputs": [
-      {
-        "indexed": false,
-        "internalType": "string",
-        "name": "clientId",
-        "type": "string"
-      },
-      {
-        "components": [
-          {
-            "internalType": "uint64",
-            "name": "revision_number",
-            "type": "uint64"
-          },
-          {
-            "internalType": "uint64",
-            "name": "revision_height",
-            "type": "uint64"
-          }
-        ],
-        "indexed": false,
-        "internalType": "struct HeightData",
-        "name": "client_height",
-        "type": "tuple"
-      }
-    ],
-    "name": "CreateClientHeight",
-    "type": "event"
-  },
-  {
-    "anonymous": false,
-    "inputs": [
-      {
-        "indexed": false,
-        "internalType": "string",
-        "name": "",
-        "type": "string"
-      }
-    ],
-    "name": "GeneratedClientIdentifier",
-    "type": "event"
-  },
-  {
-    "anonymous": false,
-    "inputs": [
-      {
-        "indexed": false,
-        "internalType": "string",
-        "name": "clientType",
-        "type": "string"
-      },
-      {
-        "indexed": false,
-        "internalType": "address",
-        "name": "client",
-        "type": "address"
-      }
-    ],
-    "name": "RegisterClient",
-    "type": "event"
-  },
-  {
-    "anonymous": false,
-    "inputs": [
-      {
-        "indexed": false,
-        "internalType": "string",
-        "name": "clientId",
-        "type": "string"
-      },
-      {
-        "indexed": true,
-        "internalType": "string",
-        "name": "clientIdIndexed",
-        "type": "string"
-      },
-      {
-        "indexed": false,
-        "internalType": "bytes32",
-        "name": "header",
-        "type": "bytes32"
-      }
-    ],
-    "name": "UpdateClient",
-    "type": "event"
-  },
-  {
-    "anonymous": false,
-    "inputs": [
-      {
-        "indexed": false,
-        "internalType": "string",
-        "name": "clientId",
-        "type": "string"
-      },
-      {
-        "components": [
-          {
-            "internalType": "uint64",
-            "name": "revision_number",
-            "type": "uint64"
-          },
-          {
-            "internalType": "uint64",
-            "name": "revision_height",
-            "type": "uint64"
-          }
-        ],
-        "indexed": false,
-        "internalType": "struct HeightData",
-        "name": "client_height",
-        "type": "tuple"
-      }
-    ],
-    "name": "UpdateClientHeight",
-    "type": "event"
-  },
-  {
-    "inputs": [
-      {
-        "components": [
-          {
-            "internalType": "string",
-            "name": "clientType",
-            "type": "string"
-          },
-          {
-            "internalType": "bytes",
-            "name": "clientStateBytes",
-            "type": "bytes"
-          },
-          {
-            "internalType": "bytes",
-            "name": "consensusStateBytes",
-            "type": "bytes"
-          }
-        ],
-        "internalType": "struct IBCMsgsMsgCreateClient",
-        "name": "msg_",
-        "type": "tuple"
-      }
-    ],
+    "type": "function",
     "name": "createClient",
+    "inputs": [
+      {
+        "name": "msg_",
+        "type": "tuple",
+        "internalType": "struct IBCMsgsMsgCreateClient",
+        "components": [
+          {
+            "name": "clientType",
+            "type": "string",
+            "internalType": "string"
+          },
+          {
+            "name": "clientStateBytes",
+            "type": "bytes",
+            "internalType": "bytes"
+          },
+          {
+            "name": "consensusStateBytes",
+            "type": "bytes",
+            "internalType": "bytes"
+          }
+        ]
+      }
+    ],
     "outputs": [
       {
-        "internalType": "string",
         "name": "clientId",
-        "type": "string"
+        "type": "string",
+        "internalType": "string"
       }
     ],
-    "stateMutability": "nonpayable",
-    "type": "function"
+    "stateMutability": "nonpayable"
   },
   {
+    "type": "function",
+    "name": "registerClient",
     "inputs": [
       {
-        "internalType": "string",
         "name": "clientType",
-        "type": "string"
+        "type": "string",
+        "internalType": "string"
       },
       {
-        "internalType": "contract ILightClient",
         "name": "client",
-        "type": "address"
+        "type": "address",
+        "internalType": "contract ILightClient"
       }
     ],
-    "name": "registerClient",
     "outputs": [],
-    "stateMutability": "nonpayable",
-    "type": "function"
+    "stateMutability": "nonpayable"
   },
   {
+    "type": "function",
+    "name": "updateClient",
     "inputs": [
       {
+        "name": "msg_",
+        "type": "tuple",
+        "internalType": "struct IBCMsgsMsgUpdateClient",
         "components": [
           {
-            "internalType": "string",
             "name": "clientId",
-            "type": "string"
+            "type": "string",
+            "internalType": "string"
           },
           {
-            "internalType": "bytes",
             "name": "clientMessage",
-            "type": "bytes"
+            "type": "bytes",
+            "internalType": "bytes"
           },
           {
-            "internalType": "bytes",
             "name": "prevClientState",
-            "type": "bytes"
+            "type": "bytes",
+            "internalType": "bytes"
           }
-        ],
-        "internalType": "struct IBCMsgsMsgUpdateClient",
-        "name": "msg_",
-        "type": "tuple"
+        ]
       }
     ],
-    "name": "updateClient",
     "outputs": [],
-    "stateMutability": "nonpayable",
-    "type": "function"
+    "stateMutability": "nonpayable"
+  },
+  {
+    "type": "event",
+    "name": "CreateClient",
+    "inputs": [
+      {
+        "name": "clientId",
+        "type": "string",
+        "indexed": false,
+        "internalType": "string"
+      },
+      {
+        "name": "clientIdIndexed",
+        "type": "string",
+        "indexed": true,
+        "internalType": "string"
+      },
+      {
+        "name": "clientType",
+        "type": "string",
+        "indexed": false,
+        "internalType": "string"
+      }
+    ],
+    "anonymous": false
+  },
+  {
+    "type": "event",
+    "name": "CreateClientHeight",
+    "inputs": [
+      {
+        "name": "clientId",
+        "type": "string",
+        "indexed": false,
+        "internalType": "string"
+      },
+      {
+        "name": "client_height",
+        "type": "tuple",
+        "indexed": false,
+        "internalType": "struct HeightData",
+        "components": [
+          {
+            "name": "revision_number",
+            "type": "uint64",
+            "internalType": "uint64"
+          },
+          {
+            "name": "revision_height",
+            "type": "uint64",
+            "internalType": "uint64"
+          }
+        ]
+      }
+    ],
+    "anonymous": false
+  },
+  {
+    "type": "event",
+    "name": "GeneratedClientIdentifier",
+    "inputs": [
+      {
+        "name": "",
+        "type": "string",
+        "indexed": false,
+        "internalType": "string"
+      }
+    ],
+    "anonymous": false
+  },
+  {
+    "type": "event",
+    "name": "RegisterClient",
+    "inputs": [
+      {
+        "name": "clientType",
+        "type": "string",
+        "indexed": false,
+        "internalType": "string"
+      },
+      {
+        "name": "client",
+        "type": "address",
+        "indexed": false,
+        "internalType": "address"
+      }
+    ],
+    "anonymous": false
+  },
+  {
+    "type": "event",
+    "name": "UpdateClient",
+    "inputs": [
+      {
+        "name": "clientId",
+        "type": "string",
+        "indexed": false,
+        "internalType": "string"
+      },
+      {
+        "name": "clientIdIndexed",
+        "type": "string",
+        "indexed": true,
+        "internalType": "string"
+      },
+      {
+        "name": "header",
+        "type": "bytes32",
+        "indexed": false,
+        "internalType": "bytes32"
+      }
+    ],
+    "anonymous": false
+  },
+  {
+    "type": "event",
+    "name": "UpdateClientHeight",
+    "inputs": [
+      {
+        "name": "clientId",
+        "type": "string",
+        "indexed": false,
+        "internalType": "string"
+      },
+      {
+        "name": "client_height",
+        "type": "tuple",
+        "indexed": false,
+        "internalType": "struct HeightData",
+        "components": [
+          {
+            "name": "revision_number",
+            "type": "uint64",
+            "internalType": "uint64"
+          },
+          {
+            "name": "revision_height",
+            "type": "uint64",
+            "internalType": "uint64"
+          }
+        ]
+      }
+    ],
+    "anonymous": false
+  },
+  {
+    "type": "error",
+    "name": "NotContractOwner",
+    "inputs": [
+      {
+        "name": "_user",
+        "type": "address",
+        "internalType": "address"
+      },
+      {
+        "name": "_contractOwner",
+        "type": "address",
+        "internalType": "address"
+      }
+    ]
   }
 ]

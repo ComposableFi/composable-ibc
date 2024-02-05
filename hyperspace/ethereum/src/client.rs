@@ -15,7 +15,7 @@ use ethers::{
 	core::k256,
 	prelude::{
 		signer::SignerMiddlewareError, Authorization, BlockId, BlockNumber, ContractInstance,
-		EIP1186ProofResponse, NameOrAddress, SignerMiddleware, Wallet, H256,
+		EIP1186ProofResponse, NameOrAddress, SignerMiddleware, StorageProof, Wallet, H256,
 	},
 	providers::{Http, Middleware, Provider, ProviderError, ProviderExt, Ws},
 	signers::Signer,
@@ -32,7 +32,9 @@ use ibc::{
 	Height,
 };
 use ibc_primitives::Timeout;
-use icsxx_ethereum::{client_message::Header, client_state::ClientState};
+use icsxx_ethereum::{
+	client_message::Header, client_state::ClientState, utils::commitment_storage_raw_key,
+};
 use log::info;
 use once_cell::sync::Lazy;
 use pallet_ibc::light_clients::{AnyClientState, HostFunctionsManager};
@@ -409,91 +411,21 @@ impl EthereumClient {
 		let key = keccak256(key.as_bytes());
 		let var_name = format!("0x{}", hex::encode(key));
 
-		let index = cast::SimpleCast::index(
-			"bytes32",
-			&var_name,
-			&format!("0x{}", hex::encode(IBC_STORAGE_SLOT.add(U256::from(storage_index)).encode())),
-		)
-		.unwrap();
+		let index = commitment_storage_raw_key(&var_name, &b"ibc"[..]);
 
 		let client = self.client().clone();
 		let address = self.yui.ibc_core_diamond.address().clone();
 
 		async move {
-			Ok(client
+			let response = client
 				.get_proof(
 					NameOrAddress::Address(address),
-					vec![H256::from_str(&index).unwrap()],
+					vec![index],
 					block_height.map(BlockId::from),
 				)
 				.await
-				.unwrap())
-		}
-	}
-
-	pub fn eth_query_proof_tokens(
-		&self,
-		tokens: &[Token],
-		block_height: Option<u64>,
-		storage_index: u32,
-	) -> impl Future<Output = Result<EIP1186ProofResponse, ClientError>> {
-		let vec1 = ethers::abi::encode_packed(tokens).unwrap();
-		let key = ethers::utils::keccak256(&vec1);
-		let key = hex::encode(key);
-
-		let var_name = format!("0x{key}");
-		let storage_index = format!("{storage_index}");
-		let index =
-			cast::SimpleCast::index("bytes32", dbg!(&var_name), dbg!(&storage_index)).unwrap();
-
-		let client = self.client().clone();
-		let address = self.yui.ibc_core_diamond.address().clone();
-
-		async move {
-			Ok(client
-				.get_proof(
-					NameOrAddress::Address(address),
-					vec![H256::from_str(&index).unwrap()],
-					block_height.map(|i| BlockId::from(i)),
-				)
-				.await
-				.unwrap())
-		}
-	}
-
-	pub fn eth_query_proof_2d(
-		&self,
-		key1: &str,
-		key2: &str,
-		block_height: Option<u64>,
-		storage_index: u32,
-	) -> impl Future<Output = Result<EIP1186ProofResponse, ClientError>> {
-		let key1 = ethers::utils::keccak256(key1.as_bytes());
-
-		let combined_key1 = [key1.as_slice(), storage_index.to_be_bytes().as_ref()].concat();
-		let key1_hashed = ethers::utils::keccak256(&combined_key1);
-		let key1_hashed_hex = hex::encode(&key1_hashed);
-
-		let key2 = ethers::utils::keccak256(key2.as_bytes());
-
-		let combined_key2 = [key2.as_slice(), key1_hashed_hex.as_bytes()].concat();
-		let key2_hashed = ethers::utils::keccak256(&combined_key2);
-		let key2_hashed_hex = hex::encode(&key2_hashed);
-
-		let index = cast::SimpleCast::index("bytes32", &key2_hashed_hex, &key2_hashed_hex).unwrap();
-
-		let client = self.client().clone();
-		let address = self.yui.ibc_core_diamond.address().clone();
-
-		async move {
-			client
-				.get_proof(
-					NameOrAddress::Address(address),
-					vec![H256::from_str(&index).unwrap()],
-					block_height.map(|i| BlockId::from(i)),
-				)
-				.map_err(|err| panic!("{err}"))
-				.await
+				.unwrap();
+			Ok(response)
 		}
 	}
 

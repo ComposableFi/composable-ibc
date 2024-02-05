@@ -18,12 +18,7 @@ forge inspect --via-ir ../contracts/core/04-channel/IBCPacket.sol:IBCPacket abi 
 forge inspect --via-ir ../contracts/core/04-channel/IBCChannelHandshake.sol:IBCChannelHandshake abi > ../../src/abi/ibc-channel-abi.json
 forge inspect --via-ir ../contracts/core/25-handler/IBCQuerier.sol:IBCQuerier abi > ../../src/abi/ibc-querier-abi.json
 
-forge inspect --via-ir ../contracts/apps/20-transfer/ICS20TransferBank.sol:ICS20TransferBank abi > ../../src/abi/ics20-transfer-bank-abi.json
-forge inspect --via-ir ../contracts/apps/20-transfer/ICS20Bank.sol:ICS20Bank abi > ../../src/abi/ics20-bank-abi.json
-forge inspect --via-ir ../contracts/clients/TendermintLightClientZK.sol:TendermintLightClientZK abi > ../../src/abi/tendermint-client-abi.json
-
-forge inspect --via-ir ../contracts/clients/ethereum/EthereumLightClient.sol:EthereumLightClient abi > ../../src/abi/ethereum-client-abi.json
-forge inspect --via-ir ../contracts/apps/20-transfer/ERC20Token.sol:ERC20Token abi > ../../src/abi/erc20-abi.json
+forge inspect --via-ir ../contracts/clients/Ics23Contract.sol:Ics23Contract abi > ../../src/abi/ics23-contract-abi.json
 
 # remove all "."s inside the abi files to make them compatible with the derive macro
 sed -i 's/\.//g' ../../src/abi/*.json

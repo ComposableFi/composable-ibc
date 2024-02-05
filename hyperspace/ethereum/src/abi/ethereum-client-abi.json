@@ -1,171 +1,171 @@
 [
   {
-    "inputs": [],
+    "type": "function",
     "name": "__expose_eth_types",
+    "inputs": [],
     "outputs": [
       {
-        "components": [
-          {
-            "components": [
-              {
-                "components": [
-                  {
-                    "internalType": "uint64",
-                    "name": "slot",
-                    "type": "uint64"
-                  },
-                  {
-                    "internalType": "uint64",
-                    "name": "proposerIndex",
-                    "type": "uint64"
-                  },
-                  {
-                    "internalType": "bytes32",
-                    "name": "parentRoot",
-                    "type": "bytes32"
-                  },
-                  {
-                    "internalType": "bytes32",
-                    "name": "stateRoot",
-                    "type": "bytes32"
-                  },
-                  {
-                    "internalType": "bytes32",
-                    "name": "bodyRoot",
-                    "type": "bytes32"
-                  }
-                ],
-                "internalType": "struct EthereumClientPrimitivesBeaconBlockHeader",
-                "name": "finalizedHeader",
-                "type": "tuple"
-              },
-              {
-                "internalType": "uint64",
-                "name": "latestFinalizedEpoch",
-                "type": "uint64"
-              },
-              {
-                "components": [
-                  {
-                    "internalType": "bytes[]",
-                    "name": "publicKeys",
-                    "type": "bytes[]"
-                  },
-                  {
-                    "internalType": "bytes",
-                    "name": "aggregatePublicKey",
-                    "type": "bytes"
-                  }
-                ],
-                "internalType": "struct EthereumClientPrimitivesSyncCommittee",
-                "name": "currentSyncCommittee",
-                "type": "tuple"
-              },
-              {
-                "components": [
-                  {
-                    "internalType": "bytes[]",
-                    "name": "publicKeys",
-                    "type": "bytes[]"
-                  },
-                  {
-                    "internalType": "bytes",
-                    "name": "aggregatePublicKey",
-                    "type": "bytes"
-                  }
-                ],
-                "internalType": "struct EthereumClientPrimitivesSyncCommittee",
-                "name": "nextSyncCommittee",
-                "type": "tuple"
-              },
-              {
-                "internalType": "uint64",
-                "name": "statePeriod",
-                "type": "uint64"
-              }
-            ],
-            "internalType": "struct EthereumClientPrimitivesLightClientState",
-            "name": "inner",
-            "type": "tuple"
-          },
-          {
-            "components": [
-              {
-                "internalType": "uint64",
-                "name": "revision_number",
-                "type": "uint64"
-              },
-              {
-                "internalType": "uint64",
-                "name": "revision_height",
-                "type": "uint64"
-              }
-            ],
-            "internalType": "struct HeightData",
-            "name": "frozenHeight",
-            "type": "tuple"
-          },
-          {
-            "internalType": "uint32",
-            "name": "latestHeight",
-            "type": "uint32"
-          },
-          {
-            "internalType": "address",
-            "name": "ibcCoreContractAddress",
-            "type": "address"
-          },
-          {
-            "internalType": "uint64",
-            "name": "nextUpgradeId",
-            "type": "uint64"
-          }
-        ],
-        "internalType": "struct EthereumClientPrimitivesClientState",
         "name": "_clientState",
-        "type": "tuple"
-      },
-      {
+        "type": "tuple",
+        "internalType": "struct EthereumClientPrimitivesClientState",
         "components": [
           {
-            "internalType": "uint64",
-            "name": "timestamp",
-            "type": "uint64"
+            "name": "inner",
+            "type": "tuple",
+            "internalType": "struct EthereumClientPrimitivesLightClientState",
+            "components": [
+              {
+                "name": "finalizedHeader",
+                "type": "tuple",
+                "internalType": "struct EthereumClientPrimitivesBeaconBlockHeader",
+                "components": [
+                  {
+                    "name": "slot",
+                    "type": "uint64",
+                    "internalType": "uint64"
+                  },
+                  {
+                    "name": "proposerIndex",
+                    "type": "uint64",
+                    "internalType": "uint64"
+                  },
+                  {
+                    "name": "parentRoot",
+                    "type": "bytes32",
+                    "internalType": "bytes32"
+                  },
+                  {
+                    "name": "stateRoot",
+                    "type": "bytes32",
+                    "internalType": "bytes32"
+                  },
+                  {
+                    "name": "bodyRoot",
+                    "type": "bytes32",
+                    "internalType": "bytes32"
+                  }
+                ]
+              },
+              {
+                "name": "latestFinalizedEpoch",
+                "type": "uint64",
+                "internalType": "uint64"
+              },
+              {
+                "name": "currentSyncCommittee",
+                "type": "tuple",
+                "internalType": "struct EthereumClientPrimitivesSyncCommittee",
+                "components": [
+                  {
+                    "name": "publicKeys",
+                    "type": "bytes[]",
+                    "internalType": "bytes[]"
+                  },
+                  {
+                    "name": "aggregatePublicKey",
+                    "type": "bytes",
+                    "internalType": "bytes"
+                  }
+                ]
+              },
+              {
+                "name": "nextSyncCommittee",
+                "type": "tuple",
+                "internalType": "struct EthereumClientPrimitivesSyncCommittee",
+                "components": [
+                  {
+                    "name": "publicKeys",
+                    "type": "bytes[]",
+                    "internalType": "bytes[]"
+                  },
+                  {
+                    "name": "aggregatePublicKey",
+                    "type": "bytes",
+                    "internalType": "bytes"
+                  }
+                ]
+              },
+              {
+                "name": "statePeriod",
+                "type": "uint64",
+                "internalType": "uint64"
+              }
+            ]
           },
           {
-            "internalType": "bytes32",
-            "name": "root",
-            "type": "bytes32"
+            "name": "frozenHeight",
+            "type": "tuple",
+            "internalType": "struct HeightData",
+            "components": [
+              {
+                "name": "revision_number",
+                "type": "uint64",
+                "internalType": "uint64"
+              },
+              {
+                "name": "revision_height",
+                "type": "uint64",
+                "internalType": "uint64"
+              }
+            ]
+          },
+          {
+            "name": "latestHeight",
+            "type": "uint32",
+            "internalType": "uint32"
+          },
+          {
+            "name": "ibcCoreContractAddress",
+            "type": "address",
+            "internalType": "address"
+          },
+          {
+            "name": "nextUpgradeId",
+            "type": "uint64",
+            "internalType": "uint64"
           }
-        ],
-        "internalType": "struct EthereumClientPrimitivesConsensusState",
+        ]
+      },
+      {
         "name": "_consensusState",
-        "type": "tuple"
-      },
-      {
+        "type": "tuple",
+        "internalType": "struct EthereumClientPrimitivesConsensusState",
         "components": [
           {
-            "internalType": "bytes",
-            "name": "merkleProof",
-            "type": "bytes"
+            "name": "timestamp",
+            "type": "uint64",
+            "internalType": "uint64"
           },
           {
-            "internalType": "bytes",
-            "name": "header",
-            "type": "bytes"
-          },
-          {
-            "internalType": "bool",
-            "name": "isWasm",
-            "type": "bool"
+            "name": "root",
+            "type": "bytes32",
+            "internalType": "bytes32"
           }
-        ],
-        "internalType": "struct EthereumClientPrimitivesConsensusStateProof",
+        ]
+      },
+      {
         "name": "_consensusStateProof",
-        "type": "tuple"
+        "type": "tuple",
+        "internalType": "struct EthereumClientPrimitivesConsensusStateProof",
+        "components": [
+          {
+            "name": "merkleProof",
+            "type": "bytes",
+            "internalType": "bytes"
+          },
+          {
+            "name": "header",
+            "type": "bytes",
+            "internalType": "bytes"
+          },
+          {
+            "name": "isWasm",
+            "type": "bool",
+            "internalType": "bool"
+          }
+        ]
       }
     ],
-    "stateMutability": "pure",
-    "type": "function"
+    "stateMutability": "pure"
   }
 ]

@@ -1,17 +1,11 @@
 use super::node_codec::RlpNodeCodec;
 use crate::{
-	proof::ethereum_trie::{verify_proof, EIP1186Layout, KeccakHasher, VerifyError},
-	utils::keccak256,
-	verify::{commitment_storage_raw_key, verify_ibc_proof},
+	proof::ethereum_trie::{verify_proof, EIP1186Layout, KeccakHasher},
+	utils::{commitment_storage_raw_key, keccak256},
 };
-use core::str::FromStr;
 use hex_literal::hex;
-use primitive_types::{H256, U256};
-use std::ops::Add;
-use trie_db::{
-	node::{Node, Value},
-	NodeCodec, TrieLayout,
-};
+use primitive_types::H256;
+use trie_db::{node::Node, NodeCodec};
 
 #[test]
 fn test_account_proof() {
