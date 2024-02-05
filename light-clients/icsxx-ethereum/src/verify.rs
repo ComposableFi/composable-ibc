@@ -98,7 +98,7 @@ where
 					let eth_tendermint_state =
 						TendermintClientAbi::ClientStateData::from(tendermint_state);
 					let encoded = eth_tendermint_state.abi_encode();
-					value = Some(Cow::Owned(encoded.to_vec()));
+					value = Some(Cow::Owned(keccak256(encoded).to_vec()));
 				}
 			},
 			Path::ClientConsensusState(ClientConsensusStatePath { client_id, .. }) => {
@@ -113,7 +113,7 @@ where
 					let eth_tendermint_state =
 						TendermintClientAbi::ConsensusStateData::from(tendermint_state);
 					let encoded = eth_tendermint_state.abi_encode();
-					value = Some(Cow::Owned(encoded.to_vec()));
+					value = Some(Cow::Owned(keccak256(encoded).to_vec()));
 				}
 			},
 			_ => {},

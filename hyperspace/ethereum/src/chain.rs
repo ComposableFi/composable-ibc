@@ -1640,7 +1640,7 @@ impl EthereumClient {
 				// 	.get_latest_consensus_state_encoded_abi_token(client_id.clone(), latest_height)
 				// 	.await?;
 
-				calls.push(self.yui.send_and_get_tuple_calldata(token, "acknowledgePacket").await;);
+				calls.push(self.yui.send_and_get_tuple_calldata(token, "acknowledgePacket").await);
 			} else if msg.type_url == channel_msgs::recv_packet::TYPE_URL {
 				let mut msg = MsgRecvPacket::decode_vec(&msg.value).map_err(|e| {
 					ClientError::Other(format!("recv_packet: failed to decode_vec : {:?}", e))
@@ -1659,7 +1659,7 @@ impl EthereumClient {
 				// 	.get_latest_consensus_state_encoded_abi_token(client_id.clone(), latest_height)
 				// 	.await?;
 
-				calls.push( self.yui.send_and_get_tuple_calldata(token, "recvPacket").await;);
+				calls.push(self.yui.send_and_get_tuple_calldata(token, "recvPacket").await);
 			} else {
 				return Err(ClientError::Other(format!(
 					"does not support this msg type for now: {}",

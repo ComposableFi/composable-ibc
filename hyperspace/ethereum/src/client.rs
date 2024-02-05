@@ -408,10 +408,7 @@ impl EthereumClient {
 		block_height: Option<u64>,
 		storage_index: u32,
 	) -> impl Future<Output = Result<EIP1186ProofResponse, ClientError>> {
-		let key = keccak256(key.as_bytes());
-		let var_name = format!("0x{}", hex::encode(key));
-
-		let index = commitment_storage_raw_key(&var_name, &b"ibc"[..]);
+		let index = commitment_storage_raw_key(key, &b"ibc"[..]);
 
 		let client = self.client().clone();
 		let address = self.yui.ibc_core_diamond.address().clone();

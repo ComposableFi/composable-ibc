@@ -1191,7 +1191,7 @@ where
 	}
 	let init_calldata = diamond_init.method::<_, ()>("init", ()).unwrap().calldata().unwrap();
 
-	debug!(target: "hyperspace-sol-codegen", "{code}");
+	log::debug!(target: "hyperspace-sol-codegen", "{code}");
 
 	let diamond = deploy_contract(
 		"Diamond",
