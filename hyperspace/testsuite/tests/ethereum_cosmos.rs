@@ -52,6 +52,7 @@ use hyperspace_testsuite::{
 	ibc_messaging_packet_height_timeout_with_connection_delay_native,
 	ibc_messaging_packet_timeout_on_channel_close,
 	ibc_messaging_packet_timestamp_timeout_with_connection_delay,
+	ibc_messaging_packet_timestamp_timeout_with_connection_delay_native,
 	ibc_messaging_with_connection_delay, send_transfer, setup_connection_and_channel,
 };
 use ibc::core::{ics02_client::client_state::ClientState, ics24_host::identifier::PortId};
