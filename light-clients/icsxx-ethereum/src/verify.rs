@@ -27,7 +27,7 @@ pub enum Verified {
 	No,
 }
 
-#[cfg(feature = "no_beacon")]
+#[cfg(feature = "no_proof_verification")]
 pub fn verify_ibc_proof<P>(
 	_prefix: &CommitmentPrefix,
 	_proof: &CommitmentProofBytes,
@@ -42,7 +42,7 @@ where
 	return Ok(Verified::Yes);
 }
 
-#[cfg(not(feature = "no_beacon"))]
+#[cfg(not(feature = "no_proof_verification"))]
 pub fn verify_ibc_proof<P>(
 	prefix: &CommitmentPrefix,
 	proof: &CommitmentProofBytes,

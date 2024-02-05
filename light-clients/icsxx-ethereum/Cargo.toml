@@ -85,3 +85,4 @@ mainnet = [
     "sync-committee-verifier/mainnet",
 ]
 no_beacon = []
+no_proof_verification = []
