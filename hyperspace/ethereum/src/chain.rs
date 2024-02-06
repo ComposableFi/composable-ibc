@@ -587,6 +587,7 @@ fn tm_header_abi_token(header: &ics07_tendermint_zk::client_message::ZkHeader) -
 		.validators()
 		.iter()
 		.map(|validator| {
+			let address = EthersToken::Bytes(validator.address.as_bytes().into());
 			let voting_power = validator.power.value();
 			let pub_key = validator.pub_key.clone();
 			let pub_key = match pub_key {
@@ -605,7 +606,7 @@ fn tm_header_abi_token(header: &ics07_tendermint_zk::client_message::ZkHeader) -
 						"unsupported public key type, only ed25519 is supported".to_string(),
 					)),
 			};
-			Ok(EthersToken::Tuple(vec![pub_key, EthersToken::Int(voting_power.into())]))
+			Ok(EthersToken::Tuple(vec![address, pub_key, EthersToken::Int(voting_power.into())]))
 		})
 		.collect::<Result<Vec<_>, _>>()?;
 
