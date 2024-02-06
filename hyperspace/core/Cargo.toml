@@ -84,6 +84,9 @@ ethereum = ["dep:ethereum"]
 ethereum-mainnet = [
     "ethereum/mainnet"
 ]
+ethereum-testnet = [
+    "ethereum/testnet"
+]
 
 testing = ["primitives/testing", "parachain/testing", "cosmos/testing"]
 default = ["cosmos", "ethereum"]
