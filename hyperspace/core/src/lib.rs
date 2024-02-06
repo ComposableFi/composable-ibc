@@ -30,17 +30,13 @@ use anyhow::anyhow;
 use events::parse_events;
 use futures::{future::ready, StreamExt, TryFutureExt};
 use ibc::{
-	core::ics02_client::msgs::update_client::MsgUpdateAnyClient,
 	events::{IbcEvent, IbcEventType},
 	timestamp::Timestamp,
 	Height,
 };
 use ibc_proto::google::protobuf::Any;
-use itertools::Itertools;
 use metrics::handler::MetricsHandler;
 use primitives::{utils::RecentStream, Chain, IbcProvider, UndeliveredType, UpdateType};
-use std::{collections::HashSet, time::Duration};
-use tendermint_proto::Protobuf;
 
 #[derive(Copy, Debug, Clone)]
 pub enum Mode {
@@ -436,37 +432,6 @@ async fn process_timeouts<A: Chain>(
 		log::debug!(target: "hyperspace", "Successfully submitted timeout messages to {}", source.name());
 	}
 	Ok(())
-}
-
-async fn find_mandatory_heights_for_undelivered_sequences<A: Chain>(
-	source: &mut A,
-	updates: &[(Any, Height, Vec<IbcEvent>, UpdateType)],
-) -> HashSet<u64> {
-	let mut mandatory_updates_for_undelivered_seqs = HashSet::new();
-	let update_heights = updates
-		.iter()
-		.map(|(_, height, ..)| height.revision_height)
-		.collect::<HashSet<_>>();
-	let (_, height, ..) = updates.first().unwrap();
-	let proof_height = source.get_proof_height(*height).await;
-	let block_proof_height_difference = proof_height
-		.revision_height
-		.checked_sub(height.revision_height)
-		.expect("proof height is less than update height");
-	let needed_updates_num = if block_proof_height_difference > 0 { 2 } else { 1 };
-	for (_, height, ..) in updates.iter().rev() {
-		if let Some(prev_height) = height.revision_height.checked_sub(block_proof_height_difference)
-		{
-			if update_heights.contains(&prev_height) {
-				mandatory_updates_for_undelivered_seqs.insert(height.revision_height);
-				mandatory_updates_for_undelivered_seqs.insert(prev_height);
-			}
-		}
-		if mandatory_updates_for_undelivered_seqs.len() == needed_updates_num {
-			break
-		}
-	}
-	mandatory_updates_for_undelivered_seqs
 }
 
 #[cfg(feature = "testing")]

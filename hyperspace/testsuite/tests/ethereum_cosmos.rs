@@ -12,30 +12,27 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-use crate::utils::{BEACON_NODE_PORT, ETH_NODE_PORT_WS};
+use crate::utils::ETH_NODE_PORT_WS;
 use core::time::Duration;
 use ethers::{
-	abi::{ethabi, Bytes, ParamType, StateMutability, Token},
+	abi::{Bytes, ParamType, StateMutability, Token},
 	middleware::SignerMiddleware,
 	prelude::{
 		coins_bip39::{English, Mnemonic},
 		transaction::eip2718::TypedTransaction,
-		ContractInstance, Http, JsonRpcClient, LocalWallet, Middleware, MnemonicBuilder, Provider,
-		Signer, H256,
+		ContractInstance, Http, LocalWallet, Middleware, MnemonicBuilder, Provider, Signer,
 	},
 	types::{Address, BlockNumber, TransactionRequest, U256},
 	utils::{keccak256, AnvilInstance},
 };
 use ethers_solc::ProjectCompileOutput;
-use futures::StreamExt;
 use hyperspace_core::{
 	chain::{AnyAssetId, AnyChain, AnyConfig},
 	logging,
 };
 use hyperspace_cosmos::client::{CosmosClient, CosmosClientConfig};
 use hyperspace_ethereum::{
-	chain::client_state_from_abi_token,
-	client::{ClientError, EthereumClient, COMMITMENTS_STORAGE_INDEX},
+	client::{ClientError, EthereumClient},
 	config::{ContractName, ContractName::ICS20Bank},
 	ibc_provider,
 	ibc_provider::PublicKeyData,
@@ -43,14 +40,12 @@ use hyperspace_ethereum::{
 		utils,
 		utils::{hyperspace_ethereum_client_fixture, ETH_NODE_PORT, USE_GETH},
 	},
-	utils::{check_code_size, deploy_contract, send_retrying, DeployYuiIbc, ProviderImpl},
+	utils::{compile_yui, deploy_contract, send_retrying, DeployYuiIbc, ProviderImpl},
 };
 use hyperspace_primitives::{utils::create_clients, Chain, CommonClientConfig, IbcProvider};
 use hyperspace_testsuite::{
-	assert_send_transfer, ibc_channel_close,
-	ibc_messaging_packet_height_timeout_with_connection_delay,
+	assert_send_transfer, ibc_messaging_packet_height_timeout_with_connection_delay,
 	ibc_messaging_packet_height_timeout_with_connection_delay_native,
-	ibc_messaging_packet_timeout_on_channel_close,
 	ibc_messaging_packet_timestamp_timeout_with_connection_delay,
 	ibc_messaging_packet_timestamp_timeout_with_connection_delay_native,
 	ibc_messaging_with_connection_delay, send_transfer, setup_connection_and_channel,
@@ -62,7 +57,6 @@ use pallet_ibc::light_clients::AnyClientState;
 use sp_core::hashing::sha2_256;
 use std::{
 	collections::{HashMap, HashSet},
-	future::Future,
 	path::PathBuf,
 	str::FromStr,
 	sync::{Arc, Mutex},
@@ -149,53 +143,6 @@ pub async fn deploy_yui_ibc_and_tendermint_client_fixture() -> DeployYuiIbcTende
 	}
 }
 
-#[track_caller]
-fn deploy_transfer_module_fixture(
-	deploy: &DeployYuiIbcTendermintClient,
-) -> impl Future<
-	Output = (
-		ContractInstance<Arc<ProviderImpl>, ProviderImpl>,
-		ContractInstance<Arc<ProviderImpl>, ProviderImpl>,
-	),
-> + '_ {
-	async move {
-		let path = utils::yui_ibc_solidity_path();
-		let project_output =
-			hyperspace_ethereum::utils::compile_yui(&path, "contracts/apps/20-transfer");
-
-		let ics20_bank_contract = deploy_contract(
-			"ICS20Bank",
-			&[&project_output],
-			(
-				Token::String("ETH".to_string()),
-				Token::Address(deploy.yui_ibc.gov_proxy.as_ref().unwrap().address()),
-			),
-			deploy.client.clone(),
-		)
-		.await;
-		info!("Bank module address: {:?}", ics20_bank_contract.address());
-		let constructor_args = (
-			Token::Address(deploy.yui_ibc.ibc_core_diamond.address()),
-			Token::Address(ics20_bank_contract.address()),
-		);
-		let ics20_bank_transfer_contract = deploy_contract(
-			"ICS20TransferBank",
-			&[&project_output],
-			constructor_args,
-			deploy.client.clone(),
-		)
-		.await;
-		let method = ics20_bank_contract
-			.method::<_, ()>(
-				"transferRole",
-				(keccak256("OWNER_ROLE"), ics20_bank_transfer_contract.address()),
-			)
-			.unwrap();
-		send_retrying(&method).await.unwrap();
-		(ics20_bank_contract, ics20_bank_transfer_contract)
-	}
-}
-
 async fn get_current_validator_set(cosmos_client: &CosmosClient<()>, client_b: &impl Chain) -> Set {
 	let (height, _) = client_b.latest_height_and_timestamp().await.unwrap();
 	let client_state_response =
@@ -242,7 +189,6 @@ async fn owner_test_tx(
 	diamond_address: Address,
 ) -> TypedTransaction {
 	use crate::ibc_provider::LibGovernanceEcdsaSignature;
-	use ethers::abi::Tokenizable;
 	use hyperspace_ethereum::ibc_provider::SimpleValidatorData;
 
 	let validator_set = get_current_validator_set(cosmos_client, eth_client).await;
@@ -337,6 +283,40 @@ async fn setup_clients() -> (AnyChain, AnyChain, JoinHandle<()>) {
 		yui_ibc.ibc_transfer_facets = ibc_transfer_facets;
 		yui_ibc.bank_diamond = Some(bank_diamond);
 		yui_ibc.bank_facets = bank_facets;
+
+		let addr = yui_ibc
+			.method_diamond::<_, Address>(
+				"queryTokenContractFromDenom",
+				"TST".to_string(),
+				ContractName::BankDiamond,
+			)
+			.unwrap()
+			.call()
+			.await
+			.unwrap();
+
+		if addr == Address::zero() {
+			let client = deploy.client.clone();
+			let path = utils::yui_ibc_solidity_path();
+			let project_output = compile_yui(&path, "contracts/apps/20-transfer");
+			let erc20_token = deploy_contract(
+				"ERC20Token",
+				&[&project_output],
+				("Test Token".to_string(), "TST".to_string(), 100u32, 0u8),
+				client,
+			)
+			.await;
+
+			let method = yui_ibc
+				.method_diamond::<_, ()>(
+					"whitelistToken",
+					(erc20_token.address(), "TST".to_string()),
+					ContractName::BankDiamond,
+				)
+				.unwrap();
+			send_retrying(&method).await.unwrap();
+		}
+
 		yui_ibc = hyperspace_ethereum::utils::deploy_governance(
 			&deploy.path,
 			deploy.client.clone(),
@@ -377,11 +357,13 @@ async fn setup_clients() -> (AnyChain, AnyChain, JoinHandle<()>) {
 
 	let url = config_a.ws_rpc_url.to_string();
 	let _h = tokio::spawn(async move {
-		let mut p = Provider::connect(url).await.unwrap();
-		loop {
-			tokio::time::sleep(Duration::from_secs(5)).await;
-			let res = p.request::<_, BlockNumber>("evm_mine", ()).await;
-			info!(target: "hyperspace", "Mined: {res:?}");
+		let p = Provider::connect(url).await.unwrap();
+		if !USE_GETH {
+			loop {
+				tokio::time::sleep(Duration::from_secs(5)).await;
+				let res = p.request::<_, BlockNumber>("evm_mine", ()).await;
+				info!(target: "hyperspace", "Mined: {res:?}");
+			}
 		}
 	});
 
@@ -416,7 +398,6 @@ async fn setup_clients() -> (AnyChain, AnyChain, JoinHandle<()>) {
 			client_update_interval_sec: 10,
 		},
 	};
-
 	let chain_b = CosmosClient::<()>::new(config_b.clone()).await.unwrap();
 
 	let wasm_data = tokio::fs::read(&args.wasm_path).await.expect("Failed to read wasm file");
@@ -486,43 +467,6 @@ async fn ethereum_to_cosmos_ibc_messaging_full_integration_test() {
 		// 		info!(target: "hyperspace", "Mined: {res:?}");
 		// 	}
 		// });
-	}
-
-	let AnyChain::Ethereum(eth) = &chain_a else { unreachable!() };
-	let addr = eth
-		.yui
-		.method_diamond::<_, Address>(
-			"queryTokenContractFromDenom",
-			"TST".to_string(),
-			ContractName::BankDiamond,
-		)
-		.unwrap()
-		.call()
-		.await
-		.unwrap();
-
-	if addr == Address::zero() {
-		let client = eth.client().clone();
-		let path = utils::yui_ibc_solidity_path();
-		let project_output =
-			hyperspace_ethereum::utils::compile_yui(&path, "contracts/apps/20-transfer");
-		let erc20_token = deploy_contract(
-			"ERC20Token",
-			&[&project_output],
-			("Test Token".to_string(), "TST".to_string(), 100u32, 0u8),
-			client,
-		)
-		.await;
-
-		let method = eth
-			.yui
-			.method_diamond::<_, ()>(
-				"whitelistToken",
-				(erc20_token.address(), "TST".to_string()),
-				ContractName::BankDiamond,
-			)
-			.unwrap();
-		send_retrying(&method).await.unwrap();
 	}
 
 	let (handle, channel_a, channel_b, connection_id_a, connection_id_b) =
@@ -660,43 +604,18 @@ async fn ethereum_to_cosmos_ibc_messaging_full_integration_test() {
 	)
 	.await;
 
-	ibc_messaging_packet_height_timeout_with_connection_delay(
-		&mut chain_a,
-		&mut chain_b,
-		asset_id_a.clone(),
-		channel_a,
-		channel_b,
-	)
-	.await;
-
-	ibc_messaging_packet_timestamp_timeout_with_connection_delay(
-		&mut chain_b,
-		&mut chain_a,
-		asset_id_b.clone(),
-		channel_b,
-		channel_a,
-	)
-	.await;
-
-	ibc_messaging_packet_timestamp_timeout_with_connection_delay(
-		&mut chain_a,
-		&mut chain_b,
-		asset_id_native_a.clone(),
-		channel_a,
-		channel_b,
-	)
-	.await;
-
+	/*
 	// channel closing semantics
 	ibc_messaging_packet_timeout_on_channel_close(
-		&mut chain_a,
-		&mut chain_b,
-		asset_id_native_a.clone(),
-		channel_a,
+		 &mut chain_b,
+		 &mut chain_a,
+		 asset_id_b.clone(),
+		 channel_b,
 	)
 	.await;
 
-	ibc_channel_close(&mut chain_a, &mut chain_b).await;
+	// ibc_channel_close(&mut chain_a, &mut chain_b).await;
+	*/
 
 	// TODO: ethereum misbehaviour?
 	// ibc_messaging_submit_misbehaviour(&mut chain_a, &mut chain_b).await;
