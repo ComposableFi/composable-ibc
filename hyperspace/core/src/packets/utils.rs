@@ -264,6 +264,8 @@ pub async fn construct_timeout_message(
 	next_sequence_recv: u64,
 	proof_height: Height,
 ) -> Result<Any, anyhow::Error> {
+	log::trace!(target: "hyperspace", "construct_timeout_message: source: {}, sink: {}, sink_channel_end: {:?}, packet: {:?}, next_sequence_recv: {}, proof_height: {}, data: {}",
+		source.name(), sink.name(), sink_channel_end, packet, next_sequence_recv, proof_height, String::from_utf8_lossy(&packet.data));
 	let path_type = if sink_channel_end.ordering == Order::Ordered {
 		KeyPathType::SeqRecv
 	} else {
@@ -348,10 +350,11 @@ pub async fn construct_ack_message(
 	let actual_proof_height = source.get_proof_height(proof_height).await;
 	log::trace!(
 		target: "hyperspace",
-		"construct_ack_message: source: {}, sink: {}, proof_height: {}",
+		"construct_ack_message: source: {}, sink: {}, proof_height: {}, ack: {}",
 		source.name(),
 		sink.name(),
-		proof_height
+		proof_height,
+		String::from_utf8_lossy(&ack),
 	);
 	let msg = MsgAcknowledgement {
 		packet,

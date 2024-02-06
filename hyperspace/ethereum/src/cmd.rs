@@ -4,8 +4,8 @@ use crate::{
 	utils::{deploy_client, deploy_governance, deploy_ibc, deploy_transfer_module, DeployYuiIbc},
 };
 use anyhow::{anyhow, bail};
-use cast::Address;
 use clap::{Args, Parser, Subcommand};
+use ethers::abi::Address;
 use ethers_providers::Provider;
 use std::path::PathBuf;
 

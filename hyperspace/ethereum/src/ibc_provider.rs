@@ -58,24 +58,16 @@ use std::{
 };
 
 use crate::{
-	client::{ClientError, EthereumClient},
-	events::TryFromEvent,
-};
-use futures::{FutureExt, Stream, StreamExt};
-use log::info;
-use ssz_rs::{Merkleized, Node};
-use sync_committee_primitives::consensus_types::BeaconBlockHeader;
-
-use crate::{
 	chain::{
 		client_state_abi_token, client_state_from_abi_token, consensus_state_from_abi_token,
 		tm_header_from_abi_token,
 	},
-	client::run_updates_fetcher,
+	client::{run_updates_fetcher, ClientError, EthereumClient},
 	config::ContractName,
-	prove::prove,
+	events::TryFromEvent,
 	utils::{create_intervals, SEQUENCES_PER_ITER},
 };
+use futures::{FutureExt, Stream, StreamExt};
 use ibc::{
 	applications::transfer::{Amount, BaseDenom, PrefixedCoin, PrefixedDenom, TracePath},
 	core::{
@@ -106,11 +98,14 @@ use icsxx_ethereum::{
 	client_state::ClientState,
 	consensus_state::ConsensusState,
 };
+use log::info;
 use pallet_ibc::light_clients::{
 	AnyClientMessage, AnyClientState, AnyConsensusState, HostFunctionsManager,
 };
 use primitives::mock::LocalClientTypes;
+use ssz_rs::Node;
 use sync_committee_primitives::{
+	consensus_types::BeaconBlockHeader,
 	types::VerifierState as LightClientState,
 	util::{compute_epoch_at_slot, compute_sync_committee_period_at_slot},
 };
@@ -186,6 +181,9 @@ abigen!(
 
 	CallBatchFacetAbi,
 	"hyperspace/ethereum/src/abi/call-batch-facet-abi.json";
+
+	Ics23ContractAbi,
+	"hyperspace/ethereum/src/abi/ics23-contract-abi.json";
 );
 
 impl From<HeightData> for Height {
@@ -599,7 +597,7 @@ impl IbcProvider for EthereumClient {
 		}
 
 		let updates = self
-			.fetch_next_updates(counterparty, client_id, &client_state, latest_revision, 10)
+			.fetch_next_updates(counterparty, client_id, &client_state, latest_revision, 20)
 			.await
 			.unwrap();
 

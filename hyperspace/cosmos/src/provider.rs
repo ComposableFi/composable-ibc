@@ -1064,8 +1064,10 @@ where
 		let client_state = ClientState::new(
 			self.chain_id.clone(),
 			TrustThreshold::default(),
-			Duration::from_secs(280),
-			Duration::from_secs(5 * 60),
+			Duration::from_secs(64000),
+			Duration::from_secs(1814400),
+			// Duration::from_secs(280),
+			// Duration::from_secs(5 * 60),
 			Duration::new(15, 0),
 			latest_height_timestamp.0,
 			ProofSpecs::default(),

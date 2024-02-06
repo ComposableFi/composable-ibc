@@ -1,636 +1,582 @@
 [
   {
-    "inputs": [
-      {
-        "components": [
-          {
-            "components": [
-              {
-                "internalType": "int64",
-                "name": "Seconds",
-                "type": "int64"
-              },
-              {
-                "internalType": "int64",
-                "name": "nanos",
-                "type": "int64"
-              }
-            ],
-            "internalType": "struct TimestampData",
-            "name": "timestamp",
-            "type": "tuple"
-          },
-          {
-            "components": [
-              {
-                "internalType": "bytes",
-                "name": "hash",
-                "type": "bytes"
-              }
-            ],
-            "internalType": "struct MerkleRootData",
-            "name": "root",
-            "type": "tuple"
-          },
-          {
-            "internalType": "bytes",
-            "name": "next_validators_hash",
-            "type": "bytes"
-          }
-        ],
-        "internalType": "struct ConsensusStateData",
-        "name": "",
-        "type": "tuple"
-      },
-      {
-        "components": [
-          {
-            "internalType": "string",
-            "name": "chain_id",
-            "type": "string"
-          },
-          {
-            "components": [
-              {
-                "internalType": "uint64",
-                "name": "numerator",
-                "type": "uint64"
-              },
-              {
-                "internalType": "uint64",
-                "name": "denominator",
-                "type": "uint64"
-              }
-            ],
-            "internalType": "struct FractionData",
-            "name": "trust_level",
-            "type": "tuple"
-          },
-          {
-            "components": [
-              {
-                "internalType": "int64",
-                "name": "Seconds",
-                "type": "int64"
-              },
-              {
-                "internalType": "int64",
-                "name": "nanos",
-                "type": "int64"
-              }
-            ],
-            "internalType": "struct DurationData",
-            "name": "trusting_period",
-            "type": "tuple"
-          },
-          {
-            "components": [
-              {
-                "internalType": "int64",
-                "name": "Seconds",
-                "type": "int64"
-              },
-              {
-                "internalType": "int64",
-                "name": "nanos",
-                "type": "int64"
-              }
-            ],
-            "internalType": "struct DurationData",
-            "name": "unbonding_period",
-            "type": "tuple"
-          },
-          {
-            "components": [
-              {
-                "internalType": "int64",
-                "name": "Seconds",
-                "type": "int64"
-              },
-              {
-                "internalType": "int64",
-                "name": "nanos",
-                "type": "int64"
-              }
-            ],
-            "internalType": "struct DurationData",
-            "name": "max_clock_drift",
-            "type": "tuple"
-          },
-          {
-            "internalType": "int64",
-            "name": "frozen_height",
-            "type": "int64"
-          },
-          {
-            "internalType": "int64",
-            "name": "latest_height",
-            "type": "int64"
-          },
-          {
-            "internalType": "bool",
-            "name": "allow_update_after_expiry",
-            "type": "bool"
-          },
-          {
-            "internalType": "bool",
-            "name": "allow_update_after_misbehaviour",
-            "type": "bool"
-          }
-        ],
-        "internalType": "struct ClientStateData",
-        "name": "",
-        "type": "tuple"
-      }
-    ],
+    "type": "function",
     "name": "_expose_data_types",
-    "outputs": [],
-    "stateMutability": "view",
-    "type": "function"
-  },
-  {
     "inputs": [
       {
-        "internalType": "string",
-        "name": "clientId",
-        "type": "string"
-      },
-      {
-        "internalType": "bytes",
-        "name": "clientStateBytes",
-        "type": "bytes"
-      },
-      {
-        "internalType": "bytes",
-        "name": "consensusStateBytes",
-        "type": "bytes"
-      }
-    ],
-    "name": "createClient",
-    "outputs": [
-      {
-        "internalType": "bytes32",
-        "name": "clientStateCommitment",
-        "type": "bytes32"
-      },
-      {
+        "name": "",
+        "type": "tuple",
+        "internalType": "struct ConsensusStateData",
         "components": [
           {
-            "internalType": "bytes32",
-            "name": "consensusStateCommitment",
-            "type": "bytes32"
-          },
-          {
+            "name": "timestamp",
+            "type": "tuple",
+            "internalType": "struct TimestampData",
             "components": [
               {
-                "internalType": "uint64",
-                "name": "revision_number",
-                "type": "uint64"
+                "name": "Seconds",
+                "type": "int64",
+                "internalType": "int64"
               },
               {
-                "internalType": "uint64",
-                "name": "revision_height",
-                "type": "uint64"
+                "name": "nanos",
+                "type": "int64",
+                "internalType": "int64"
               }
-            ],
-            "internalType": "struct HeightData",
-            "name": "height",
-            "type": "tuple"
+            ]
+          },
+          {
+            "name": "root",
+            "type": "tuple",
+            "internalType": "struct MerkleRootData",
+            "components": [
+              {
+                "name": "hash",
+                "type": "bytes",
+                "internalType": "bytes"
+              }
+            ]
+          },
+          {
+            "name": "next_validators_hash",
+            "type": "bytes",
+            "internalType": "bytes"
           }
-        ],
-        "internalType": "struct ConsensusStateUpdate",
-        "name": "update",
-        "type": "tuple"
+        ]
       },
       {
-        "internalType": "bool",
-        "name": "ok",
-        "type": "bool"
+        "name": "",
+        "type": "tuple",
+        "internalType": "struct ClientStateData",
+        "components": [
+          {
+            "name": "chain_id",
+            "type": "string",
+            "internalType": "string"
+          },
+          {
+            "name": "trust_level",
+            "type": "tuple",
+            "internalType": "struct FractionData",
+            "components": [
+              {
+                "name": "numerator",
+                "type": "uint64",
+                "internalType": "uint64"
+              },
+              {
+                "name": "denominator",
+                "type": "uint64",
+                "internalType": "uint64"
+              }
+            ]
+          },
+          {
+            "name": "trusting_period",
+            "type": "tuple",
+            "internalType": "struct DurationData",
+            "components": [
+              {
+                "name": "Seconds",
+                "type": "int64",
+                "internalType": "int64"
+              },
+              {
+                "name": "nanos",
+                "type": "int64",
+                "internalType": "int64"
+              }
+            ]
+          },
+          {
+            "name": "unbonding_period",
+            "type": "tuple",
+            "internalType": "struct DurationData",
+            "components": [
+              {
+                "name": "Seconds",
+                "type": "int64",
+                "internalType": "int64"
+              },
+              {
+                "name": "nanos",
+                "type": "int64",
+                "internalType": "int64"
+              }
+            ]
+          },
+          {
+            "name": "max_clock_drift",
+            "type": "tuple",
+            "internalType": "struct DurationData",
+            "components": [
+              {
+                "name": "Seconds",
+                "type": "int64",
+                "internalType": "int64"
+              },
+              {
+                "name": "nanos",
+                "type": "int64",
+                "internalType": "int64"
+              }
+            ]
+          },
+          {
+            "name": "frozen_height",
+            "type": "int64",
+            "internalType": "int64"
+          },
+          {
+            "name": "latest_height",
+            "type": "int64",
+            "internalType": "int64"
+          },
+          {
+            "name": "allow_update_after_expiry",
+            "type": "bool",
+            "internalType": "bool"
+          },
+          {
+            "name": "allow_update_after_misbehaviour",
+            "type": "bool",
+            "internalType": "bool"
+          }
+        ]
       }
     ],
-    "stateMutability": "nonpayable",
-    "type": "function"
+    "outputs": [],
+    "stateMutability": "view"
   },
   {
-    "inputs": [
-      {
-        "internalType": "string",
-        "name": "clientId",
-        "type": "string"
-      }
-    ],
+    "type": "function",
     "name": "getClientState",
-    "outputs": [
-      {
-        "internalType": "bytes",
-        "name": "",
-        "type": "bytes"
-      },
-      {
-        "internalType": "bool",
-        "name": "",
-        "type": "bool"
-      }
-    ],
-    "stateMutability": "view",
-    "type": "function"
-  },
-  {
     "inputs": [
       {
-        "internalType": "string",
         "name": "clientId",
-        "type": "string"
-      },
-      {
-        "components": [
-          {
-            "internalType": "uint64",
-            "name": "revision_number",
-            "type": "uint64"
-          },
-          {
-            "internalType": "uint64",
-            "name": "revision_height",
-            "type": "uint64"
-          }
-        ],
-        "internalType": "struct HeightData",
-        "name": "height",
-        "type": "tuple"
+        "type": "string",
+        "internalType": "string"
       }
     ],
+    "outputs": [
+      {
+        "name": "",
+        "type": "bytes",
+        "internalType": "bytes"
+      },
+      {
+        "name": "",
+        "type": "bool",
+        "internalType": "bool"
+      }
+    ],
+    "stateMutability": "view"
+  },
+  {
+    "type": "function",
     "name": "getConsensusState",
-    "outputs": [
+    "inputs": [
       {
-        "internalType": "bytes",
-        "name": "",
-        "type": "bytes"
+        "name": "clientId",
+        "type": "string",
+        "internalType": "string"
       },
       {
-        "internalType": "bool",
-        "name": "",
-        "type": "bool"
+        "name": "height",
+        "type": "tuple",
+        "internalType": "struct HeightData",
+        "components": [
+          {
+            "name": "revision_number",
+            "type": "uint64",
+            "internalType": "uint64"
+          },
+          {
+            "name": "revision_height",
+            "type": "uint64",
+            "internalType": "uint64"
+          }
+        ]
       }
     ],
-    "stateMutability": "view",
-    "type": "function"
+    "outputs": [
+      {
+        "name": "",
+        "type": "bytes",
+        "internalType": "bytes"
+      },
+      {
+        "name": "",
+        "type": "bool",
+        "internalType": "bool"
+      }
+    ],
+    "stateMutability": "view"
   },
   {
-    "inputs": [],
+    "type": "function",
     "name": "getFirstClientNextValidatorsHash",
+    "inputs": [],
     "outputs": [
       {
-        "internalType": "bytes32",
         "name": "",
-        "type": "bytes32"
+        "type": "bytes32",
+        "internalType": "bytes32"
       }
     ],
-    "stateMutability": "view",
-    "type": "function"
+    "stateMutability": "view"
   },
   {
-    "inputs": [
-      {
-        "internalType": "string",
-        "name": "clientId",
-        "type": "string"
-      }
-    ],
+    "type": "function",
     "name": "getLatestHeight",
-    "outputs": [
-      {
-        "components": [
-          {
-            "internalType": "uint64",
-            "name": "revision_number",
-            "type": "uint64"
-          },
-          {
-            "internalType": "uint64",
-            "name": "revision_height",
-            "type": "uint64"
-          }
-        ],
-        "internalType": "struct HeightData",
-        "name": "",
-        "type": "tuple"
-      },
-      {
-        "internalType": "bool",
-        "name": "",
-        "type": "bool"
-      }
-    ],
-    "stateMutability": "view",
-    "type": "function"
-  },
-  {
     "inputs": [
       {
-        "internalType": "string",
         "name": "clientId",
-        "type": "string"
+        "type": "string",
+        "internalType": "string"
       }
     ],
+    "outputs": [
+      {
+        "name": "",
+        "type": "tuple",
+        "internalType": "struct HeightData",
+        "components": [
+          {
+            "name": "revision_number",
+            "type": "uint64",
+            "internalType": "uint64"
+          },
+          {
+            "name": "revision_height",
+            "type": "uint64",
+            "internalType": "uint64"
+          }
+        ]
+      }
+    ],
+    "stateMutability": "view"
+  },
+  {
+    "type": "function",
     "name": "getStatus",
-    "outputs": [
-      {
-        "internalType": "enum ClientStatus",
-        "name": "",
-        "type": "uint8"
-      }
-    ],
-    "stateMutability": "view",
-    "type": "function"
-  },
-  {
     "inputs": [
       {
-        "internalType": "string",
         "name": "clientId",
-        "type": "string"
-      },
-      {
-        "components": [
-          {
-            "internalType": "uint64",
-            "name": "revision_number",
-            "type": "uint64"
-          },
-          {
-            "internalType": "uint64",
-            "name": "revision_height",
-            "type": "uint64"
-          }
-        ],
-        "internalType": "struct HeightData",
-        "name": "height",
-        "type": "tuple"
+        "type": "string",
+        "internalType": "string"
       }
     ],
+    "outputs": [
+      {
+        "name": "",
+        "type": "uint8",
+        "internalType": "enum ClientStatus"
+      }
+    ],
+    "stateMutability": "view"
+  },
+  {
+    "type": "function",
     "name": "getTimestampAtHeight",
-    "outputs": [
-      {
-        "internalType": "uint64",
-        "name": "",
-        "type": "uint64"
-      },
-      {
-        "internalType": "bool",
-        "name": "",
-        "type": "bool"
-      }
-    ],
-    "stateMutability": "view",
-    "type": "function"
-  },
-  {
     "inputs": [
       {
-        "internalType": "address",
-        "name": "ibcHandler_",
-        "type": "address"
+        "name": "clientId",
+        "type": "string",
+        "internalType": "string"
       },
       {
-        "internalType": "address",
-        "name": "ics23_",
-        "type": "address"
+        "name": "height",
+        "type": "tuple",
+        "internalType": "struct HeightData",
+        "components": [
+          {
+            "name": "revision_number",
+            "type": "uint64",
+            "internalType": "uint64"
+          },
+          {
+            "name": "revision_height",
+            "type": "uint64",
+            "internalType": "uint64"
+          }
+        ]
       }
     ],
+    "outputs": [
+      {
+        "name": "",
+        "type": "uint64",
+        "internalType": "uint64"
+      }
+    ],
+    "stateMutability": "view"
+  },
+  {
+    "type": "function",
     "name": "init",
+    "inputs": [
+      {
+        "name": "ibcHandler_",
+        "type": "address",
+        "internalType": "address"
+      },
+      {
+        "name": "ics23_",
+        "type": "address",
+        "internalType": "address"
+      }
+    ],
     "outputs": [],
-    "stateMutability": "nonpayable",
-    "type": "function"
+    "stateMutability": "nonpayable"
   },
   {
+    "type": "function",
+    "name": "initializeClient",
     "inputs": [
       {
-        "internalType": "bytes",
-        "name": "b",
-        "type": "bytes"
+        "name": "clientId",
+        "type": "string",
+        "internalType": "string"
+      },
+      {
+        "name": "clientStateBytes",
+        "type": "bytes",
+        "internalType": "bytes"
+      },
+      {
+        "name": "consensusStateBytes",
+        "type": "bytes",
+        "internalType": "bytes"
       }
     ],
+    "outputs": [
+      {
+        "name": "",
+        "type": "tuple",
+        "internalType": "struct HeightData",
+        "components": [
+          {
+            "name": "revision_number",
+            "type": "uint64",
+            "internalType": "uint64"
+          },
+          {
+            "name": "revision_height",
+            "type": "uint64",
+            "internalType": "uint64"
+          }
+        ]
+      }
+    ],
+    "stateMutability": "nonpayable"
+  },
+  {
+    "type": "function",
     "name": "stringToUint",
-    "outputs": [
-      {
-        "internalType": "uint256",
-        "name": "",
-        "type": "uint256"
-      }
-    ],
-    "stateMutability": "pure",
-    "type": "function"
-  },
-  {
     "inputs": [
       {
-        "components": [
-          {
-            "internalType": "string",
-            "name": "clientId",
-            "type": "string"
-          },
-          {
-            "internalType": "bytes",
-            "name": "clientMessage",
-            "type": "bytes"
-          },
-          {
-            "internalType": "bytes",
-            "name": "prevClientState",
-            "type": "bytes"
-          }
-        ],
-        "internalType": "struct IBCMsgsMsgUpdateClient",
-        "name": "msg_",
-        "type": "tuple"
+        "name": "b",
+        "type": "bytes",
+        "internalType": "bytes"
       }
     ],
+    "outputs": [
+      {
+        "name": "",
+        "type": "uint256",
+        "internalType": "uint256"
+      }
+    ],
+    "stateMutability": "pure"
+  },
+  {
+    "type": "function",
     "name": "updateClient",
-    "outputs": [
-      {
-        "internalType": "bytes32",
-        "name": "clientStateCommitment",
-        "type": "bytes32"
-      },
-      {
-        "components": [
-          {
-            "internalType": "bytes32",
-            "name": "consensusStateCommitment",
-            "type": "bytes32"
-          },
-          {
-            "components": [
-              {
-                "internalType": "uint64",
-                "name": "revision_number",
-                "type": "uint64"
-              },
-              {
-                "internalType": "uint64",
-                "name": "revision_height",
-                "type": "uint64"
-              }
-            ],
-            "internalType": "struct HeightData",
-            "name": "height",
-            "type": "tuple"
-          }
-        ],
-        "internalType": "struct ConsensusStateUpdate[]",
-        "name": "updates",
-        "type": "tuple[]"
-      },
-      {
-        "internalType": "bool",
-        "name": "ok",
-        "type": "bool"
-      }
-    ],
-    "stateMutability": "nonpayable",
-    "type": "function"
-  },
-  {
     "inputs": [
       {
-        "internalType": "string",
-        "name": "clientId",
-        "type": "string"
-      },
-      {
+        "name": "msg_",
+        "type": "tuple",
+        "internalType": "struct IBCMsgsMsgUpdateClient",
         "components": [
           {
-            "internalType": "uint64",
-            "name": "revision_number",
-            "type": "uint64"
+            "name": "clientId",
+            "type": "string",
+            "internalType": "string"
           },
           {
-            "internalType": "uint64",
-            "name": "revision_height",
-            "type": "uint64"
+            "name": "clientMessage",
+            "type": "bytes",
+            "internalType": "bytes"
+          },
+          {
+            "name": "prevClientState",
+            "type": "bytes",
+            "internalType": "bytes"
           }
-        ],
-        "internalType": "struct HeightData",
-        "name": "height",
-        "type": "tuple"
-      },
-      {
-        "internalType": "uint64",
-        "name": "delayTimePeriod",
-        "type": "uint64"
-      },
-      {
-        "internalType": "uint64",
-        "name": "delayBlockPeriod",
-        "type": "uint64"
-      },
-      {
-        "components": [
-          {
-            "internalType": "bytes",
-            "name": "proof",
-            "type": "bytes"
-          },
-          {
-            "internalType": "bytes",
-            "name": "prefix",
-            "type": "bytes"
-          },
-          {
-            "internalType": "bytes",
-            "name": "path",
-            "type": "bytes"
-          }
-        ],
-        "internalType": "struct HeightVerifyMembershipBytes",
-        "name": "membershipBytes",
-        "type": "tuple"
-      },
-      {
-        "internalType": "bytes",
-        "name": "value",
-        "type": "bytes"
+        ]
       }
     ],
+    "outputs": [
+      {
+        "name": "",
+        "type": "tuple[]",
+        "internalType": "struct HeightData[]",
+        "components": [
+          {
+            "name": "revision_number",
+            "type": "uint64",
+            "internalType": "uint64"
+          },
+          {
+            "name": "revision_height",
+            "type": "uint64",
+            "internalType": "uint64"
+          }
+        ]
+      }
+    ],
+    "stateMutability": "nonpayable"
+  },
+  {
+    "type": "function",
     "name": "verifyMembership",
-    "outputs": [
-      {
-        "internalType": "bool",
-        "name": "",
-        "type": "bool"
-      }
-    ],
-    "stateMutability": "view",
-    "type": "function"
-  },
-  {
     "inputs": [
       {
-        "internalType": "string",
         "name": "clientId",
-        "type": "string"
+        "type": "string",
+        "internalType": "string"
       },
       {
-        "components": [
-          {
-            "internalType": "uint64",
-            "name": "revision_number",
-            "type": "uint64"
-          },
-          {
-            "internalType": "uint64",
-            "name": "revision_height",
-            "type": "uint64"
-          }
-        ],
-        "internalType": "struct HeightData",
         "name": "height",
-        "type": "tuple"
-      },
-      {
-        "internalType": "uint64",
-        "name": "delayTimePeriod",
-        "type": "uint64"
-      },
-      {
-        "internalType": "uint64",
-        "name": "delayBlockPeriod",
-        "type": "uint64"
-      },
-      {
+        "type": "tuple",
+        "internalType": "struct HeightData",
         "components": [
           {
-            "internalType": "bytes",
-            "name": "proof",
-            "type": "bytes"
+            "name": "revision_number",
+            "type": "uint64",
+            "internalType": "uint64"
           },
           {
-            "internalType": "bytes",
-            "name": "prefix",
-            "type": "bytes"
-          },
-          {
-            "internalType": "bytes",
-            "name": "path",
-            "type": "bytes"
+            "name": "revision_height",
+            "type": "uint64",
+            "internalType": "uint64"
           }
-        ],
-        "internalType": "struct HeightVerifyMembershipBytes",
+        ]
+      },
+      {
+        "name": "delayTimePeriod",
+        "type": "uint64",
+        "internalType": "uint64"
+      },
+      {
+        "name": "delayBlockPeriod",
+        "type": "uint64",
+        "internalType": "uint64"
+      },
+      {
         "name": "membershipBytes",
-        "type": "tuple"
+        "type": "tuple",
+        "internalType": "struct HeightVerifyMembershipBytes",
+        "components": [
+          {
+            "name": "proof",
+            "type": "bytes",
+            "internalType": "bytes"
+          },
+          {
+            "name": "prefix",
+            "type": "bytes",
+            "internalType": "bytes"
+          },
+          {
+            "name": "path",
+            "type": "bytes",
+            "internalType": "bytes"
+          }
+        ]
+      },
+      {
+        "name": "value",
+        "type": "bytes",
+        "internalType": "bytes"
       }
     ],
-    "name": "verifyNonMembership",
     "outputs": [
       {
-        "internalType": "bool",
         "name": "",
-        "type": "bool"
+        "type": "bool",
+        "internalType": "bool"
       }
     ],
-    "stateMutability": "view",
-    "type": "function"
+    "stateMutability": "view"
+  },
+  {
+    "type": "function",
+    "name": "verifyNonMembership",
+    "inputs": [
+      {
+        "name": "clientId",
+        "type": "string",
+        "internalType": "string"
+      },
+      {
+        "name": "height",
+        "type": "tuple",
+        "internalType": "struct HeightData",
+        "components": [
+          {
+            "name": "revision_number",
+            "type": "uint64",
+            "internalType": "uint64"
+          },
+          {
+            "name": "revision_height",
+            "type": "uint64",
+            "internalType": "uint64"
+          }
+        ]
+      },
+      {
+        "name": "delayTimePeriod",
+        "type": "uint64",
+        "internalType": "uint64"
+      },
+      {
+        "name": "delayBlockPeriod",
+        "type": "uint64",
+        "internalType": "uint64"
+      },
+      {
+        "name": "membershipBytes",
+        "type": "tuple",
+        "internalType": "struct HeightVerifyMembershipBytes",
+        "components": [
+          {
+            "name": "proof",
+            "type": "bytes",
+            "internalType": "bytes"
+          },
+          {
+            "name": "prefix",
+            "type": "bytes",
+            "internalType": "bytes"
+          },
+          {
+            "name": "path",
+            "type": "bytes",
+            "internalType": "bytes"
+          }
+        ]
+      }
+    ],
+    "outputs": [
+      {
+        "name": "",
+        "type": "bool",
+        "internalType": "bool"
+      }
+    ],
+    "stateMutability": "view"
   }
 ]

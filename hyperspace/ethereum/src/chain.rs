@@ -3,7 +3,8 @@ use crate::{
 	contract::{IbcHandler, UnwrapContractError},
 	ibc_provider::{BlockHeight, INDEXER_DELAY_BLOCKS},
 	utils::{
-		clear_proof_value, handle_gas_usage, send_retrying, Header as EthHeader, ProviderImpl,
+		clear_proof_value, handle_gas_usage, redecode_proof, send_retrying, Header as EthHeader,
+		ProviderImpl,
 	},
 	yui_types::{ics03_connection::conn_open_try::YuiMsgConnectionOpenTry, IntoToken},
 };
@@ -44,7 +45,7 @@ use ibc::{
 		},
 		ics24_host::identifier::{ChainId, ClientId},
 	},
-	proofs::ConsensusProof,
+	proofs::{ConsensusProof, Proofs},
 	protobuf::{google::protobuf::Timestamp, Protobuf},
 	Height,
 };
@@ -1475,7 +1476,7 @@ impl EthereumClient {
 				}
 				let new_proof = EthereumClientPrimitivesConsensusStateProof {
 					header: rlp_encoded_header,
-					merkleProof: clear_proof_value(&bytes)?.as_bytes().to_vec(),
+					merkleProof: redecode_proof(&clear_proof_value(&bytes)?)?.as_bytes().to_vec(),
 					isWasm: true, // TODO: replace with the actual value
 				}
 				.abi_encode();
@@ -1488,11 +1489,16 @@ impl EthereumClient {
 					.expect("proof can't be empty"),
 				);
 				let commitment_proof = msg.proofs.client_proof().as_ref().expect("no proof");
-				msg.proofs.client_proof = Some(clear_proof_value(commitment_proof)?);
+				msg.proofs.client_proof =
+					Some(redecode_proof(&clear_proof_value(commitment_proof)?)?);
+				msg.proofs.object_proof =
+					redecode_proof(&clear_proof_value(&msg.proofs.object_proof)?)?;
+				// replace the line above with if let
+				if let Some(proof) = msg.proofs.other_proof.as_mut() {
+					*proof = redecode_proof(&clear_proof_value(proof)?)?;
+				}
 
 				let mut token = msg_connection_open_ack_token(msg)?;
-				// log::info!("tok={token:?}");
-				std::fs::write("token.txt", format!("{:?}", token)).unwrap();
 
 				calls.push(self.yui.connection_open_ack_calldata(token).await);
 			} else if msg.type_url == ibc::core::ics03_connection::msgs::conn_open_try::TYPE_URL {
@@ -1508,9 +1514,12 @@ impl EthereumClient {
 				calls.push(self.yui.connection_open_try_calldata(token).await);
 			} else if msg.type_url == ibc::core::ics03_connection::msgs::conn_open_confirm::TYPE_URL
 			{
-				let msg = MsgConnectionOpenConfirm::decode_vec(&msg.value).map_err(|_| {
+				let mut msg = MsgConnectionOpenConfirm::decode_vec(&msg.value).map_err(|_| {
 					ClientError::Other("conn_open_confirm: failed to decode_vec".into())
 				})?;
+
+				Self::redecode_proofs(&mut msg.proofs)?;
+
 				let mut token = msg_connection_open_confirm_token(msg);
 				let Token::Tuple(ref mut tokens) = token else {
 					return Err(ClientError::Other(format!("Token should be tuple")))
@@ -1525,9 +1534,10 @@ impl EthereumClient {
 				let token = msg.into_token();
 				calls.push(self.yui.channel_open_init_calldata(token).await);
 			} else if msg.type_url == channel_msgs::chan_open_try::TYPE_URL {
-				let msg = MsgChannelOpenTry::decode_vec(&msg.value).map_err(|_| {
+				let mut msg = MsgChannelOpenTry::decode_vec(&msg.value).map_err(|_| {
 					ClientError::Other("chan_open_try: failed to decode_vec".into())
 				})?;
+				Self::redecode_proofs(&mut msg.proofs)?;
 				let mut token = msg.into_token();
 
 				let Token::Tuple(ref mut tokens) = token else {
@@ -1536,10 +1546,10 @@ impl EthereumClient {
 
 				calls.push(self.yui.channel_open_try_calldata(token).await);
 			} else if msg.type_url == channel_msgs::chan_open_ack::TYPE_URL {
-				let msg = MsgChannelOpenAck::decode_vec(&msg.value).map_err(|e| {
+				let mut msg = MsgChannelOpenAck::decode_vec(&msg.value).map_err(|e| {
 					ClientError::Other(format!("chan_open_ack: failed to decode_vec: {:?}", e))
 				})?;
-				// log::info!("msg = {msg:#?}");
+				Self::redecode_proofs(&mut msg.proofs)?;
 				let mut token = msg.into_token();
 				let Token::Tuple(ref mut tokens) = token else {
 					return Err(ClientError::Other(format!("Token should be tuple")))
@@ -1547,12 +1557,15 @@ impl EthereumClient {
 
 				calls.push(self.yui.send_and_get_tuple_calldata(token, "channelOpenAck").await);
 			} else if msg.type_url == channel_msgs::chan_open_confirm::TYPE_URL {
-				let msg = MsgChannelOpenConfirm::decode_vec(&msg.value).map_err(|e| {
+				let mut msg = MsgChannelOpenConfirm::decode_vec(&msg.value).map_err(|e| {
 					ClientError::Other(format!(
 						"chann_open_confirm: failed to decode_vec : {:?}",
 						e
 					))
 				})?;
+
+				Self::redecode_proofs(&mut msg.proofs)?;
+
 				let mut token = msg.into_token();
 
 				let Token::Tuple(ref mut tokens) = token else {
@@ -1567,12 +1580,15 @@ impl EthereumClient {
 				let token = msg.into_token();
 				calls.push(self.yui.send_and_get_tuple_calldata(token, "channelCloseInit").await);
 			} else if msg.type_url == channel_msgs::chan_close_confirm::TYPE_URL {
-				let msg = MsgChannelCloseConfirm::decode_vec(&msg.value).map_err(|e| {
+				let mut msg = MsgChannelCloseConfirm::decode_vec(&msg.value).map_err(|e| {
 					ClientError::Other(format!(
 						"chan_close_confirm: failed to decode_vec : {:?}",
 						e
 					))
 				})?;
+
+				Self::redecode_proofs(&mut msg.proofs)?;
+
 				let mut token = msg.into_token();
 				let Token::Tuple(ref mut tokens) = token else {
 					return Err(ClientError::Other(format!("Token should be tuple")))
@@ -1588,21 +1604,29 @@ impl EthereumClient {
 				calls
 					.push(self.yui.send_and_get_tuple_calldata(token, "channelCloseConfirm").await);
 			} else if msg.type_url == channel_msgs::timeout_on_close::TYPE_URL {
-				let msg = MsgTimeoutOnClose::decode_vec(&msg.value).map_err(|e| {
+				let mut msg = MsgTimeoutOnClose::decode_vec(&msg.value).map_err(|e| {
 					ClientError::Other(format!("timeout_on_close: failed to decode_vec : {:?}", e))
 				})?;
+
+				Self::redecode_proofs(&mut msg.proofs)?;
+
 				let token = msg.into_token();
 				calls.push(self.yui.send_and_get_tuple_calldata(token, "timeoutOnClose").await);
 			} else if msg.type_url == channel_msgs::timeout::TYPE_URL {
-				let msg = MsgTimeout::decode_vec(&msg.value).map_err(|e| {
+				let mut msg = MsgTimeout::decode_vec(&msg.value).map_err(|e| {
 					ClientError::Other(format!("timeout: failed to decode_vec : {:?}", e))
 				})?;
+
+				Self::redecode_proofs(&mut msg.proofs)?;
+
 				let token = msg.into_token();
 				calls.push(self.yui.send_and_get_tuple_calldata(token, "timeoutPacket").await);
 			} else if msg.type_url == channel_msgs::acknowledgement::TYPE_URL {
-				let msg = MsgAcknowledgement::decode_vec(&msg.value).map_err(|e| {
+				let mut msg = MsgAcknowledgement::decode_vec(&msg.value).map_err(|e| {
 					ClientError::Other(format!("acknowledgement: failed to decode_vec : {:?}", e))
 				})?;
+
+				Self::redecode_proofs(&mut msg.proofs)?;
 				let mut token = msg.into_token();
 
 				let Token::Tuple(ref mut tokens) = token else {
@@ -1618,9 +1642,10 @@ impl EthereumClient {
 
 				calls.push(self.yui.send_and_get_tuple_calldata(token, "acknowledgePacket").await);
 			} else if msg.type_url == channel_msgs::recv_packet::TYPE_URL {
-				let msg = MsgRecvPacket::decode_vec(&msg.value).map_err(|e| {
+				let mut msg = MsgRecvPacket::decode_vec(&msg.value).map_err(|e| {
 					ClientError::Other(format!("recv_packet: failed to decode_vec : {:?}", e))
 				})?;
+				Self::redecode_proofs(&mut msg.proofs)?;
 				let mut token = msg.into_token();
 
 				let Token::Tuple(ref mut tokens) = token else {
@@ -1645,5 +1670,19 @@ impl EthereumClient {
 
 		let method = self.yui.method::<_, (Vec<bool>, Vec<Vec<u8>>)>("callBatch", calls)?;
 		Ok(method)
+	}
+
+	fn redecode_proofs(proofs: &mut Proofs) -> Result<(), ClientError> {
+		if let Some(proof) = proofs.client_proof.as_mut() {
+			*proof = redecode_proof(&clear_proof_value(proof)?)?;
+		}
+		proofs.object_proof = redecode_proof(&clear_proof_value(&proofs.object_proof)?)?;
+		if let Some(proof) = proofs.other_proof.as_mut() {
+			*proof = redecode_proof(&clear_proof_value(proof)?)?;
+		}
+		if let Some(proof) = proofs.consensus_proof.as_mut() {
+			proof.proof = redecode_proof(&clear_proof_value(&proof.proof)?)?;
+		}
+		Ok(())
 	}
 }

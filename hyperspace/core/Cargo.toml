@@ -13,7 +13,7 @@ tokio = { version = "1.19.2", features = ["macros", "rt-multi-thread"] }
 
 [dependencies]
 primitives = { path = "../primitives", package = "hyperspace-primitives" }
-parachain = { path = "../parachain", package = "hyperspace-parachain" }
+parachain = { path = "../parachain", package = "hyperspace-parachain", optional = true }
 cosmos = { path = "../cosmos", package = "hyperspace-cosmos", optional = true }
 ethereum = { path = "../ethereum", package = "hyperspace-ethereum", optional = true }
 #near = { path = "near", package = "hyperspace-near", optional = true }

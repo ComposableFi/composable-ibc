@@ -41,3 +41,6 @@ mod tests;
 pub use sync_committee_verifier::error::Error as EthereumError;
 
 pub trait HostFunctions: Sized + Send + Sync {}
+
+pub const IBC_CORE_STORAGE_PREFIX: &[u8] = b".core";
+pub const IBC_COMMITMENT_STORAGE_INDEX: u32 = 0;

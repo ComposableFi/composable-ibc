@@ -118,11 +118,11 @@ fn process_message(
 				&msg.proof,
 				&consensus_state.root,
 				client_state.ibc_core_address,
-				msg.path,
+				msg.path.clone(),
 				Some(Cow::Borrowed(&msg.value)),
 			)
 			.map_err(|e| {
-				ctx.log(&format!("VerifyMembership: error = {:?}", e));
+				ctx.log(&format!("VerifyMembership: error = {e:?}"));
 				ContractError::Client(e.to_string())
 			})?;
 			ensure!(verified == Verified::Yes, "failed to verify membership proof");

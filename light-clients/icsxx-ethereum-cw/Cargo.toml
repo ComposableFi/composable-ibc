@@ -100,3 +100,6 @@ testnet = [
 no_beacon = [
   "icsxx-ethereum/no_beacon"
 ]
+no_proof_verification = [
+  "icsxx-ethereum/no_proof_verification"
+]

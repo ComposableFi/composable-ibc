@@ -34,11 +34,11 @@ define_error! {
 /// handshake, as well as for ICS4 packets, timeouts, and acknowledgements.
 #[derive(Clone, Debug, PartialEq, Eq, Serialize)]
 pub struct Proofs {
-	object_proof: CommitmentProofBytes,
+	pub object_proof: CommitmentProofBytes,
 	pub client_proof: Option<CommitmentProofBytes>,
 	pub consensus_proof: Option<ConsensusProof>,
 	/// Currently used for proof_close for MsgTimeoutOnCLose where object_proof is proof_unreceived
-	other_proof: Option<CommitmentProofBytes>,
+	pub other_proof: Option<CommitmentProofBytes>,
 	/// Height for the commitment root for proving the proofs above.
 	/// When creating these proofs, the chain is queried at `height-1`.
 	height: Height,
@@ -89,7 +89,7 @@ impl Proofs {
 
 #[derive(Clone, Debug, PartialEq, Eq, Serialize)]
 pub struct ConsensusProof {
-	proof: CommitmentProofBytes,
+	pub proof: CommitmentProofBytes,
 	height: Height,
 }
 
