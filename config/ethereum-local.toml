@@ -50,7 +50,7 @@ ibc_core_facets = [
     "0x610178da211fef7d417bc0e6fed39f05609ad788",
 ],
 ]
-tendermint_diamond_address = "0x0b306bf915c4d645ff596e518faf3f9669b97016"
+tendermint_diamond_address = "0x959922be3caee4b8cd9a407cc3ac1c251c2007b1"
 tendermint_facets = [
     [
     "DiamondCutFacet",
@@ -66,14 +66,14 @@ tendermint_facets = [
 ],
     [
     "TendermintLightClientZK",
-    "0x9a676e781a523b5d0c0e43731313a708cb607508",
+    "0x0b306bf915c4d645ff596e518faf3f9669b97016",
 ],
 ]
-ibc_transfer_diamond_address = "0x322813fd9a801c5507c9de605d63cea4f2ce6c44"
+ibc_transfer_diamond_address = "0xa85233c63b9ee964add6f2cffe00fd84eb32338f"
 ibc_transfer_facets = [
     [
     "ICS20TransferBank",
-    "0x4ed7c70f96b99c776995fb64377f0d4ab3b0e1c1",
+    "0x322813fd9a801c5507c9de605d63cea4f2ce6c44",
 ],
     [
     "DiamondCutFacet",
@@ -88,11 +88,11 @@ ibc_transfer_facets = [
     "0xcf7ed3acca5a467e9e704c703e8d87f634fb0fc9",
 ],
 ]
-bank_diamond_address = "0xc6e7df5e7b4f2a278906862b61205850344d4e7d"
+bank_diamond_address = "0x59b670e9fa9d0a427751af201d676719a970857b"
 bank_facets = [
     [
     "ICS20Bank",
-    "0x3aa5ebb10dc797cac828524e59a333d0a371443c",
+    "0xc6e7df5e7b4f2a278906862b61205850344d4e7d",
 ],
     [
     "DiamondCutFacet",

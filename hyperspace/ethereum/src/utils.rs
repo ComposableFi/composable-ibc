@@ -1183,6 +1183,9 @@ pub async fn deploy_client<M: Middleware>(
 	let ics23_contract =
 		deploy_contract("Ics23Contract", &[&project_output1], (), client.clone()).await;
 
+	let tendermint_zk_contract =
+		deploy_contract("TendermintZKContract", &[&project_output1], (), client.clone()).await;
+
 	let contract_name = ContractName::from_str(client_name).map_err(|_| {
 		ClientError::Other(format!("invalid contract name: {}", client_name.to_string()))
 	})?;
@@ -1208,7 +1211,7 @@ pub async fn deploy_client<M: Middleware>(
 	yui_ibc.tendermint_facets = deployed_facets.clone();
 	let method = yui_ibc.method_diamond::<_, ()>(
 		"init",
-		(yui_ibc.ibc_core_diamond.address(), ics23_contract.address()),
+		(yui_ibc.ibc_core_diamond.address(), ics23_contract.address(), tendermint_zk_contract.address()),
 		TendermintDiamond,
 	)?;
 	send_retrying(&method).await.unwrap();
