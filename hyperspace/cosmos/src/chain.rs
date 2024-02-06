@@ -265,15 +265,9 @@ where
 		let (rpc_client, ws_driver) = WebSocketClient::new(self.websocket_url.clone())
 			.await
 			.map_err(|e| Error::RpcError(format!("{e:?}")))?;
-		let (rpc_client2, rpc_driver2) =
-			WebSocketClient::new("ws://34.116.194.171:26657/websocket")
-				.await
-				.map_err(|e| Error::RpcError(format!("{:?}", e)))?;
 
 		self.join_handles.lock().await.push(tokio::spawn(ws_driver.run()));
-		self.join_handles.lock().await.push(tokio::spawn(rpc_driver2.run()));
 		self.rpc_client = rpc_client;
-		self.rpc_client2 = rpc_client2;
 		log::info!(target: "hyperspace_cosmos", "Reconnected to cosmos chain");
 		Ok(())
 	}

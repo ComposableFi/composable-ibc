@@ -66,10 +66,6 @@ use log::info;
 use ssz_rs::{Merkleized, Node};
 use sync_committee_primitives::consensus_types::BeaconBlockHeader;
 
-#[cfg(not(feature = "no_beacon"))]
-use crate::prove::prove;
-#[cfg(feature = "no_beacon")]
-use crate::prove::prove_fast as prove;
 use crate::{
 	chain::{
 		client_state_abi_token, client_state_from_abi_token, consensus_state_from_abi_token,
@@ -77,6 +73,7 @@ use crate::{
 	},
 	client::run_updates_fetcher,
 	config::ContractName,
+	prove::prove,
 	utils::{create_intervals, SEQUENCES_PER_ITER},
 };
 use ibc::{

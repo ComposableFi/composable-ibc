@@ -253,10 +253,9 @@ where
 		let (rpc_client, rpc_driver) = WebSocketClient::new(config.websocket_url.clone())
 			.await
 			.map_err(|e| Error::RpcError(format!("{:?}", e)))?;
-		let (rpc_client2, rpc_driver2) =
-			WebSocketClient::new("ws://34.116.194.171:26657/websocket")
-				.await
-				.map_err(|e| Error::RpcError(format!("{:?}", e)))?;
+		let (rpc_client2, rpc_driver2) = WebSocketClient::new(config.websocket_url.clone())
+			.await
+			.map_err(|e| Error::RpcError(format!("{:?}", e)))?;
 		let rpc_http_client = HttpClient::new(config.rpc_url.clone())
 			.map_err(|e| Error::RpcError(format!("{:?}", e)))?;
 		let ws_driver_jh = tokio::spawn(rpc_driver.run());
