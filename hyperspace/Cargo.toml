@@ -15,3 +15,6 @@ toml = "0.7.3"
 ethereum-mainnet = [
     "hyperspace-core/ethereum-mainnet",
 ]
+ethereum-testnet = [
+    "hyperspace-core/ethereum-testnet",
+]
