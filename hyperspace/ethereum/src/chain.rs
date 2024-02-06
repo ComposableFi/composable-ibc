@@ -77,7 +77,7 @@ use std::{
 };
 use tendermint::{
 	account, block,
-	block::{header::Version, signed_header::SignedHeader, Height as TmHeight},
+	block::{header::Version, signed_header::SignedHeader, CommitSig, Height as TmHeight},
 	trust_threshold::TrustThresholdFraction,
 	AppHash, Hash, PublicKey, Time,
 };
@@ -507,6 +507,24 @@ fn tm_header_abi_token(header: &ics07_tendermint_zk::client_message::ZkHeader) -
 		.to_vec(),
 	);
 
+	let mut list_of_commit_sig = vec![];
+	for i in header.signed_header.commit.signatures.iter() {
+		match i{
+			CommitSig::BlockIdFlagAbsent => {
+				// EthersToken::Tuple(vec![])
+			}
+			CommitSig::BlockIdFlagCommit{validator_address, timestamp, signature} => {
+				let validator_address = EthersToken::Bytes(validator_address.as_bytes().into());
+				let tuple = EthersToken::Tuple(vec![validator_address]);
+				list_of_commit_sig.push(tuple);
+				// EthersToken::Tuple(vec![EthersToken::Bytes(validator_address.into()), EthersToken::Int(timestamp.into()), EthersToken::Bytes(signature.into())])
+			}
+			CommitSig::BlockIdFlagNil{validator_address, timestamp, signature} => {
+				// EthersToken::Tuple(vec![EthersToken::Bytes(validator_address.into()), EthersToken::Int(timestamp.into()), EthersToken::Bytes(signature.into())])
+			}
+		};
+	}
+
 	let signed_header_commit = EthersToken::Tuple(
 		[
 			//height
@@ -530,12 +548,42 @@ fn tm_header_abi_token(header: &ics07_tendermint_zk::client_message::ZkHeader) -
 				]
 				.to_vec(),
 			),
+			//signatures
+			EthersToken::Array(list_of_commit_sig),
 		]
 		.to_vec(),
 	);
 
-	let trusted_validators = header
+	// let validator_set = hea
+
+	// for i in header.validator_set.validators().iter(){
+
+	// }
+
+	let validators = header
 		.validator_set
+		.validators()
+		.iter()
+		.map(|validator| {
+			validator_info_token(validator)
+		})
+		.collect::<Result<Vec<_>, _>>()?;
+
+	let validators_proposer = header.validator_set.proposer().clone().unwrap();
+	let validators_proposer = validator_info_token(&validators_proposer)?;
+
+	let validator_set = EthersToken::Tuple(vec![
+			EthersToken::Array(validators),
+			validators_proposer,
+			EthersToken::Int(header.validator_set.total_voting_power().value().into()),
+		]
+	);
+
+
+	
+
+	let trusted_validators = header
+		.trusted_validator_set
 		.validators()
 		.iter()
 		.map(|validator| {
@@ -564,12 +612,39 @@ fn tm_header_abi_token(header: &ics07_tendermint_zk::client_message::ZkHeader) -
 	let ret = EthersToken::Tuple(
 		[
 			EthersToken::Tuple([signed_header_header, signed_header_commit].to_vec()),
+			validator_set,
 			EthersToken::Int(header.trusted_height.revision_height.into()),
 			EthersToken::Array(trusted_validators),
 		]
 		.to_vec(),
 	);
 	Ok(ret)
+}
+
+fn validator_info_token(validator: &tendermint::validator::Info) -> Result<Token, ClientError> {
+	use ethers::abi::{encode as ethers_encode, Token as EthersToken};
+    let address = EthersToken::Bytes(validator.address.as_bytes().into());
+    let pub_key = validator.pub_key.clone();
+    let voting_power = EthersToken::Int(validator.power.value().into());
+    let proposer_priority = EthersToken::Int(validator.proposer_priority.value().into());
+    let pub_key = match pub_key {
+				    PublicKey::Ed25519(pub_key) => EthersToken::Tuple(vec![
+					    EthersToken::Bytes(pub_key.as_bytes().to_vec()),
+					    EthersToken::Bytes(vec![]),
+					    EthersToken::Bytes(vec![]),
+				    ]),
+				    PublicKey::Secp256k1(pub_key) => EthersToken::Tuple(vec![
+					    EthersToken::Bytes(vec![]),
+					    EthersToken::Bytes(pub_key.to_bytes().to_vec()),
+					    EthersToken::Bytes(vec![]),
+				    ]),
+				    _ =>
+					    return Err(ClientError::Other(
+						    "unsupported public key type, only ed25519 is supported".to_string(),
+					    )),
+			    };
+    // Ok(EthersToken::Tuple(vec![pub_key, EthersToken::Int(voting_power.into())]))
+    Ok(EthersToken::Tuple(vec![address, pub_key,voting_power, proposer_priority ]))
 }
 
 pub(crate) fn tm_header_from_abi_token(token: Token) -> Result<Header, ClientError> {
