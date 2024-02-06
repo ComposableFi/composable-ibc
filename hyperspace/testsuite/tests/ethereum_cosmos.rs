@@ -154,8 +154,10 @@ async fn get_current_validator_set(cosmos_client: &CosmosClient<()>, client_b: &
 		.unwrap();
 
 	let height = client_state.latest_height().revision_height as u32;
+	info!("Using height for current validators: {}", height);
+	let height1 = height.into();
 	let header = cosmos_client
-		.msg_update_client_header(height.into(), height.into(), client_state.latest_height())
+		.msg_update_client_header(height1, height1.increment(), client_state.latest_height())
 		.await
 		.unwrap()
 		.pop()
@@ -1106,7 +1108,7 @@ async fn ethereum_to_cosmos_governance_and_filters_test() {
 		(RelayerWhitelistFacet, "addRelayer", Owner),
 		(RelayerWhitelistFacet, "removeRelayer", Owner),
 		(TendermintLightClientZK, "init", Anyone),
-		(TendermintLightClientZK, "createClient", Ibc),
+		(TendermintLightClientZK, "initializeClient", Ibc),
 		(TendermintLightClientZK, "updateClient", Ibc),
 	]
 	.into_iter()
@@ -1156,8 +1158,7 @@ async fn ethereum_to_cosmos_governance_and_filters_test() {
 		.unwrap();
 
 	let path = utils::yui_ibc_solidity_path();
-	let project_output =
-		hyperspace_ethereum::utils::compile_yui(&path, "contracts/apps/20-transfer");
+	let project_output = compile_yui(&path, "contracts/apps/20-transfer");
 	let erc20_token = deploy_contract(
 		"ERC20Token",
 		&[&project_output],
