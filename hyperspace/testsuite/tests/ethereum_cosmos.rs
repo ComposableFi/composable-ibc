@@ -457,19 +457,6 @@ async fn ethereum_to_cosmos_ibc_messaging_full_integration_test() {
 	let asset_id_native_a = AnyAssetId::Ethereum(asset_native_str.clone());
 	let (mut chain_a, mut chain_b, _indexer_handle) = setup_clients().await;
 	sleep(Duration::from_secs(12)).await;
-	if !USE_GETH {
-		// let a = chain_a.clone();
-		// let _h = tokio::spawn(async move {
-		// 	let AnyChain::Ethereum(eth) = &a else { unreachable!() };
-		//
-		// 	let mut p = Provider::connect(eth.config.ws_rpc_url.to_string()).await.unwrap();
-		// 	loop {
-		// 		tokio::time::sleep(Duration::from_secs(5)).await;
-		// 		let res = p.request::<_, BlockNumber>("evm_mine", ()).await;
-		// 		info!(target: "hyperspace", "Mined: {res:?}");
-		// 	}
-		// });
-	}
 
 	let (handle, channel_a, channel_b, connection_id_a, connection_id_b) =
 		setup_connection_and_channel(&mut chain_a, &mut chain_b, Duration::from_secs(1)).await;
