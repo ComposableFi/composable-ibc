@@ -265,7 +265,7 @@ The following is a template of centauri-mainnet
 
 ```
 type = "cosmos"
-name = "centauri_mainnet"
+name = "composable"
 rpc_url = "wss://rpc-pruned3600-0.composable-mainnet.sre-scratchpad-349209.composablenodes.tech:443"
 grpc_url = "wss://rpc-pruned7200-0.polkadot-mainnet.sre-scratchpad-349209.composablenodes.tech:443"
 websocket_url = "ws://127.0.0.1:2261/websocket"
