@@ -162,7 +162,7 @@ where
 	B::Error: From<A::Error>,
 {
 	let balance = chain_a
-		.query_ibc_balance(asset_a)
+		.query_ibc_balance(asset_a, None)
 		.await
 		.expect("Can't query ibc balance")
 		.pop()
@@ -210,32 +210,49 @@ where
 	(amount, msg)
 }
 
-pub async fn assert_send_transfer<A>(
-	chain: &A,
-	asset_id: A::AssetId,
+pub async fn assert_send_transfer<A, B>(
+	chain_a: &A,
+	asset_id_a: A::AssetId,
+	chain_b: &B,
+	asset_id_b: B::AssetId,
 	previous_balance: u128,
 	wait_blocks: u64,
+	is_native_asset: bool,
+	fee_percentage: Option<u32>,
 ) where
 	A: TestProvider,
 	A::FinalityEvent: Send + Sync,
+	B: TestProvider,
+	B::FinalityEvent: Send + Sync,
 {
+	let sent_amount = (previous_balance * 20) / 100;
+	let fee_amount = fee_percentage.map(|p| (sent_amount * p as u128) / 100_00).unwrap_or_default();
+
+	let balance_before_receive = chain_b
+		.query_ibc_balance(asset_id_b.clone(), None)
+		.await
+		.expect("Can't query ibc balance")
+		.pop()
+		.expect("No Ibc balances")
+		.amount;
+
 	// wait for the acknowledgment
-	let future = chain
+	let future = chain_a
 		.ibc_events()
 		.await
 		.skip_while(|ev| future::ready(!matches!(ev, IbcEvent::AcknowledgePacket(_))))
 		.take(1)
 		.collect::<Vec<_>>();
 	timeout_after(
-		chain,
+		chain_a,
 		future,
 		wait_blocks,
-		format!("Didn't see AcknowledgePacket on {}", chain.name()),
+		format!("Didn't see AcknowledgePacket on {}", chain_a.name()),
 	)
 	.await;
 
-	let balance = chain
-		.query_ibc_balance(asset_id)
+	let balance = chain_a
+		.query_ibc_balance(asset_id_a, None)
 		.await
 		.expect("Can't query ibc balance")
 		.pop()
@@ -243,6 +260,27 @@ pub async fn assert_send_transfer<A>(
 
 	let new_amount = balance.amount.as_u256().as_u128();
 	assert!(new_amount <= (previous_balance * 80) / 100 + 1);
+
+	let balance_after_receive = chain_b
+		.query_ibc_balance(asset_id_b, None)
+		.await
+		.expect("Can't query ibc balance")
+		.pop()
+		.expect("No Ibc balances")
+		.amount;
+
+	if is_native_asset {
+		let half_sent = sent_amount / 2;
+		assert!(
+			balance_after_receive.as_u256().as_u128() >
+				balance_before_receive.as_u256().as_u128() + half_sent - fee_amount
+		);
+	} else {
+		assert_eq!(
+			balance_after_receive.as_u256().as_u128(),
+			balance_before_receive.as_u256().as_u128() + sent_amount - fee_amount
+		);
+	}
 }
 
 /// Send a packet using a height timeout that has already passed
@@ -253,6 +291,7 @@ async fn send_packet_and_assert_height_timeout<A, B>(
 	asset_a: A::AssetId,
 	channel_id: ChannelId,
 	is_native_asset: bool,
+	fee_percentage: Option<u32>,
 ) where
 	A: TestProvider,
 	A::FinalityEvent: Send + Sync,
@@ -272,9 +311,11 @@ async fn send_packet_and_assert_height_timeout<A, B>(
 		Some(Timeout::Offset { timestamp: Some(60 * 60), height: Some(20) }),
 	)
 	.await;
+	let sent_amount = (initial_balance * 20) / 100;
+	let fee_amount = fee_percentage.map(|p| (sent_amount * p as u128) / 100_00).unwrap_or_default();
 
 	let balance_after_send = chain_a
-		.query_ibc_balance(asset_a.clone())
+		.query_ibc_balance(asset_a.clone(), None)
 		.await
 		.expect("Can't query ibc balance")
 		.pop()
@@ -307,7 +348,7 @@ async fn send_packet_and_assert_height_timeout<A, B>(
 	assert_timeout_packet(chain_a, 175).await;
 
 	let balance_after_timeout = chain_a
-		.query_ibc_balance(asset_a)
+		.query_ibc_balance(asset_a, None)
 		.await
 		.expect("Can't query ibc balance")
 		.pop()
@@ -317,7 +358,7 @@ async fn send_packet_and_assert_height_timeout<A, B>(
 		let half_sent = (initial_balance * 10) / 100;
 		assert!(balance_after_timeout.as_u256().as_u128() > initial_balance - half_sent);
 	} else {
-		assert_eq!(balance_after_timeout.as_u256().as_u128(), initial_balance);
+		assert_eq!(balance_after_timeout.as_u256().as_u128(), initial_balance - fee_amount);
 	}
 
 	log::info!(target: "hyperspace", "🚀🚀 Timeout packet successfully processed for height timeout");
@@ -331,6 +372,7 @@ async fn send_packet_and_assert_timestamp_timeout<A, B>(
 	asset_a: A::AssetId,
 	channel_id: ChannelId,
 	is_native_asset: bool,
+	fee_percentage: Option<u32>,
 ) where
 	A: TestProvider,
 	A::FinalityEvent: Send + Sync,
@@ -350,9 +392,11 @@ async fn send_packet_and_assert_timestamp_timeout<A, B>(
 		Some(Timeout::Offset { timestamp: Some(60 * 2), height: Some(400) }),
 	)
 	.await;
+	let sent_amount = (initial_balance * 20) / 100;
+	let fee_amount = fee_percentage.map(|p| (sent_amount * p as u128) / 100_00).unwrap_or_default();
 
 	let balance_after_send = chain_a
-		.query_ibc_balance(asset_a.clone())
+		.query_ibc_balance(asset_a.clone(), None)
 		.await
 		.expect("Can't query ibc balance")
 		.pop()
@@ -390,7 +434,7 @@ async fn send_packet_and_assert_timestamp_timeout<A, B>(
 	assert_timeout_packet(chain_a, 4000).await;
 
 	let balance_after_timeout = chain_a
-		.query_ibc_balance(asset_a)
+		.query_ibc_balance(asset_a, None)
 		.await
 		.expect("Can't query ibc balance")
 		.pop()
@@ -401,7 +445,7 @@ async fn send_packet_and_assert_timestamp_timeout<A, B>(
 		let half_sent = (initial_balance * 10) / 100;
 		assert!(balance_after_timeout.as_u256().as_u128() > initial_balance - half_sent);
 	} else {
-		assert_eq!(balance_after_timeout.as_u256().as_u128(), initial_balance);
+		assert_eq!(balance_after_timeout.as_u256().as_u128(), initial_balance - fee_amount);
 	}
 
 	log::info!(target: "hyperspace", "🚀🚀 Timeout packet successfully processed for timeout timestamp");
@@ -415,6 +459,9 @@ async fn send_packet_with_connection_delay<A, B>(
 	channel_id_b: ChannelId,
 	asset_a: A::AssetId,
 	asset_b: B::AssetId,
+	is_native_asset: bool,
+	fee_percentage_a: Option<u32>,
+	fee_percentage_b: Option<u32>,
 ) where
 	A: TestProvider,
 	A::FinalityEvent: Send + Sync,
@@ -426,11 +473,31 @@ async fn send_packet_with_connection_delay<A, B>(
 	log::info!(target: "hyperspace", "Sending transfer from {}", chain_a.name());
 	let (previous_balance, ..) =
 		send_transfer(chain_a, chain_b, asset_a.clone(), channel_id_a, None).await;
-	assert_send_transfer(chain_a, asset_a, previous_balance, 4800).await;
+	assert_send_transfer(
+		chain_a,
+		asset_a.clone(),
+		chain_b,
+		asset_b.clone(),
+		previous_balance,
+		4800,
+		is_native_asset,
+		fee_percentage_a,
+	)
+	.await;
 	log::info!(target: "hyperspace", "Sending transfer from {}", chain_b.name());
 	let (previous_balance, ..) =
 		send_transfer(chain_b, chain_a, asset_b.clone(), channel_id_b, None).await;
-	assert_send_transfer(chain_b, asset_b, previous_balance, 4800).await;
+	assert_send_transfer(
+		chain_b,
+		asset_b,
+		chain_a,
+		asset_a,
+		previous_balance,
+		4800,
+		is_native_asset,
+		fee_percentage_b,
+	)
+	.await;
 	// now send from chain b.
 	log::info!(target: "hyperspace", "🚀🚀 Token Transfer successful with connection delay");
 }
@@ -503,7 +570,7 @@ async fn send_packet_and_assert_timeout_on_channel_close<A, B>(
 	.await;
 
 	let balance_after_send = chain_a
-		.query_ibc_balance(asset_a.clone())
+		.query_ibc_balance(asset_a.clone(), None)
 		.await
 		.expect("Can't query ibc balance")
 		.pop()
@@ -550,7 +617,7 @@ async fn send_packet_and_assert_timeout_on_channel_close<A, B>(
 	assert_timeout_packet(chain_a, 1000).await;
 
 	let balance_after_timeout = chain_a
-		.query_ibc_balance(asset_a)
+		.query_ibc_balance(asset_a, None)
 		.await
 		.expect("Can't query ibc balance")
 		.pop()
@@ -569,6 +636,7 @@ pub async fn ibc_messaging_packet_height_timeout_with_connection_delay<A, B>(
 	asset_a: A::AssetId,
 	channel_a: ChannelId,
 	_channel_b: ChannelId,
+	fee_percentage: Option<u32>,
 ) where
 	A: TestProvider,
 	A::FinalityEvent: Send + Sync,
@@ -584,7 +652,15 @@ pub async fn ibc_messaging_packet_height_timeout_with_connection_delay<A, B>(
 			.await
 			.unwrap()
 	});
-	send_packet_and_assert_height_timeout(chain_a, chain_b, asset_a, channel_a, false).await;
+	send_packet_and_assert_height_timeout(
+		chain_a,
+		chain_b,
+		asset_a,
+		channel_a,
+		false,
+		fee_percentage,
+	)
+	.await;
 	handle.abort()
 }
 
@@ -595,6 +671,7 @@ pub async fn ibc_messaging_packet_height_timeout_with_connection_delay_native<A,
 	asset_a: A::AssetId,
 	channel_a: ChannelId,
 	_channel_b: ChannelId,
+	fee_percentage: Option<u32>,
 ) where
 	A: TestProvider,
 	A::FinalityEvent: Send + Sync,
@@ -610,7 +687,15 @@ pub async fn ibc_messaging_packet_height_timeout_with_connection_delay_native<A,
 			.await
 			.unwrap()
 	});
-	send_packet_and_assert_height_timeout(chain_a, chain_b, asset_a, channel_a, true).await;
+	send_packet_and_assert_height_timeout(
+		chain_a,
+		chain_b,
+		asset_a,
+		channel_a,
+		true,
+		fee_percentage,
+	)
+	.await;
 	handle.abort()
 }
 
@@ -621,6 +706,7 @@ pub async fn ibc_messaging_packet_timestamp_timeout_with_connection_delay<A, B>(
 	asset_a: A::AssetId,
 	channel_a: ChannelId,
 	_channel_b: ChannelId,
+	fee_percentage: Option<u32>,
 ) where
 	A: TestProvider,
 	A::FinalityEvent: Send + Sync,
@@ -636,7 +722,15 @@ pub async fn ibc_messaging_packet_timestamp_timeout_with_connection_delay<A, B>(
 			.await
 			.unwrap()
 	});
-	send_packet_and_assert_timestamp_timeout(chain_a, chain_b, asset_a, channel_a, false).await;
+	send_packet_and_assert_timestamp_timeout(
+		chain_a,
+		chain_b,
+		asset_a,
+		channel_a,
+		false,
+		fee_percentage,
+	)
+	.await;
 	handle.abort()
 }
 
@@ -647,6 +741,7 @@ pub async fn ibc_messaging_packet_timestamp_timeout_with_connection_delay_native
 	asset_a: A::AssetId,
 	channel_a: ChannelId,
 	_channel_b: ChannelId,
+	fee_percentage: Option<u32>,
 ) where
 	A: TestProvider,
 	A::FinalityEvent: Send + Sync,
@@ -662,7 +757,15 @@ pub async fn ibc_messaging_packet_timestamp_timeout_with_connection_delay_native
 			.await
 			.unwrap()
 	});
-	send_packet_and_assert_timestamp_timeout(chain_a, chain_b, asset_a, channel_a, true).await;
+	send_packet_and_assert_timestamp_timeout(
+		chain_a,
+		chain_b,
+		asset_a,
+		channel_a,
+		true,
+		fee_percentage,
+	)
+	.await;
 	handle.abort()
 }
 
@@ -675,6 +778,8 @@ pub async fn ibc_messaging_with_connection_delay<A, B>(
 	asset_b: B::AssetId,
 	channel_a: ChannelId,
 	channel_b: ChannelId,
+	fee_percentage_a: Option<u32>,
+	fee_percentage_b: Option<u32>,
 ) where
 	A: TestProvider,
 	A::FinalityEvent: Send + Sync,
@@ -694,8 +799,61 @@ pub async fn ibc_messaging_with_connection_delay<A, B>(
 			})
 			.unwrap()
 	});
-	send_packet_with_connection_delay(chain_a, chain_b, channel_a, channel_b, asset_a, asset_b)
-		.await;
+	send_packet_with_connection_delay(
+		chain_a,
+		chain_b,
+		channel_a,
+		channel_b,
+		asset_a,
+		asset_b,
+		false,
+		fee_percentage_a,
+		fee_percentage_b,
+	)
+	.await;
+	handle.abort()
+}
+
+pub async fn ibc_messaging_with_connection_delay_native<A, B>(
+	chain_a: &mut A,
+	chain_b: &mut B,
+	asset_a: A::AssetId,
+	asset_b: B::AssetId,
+	channel_a: ChannelId,
+	channel_b: ChannelId,
+	fee_percentage_a: Option<u32>,
+	fee_percentage_b: Option<u32>,
+) where
+	A: TestProvider,
+	A::FinalityEvent: Send + Sync,
+	A::Error: From<B::Error>,
+	B: TestProvider,
+	B::FinalityEvent: Send + Sync,
+	B::Error: From<A::Error>,
+{
+	let client_a_clone = chain_a.clone();
+	let client_b_clone = chain_b.clone();
+	let handle = tokio::task::spawn(async move {
+		hyperspace_core::relay(client_a_clone, client_b_clone, None, None, None)
+			.await
+			.map_err(|e| {
+				log::error!(target: "hyperspace", "Relayer loop failed: {:?}", e);
+				e
+			})
+			.unwrap()
+	});
+	send_packet_with_connection_delay(
+		chain_a,
+		chain_b,
+		channel_a,
+		channel_b,
+		asset_a,
+		asset_b,
+		true,
+		fee_percentage_a,
+		fee_percentage_b,
+	)
+	.await;
 	handle.abort()
 }
 

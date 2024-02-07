@@ -28,6 +28,7 @@ use ibc::{
 		ics24_host::identifier::{ChannelId, ClientId, ConnectionId, PortId},
 	},
 	events::IbcEvent,
+	signer::Signer,
 	timestamp::Timestamp,
 	Height,
 };
@@ -585,6 +586,7 @@ where
 	async fn query_ibc_balance(
 		&self,
 		asset_id: Self::AssetId,
+		account_id: Option<&Signer>,
 	) -> Result<Vec<PrefixedCoin>, Self::Error> {
 		let account = self.public_key.clone().into_account();
 		let account = subxt::utils::AccountId32::from(<[u8; 32]>::from(account));
@@ -596,7 +598,7 @@ where
 			<T as light_client_common::config::Config>::AssetId,
 		>::query_balance_with_address(
 			&*self.para_ws_client,
-			hex_string,
+			account_id.map(ToString::to_string).unwrap_or(hex_string),
 			asset_id,
 		)
 		.await

@@ -436,6 +436,7 @@ pub trait IbcProvider {
 	async fn query_ibc_balance(
 		&self,
 		asset_id: Self::AssetId,
+		account_id: Option<&Signer>,
 	) -> Result<Vec<PrefixedCoin>, Self::Error>;
 
 	/// Return the chain connection prefix

@@ -1327,6 +1327,8 @@ pub async fn deploy_transfer_module<M: Middleware, S: Signer>(
 	ibc_core_diamond_address: Address,
 	client: Arc<SignerMiddleware<M, S>>,
 	min_timeout_timestamp: u64,
+	fee_percentage: u32,
+	fee_collector: Address,
 ) -> Result<
 	(
 		ContractInstance<Arc<SignerMiddleware<M, S>>, SignerMiddleware<M, S>>,
@@ -1386,6 +1388,8 @@ pub async fn deploy_transfer_module<M: Middleware, S: Signer>(
 			Token::Address(ibc_core_diamond_address),
 			Token::Address(bank_diamond.address()),
 			min_timeout_timestamp,
+			fee_percentage,
+			fee_collector,
 		),
 		IbcTransferDiamond,
 	)?;
