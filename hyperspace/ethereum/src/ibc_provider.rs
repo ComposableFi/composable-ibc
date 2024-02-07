@@ -81,6 +81,7 @@ use ibc::{
 	},
 	events::IbcEvent,
 	protobuf::Protobuf,
+	signer::Signer,
 	tx_msg::Msg,
 };
 use ibc_proto::{
@@ -1551,15 +1552,16 @@ impl IbcProvider for EthereumClient {
 	async fn query_ibc_balance(
 		&self,
 		asset_id: Self::AssetId,
+		account_id: Option<&Signer>,
 	) -> Result<Vec<PrefixedCoin>, Self::Error> {
 		let balance = self
 			.yui
 			.method_diamond::<_, U256>(
 				"balanceOf",
 				(
-					H160::from_str(&self.account_id().to_string()).map_err(|_| {
-						ClientError::Other("failed get bytes from account id".to_string())
-					})?,
+					H160::from_str(&account_id.unwrap_or(&self.account_id()).to_string()).map_err(
+						|_| ClientError::Other("failed get bytes from account id".to_string()),
+					)?,
 					asset_id.clone(),
 				),
 				ContractName::IbcTransferDiamond,

@@ -159,6 +159,11 @@ pub struct DeployTransferModuleCmd {
 	pub yui_solidity_path: PathBuf,
 	#[clap(long)]
 	pub min_timeout_timestamp: u64,
+	#[clap(long)]
+	/// Fee percentage (0.00 - 100.00)
+	pub fee_percentage: f32,
+	#[clap(long)]
+	pub fee_collector: Address,
 }
 
 impl DeployTransferModuleCmd {
@@ -190,6 +195,10 @@ impl DeployTransferModuleCmd {
 		)
 		.await?;
 
+		let fee_basis_points = (self.fee_percentage * 100.0) as u32;
+		if fee_basis_points > 100_00 {
+			bail!("Fee percentage should be between 0.00 and 100.00")
+		}
 		let (ibc_transfer_bank_diamond, transfer_bank_facets, bank_diamond, bank_facets) =
 			deploy_transfer_module::<Provider<_>, _>(
 				path,
@@ -197,6 +206,8 @@ impl DeployTransferModuleCmd {
 				diamond_addr,
 				client,
 				self.min_timeout_timestamp,
+				fee_basis_points,
+				self.fee_collector,
 			)
 			.await?;
 		config.ibc_transfer_diamond_address = Some(ibc_transfer_bank_diamond.address());

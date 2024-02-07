@@ -29,6 +29,7 @@ use ibc::{
 	},
 	events::IbcEvent,
 	protobuf::Protobuf,
+	signer::Signer,
 	timestamp::Timestamp,
 	tx_msg::Msg,
 	Height,
@@ -881,6 +882,7 @@ where
 	async fn query_ibc_balance(
 		&self,
 		asset_id: Self::AssetId,
+		account_id: Option<&Signer>,
 	) -> Result<Vec<PrefixedCoin>, Self::Error> {
 		let denom = &asset_id;
 		let mut grpc_client = ibc_proto::cosmos::bank::v1beta1::query_client::QueryClient::connect(
@@ -890,7 +892,7 @@ where
 		.map_err(|e| Error::from(format!("{e:?}")))?;
 
 		let request = tonic::Request::new(QueryBalanceRequest {
-			address: self.keybase.clone().account,
+			address: account_id.map(ToString::to_string).unwrap_or(self.keybase.account.clone()),
 			denom: denom.to_string(),
 		});
 

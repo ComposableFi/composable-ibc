@@ -48,13 +48,14 @@ use hyperspace_testsuite::{
 	ibc_messaging_packet_height_timeout_with_connection_delay_native,
 	ibc_messaging_packet_timestamp_timeout_with_connection_delay,
 	ibc_messaging_packet_timestamp_timeout_with_connection_delay_native,
-	ibc_messaging_with_connection_delay, send_transfer, setup_connection_and_channel,
+	ibc_messaging_with_connection_delay, ibc_messaging_with_connection_delay_native, send_transfer,
+	setup_connection_and_channel,
 };
 use ibc::core::{ics02_client::client_state::ClientState, ics24_host::identifier::PortId};
 use itertools::Itertools;
 use log::{info, warn};
 use pallet_ibc::light_clients::AnyClientState;
-use sp_core::hashing::sha2_256;
+use sp_core::{hashing::sha2_256, H160};
 use std::{
 	collections::{HashMap, HashSet},
 	path::PathBuf,
@@ -64,8 +65,11 @@ use std::{
 use tendermint::{validator::Set, PublicKey};
 use tokio::{task::JoinHandle, time::sleep};
 
-const USE_CONFIG: bool = true;
-const SAVE_TO_CONFIG: bool = true;
+const USE_CONFIG: bool = false;
+const SAVE_TO_CONFIG: bool = false;
+
+pub const FEE_PERCENTAGE: u32 = 1_00; // 1%
+pub const FEE_COLLECTOR: Address = H160([1; 20]);
 
 #[derive(Debug, Clone)]
 pub struct Args {
@@ -267,6 +271,8 @@ async fn setup_clients() -> (AnyChain, AnyChain, JoinHandle<()>) {
 				deploy.yui_ibc.ibc_core_diamond.address(),
 				deploy.client.clone(),
 				1,
+				FEE_PERCENTAGE,
+				FEE_COLLECTOR,
 			)
 			.await
 			.unwrap();
@@ -446,6 +452,20 @@ async fn setup_clients() -> (AnyChain, AnyChain, JoinHandle<()>) {
 	(chain_a_wrapped, chain_b_wrapped, indexer_handle)
 }
 
+async fn query_fee_collector_balance<C: Chain>(chain: &C, asset_id: &C::AssetId) -> U256 {
+	chain
+		.query_ibc_balance(
+			asset_id.clone(),
+			Some(&ibc::signer::Signer::from_str(&format!("{FEE_COLLECTOR:?}")).unwrap()),
+		)
+		.await
+		.expect("Can't query ibc balance")
+		.pop()
+		.expect("No Ibc balances")
+		.amount
+		.as_u256()
+}
+
 #[tokio::test(flavor = "multi_thread", worker_threads = 10)]
 #[ignore]
 async fn ethereum_to_cosmos_ibc_messaging_full_integration_test() {
@@ -468,7 +488,7 @@ async fn ethereum_to_cosmos_ibc_messaging_full_integration_test() {
 	log::info!(target: "hyperspace", "Conn A: {connection_id_a:?} B: {connection_id_b:?}");
 	log::info!(target: "hyperspace", "Chann A: {channel_a:?} B: {channel_b:?}");
 
-	let asset_id_native_b: AnyAssetId = AnyAssetId::Cosmos(format!(
+	let asset_id_native_a_on_b: AnyAssetId = AnyAssetId::Cosmos(format!(
 		"ibc/{}",
 		hex::encode(&sha2_256(
 			format!("{}/{channel_b}/{asset_native_str}", PortId::transfer()).as_bytes()
@@ -492,20 +512,37 @@ async fn ethereum_to_cosmos_ibc_messaging_full_integration_test() {
 
 	let (previous_balance, _) =
 		send_transfer(&chain_b, &chain_a, asset_id_b.clone(), channel_b, None).await;
-	assert_send_transfer(&chain_b, asset_id_b.clone(), previous_balance, 4800).await;
+	assert_send_transfer(
+		&chain_b,
+		asset_id_b.clone(),
+		&chain_a,
+		asset_id_b_on_a.clone(),
+		previous_balance,
+		4800,
+		true,
+		None,
+	)
+	.await;
 	handle.abort();
+
+	assert_eq!(query_fee_collector_balance(&chain_a, &asset_id_native_a).await, 0u32.into());
 
 	// Run tests sequentially
 	// no timeouts + connection delay
-	ibc_messaging_with_connection_delay(
+	ibc_messaging_with_connection_delay_native(
 		&mut chain_a,
 		&mut chain_b,
 		asset_id_native_a.clone(),
-		asset_id_native_b.clone(),
+		asset_id_native_a_on_b.clone(),
 		channel_a,
 		channel_b,
+		Some(FEE_PERCENTAGE),
+		None,
 	)
 	.await;
+
+	assert_ne!(query_fee_collector_balance(&chain_a, &asset_id_native_a).await, 0u32.into());
+	assert_eq!(query_fee_collector_balance(&chain_a, &asset_id_a).await, 0u32.into());
 
 	ibc_messaging_with_connection_delay(
 		&mut chain_a,
@@ -514,8 +551,12 @@ async fn ethereum_to_cosmos_ibc_messaging_full_integration_test() {
 		asset_id_a_on_b.clone(),
 		channel_a,
 		channel_b,
+		Some(FEE_PERCENTAGE),
+		None,
 	)
 	.await;
+
+	assert_ne!(query_fee_collector_balance(&chain_a, &asset_id_a).await, 0u32.into());
 
 	ibc_messaging_with_connection_delay(
 		&mut chain_b,
@@ -524,6 +565,8 @@ async fn ethereum_to_cosmos_ibc_messaging_full_integration_test() {
 		asset_id_b_on_a.clone(),
 		channel_b,
 		channel_a,
+		None,
+		Some(FEE_PERCENTAGE),
 	)
 	.await;
 
@@ -534,6 +577,8 @@ async fn ethereum_to_cosmos_ibc_messaging_full_integration_test() {
 		asset_id_b.clone(),
 		channel_a,
 		channel_b,
+		Some(FEE_PERCENTAGE),
+		None,
 	)
 	.await;
 
@@ -544,6 +589,7 @@ async fn ethereum_to_cosmos_ibc_messaging_full_integration_test() {
 		asset_id_b.clone(),
 		channel_b,
 		channel_a,
+		None,
 	)
 	.await;
 
@@ -554,6 +600,7 @@ async fn ethereum_to_cosmos_ibc_messaging_full_integration_test() {
 		asset_id_native_a.clone(),
 		channel_a,
 		channel_b,
+		Some(FEE_PERCENTAGE),
 	)
 	.await;
 
@@ -563,6 +610,7 @@ async fn ethereum_to_cosmos_ibc_messaging_full_integration_test() {
 		asset_id_b_on_a.clone(),
 		channel_a,
 		channel_b,
+		Some(FEE_PERCENTAGE),
 	)
 	.await;
 
@@ -572,6 +620,7 @@ async fn ethereum_to_cosmos_ibc_messaging_full_integration_test() {
 		asset_id_a.clone(),
 		channel_a,
 		channel_b,
+		Some(FEE_PERCENTAGE),
 	)
 	.await;
 
@@ -581,6 +630,7 @@ async fn ethereum_to_cosmos_ibc_messaging_full_integration_test() {
 		asset_id_b.clone(),
 		channel_b,
 		channel_a,
+		None,
 	)
 	.await;
 
@@ -590,6 +640,7 @@ async fn ethereum_to_cosmos_ibc_messaging_full_integration_test() {
 		asset_id_native_a.clone(),
 		channel_a,
 		channel_b,
+		Some(FEE_PERCENTAGE),
 	)
 	.await;
 
@@ -1091,6 +1142,10 @@ async fn ethereum_to_cosmos_governance_and_filters_test() {
 		(ICS20TransferBank, "onTimeoutPacket", Ibc),
 		(ICS20TransferBank, "sendTransfer", Anyone),
 		(ICS20TransferBank, "sendTransferNativeToken", Anyone),
+		(ICS20TransferBank, "setMinTimeoutTimestamp", Owner),
+		(ICS20TransferBank, "setFeePercentage", Owner),
+		(ICS20TransferBank, "setFeeCollector", Owner),
+		(ICS20TransferBank, "setMinTokenSendAmount", Owner),
 		(OwnershipFacet, "transferOwnership", Owner),
 		(RelayerWhitelistFacet, "addRelayer", Owner),
 		(RelayerWhitelistFacet, "removeRelayer", Owner),

@@ -67,7 +67,7 @@ pub async fn spawn_anvil() -> (AnvilInstance, Arc<SignerMiddleware<Provider<Http
 		if USE_GETH { format!("http://localhost:{}", ETH_NODE_PORT) } else { anvil.endpoint() };
 	let provider = Provider::<Http>::try_from(endpoint)
 		.unwrap()
-		.interval(Duration::from_millis(10u64));
+		.interval(Duration::from_millis(100u64));
 	let chain_id =
 		if USE_GETH { provider.get_chainid().await.unwrap().as_u64() } else { anvil.chain_id() };
 	let client = SignerMiddleware::new(provider, wallet.with_chain_id(chain_id));

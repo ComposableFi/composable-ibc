@@ -509,14 +509,15 @@ macro_rules! chains {
 			async fn query_ibc_balance(
 				&self,
 				asset_id: AnyAssetId,
+				account_id: Option<&Signer>,
 			) -> Result<Vec<PrefixedCoin>, Self::Error> {
 				match (self, asset_id) {
 					$(
 						$(#[$($meta)*])*
 						(Self::$name(chain), AnyAssetId::$name(asset_id)) =>
-							chain.query_ibc_balance(asset_id.into()).await.map_err(AnyError::$name),
+							chain.query_ibc_balance(asset_id.into(), account_id).await.map_err(AnyError::$name),
 					)*
-					(Self::Wasm(c), asset_id) => c.inner.query_ibc_balance(asset_id).await,
+					(Self::Wasm(c), asset_id) => c.inner.query_ibc_balance(asset_id, account_id).await,
 					(chain, _) => panic!("query_ibc_balance is not implemented for {}", chain.name()),
 				}
 			}
