@@ -238,16 +238,17 @@ centaurid tx gov draft-proposal
 
 3. You will need two config files in order to start the relayer. In the following example you will have a config file for `centauri` and for `picasso`:
 
+The following is a template for banksy-testnet-5
 ```
 type = "cosmos"
-name = "centauri"
-rpc_url = "http://127.0.0.1:26657/"
-grpc_url = "http://127.0.0.1:9090/"
-websocket_url = "ws://127.0.0.1:26657/websocket"
-chain_id = "banksy-testnet-4"
+name = "banksy"
+rpc_url = "https://rpc-testnet5.composable-cosmos.composablenodes.tech/"
+grpc_url = "https://api-testnet5.composable-cosmos.composablenodes.tech"
+websocket_url = "ws://rpc-testnet5.composable-cosmos.composablenodes.tech/websocket"
+chain_id = "banksy-testnet-5"
 client_id = "07-tendermint-0"
 connection_id = "connection-2"
-account_prefix = "layer"
+account_prefix = "centauri"
 fee_denom = "ppica"
 fee_amount = "4000"
 gas_limit = 9223372036854775806
@@ -260,13 +261,39 @@ skip_optional_client_updates = true
 max_packets_to_process = 200
 ```
 
+The following is a template of composable-mainnet
+
+```
+type = "cosmos"
+name = "composable"
+rpc_url = "wss://rpc.composable.finance"
+grpc_url = "wss://polkadot-rpc.dwellir.com"
+websocket_url = "ws://rpc.composable.finance/websocket"
+chain_id = "centauri-1"
+client_id = "07-tendermint-32"
+connection_id = "connection-5"
+account_prefix = "centauri"
+fee_denom = "ppica"
+fee_amount = "1500000"
+gas_limit = 10000000000
+store_prefix = "ibc"
+max_tx_size = 20000000
+wasm_code_id = "HERE IS THE WASM CODE"
+channel_whitelist = [["channel-2", "transfer"]]
+mnemonic = "mnemonic phrase example"
+skip_optional_client_updates = true
+skip_tokens_list = []
+```
+
+The following is a template of picasso mainnet
+
 ```
 chain_id = "picasso_kusama"
 type = "picasso_kusama"
 name = "picasso"
 para_id = 2087
-parachain_rpc_url = "ws://127.0.0.1:8833"
-relay_chain_rpc_url = "ws://127.0.0.1:8834"
+parachain_rpc_url = "wss://rpc.composablenodes.tech"
+relay_chain_rpc_url = "wss://kusama-rpc.dwellir.com"
 client_id = "10-grandpa-28"
 connection_id = "connection-23"
 channel_whitelist = [["channel-15", "transfer"]]
