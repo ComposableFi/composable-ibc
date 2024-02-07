@@ -1485,12 +1485,17 @@ impl EthereumClient {
 				}
 
 				let latest_client_state = if let Some(cs) = &temp_client_state {
+					info!(target: "hyperspace_ethereum", "Submitting temp_client_state 1 to ethereum: {:?}", cs);
 					Token::Bytes(ethabi::encode(&[client_state_abi_token(cs)]))
 				} else {
 					let (state, _) =
 						self.get_latest_client_state_exact_token(client_id.clone()).await?;
-					temp_client_state = Some(client_state_from_abi_token::<()>(state.clone())?);
-					state
+					let x = client_state_from_abi_token::<()>(state.clone())?;
+					temp_client_state = Some(x.clone());
+					info!(target: "hyperspace_ethereum", "Submitting temp_client_state 2 to ethereum: {:?}", temp_client_state);
+					info!(target: "hyperspace_ethereum", "Submitting temp_client_state chain id to ethereum: {:?}", x.chain_id);
+					Token::Bytes(ethabi::encode(&[client_state_abi_token(&x)]))
+					// state
 				};
 
 				if let Some(cs) = &mut temp_client_state {
@@ -1503,6 +1508,8 @@ impl EthereumClient {
 				//get abi token to update client
 				let tm_header_abi_token = tm_header_abi_token(header)?;
 				let tm_header_bytes = ethers_encode(&[tm_header_abi_token]);
+
+				info!(target: "hyperspace_ethereum", "Submitting header.signed_header.header to ethereum: {:?}", header.signed_header.header);
 
 				error!(target: "hyperspace_ethereum", "client update msg ____________________________________________");
 				error!(target: "hyperspace_ethereum", "Submitting client_update to ethereum: {:?}", header.height());
