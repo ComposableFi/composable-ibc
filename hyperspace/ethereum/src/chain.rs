@@ -508,19 +508,28 @@ fn tm_header_abi_token(header: &ics07_tendermint_zk::client_message::ZkHeader) -
 	);
 
 	let mut list_of_commit_sig = vec![];
+	
+	//enum BlockIDFlag from yui solidity
+	const BLOCK_ID_FLAG_UNKNOWN: u32 = 0;
+	const BLOCK_ID_FLAG_ABSENT: u32 = 1;
+	const BLOCK_ID_FLAG_COMMIT: u32 = 2;
+	const BLOCK_ID_FLAG_NIL: u32 = 3;
+	
 	for i in header.signed_header.commit.signatures.iter() {
 		match i{
 			CommitSig::BlockIdFlagAbsent => {
-				// EthersToken::Tuple(vec![])
+				let tuple = EthersToken::Tuple(vec![EthersToken::Int(BLOCK_ID_FLAG_ABSENT.into()), EthersToken::Bytes([0;32].into())]);
+				list_of_commit_sig.push(tuple);
 			}
 			CommitSig::BlockIdFlagCommit{validator_address, timestamp, signature} => {
 				let validator_address = EthersToken::Bytes(validator_address.as_bytes().into());
-				let tuple = EthersToken::Tuple(vec![validator_address]);
+				let tuple = EthersToken::Tuple(vec![EthersToken::Int(BLOCK_ID_FLAG_COMMIT.into()), validator_address]);
 				list_of_commit_sig.push(tuple);
-				// EthersToken::Tuple(vec![EthersToken::Bytes(validator_address.into()), EthersToken::Int(timestamp.into()), EthersToken::Bytes(signature.into())])
 			}
 			CommitSig::BlockIdFlagNil{validator_address, timestamp, signature} => {
-				// EthersToken::Tuple(vec![EthersToken::Bytes(validator_address.into()), EthersToken::Int(timestamp.into()), EthersToken::Bytes(signature.into())])
+				let validator_address = EthersToken::Bytes(validator_address.as_bytes().into());
+				let tuple = EthersToken::Tuple(vec![EthersToken::Int(BLOCK_ID_FLAG_NIL.into()), validator_address]);
+				list_of_commit_sig.push(tuple);
 			}
 		};
 	}
