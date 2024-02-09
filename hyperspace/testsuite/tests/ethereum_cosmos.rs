@@ -521,6 +521,17 @@ async fn zk_prover_integration_test() {
 
 #[tokio::test(flavor = "multi_thread", worker_threads = 10)]
 #[ignore]
+async fn decode_yui_error(){
+	let error = "08c379a0000000000000000000000000000000000000000000000000000000000000002000000000000000000000000000000000000000000000000000000000000000186661696c65642068657265206a75737420746f20746573740000000000000000";
+	let error = hex::decode(error).unwrap();
+	let s = String::from_utf8_lossy(&error);
+	println!("s: {:?}", s);
+	// let error = ethabi::decode(&[ParamType::String], &error).unwrap();
+	// println!("error: {:?}", error);
+}
+
+#[tokio::test(flavor = "multi_thread", worker_threads = 10)]
+#[ignore]
 async fn ethereum_to_cosmos_ibc_messaging_full_integration_test() {
 	std::env::set_var("KEY_PASS", "mybullishpassword ^_^");
 	// std::env::set_var("RUST_LOG", "hyperspace_cosmos=error,hyperspace_ethereum=error,hyperspace=error,prover=error");
