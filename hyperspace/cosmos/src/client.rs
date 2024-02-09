@@ -253,15 +253,15 @@ where
 	pub async fn new(config: CosmosClientConfig) -> Result<Self, Error> {
 		let (rpc_client, rpc_driver) = WebSocketClient::new(config.websocket_url.clone())
 			.await
-			.map_err(|e| Error::RpcError(format!("{:?}", e)))?;
+			.map_err(|e| Error::RpcError(format!("failed to connect to Websocket {:?}", e)))?;
 		let rpc_http_client = HttpClient::new(config.rpc_url.clone())
-			.map_err(|e| Error::RpcError(format!("{:?}", e)))?;
+			.map_err(|e| Error::RpcError(format!("failed to connect to RPC {:?}", e)))?;
 		let ws_driver_jh = tokio::spawn(rpc_driver.run());
 		let grpc_client = tonic::transport::Endpoint::new(config.grpc_url.to_string())
-			.map_err(|e| Error::RpcError(format!("{:?}", e)))?
+			.map_err(|e| Error::RpcError(format!("failed to create a GRPC endpoint {:?}", e)))?
 			.connect()
 			.await
-			.map_err(|e| Error::RpcError(format!("{:?}", e)))?;
+			.map_err(|e| Error::RpcError(format!("failed to connect to GRPC {:?}", e)))?;
 
 		let chain_id = ChainId::from(config.chain_id);
 		let light_client =
@@ -401,15 +401,17 @@ where
 		to: TmHeight,
 		trusted_height: Height,
 	) -> Result<Vec<(Header, UpdateType)>, Error> {
+		let from = from.increment();
 		let mut xs = Vec::new();
 		let heightss = (from.value()..=to.value()).collect::<Vec<_>>();
 		let client = Arc::new(self.clone());
-		let to = self.rpc_call_delay().as_millis();
+		let delay_to = self.rpc_call_delay().as_millis();
 		for heights in heightss.chunks(5) {
 			let mut join_set = JoinSet::<Result<Result<_, Error>, Elapsed>>::new();
 			for height in heights.to_owned() {
 				let client = client.clone();
-				let duration = Duration::from_millis(rand::thread_rng().gen_range(0..to) as u64);
+				let duration =
+					Duration::from_millis(rand::thread_rng().gen_range(0..delay_to) as u64);
 				let fut = async move {
 					log::trace!(target: "hyperspace_cosmos", "Fetching header at height {:?}", height);
 					let latest_light_block =
