@@ -4822,7 +4822,9 @@ dependencies = [
  "sp-state-machine 0.13.0",
  "sp-trie 7.0.0",
  "subxt",
+ "tendermint",
  "tendermint-proto",
+ "tendermint-rpc",
  "tokio",
  "toml 0.7.6",
 ]
