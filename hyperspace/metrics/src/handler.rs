@@ -159,6 +159,9 @@ impl MetricsHandler {
 				_ => (),
 			}
 		}
+		if new_latest_processed_height == 0 {
+			return Ok(())
+		}
 		self.metrics.update_latest_processed_height(new_latest_processed_height)?;
 		Ok(())
 	}
