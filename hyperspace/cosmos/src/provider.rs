@@ -67,7 +67,12 @@ use primitives::{
 };
 use prost::Message;
 use rand::Rng;
-use std::{collections::HashSet, pin::Pin, str::FromStr, time::Duration};
+use std::{
+	collections::{hash_map::Entry, HashMap, HashSet},
+	pin::Pin,
+	str::FromStr,
+	time::Duration,
+};
 use tendermint::block::Height as TmHeight;
 pub use tendermint::Hash;
 use tendermint_rpc::{
@@ -666,11 +671,10 @@ where
 			target: "hyperspace_cosmos",
 			"query_send_packets: channel_id: {}, port_id: {}, seqs: {:?}", channel_id, port_id, seqs
 		);
-		let mut block_events = vec![];
+		let mut block_events = HashMap::<u64, PacketInfo>::new();
 
-		let mut added_seqs = HashSet::new();
 		for seq in seqs.iter() {
-			if added_seqs.contains(seq) {
+			if block_events.contains_key(seq) {
 				continue
 			}
 			let query_str = Query::eq("send_packet.packet_src_channel", channel_id.to_string())
@@ -684,7 +688,9 @@ where
 					true,
 					1,
 					1, // get only the first Tx matching the query
-					Order::Ascending,
+					Order::Descending, /* query the most recent event, there is possibility that the same
+					    * sequence number is used twice in send_packet event (in case of an
+					    * error during the message processing) */
 				)
 				.await
 				.map_err(|e| Error::RpcError(format!("{e:?}")))?;
@@ -697,12 +703,11 @@ where
 
 					match ev {
 						Ok(IbcEvent::SendPacket(p))
-							if !added_seqs.contains(&p.packet.sequence.0) &&
-								seqs.contains(&p.packet.sequence.0) &&
+							if seqs.contains(&p.packet.sequence.0) &&
 								p.packet.source_port == port_id && p.packet.source_channel ==
 								channel_id =>
 						{
-							added_seqs.insert(p.packet.sequence.0);
+							let seq = p.packet.sequence.0;
 							let mut info = PacketInfo::try_from(IbcPacketInfo::from(p.packet))
 								.map_err(|_| {
 									Error::from(
@@ -711,14 +716,24 @@ where
 									)
 								})?;
 							info.height = Some(p.height.revision_height);
-							block_events.push(info)
+							let entry = block_events.entry(seq);
+							match entry {
+								Entry::Occupied(mut packet) => {
+									if packet.get().height.unwrap() <= p.height.revision_height {
+										packet.insert(info);
+									}
+								},
+								Entry::Vacant(v) => {
+									v.insert(info);
+								},
+							}
 						},
 						_ => (),
 					}
 				}
 			}
 		}
-		Ok(block_events)
+		Ok(block_events.into_values().collect())
 	}
 
 	async fn query_received_packets(
@@ -732,11 +747,10 @@ where
 			"query_recv_packets: channel_id: {}, port_id: {}, seqs: {:?}", channel_id, port_id, seqs
 		);
 
-		let mut block_events = vec![];
+		let mut block_events = HashMap::<u64, PacketInfo>::new();
 
-		let mut added_seqs = HashSet::new();
 		for seq in seqs.iter() {
-			if added_seqs.contains(seq) {
+			if block_events.contains_key(seq) {
 				continue
 			}
 
@@ -752,7 +766,9 @@ where
 					true,
 					1,
 					1, // get only the first Tx matching the query
-					Order::Ascending,
+					Order::Descending, /* query the most recent event, there is possibility that the same
+					    * sequence number is used twice in write_acknowledgement event (in case
+					    * of an error during the message processing) */
 				)
 				.await
 				.map_err(|e| Error::RpcError(format!("{e:?}")))?;
@@ -765,12 +781,11 @@ where
 
 					match ev {
 						Ok(IbcEvent::WriteAcknowledgement(p))
-							if !added_seqs.contains(&p.packet.sequence.0) &&
-								seqs.contains(&p.packet.sequence.0) &&
+							if seqs.contains(&p.packet.sequence.0) &&
 								p.packet.destination_port == port_id &&
 								p.packet.destination_channel == channel_id =>
 						{
-							added_seqs.insert(p.packet.sequence.0);
+							let seq = p.packet.sequence.0;
 							let mut info = PacketInfo::try_from(IbcPacketInfo::from(p.packet))
 								.map_err(|_| {
 									Error::from(
@@ -780,14 +795,24 @@ where
 								})?;
 							info.ack = Some(p.ack);
 							info.height = Some(p.height.revision_height);
-							block_events.push(info)
+							let entry = block_events.entry(seq);
+							match entry {
+								Entry::Occupied(mut packet) => {
+									if packet.get().height.unwrap() <= p.height.revision_height {
+										packet.insert(info);
+									}
+								},
+								Entry::Vacant(v) => {
+									v.insert(info);
+								},
+							}
 						},
 						_ => (),
 					}
 				}
 			}
 		}
-		Ok(block_events)
+		Ok(block_events.into_values().collect())
 	}
 
 	fn expected_block_time(&self) -> Duration {
