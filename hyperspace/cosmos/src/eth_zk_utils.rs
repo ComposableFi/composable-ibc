@@ -8,6 +8,7 @@ use ureq;
 #[derive(Debug, Clone)]
 pub struct ZKProver {
 	pub prover_url: String,
+	pub delay_secs: u64
 }
 
 #[derive(Debug, serde::Deserialize)]
@@ -35,8 +36,8 @@ impl CreateProofInput{
 }
 
 impl ZKProver {
-	pub fn new(prover_url: String, proof_timeout: Duration) -> Self {
-		Self { prover_url, /* proof_timeout */}
+	pub fn new(prover_url: String, delay_secs: u64) -> Self {
+		Self { prover_url, delay_secs: delay_secs }
 	}
 
     pub fn status(&self) -> Result<String, Error> {

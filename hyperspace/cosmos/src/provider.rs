@@ -15,7 +15,6 @@ use ibc::{
 		ics02_client::{
 			client_state::ClientType, events as ClientEvents,
 			msgs::update_client::MsgUpdateAnyClient, 
-			msgs::update_client_zk::MsgUpdateAnyClientProof,
 			trust_threshold::TrustThreshold,
 		},
 		ics04_channel::packet::Sequence,
@@ -66,10 +65,7 @@ use std::{collections::HashSet, f32::consts::E, pin::Pin, str::FromStr, time::Du
 use tendermint::block::Height as TmHeight;
 pub use tendermint::Hash;
 use tendermint_rpc::{
-	endpoint::tx::Response,
-	event::{Event, EventData},
-	query::{EventType, Query},
-	Client, Error as RpcError, Order, SubscriptionClient,
+	endpoint::tx::Response, event::{Event, EventData}, query::{EventType, Query}, request, Client, Error as RpcError, Order, SubscriptionClient
 };
 use tokio::{task::JoinSet, time::sleep};
 
@@ -130,14 +126,10 @@ where
 		log::info!(target: "hyperspace_cosmos", "Getting blocks {}..{}", from, to);
 		let to2 = to.clone();
 
-		// query (exclusively) up to `to`, because the proof for the event at `to - 1` will be
-		// contained at `to` and will be fetched below by `msg_update_client_header`
 		let update_headers =
 			self.msg_update_client_header(from, to, client_state.latest_height).await?;
 		let mut block_events = Vec::new();
-		// block_events.push((0, Vec::new()));
 		let mut join_set: JoinSet<Result<_, anyhow::Error>> = JoinSet::new();
-		// let range = (from.value()..to.value()).collect::<Vec<_>>();
 		let range = (from.value()..to.value()).collect::<Vec<_>>();
 		let delay_to = self.rpc_call_delay().as_millis();
 		for heights in range.chunks(100) {
@@ -163,8 +155,6 @@ where
 			}
 		}
 
-		// block_events.push((to.increment().value(), Vec::new()));
-
 		if block_events.len() != update_headers.len() {
 			return Err(anyhow::anyhow!(
 				"block events and updates must match, got {} and {}",
@@ -174,9 +164,6 @@ where
 		}
 		block_events.sort_by_key(|(height, _)| *height);
 
-		//replace updates.last() -> max_event_height
-		//replace mandatory_updates.last() -> max_event_height
-		//use the filter from prev fn in process_updates()
 		let all_ibc_events =
     	block_events.iter().map(|ev| ev.1.clone()).flatten().collect::<Vec<_>>();
 
@@ -201,18 +188,6 @@ where
 		log::error!(target: "hyperspace", "++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++");
 		log::error!(target: "hyperspace_cosmos", "max_event_height blocks {}..{}. h :{}", from, to2, max_event_height);
 
-		//we can leave max_event_height as a zero in for inside if statement will be ignore all height if it is not max_event_height or mandatory
-
-		// .max().unwrap_or_else(|| Height::zero());
-
-		// .map(|(_, _, events, ..)| events.clone())
-		// .flatten()
-		// .collect::<Vec<_>>();
-		//max_event_height never should be ZERO!!!
-		//panic unreachable
-		//fi let. max_event_height could be zero
-		// if let some max_event_height => ask zk proof from remote api service!!!
-
 		let mut updates = Vec::new();
 		let mut continew = false;
 		let mut exist_at_least_one_proof = false;
@@ -222,7 +197,6 @@ where
 			.zip(update_headers)
 			.enumerate()
 		{
-			//todo check the that we do not have mandatory updates and only then add this one as a mandatory
 			if i == NUMBER_OF_BLOCKS_TO_PROCESS_PER_ITER as usize - 1 /* -2 */ {
 				update_type = UpdateType::Mandatory;
 			}
@@ -233,17 +207,6 @@ where
 			let mut zk_bitmask = 0;
 
 			if update_type == UpdateType::Mandatory || height == max_event_height {
-				//h1, h2, h3, h4, h5, h6, h7, h8, h9, h10
-				//?-      ?        +           ?
-				//ask generate the proof or poll the proof from remote api service
-				
-				//ask about proof from remote api service or poll resp from remote api service
-				//if prove does not exist then break the for loop
-
-				//if proof does not exsits then continue the loop.
-				// let zk_input = update_header.get_zk_input(1).unwrap();
-				
-
 				let mock_zk_prover = false;
 				if mock_zk_prover{
 					let mut zk_proover = self.mock_zk_prover.lock().unwrap();
@@ -253,6 +216,21 @@ where
 					log::error!(target: "hyperspace_cosmos", "requested proof: {:?}, {:?}, {}", update_type, height, is_request_ready);
 					println!("requested proof: {:?}", height);
 
+					if true{
+						zk_proof = vec![1, 2, 3, 4, 5, 6, 7, 8, 9, 10]; //mock proof
+						/*
+						let expected_validators = vec![1]; all validators included in the proof
+						let mut zk_bitmask: u64 = 0;
+						for (index, &validator) in expected_validators.iter().enumerate() {
+							if validator == 1 {
+								zk_bitmask |= 1 << index;
+							}
+						}
+						 */
+						zk_bitmask = 1; //it is real bitmask for local tests with 1 validator [1]
+						is_request_ready = true;
+						exist_at_least_one_proof = true;
+					}
 					if !is_request_ready{
 						continew = true;
 					}
@@ -260,6 +238,7 @@ where
 				else{
 					let mut zk_height_proof_id_map = self.zk_proof_requests.lock().unwrap();
 					let zk_prover = self.zk_prover_api.clone();
+					let delay_secs = self.zk_prover_api.delay_secs;
 					let proof_id = zk_height_proof_id_map.get(&height);
 					if let Some(proof_request) = proof_id{
 						let proof_request = proof_request.clone();
@@ -276,7 +255,7 @@ where
 								}
 								else{
 									log::info!(target: "hyperspace", "proof not ready Yet. proof is None. proof_id: {:?}, height: {:?}", proof_request, height);
-									if proof_request.is_waiting_for_proof_too_long(){
+									if proof_request.is_waiting_for_proof_too_long(delay_secs){
 										log::error!(target: "hyperspace", "Proof not ready too long. proof_id: {:?}, height: {:?}, requested proof at : {:?}", proof_request, height, proof_request.request_time);
 									}
 
@@ -288,8 +267,7 @@ where
 						}
 					}
 					else{
-						// //todo get input. uncomment
-						// //todo size should be 32 for prodauction
+						// //todo size should be 32 for mainnets. 1 is only for local testing.
 						let size = 1;
 						let zk_input = update_header.get_zk_input(size);
 						
@@ -328,28 +306,19 @@ where
 				continue;
 			}
 
-			//push will into updates updates
-			/*
-				 non mumdatary #1 updates -> push.
-				 mundatary #5 push but not metter if other next mandatory without proof #6
-
-			*/
-
 			let zk_update_header = ics07_tendermint_zk::client_message::ZkHeader{
 				signed_header: update_header.signed_header.clone(),
 				validator_set: update_header.validator_set.clone(),
 				trusted_height: update_header.trusted_height.clone(),
 				trusted_validator_set: update_header.trusted_validator_set.clone(),
-				zk_proof: zk_proof, //todo put the proof here
-				zk_bitmask: zk_bitmask, //todo put the bitmask here
+				zk_proof: zk_proof, 
+				zk_bitmask: zk_bitmask, 
 			};
 
 			let update_client_header = {
-				let msg = MsgUpdateAnyClientProof::<LocalClientTypes> {
+				let msg = MsgUpdateAnyClient::<LocalClientTypes> {
 					client_id: client_id.clone(),
-					// client_message: AnyClientMessage::Tendermint(ClientMessage::Header(
 					client_message: AnyClientMessage::TendermintZk(ics07_tendermint_zk::client_message::ZkClientMessage::Header(
-						// update_header, //todo use another tipe that will be able to hold the proof as well
 						zk_update_header, 
 					)),
 					signer: counterparty.account_id(),

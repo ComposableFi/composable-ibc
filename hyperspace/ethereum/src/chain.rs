@@ -30,7 +30,7 @@ use ibc::{
 		ics02_client::{
 			client_state::ClientState as _,
 			events::UpdateClient,
-			msgs::{create_client::MsgCreateAnyClient, update_client::MsgUpdateAnyClient, update_client_zk::MsgUpdateAnyClientProof},
+			msgs::{create_client::MsgCreateAnyClient, update_client::MsgUpdateAnyClient},
 			trust_threshold::TrustThreshold,
 		},
 		ics03_connection::msgs::{
@@ -1472,8 +1472,8 @@ impl EthereumClient {
 				let bytes = self.yui.create_client_calldata(token).await;
 
 				calls.push(bytes);
-			} else if msg.type_url == ibc::core::ics02_client::msgs::update_client_zk::TYPE_URL {
-				let msg = MsgUpdateAnyClientProof::<LocalClientTypes>::decode_vec(&msg.value).map_err(
+			} else if msg.type_url == ibc::core::ics02_client::msgs::update_client::TYPE_URL {
+				let msg = MsgUpdateAnyClient::<LocalClientTypes>::decode_vec(&msg.value).map_err(
 					|_| ClientError::Other("update_client: failed to decode_vec".into()),
 				)?;
 

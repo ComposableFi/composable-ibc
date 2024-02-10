@@ -202,10 +202,10 @@ impl ZkProofRequest{
 			bitmask,
 		}
 	}
-	pub fn is_waiting_for_proof_too_long(&self) -> bool {
+	pub fn is_waiting_for_proof_too_long(&self, possible_delay_secs: u64 ) -> bool {
 		let t = std::time::SystemTime::now();
 		let diff = t.duration_since(self.request_time.clone()).unwrap();
-		if diff.as_secs() > 30 {
+		if diff.as_secs() > possible_delay_secs {
 			return true;
 		}
 		return false;
@@ -387,7 +387,7 @@ where
 			mock_zk_prover: Arc::new(Mutex::new(MockZkProover::new())),
 			zk_proof_requests: Arc::new(Mutex::new(HashMap::new())),
 			//todo need to read from config
-			zk_prover_api: ZKProver::new("http://127.0.0.1:8000".to_string(), Duration::from_secs(60)),
+			zk_prover_api: ZKProver::new("http://127.0.0.1:8000".to_string(), Duration::from_secs(30).as_secs()),
 		})
 	}
 
