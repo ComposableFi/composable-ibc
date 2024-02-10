@@ -41,7 +41,6 @@ impl ZKProver {
 	}
 
     pub fn status(&self) -> Result<String, Error> {
-        //concat prover_url and create_proof
         let url = format!("{}{}", self.prover_url, "/status");
 		let result= ureq::get(url.as_str())
             .call()?
@@ -53,7 +52,6 @@ impl ZKProver {
 
 
 	pub fn create_proof(&self, proof_input: CreateProofInput) -> Result<Response, Error> {
-        //concat prover_url and create_proof
         let url = format!("{}{}", self.prover_url, "/create_proof");
 		let result= ureq::post(url.as_str())
 			.send_json(ureq::json!(proof_input))?
