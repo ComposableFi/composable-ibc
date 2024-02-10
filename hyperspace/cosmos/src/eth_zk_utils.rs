@@ -8,6 +8,7 @@ use ureq;
 #[derive(Debug, Clone)]
 pub struct ZKProver {
 	pub prover_url: String,
+	pub delay_secs: u64
 }
 
 #[derive(Debug, serde::Deserialize)]
@@ -35,12 +36,11 @@ impl CreateProofInput{
 }
 
 impl ZKProver {
-	pub fn new(prover_url: String, proof_timeout: Duration) -> Self {
-		Self { prover_url, /* proof_timeout */}
+	pub fn new(prover_url: String, delay_secs: u64) -> Self {
+		Self { prover_url, delay_secs: delay_secs }
 	}
 
     pub fn status(&self) -> Result<String, Error> {
-        //concat prover_url and create_proof
         let url = format!("{}{}", self.prover_url, "/status");
 		let result= ureq::get(url.as_str())
             .call()?
@@ -52,7 +52,6 @@ impl ZKProver {
 
 
 	pub fn create_proof(&self, proof_input: CreateProofInput) -> Result<Response, Error> {
-        //concat prover_url and create_proof
         let url = format!("{}{}", self.prover_url, "/create_proof");
 		let result= ureq::post(url.as_str())
 			.send_json(ureq::json!(proof_input))?

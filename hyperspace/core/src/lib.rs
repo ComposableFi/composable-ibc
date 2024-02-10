@@ -276,13 +276,10 @@ async fn process_updates<A: Chain, B: Chain>(
 	updates: Vec<(Any, Height, Vec<IbcEvent>, UpdateType)>,
 	msgs: &mut Vec<Any>,
 ) -> anyhow::Result<()> {
-	let sink_recvs = sink.has_undelivered_sequences(UndeliveredType::Recvs);
-	let sink_acks = sink.has_undelivered_sequences(UndeliveredType::Acks);
-	let sink_timeouts = sink.has_undelivered_sequences(UndeliveredType::Timeouts);
 	// for timeouts we need both chains to be up to date
-	let sink_has_undelivered_acks =  sink_recvs || 
-	sink_acks ||
-	sink_timeouts;
+	let sink_has_undelivered_acks =  sink.has_undelivered_sequences(UndeliveredType::Recvs) || 
+		sink.has_undelivered_sequences(UndeliveredType::Acks) ||
+		sink.has_undelivered_sequences(UndeliveredType::Timeouts);
 
 	let need_to_update = sink_has_undelivered_acks;
 	log::error!(target: "hyperspace", "Received {} client updates from {}", updates.len(), source.name(),);
@@ -346,57 +343,11 @@ async fn process_updates<A: Chain, B: Chain>(
 		)
 	});
 
-	//filter of instance event . filter(match from prev statement^ | ) 
-	//filter iclude any of the following:
-	/*
-		SendPacket,
-		ReceivePacket,
-		WriteAck,
-		Timeout,
-		TimeoutOnClose,
-	 */
-	//max_event_height
 	
-	
-	log::error!(target: "hyperspace", "Received'' {}, has_instant_events = {has_instant_events}, update_delay_passed = {update_delay_passed}, need_to_update = {need_to_update}, sink_recvs = {sink_recvs}, sink_acks = {sink_acks}, sink_timeouts = {sink_timeouts}", mandatory_updates.len(), );
-
 	if !updates.is_empty() &&
 		(mandatory_updates.is_empty() && update_delay_passed && need_to_update) ||
 		has_instant_events
 	{	
-		//replace updates.last() -> max_event_height
-		//replace mandatory_updates.last() -> max_event_height
-		// let max_event_height =
-    	// ibc_events.iter().map(|ev| ev.height()).max().unwrap_or_else(|| Height::zero());
-		//max_event_height never should be ZERO!!!
-		//panic unreachable
-
-		// let max_event_height = ibc_events.iter().filter(|ev| {
-		// 	matches!(
-		// 		&ev.event_type(),
-		// 		&IbcEventType::OpenInitConnection |
-		// 			&IbcEventType::OpenInitChannel |
-		// 			&IbcEventType::OpenTryConnection |
-		// 			&IbcEventType::OpenTryChannel |
-		// 			&IbcEventType::OpenAckChannel |
-		// 			&IbcEventType::OpenAckConnection |
-		// 			&IbcEventType::CloseInitChannel | 
-
-		// 			&IbcEventType::SendPacket |
-		// 			&IbcEventType::ReceivePacket |
-		// 			&IbcEventType::WriteAck |
-		// 			&IbcEventType::Timeout | 
-		// 			&IbcEventType::TimeoutOnClose
-		// 	)
-		// }).map(|ev| ev.height()).max().unwrap_or_else(|| Height::zero());
-		// log::error!(target: "hyperspace", "max_event_height is : {:#?}", max_event_height);
-
-		// if max_event_height == Height::zero() {
-		// 	log::error!(target: "hyperspace", "max_event_height is ZERO");
-		// 	return Ok(())
-		// }
-
-		// .filter(|e| e.1 == max_event_height)
 		let (forced_update, height) = updates.last().map(|(msg, h, ..)| (msg.clone(), h)).unwrap();
 		if !mandatory_updates.is_empty() {
 			let (_, last_height) =

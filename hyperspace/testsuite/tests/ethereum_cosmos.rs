@@ -499,7 +499,7 @@ async fn zk_prover_bitmask() {
 #[ignore]
 async fn zk_prover_integration_test() {
 	//branch rustninja/compatibility
-	let zk_prover = ZKProver::new("http://127.0.0.1:8000".to_string(), Duration::from_secs(60));
+	let zk_prover = ZKProver::new("http://127.0.0.1:8000".to_string(), Duration::from_secs(60).as_secs());
 	let proof_input = CreateProofInput {
 		signatures: vec![],
 		msgs: vec![],
@@ -512,7 +512,7 @@ async fn zk_prover_integration_test() {
 
 	let proof = zk_prover.poll_proof(&resp.proof_id).unwrap();
 	assert!(proof.is_none());
-	std::thread::sleep(Duration::from_secs(33));
+	std::thread::sleep(Duration::from_secs(63));
 	let proof = zk_prover.poll_proof(&resp.proof_id).unwrap();
 	assert!(proof.is_some());
 	println!("proof: {:?}", proof.unwrap());
