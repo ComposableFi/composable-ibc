@@ -1,5 +1,5 @@
 KEY="mykey"
-CHAINID="centauri-testnet-1"
+CHAINID="centauri-1"
 MONIKER="localtestnet"
 KEYALGO="secp256k1"
 KEYRING="test"

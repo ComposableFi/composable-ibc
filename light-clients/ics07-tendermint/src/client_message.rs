@@ -35,10 +35,7 @@ use prost::Message;
 use serde::{Deserialize, Serialize};
 use std::collections::HashSet;
 use tendermint::{
-	block::{signed_header::SignedHeader, Commit, CommitSig},
-	validator::Set as ValidatorSet,
-	vote::{SignedVote, ValidatorIndex},
-	Vote,
+	block::{signed_header::SignedHeader, Commit, CommitSig}, validator::Set as ValidatorSet, vote::{SignedVote, ValidatorIndex}, PublicKey, Vote
 };
 use tendermint_proto::Protobuf;
 
@@ -182,6 +179,18 @@ impl Header {
 	}
 
 	pub fn get_zk_input(&self, size: usize) -> Result<(Vec<(Vec<u8>, Vec<u8>, Vec<u8>)>, u64), Error> {
+		//todo we need to take a pub key from the validator to get 32 bytes to create a zk input 
+		let v = &self.validator_set.validators();
+		let p = v[0].pub_key;
+		match p {
+			PublicKey::Ed25519(e) => {
+				println!("Ed25519");
+				println!("{:?}", e.as_bytes());
+			},
+			_ => {}
+		};
+
+
 		#[derive(Clone)]
 		struct ZKInput {
 			pub_key: Vec<u8>,

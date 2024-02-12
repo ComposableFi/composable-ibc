@@ -272,7 +272,16 @@ where
 						let zk_input = update_header.get_zk_input(size);
 						
 						match zk_input {
-							Ok((_input, bitmask)) => {
+							Ok((input, bitmask)) => {
+
+								for i in input.iter(){
+									log::error!(target: "hyperspace", "XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX");
+									log::error!(target: "hyperspace", "pub key : {:?}", i.0);
+									log::error!(target: "hyperspace", "signature : {:?}", i.1);
+									log::error!(target: "hyperspace", "message : {:?}", i.2);
+								};
+
+								
 								let result = zk_prover.create_proof(CreateProofInput::new(
 									vec![], vec![], vec![] //pass the input
 								));

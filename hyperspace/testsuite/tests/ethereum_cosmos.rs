@@ -393,7 +393,7 @@ async fn setup_clients() -> (AnyChain, AnyChain, JoinHandle<()>) {
 		rpc_url: args.chain_b.clone().parse().unwrap(),
 		grpc_url: args.cosmos_grpc.clone().parse().unwrap(),
 		websocket_url: args.cosmos_ws.clone().parse().unwrap(),
-		chain_id: "centauri-testnet-1".to_string(),
+		chain_id: "centauri-1".to_string(),
 		client_id: None,
 		connection_id: None,
 		account_prefix: "centauri".to_string(),
