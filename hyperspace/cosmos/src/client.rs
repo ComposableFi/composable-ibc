@@ -387,7 +387,7 @@ where
 			mock_zk_prover: Arc::new(Mutex::new(MockZkProover::new())),
 			zk_proof_requests: Arc::new(Mutex::new(HashMap::new())),
 			//todo need to read from config
-			zk_prover_api: ZKProver::new("http://127.0.0.1:8000".to_string(), Duration::from_secs(30).as_secs()),
+			zk_prover_api: ZKProver::new("http://127.0.0.1:8000".to_string(), Duration::from_secs(160).as_secs()),
 		})
 	}
 

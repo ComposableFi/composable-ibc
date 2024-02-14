@@ -498,24 +498,40 @@ async fn zk_prover_bitmask() {
 #[tokio::test(flavor = "multi_thread", worker_threads = 10)]
 #[ignore]
 async fn zk_prover_integration_test() {
-	//branch rustninja/compatibility
+
+	let h = 170;
+
 	let zk_prover = ZKProver::new("http://127.0.0.1:8000".to_string(), Duration::from_secs(60).as_secs());
 	let proof_input = CreateProofInput {
-		signatures: vec![],
-		msgs: vec![],
-		public_keys: vec![]
+		signatures: vec![vec![101, 168, 183, 134, 143, 54, 1, 63, 148, 125, 195, 152, 170, 120, 195, 218, 68, 126, 139, 93, 180, 148, 179, 82, 108, 189, 188, 127, 111, 147, 233, 36, 70, 169, 214, 104, 165, 109, 216, 165, 7, 246, 111, 41, 104, 152, 168, 234, 251, 37, 43, 20, 57, 185, 154, 38, 159, 204, 186, 76, 153, 87, 85, 14]],
+		msgs: vec![111, 8, 2, 17, 36, 0, 0, 0, 0, 0, 0, 0, 34, 72, 10, 32, 66, 15, 32, 152, 208, 7, 69, 219, 166, 26, 244, 231, 127, 247, 196, 94, 155, 127, 207, 55, 136, 84, 147, 228, 153, 98, 60, 132, 217, 5, 138, 158, 18, 36, 8, 1, 18, 32, 11, 240, 43, 121, 197, 33, 157, 232, 109, 180, 116, 4, 121, 90, 247, 22, 40, 58, 232, 238, 206, 228, 227, 85, 28, 80, 93, 168, 110, 223, 49, 183, 42, 12, 8, 176, 194, 170, 174, 6, 16, 144, 206, 240, 168, 2, 50, 10, 99, 101, 110, 116, 97, 117, 114, 105, 45, 49],
+		public_keys: vec![vec![16, 147, 45, 80, 193, 165, 204, 196, 89, 59, 167, 137, 249, 34, 61, 211, 57, 184, 100, 157, 6, 199, 160, 237, 149, 254, 14, 202, 131, 61, 183, 163]],
+		height: h,
 	};
 	let status = zk_prover.status().unwrap();
 	println!("status: {:?}", status);
-	let resp = zk_prover.create_proof(proof_input).unwrap();
-	println!("resp: {:?}", resp);
+	
+	let resp = zk_prover.create_proof(proof_input.clone()).unwrap();
+	println!("resp should be immidiatly: {:?}", resp.clone());
+	
+	let mut new_reqeust = proof_input;
+	new_reqeust.height = h + 1;
+	let resp_when_server_was_busy_with_oter_proof = zk_prover.create_proof(new_reqeust.clone()).unwrap();
+	assert!(resp_when_server_was_busy_with_oter_proof.proof_id.is_none()); //none because server was busy with previous request
+	
 
-	let proof = zk_prover.poll_proof(&resp.proof_id).unwrap();
+	
+	let proof = zk_prover.poll_proof(&resp.proof_id.clone().unwrap(), h).unwrap();
 	assert!(proof.is_none());
-	std::thread::sleep(Duration::from_secs(63));
-	let proof = zk_prover.poll_proof(&resp.proof_id).unwrap();
+	std::thread::sleep(Duration::from_secs(170));
+	// println!("&resp.proof_id: {:?}", &resp.proof_id);
+	let proof = zk_prover.poll_proof(&resp.proof_id.clone().unwrap(), h).unwrap();
+	println!("proof: {:?}", proof);
 	assert!(proof.is_some());
 	println!("proof: {:?}", proof.unwrap());
+
+	let proof = zk_prover.poll_proof(&new_reqeust.height.to_string(), new_reqeust.height).unwrap();
+	assert!(proof.is_none());
 	return;
 }
 
