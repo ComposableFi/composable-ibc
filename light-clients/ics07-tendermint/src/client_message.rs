@@ -253,11 +253,23 @@ impl Header {
 				.is_err()
 			{}
 
-			let zk_input = ZKInput {
-				pub_key: vote.validator_address.into(),
+			let mut zk_input = ZKInput {
+				// pub_key: vote.validator_address.into(),
+				pub_key: vec![],
 				signature: signature.as_bytes().to_vec(),
 				message: sign_bytes,
 				voting_power: validator.power(),
+			};
+
+			let pub_key = &self.validator_set.validators().iter().find(|x| x.address == vote.validator_address).unwrap().pub_key;
+			let p = pub_key;
+			match p {
+				PublicKey::Ed25519(e) => {
+					println!("Ed25519");
+					println!("{:?}", e.as_bytes());
+					zk_input.pub_key = e.as_bytes().to_vec();
+				},
+				_ => {}
 			};
 			pre_input.push(zk_input);
 		}
