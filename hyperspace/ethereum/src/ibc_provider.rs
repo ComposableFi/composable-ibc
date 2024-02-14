@@ -602,7 +602,7 @@ impl IbcProvider for EthereumClient {
 		}
 
 		let updates = self
-			.fetch_next_updates(counterparty, client_id, &client_state, latest_revision, 10)
+			.fetch_next_updates(counterparty, client_id, &client_state, latest_revision, 20)
 			.await
 			.unwrap();
 
