@@ -499,7 +499,7 @@ async fn zk_prover_bitmask() {
 #[ignore]
 async fn zk_prover_integration_test() {
 
-	let h = 170;
+	let h = 12;
 
 	let zk_prover = ZKProver::new("http://127.0.0.1:8000".to_string(), Duration::from_secs(60).as_secs());
 	let proof_input = CreateProofInput {
