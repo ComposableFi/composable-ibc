@@ -1573,10 +1573,7 @@ impl EthereumClient {
 					
 				// }
 
-				// let chain_id: U256 = match serde_json::from_value(value) {
-				// 	Ok(value) => value,
-				// 	Err(_) => continue,
-				// };
+				
 
 				let pi_a_0 = proof.pi_a[0].clone();
 				let pi_a_1 = proof.pi_a[1].clone();
@@ -1584,10 +1581,23 @@ impl EthereumClient {
 				let pi_b_0 = proof.pi_b[0][0].clone();
 				let pi_b_1 = proof.pi_b[0][1].clone();
 				let pi_b_2 = proof.pi_b[1][0].clone();
-				let pi_b_2 = proof.pi_b[1][1].clone();
+				let pi_b_3 = proof.pi_b[1][1].clone();
 
 				let pi_c_0 = proof.pi_c[0].clone();
 				let pi_c_1 = proof.pi_c[1].clone();
+				
+				let pi_a_0 = U256::from_dec_str(pi_a_0.as_str()).expect(format!("Failed to convert pi_a_1 to U256, : {}", pi_a_0).as_str());
+				let pi_a_1 = U256::from_dec_str(pi_a_1.as_str()).expect(format!("Failed to convert pi_a_1 to U256, : {}", pi_a_1).as_str());
+
+				let pi_b_0 = U256::from_dec_str(pi_b_0.as_str()).expect(format!("Failed to convert pi_b_0 to U256, : {}", pi_b_0).as_str());
+				let pi_b_1 = U256::from_dec_str(pi_b_1.as_str()).expect(format!("Failed to convert pi_b_1 to U256, : {}", pi_b_1).as_str());
+				let pi_b_2 = U256::from_dec_str(pi_b_2.as_str()).expect(format!("Failed to convert pi_b_2 to U256, : {}", pi_b_2).as_str());
+				let pi_b_3 = U256::from_dec_str(pi_b_3.as_str()).expect(format!("Failed to convert pi_b_3 to U256, : {}", pi_b_3).as_str());
+
+				let pi_c_0 = U256::from_dec_str(pi_c_0.as_str()).expect(format!("Failed to convert pi_c_0 to U256, : {}", pi_c_0).as_str());
+				let pi_c_1 = U256::from_dec_str(pi_c_1.as_str()).expect(format!("Failed to convert pi_c_1 to U256, : {}", pi_c_1).as_str());
+
+
 
 				let token = EthersToken::Tuple(vec![
 					//should be the same that we use to create client
@@ -1603,26 +1613,26 @@ impl EthereumClient {
 					EthersToken::Uint(header.zk_bitmask.into()),
 					//uint[2] _pA;
 					EthersToken::FixedArray(vec![
-						EthersToken::Uint(1.into()),
-						EthersToken::Uint(1.into()),
+						EthersToken::Uint(pi_a_0),
+						EthersToken::Uint(pi_a_1),
 					]),
 					//uint[2][2] _pB;
 					EthersToken::FixedArray(vec![
 						EthersToken::FixedArray(vec![
-							EthersToken::Uint(1.into()),
-							EthersToken::Uint(1.into()),
+							EthersToken::Uint(pi_b_0),
+							EthersToken::Uint(pi_b_1),
 						]),
 						EthersToken::FixedArray(vec![
-							EthersToken::Uint(1.into()),
-							EthersToken::Uint(1.into()),
+							EthersToken::Uint(pi_b_2),
+							EthersToken::Uint(pi_b_3),
 						]),
 					]),
 					//uint[2] _pC;
 					EthersToken::FixedArray(vec![
-						EthersToken::Uint(1.into()),
-						EthersToken::Uint(1.into()),
+						EthersToken::Uint(pi_c_0),
+						EthersToken::Uint(pi_c_1),
 					]),
-					//uint[3] _pubSignals;
+					//uint[3] _pubSignals; //do not need pass anything. will be calculated on eth side.
 					EthersToken::FixedArray(vec![
 						EthersToken::Uint(1.into()),
 						EthersToken::Uint(1.into()),

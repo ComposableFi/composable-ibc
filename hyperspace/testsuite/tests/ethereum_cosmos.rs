@@ -497,9 +497,18 @@ async fn zk_prover_bitmask() {
 
 #[tokio::test(flavor = "multi_thread", worker_threads = 10)]
 #[ignore]
+async fn test_u256_conversion() {
+	let pi_a_0 = "3539986140604516990123374722280552878594159762766456475343280045247856955765";
+	let x = U256::from_dec_str(pi_a_0).unwrap();
+}
+
+
+
+#[tokio::test(flavor = "multi_thread", worker_threads = 10)]
+#[ignore]
 async fn zk_prover_integration_test() {
 
-	let h = 12;
+	let h = 0;
 
 	let zk_prover = ZKProver::new("http://127.0.0.1:8000".to_string(), Duration::from_secs(60).as_secs());
 	let proof_input = CreateProofInput {
