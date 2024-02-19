@@ -24,14 +24,14 @@ pub struct ResponseProofRequest {
 
 #[derive(Debug, serde::Serialize, Clone)]
 pub struct CreateProofInput {
-	pub msgs: Vec<u8>,
+	pub msgs: Vec<Vec<u8>>,
 	pub signatures: Vec<Vec<u8>>,
 	pub public_keys: Vec<Vec<u8>>,
 	pub height: u64,
 }
 
 impl CreateProofInput{
-	pub fn new(signatures: Vec<Vec<u8>>, msgs: Vec<u8>, public_keys: Vec<Vec<u8>>, height: u64) -> Self {
+	pub fn new(signatures: Vec<Vec<u8>>, msgs: Vec<Vec<u8>>, public_keys: Vec<Vec<u8>>, height: u64) -> Self {
 		Self { signatures, msgs, public_keys, height }
 	}
 }

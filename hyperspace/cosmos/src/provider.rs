@@ -288,7 +288,7 @@ where
 
 								let pub_keys_list  = input.iter().map(|(pub_keys, _, _)| pub_keys.clone()).collect::<Vec<_>>();
 								let signatures_list  = input.iter().map(|(_, signatures, _)| signatures.clone()).collect::<Vec<_>>();
-								let msg = input[0].2.clone();
+								let msg = input.iter().map(|(_, _, msg)| msg.clone()).collect::<Vec<_>>();
 
 								let result = zk_prover.create_proof(CreateProofInput::new(
 									signatures_list, msg, pub_keys_list, height.revision_height
