@@ -82,5 +82,5 @@ json = { package = "serde_json", version = "1.0.85" }
 frame-support = { git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.43" }
 finality-grandpa-rpc = { package = "sc-consensus-grandpa-rpc", git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.43" }
 jsonrpsee-ws-client = "0.16.2"
-hyperspace-core = { path = "../../hyperspace/core", features = ["testing", "build-metadata-from-ws"] }
+hyperspace-core = { path = "../../hyperspace/core", features = ["testing"] }
 light-client-common = { path = "../common", features = ["std"] }

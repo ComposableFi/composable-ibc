@@ -42,11 +42,13 @@ pub type RelayChainHeader = sp_runtime::generic::Header<u32, BlakeTwo256>;
 pub struct Header {
 	/// The grandpa finality proof: contains relay chain headers from the
 	/// last known finalized grandpa block.
-	pub finality_proof: FinalityProof<RelayChainHeader>,
+	pub finality_proof: FinalityProof<RelayChainHeader>, // [H1, H2, H3...]
 	/// Contains a map of relay chain header hashes to parachain headers
 	/// finalzed at the relay chain height. We check for this parachain header finalization
 	/// via state proofs. Also contains extrinsic proof for timestamp.
-	pub parachain_headers: BTreeMap<H256, ParachainHeaderProofs>,
+	// pub parachain_headers: BTreeMap<H256, ParachainHeaderProofs>, // [Pn], where Pn proved in
+	// [H1, H2, H3...], last
+	pub parachain_header: ParachainHeaderProofs,
 	/// Lazily initialized height
 	pub height: Height,
 }
@@ -66,6 +68,8 @@ pub struct Misbehaviour {
 	pub first_finality_proof: FinalityProof<RelayChainHeader>,
 	/// second proof of misbehaviour
 	pub second_finality_proof: FinalityProof<RelayChainHeader>,
+	/// Consensus height against which the misbehaviour is checked (base block)
+	pub para_height: u32,
 }
 
 /// [`ClientMessage`] for Ics10-GRANDPA
@@ -98,6 +102,13 @@ impl TryFrom<RawHeader> for Header {
 			Err(anyhow!("Invalid hash type with length: {}", finality_proof.block.len()))?
 		};
 
+		// 2079-1
+		// 2079-2
+		// 2079-3
+
+		// MAX_PARA_ID+1-1
+		// 2080-2
+		// 2080-3
 		let parachain_headers = raw_header
 			.parachain_headers
 			.into_iter()

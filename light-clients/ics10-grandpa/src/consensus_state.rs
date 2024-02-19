@@ -18,6 +18,7 @@ use anyhow::anyhow;
 use codec::Decode;
 use core::{convert::Infallible, fmt::Debug};
 use serde::{Deserialize, Serialize};
+use std::collections::BTreeSet;
 use tendermint::time::Time;
 use tendermint_proto::{google::protobuf as tpb, Protobuf};
 
@@ -39,6 +40,7 @@ pub const GRANDPA_CONSENSUS_STATE_TYPE_URL: &str = "/ibc.lightclients.grandpa.v1
 pub struct ConsensusState {
 	pub timestamp: Time,
 	pub root: CommitmentRoot,
+	pub relaychain_hashes: BTreeSet<H256>,
 }
 
 impl ConsensusState {

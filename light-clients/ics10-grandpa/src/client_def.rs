@@ -33,6 +33,7 @@ use ibc::{
 	core::{
 		ics02_client::{
 			client_def::{ClientDef, ConsensusUpdateResult},
+			context::ClientTypes,
 			error::Error as Ics02Error,
 		},
 		ics03_connection::connection::ConnectionEnd,
@@ -77,7 +78,7 @@ where
 
 	fn verify_client_message<Ctx: ReaderContext>(
 		&self,
-		_ctx: &Ctx,
+		ctx: &Ctx,
 		_client_id: ClientId,
 		client_state: Self::ClientState,
 		client_message: Self::ClientMessage,
@@ -123,7 +124,7 @@ where
 				let second_headers =
 					AncestryChain::<RelayChainHeader>::new(&second_proof.unknown_headers);
 				let second_target =
-					second_proof.unknown_headers.iter().max_by_key(|h| *h.number()).ok_or_else(
+					second_proof.unknown_headers.last().max_by_key(|h| *h.number()).ok_or_else(
 						|| Error::Custom("Unknown headers can't be empty!".to_string()),
 					)?;
 
@@ -136,6 +137,7 @@ where
 					.into())
 				}
 
+				// let target_hash = check_ancestry(&first_proof.unknown_headers)?;
 				let first_base =
 					first_proof.unknown_headers.iter().min_by_key(|h| *h.number()).ok_or_else(
 						|| Error::Custom("Unknown headers can't be empty!".to_string()),
@@ -162,8 +164,73 @@ where
 					.into())
 				}
 
+				/*
+				/*
+				//               H6 v-- [G7, G8, G9, G10,  G11, G12, G13, ..., GN] -> U'3 N <= 10 (L) => Freeze client
+				//                                    !                        F3'
+				//  [H3, H4, H5, H6] <- [H7, H8, H9, H10]
+				//    ^----------F2      ^------------F3
+				//                v                    v
+				//               U2                   U3
+				//[P1, {P2}] <----|		[P3, P4, P5, P6, P7, P8, P9, P10, P11, P12, P13, ..., {PN}]
+				// == client update ===> (ClientState, ConsensusState)
+
+				P = check(Fn)
+				// ctx.consensus_states[P.height] = GetState(P, Fn.last())
+
+
+				struct ConsensusState {
+					timestamp: u64;
+					root: Hash,
+					relaychain_hashes: Vec<Hash>,
+				}
+				 */
+
+				Misbheaviour {
+					FP1 = [G501, ... GN],     N = 1001, |FP1| = 502
+					FP2 = [H501, ]
+				}
+				divergence: H501 != G501
+				first_parent = H500 == FP1[0].height - 1 == FP2[0].height - 1
+
+
+				Cache: 0..500
+				After update..
+				Cache 501..1001 (no 500)
+
+				Possible solutions:
+				1. Limit (L) update headers count.
+				   What's the limit for GRANDPA? What if GRANDPA allows L+1 headers to justify?
+				   Then we can freeze the client in UpdateClient proc
+				2. Use direct chain KV-storage,
+					where K = "grandpa-10/relay_headers/<hash>", V = ()
+						  H1_K = "grandpa-10/relay_headers/0x11...", V = ()
+						   H2_K = "grandpa-10/relay_headers/0x22...", V = ()
+
+					currently, we have K = "grandpa-10/relay_headers", V = Vec<Hash> // size is ver big => expensive in storage load/write
+				3. Change ConsensusState
+				   Store relay header hashes.
+				   And then load the needed consensus state by height and check if it contains the hash
+				   It means, that we need to replace `first_parent` (hash) with first_parent_height
+				   // 1, 2, 3, 4, ..
+				   then we do first_parent_height = first_base.height - 1 == second_base.height - 1
+
+				   UnbondingPeriod / BlockTime = e.g. 10000
+				 */
+
 				// TODO: should we handle genesis block here somehow?
-				if !H::contains_relay_header_hash(first_parent) {
+				// if !H::contains_relay_header_hash(first_parent) {
+				// 	Err(Error::Custom(
+				// 		"Could not find the known header for first finality proof".to_string(),
+				// 	))?
+				// }
+				let cs =
+					ctx.consensus_state(&client_id, misbehavior.para_height).map_err(|_| {
+						Error::Custom(
+							"Could not find the known header for first finality proof".to_string(),
+						)
+					})?;
+				if !cs.relaychain_hashes.contains(first_parent) {
 					Err(Error::Custom(
 						"Could not find the known header for first finality proof".to_string(),
 					))?
@@ -224,38 +291,38 @@ where
 
 		let from = client_state.latest_relay_hash;
 
-		let finalized = ancestry
+		let finalized = ancestry // Hs
 			.ancestry(from, header.finality_proof.block)
 			.map_err(|_| Error::Custom(format!("[update_state] Invalid ancestry!")))?;
 		let mut finalized_sorted = finalized.clone();
 		finalized_sorted.sort();
 
-		for (relay_hash, parachain_header_proof) in header.parachain_headers {
-			// we really shouldn't set consensus states for parachain headers not in the finalized
-			// chain.
-			if finalized_sorted.binary_search(&relay_hash).is_err() {
-				continue
-			}
-
-			let header = ancestry.header(&relay_hash).ok_or_else(|| {
-				Error::Custom(format!("No relay chain header found for hash: {relay_hash:?}"))
-			})?;
-
-			let (height, consensus_state) = ConsensusState::from_header::<H>(
-				parachain_header_proof,
-				client_state.para_id,
-				header.state_root.clone(),
-			)?;
-
-			// Skip duplicate consensus states
-			if ctx.consensus_state(&client_id, height).is_ok() {
-				continue
-			}
-
-			let wrapped = Ctx::AnyConsensusState::wrap(&consensus_state)
-				.expect("AnyConsenusState is type checked; qed");
-			consensus_states.push((height, wrapped));
+		let (relay_hash, parachain_header_proof) = header.parachain_header;
+		// we really shouldn't set consensus states for parachain headers not in the finalized
+		// chain.
+		if finalized_sorted.binary_search(&relay_hash).is_err() {
+			continue
 		}
+
+		let header = ancestry.header(&relay_hash).ok_or_else(|| {
+			Error::Custom(format!("No relay chain header found for hash: {relay_hash:?}"))
+		})?;
+
+		let (height, mut consensus_state) = ConsensusState::from_header::<H>(
+			parachain_header_proof,
+			client_state.para_id,
+			header.state_root.clone(),
+		)?;
+		consensus_state.relaychain_hashes = finalized_sorted;
+
+		// Skip duplicate consensus states
+		if ctx.consensus_state(&client_id, height).is_ok() {
+			continue
+		}
+
+		let wrapped = Ctx::AnyConsensusState::wrap(&consensus_state)
+			.expect("AnyConsenusState is type checked; qed");
+		consensus_states.push((height, wrapped));
 
 		// updates
 		let target = ancestry
@@ -299,7 +366,7 @@ where
 
 		H::insert_relay_header_hashes(&finalized);
 
-		Ok((client_state, ConsensusUpdateResult::Batch(consensus_states)))
+		Ok((client_state, ConsensusUpdateResult::Single(consensus_state)))
 	}
 
 	fn update_state_on_misbehaviour(

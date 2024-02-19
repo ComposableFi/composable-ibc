@@ -45,10 +45,20 @@ grandpa-light-client = { path = "../../algorithms/grandpa/verifier", package = "
 hex = "0.4.3"
 rand = "0.8.5"
 toml = "0.7.4"
+#tonic = { version = "0.8", features = ["tls", "tls-roots"] }
+#prost = "0.11.6"
+#sp-rpc = { git = "https://github.com/paritytech//substrate.git", branch = "polkadot-v0.9.43" }
+#tendermint = { git = "https://github.com/informalsystems/tendermint-rs", rev = "e81f7bf23d63ffbcd242381d1ce5e35da3515ff1", default-features = false, features = [
+#    "secp256k1",
+#] }
+#tendermint-rpc = { git = "https://github.com/informalsystems/tendermint-rs", rev = "e81f7bf23d63ffbcd242381d1ce5e35da3515ff1", default-features = false, features = [
+#    "http-client",
+#    "websocket-client",
+#] }
 
 [dev-dependencies]
 subxt = { git = "https://github.com/paritytech/subxt",  tag = "v0.29.0", features = ["substrate-compat"] }
-hyperspace-core = { path = "../core", features = ["testing", "build-metadata-from-ws"] }
+hyperspace-core = { path = "../core", features = ["testing"] }
 hyperspace-parachain = { path = "../parachain", features = ["testing"] }
 hyperspace-cosmos = { path = "../cosmos", features = [] }
 

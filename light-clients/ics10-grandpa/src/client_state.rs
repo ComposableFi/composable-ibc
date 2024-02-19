@@ -38,6 +38,7 @@ use light_client_common::RelayChain;
 use serde::{Deserialize, Serialize};
 use sp_consensus_grandpa::AuthorityList;
 use sp_core::{ed25519::Public, H256};
+use std::collections::BTreeSet;
 use tendermint_proto::Protobuf;
 
 /// Protobuf type url for GRANDPA ClientState
@@ -63,6 +64,7 @@ pub struct ClientState<H> {
 	pub current_authorities: AuthorityList,
 	/// phantom type.
 	pub _phantom: PhantomData<H>,
+	pub relaychain_hashes: BTreeSet<H256>,
 }
 
 impl<H> From<ClientState<H>> for grandpa_client_primitives::ClientState {

@@ -36,7 +36,9 @@ use ibc_proto::google::protobuf::Any;
 use ics10_grandpa::client_message::{ClientMessage, Misbehaviour, RelayChainHeader};
 use itertools::Itertools;
 use jsonrpsee_ws_client::WsClientBuilder;
-use light_client_common::config::{EventRecordT, RuntimeCall, RuntimeTransactions};
+use light_client_common::config::{
+	AsInner, EventRecordT, RuntimeCall, RuntimeStorage, RuntimeTransactions,
+};
 use pallet_ibc::light_clients::AnyClientMessage;
 use primitives::{
 	mock::LocalClientTypes, Chain, CommonClientState, IbcProvider, MisbehaviourHandler,
@@ -426,6 +428,22 @@ where
 						anyhow!("No header found for hash: {:?}", base_header.parent_hash)
 					})?;
 
+				let common_ancestor_header = loop {
+					match try_query_header() {
+						Ok(header) => break header,
+						Err(e) => {
+							log::warn!("Failed to query header: {:?}", e);
+							sleep(Duration::from_secs(1)).await;
+						},
+					}
+				};
+				//                  v-- [G7, G8, G9, G10,  G11, G12, G13, ..., GN] -> U'3 N <= 10 (L) => Freeze client
+				//                                    !
+				//  [H3, H4, H5, H6] <- [H7, H8, H9, H10]
+				//    ^----------F2      ^------------F3
+				//                v                    v
+				//               U2                   U3
+				// common_ancestor_block_number = H6
 				let common_ancestor_block_number = u32::from(common_ancestor_header.number());
 				let encoded =
 					GrandpaApiClient::<JustificationNotification, H256, u32>::prove_finality(
@@ -445,8 +463,55 @@ where
 					FinalityProof::<RelayChainHeader>::decode(&mut &encoded[..])?;
 				let trusted_justification =
 					GrandpaJustification::decode(&mut &*trusted_finality_proof.justification)?;
-				let to_block = trusted_justification.commit.target_number;
+				let to_block = trusted_justification.commit.target_number; // H10
+				// trusted_justification.votes_ancestries // H7, H8, H9
 				let from_block = (common_ancestor_block_number + 1).min(to_block);
+
+				// Relay:
+				// Relaychain+Para (A) -> Header -> Relayer -> MsgUpdateClient -> B (?) ->
+				// LightClient (ics10-grandpa!) -> ClientUpdate (event)
+
+				// Fish (B):
+				// B (LC) -> UpdateClient -> Relayer -> Relaychain -> Header -> Compare H1 ?= H2 ->
+				// Misbehaviour -> B
+
+				// Fish (A) (not support):
+				// A  -> Header1
+				// A' -> Header2
+				// Header1 ?= Header2
+				// Equivocation { h1, h2 } -> A
+
+				// N1, N2, .., N100
+				// H -> N1..N99 (Composable Node, Delwer)
+				// H' -> N100 (Parity Node)
+
+
+				// signed (forged): 10,11,12,..1000
+				// trusted: 10,11,12
+				// Divergence: hash(fp1[12]) != hash(fp2[12])
+
+				// Relaychain -> Header -> (Relayer magic) -> Update
+				// H1 -> Upd1
+				// H1 -/> Upd2
+				// N = 10000000
+				//                                 v-- [G7, G8, G9, G10,  G11, G12, G13, ..., GN] -> U'3
+				//                                                         !
+				// [H0, H1, H2] <- [H3, H4, H5, H6] <- [H7, H8, H9, H10] + H11           H_N-1?  query(14)? -> Err
+				//   ^------F1       ^----------F2      ^------------F3
+				//           v                   v                    v
+				//          U1                  U2                   U3
+
+				// H(G7) == H(H7)
+				// H(G8) == H(H8)
+				// H(G11) != H(H11) -- divergence!
+
+
+				/* TODO:
+				// 1. check_for_misbehaviour
+				//    a. Make loop to try to find the block, otherwise an error will be returned on query failure
+				//    b. if haven't received all the blocks up to HN (latest block in the update), in `delay_period` -> print error (no kill)
+				//    c.
+				*/
 
 				let trusted_base_header_hash = self
 					.relay_client
@@ -496,10 +561,28 @@ where
 						));
 					}
 
+					let parachain_header_bytes = {
+						let key = T::Storage::paras_heads(self.para_id);
+						let data = self
+							.relay_client
+							.storage()
+							.at(common_ancestor_header.hash())
+							.fetch(&key)
+							.await?
+							.expect("Header exists in its own changeset; qed");
+						<T::Storage as RuntimeStorage>::HeadData::from_inner(data)
+					};
+
+					let para_header: T::Header =
+						Decode::decode(&mut parachain_header_bytes.as_ref())?;
+					let para_block_number = para_header.number();
+
 					let misbehaviour = ClientMessage::Misbehaviour(Misbehaviour {
 						first_finality_proof: header.finality_proof,
 						second_finality_proof: trusted_finality_proof,
-					});
+						// consensus state height which gives us our relaychain base header against which we validate misbehaviour
+						para_height: para_block_number.into(),
+	 				});
 
 					counterparty
 						.submit(vec![MsgUpdateAnyClient::<LocalClientTypes>::new(

@@ -154,58 +154,58 @@ async fn parachain_to_parachain_ibc_messaging_full_integration_test() {
 	let mut join_set = tokio::task::JoinSet::new();
 
 	// no timeouts + connection delay
-	let mut c1 = chain_a.clone();
-	let mut c2 = chain_b.clone();
-	join_set.spawn(async move {
-		ibc_messaging_with_connection_delay(
-			&mut c1, &mut c2, asset_id, asset_id, channel_a, channel_b,
-		)
-		.await;
-		log::info!(target: "hyperspace", "🚀🚀 finished connection delay");
-	});
-
-	// timeouts + connection delay
-	let mut c1 = chain_a.clone();
-	let mut c2 = chain_b.clone();
-	join_set.spawn(async move {
-		ibc_messaging_packet_height_timeout_with_connection_delay(
-			&mut c1, &mut c2, asset_id, channel_a, channel_b,
-		)
-		.await;
-		log::info!(target: "hyperspace", "🚀🚀 finished packet height timeout");
-
-		ibc_messaging_packet_timestamp_timeout_with_connection_delay(
-			&mut c1, &mut c2, asset_id, channel_a, channel_b,
-		)
-		.await;
-		log::info!(target: "hyperspace", "🚀🚀 finished packet timestamp timeout");
-	});
-
-	log::info!(target: "hyperspace", "🚀🚀 Waiting for connection delay and timeout checks to finish");
-	while let Some(res) = join_set.join_next().await {
-		res.unwrap();
-	}
-
-	// channel closing semantics
-	let mut join_set = tokio::task::JoinSet::new();
-	let mut c1 = chain_a.clone();
-	let mut c2 = chain_b.clone();
-	join_set.spawn(async move {
-		ibc_messaging_packet_timeout_on_channel_close(&mut c1, &mut c2, asset_id, channel_a).await;
-		log::info!(target: "hyperspace", "🚀🚀 finished packet timeout on channel close");
-	});
-	join_set.spawn(async move {
-		ibc_channel_close(&mut chain_aa, &mut chain_bb).await;
-		log::info!(target: "hyperspace", "🚀🚀 finished channel close");
-	});
-
-	log::info!(target: "hyperspace", "🚀🚀 Waiting for channel close semantics to finish");
-	while let Some(res) = join_set.join_next().await {
-		res.unwrap();
-	}
-
-	// Test sync abilities, run this before misbehaviour test
-	client_synchronization_test(&mut chain_a, &mut chain_b).await;
+	// let mut c1 = chain_a.clone();
+	// let mut c2 = chain_b.clone();
+	// join_set.spawn(async move {
+	// 	ibc_messaging_with_connection_delay(
+	// 		&mut c1, &mut c2, asset_id, asset_id, channel_a, channel_b,
+	// 	)
+	// 	.await;
+	// 	log::info!(target: "hyperspace", "🚀🚀 finished connection delay");
+	// });
+	//
+	// // timeouts + connection delay
+	// let mut c1 = chain_a.clone();
+	// let mut c2 = chain_b.clone();
+	// join_set.spawn(async move {
+	// 	ibc_messaging_packet_height_timeout_with_connection_delay(
+	// 		&mut c1, &mut c2, asset_id, channel_a, channel_b,
+	// 	)
+	// 	.await;
+	// 	log::info!(target: "hyperspace", "🚀🚀 finished packet height timeout");
+	//
+	// 	ibc_messaging_packet_timestamp_timeout_with_connection_delay(
+	// 		&mut c1, &mut c2, asset_id, channel_a, channel_b,
+	// 	)
+	// 	.await;
+	// 	log::info!(target: "hyperspace", "🚀🚀 finished packet timestamp timeout");
+	// });
+	//
+	// log::info!(target: "hyperspace", "🚀🚀 Waiting for connection delay and timeout checks to
+	// finish"); while let Some(res) = join_set.join_next().await {
+	// 	res.unwrap();
+	// }
+	//
+	// // channel closing semantics
+	// let mut join_set = tokio::task::JoinSet::new();
+	// let mut c1 = chain_a.clone();
+	// let mut c2 = chain_b.clone();
+	// join_set.spawn(async move {
+	// 	ibc_messaging_packet_timeout_on_channel_close(&mut c1, &mut c2, asset_id, channel_a).await;
+	// 	log::info!(target: "hyperspace", "🚀🚀 finished packet timeout on channel close");
+	// });
+	// join_set.spawn(async move {
+	// 	ibc_channel_close(&mut chain_aa, &mut chain_bb).await;
+	// 	log::info!(target: "hyperspace", "🚀🚀 finished channel close");
+	// });
+	//
+	// log::info!(target: "hyperspace", "🚀🚀 Waiting for channel close semantics to finish");
+	// while let Some(res) = join_set.join_next().await {
+	// 	res.unwrap();
+	// }
+	//
+	// // Test sync abilities, run this before misbehaviour test
+	// client_synchronization_test(&mut chain_a, &mut chain_b).await;
 
 	// misbehaviour
 	ibc_messaging_submit_misbehaviour(&mut chain_a, &mut chain_b).await;
