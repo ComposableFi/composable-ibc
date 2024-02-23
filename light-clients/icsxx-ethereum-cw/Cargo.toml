@@ -96,6 +96,7 @@ mainnet = [
 testnet = [
   "sync-committee-primitives/sepolia",
   "sync-committee-verifier/sepolia",
+  "icsxx-ethereum/testnet",
 ]
 no_beacon = [
   "icsxx-ethereum/no_beacon"
