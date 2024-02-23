@@ -2,11 +2,12 @@
 extern crate alloc;
 
 use alloc::rc::Rc;
-use anchor_client::solana_sdk::compute_budget::ComputeBudgetInstruction;
+use anchor_client::solana_sdk::{compute_budget::ComputeBudgetInstruction, transaction::Transaction};
 use anchor_spl::associated_token::get_associated_token_address;
 use base64::Engine;
 use client_state::convert_new_client_state_to_old;
 use consensus_state::convert_new_consensus_state_to_old;
+use solana_ibc::CryptoHash;
 use core::{pin::Pin, str::FromStr, time::Duration};
 use futures::future::join_all;
 use ibc_proto_new::cosmos::crypto::keyring::v1::record::Local;
@@ -93,13 +94,12 @@ use tokio_stream::{Stream, StreamExt};
 
 // use crate::ibc_storage::{AnyConsensusState, Serialised};
 use solana_ibc::{
-	chain::ChainData,
-	storage::{PrivateStorage, SequenceKind, Serialised},
+	chain::ChainData, ix_data_account, storage::{PrivateStorage, SequenceKind, Serialised}
 };
-use solana_trie::trie;
+// use solana_trie::trie;
 use trie_ids::{ClientIdx, ConnectionIdx, PortChannelPK, Tag, TrieKey};
 
-use crate::{events::convert_new_event_to_old, msgs::convert_messages_to_any};
+use crate::events::convert_new_event_to_old;
 
 // mod accounts;
 mod client_state;
@@ -196,6 +196,7 @@ pub struct SolanaClientConfig {
 }
 
 pub const NUMBER_OF_BLOCKS_TO_PROCESS_PER_ITER: u64 = 250;
+pub const WRITE_ACCOUNT_SEED: &[u8] = b"write"; 
 
 #[derive(Debug, Clone)]
 pub enum FinalityEvent {
@@ -240,12 +241,6 @@ impl SolanaClient {
 		ibc_storage
 	}
 
-	pub fn get_msg_chunks_key(&self) -> Pubkey {
-		let msg_chunks_seeds = &[solana_ibc::MSG_CHUNKS];
-		let msg_chunks = Pubkey::find_program_address(msg_chunks_seeds, &self.program_id).0;
-		msg_chunks
-	}
-
 	pub fn get_chain_key(&self) -> Pubkey {
 		let chain_seeds = &[CHAIN_SEED];
 		let chain = Pubkey::find_program_address(chain_seeds, &self.program_id).0;
@@ -258,7 +253,7 @@ impl SolanaClient {
 		mint_auth
 	}
 
-	pub async fn get_trie(&self) -> trie::AccountTrie<Vec<u8>> {
+	pub async fn get_trie(&self) -> solana_trie::TrieAccount<Vec<u8>> {
 		let trie_key = self.get_trie_key();
 		let rpc_client = self.rpc_client();
 		let trie_account = rpc_client
@@ -267,7 +262,7 @@ impl SolanaClient {
 			.unwrap()
 			.value
 			.unwrap();
-		let trie = trie::AccountTrie::new(trie_account.data).unwrap();
+		let trie = solana_trie::TrieAccount::new(trie_account.data).unwrap();
 		trie
 	}
 
@@ -401,6 +396,7 @@ impl SolanaClient {
 			)
 			.unwrap(),
 		};
+		let hashed_denom = CryptoHash::digest(denom.as_bytes());
 
 		let sig = program
 			.request()
@@ -422,7 +418,7 @@ impl SolanaClient {
 			.args(solana_ibc::instruction::SendTransfer {
 				port_id,
 				channel_id,
-				base_denom: denom.to_string(),
+				hashed_base_denom: hashed_denom,
 				msg: new_msg_transfer,
 			})
 			// .payer(Arc::new(keypair))
@@ -577,7 +573,7 @@ impl IbcProvider for SolanaClient {
 		let ws_url = self.ws_url.clone();
 		tokio::task::spawn_blocking(move || {
 			let (_logs_subscription, receiver) = PubsubClient::logs_subscribe(
-				&ws_url,	
+				&ws_url,
 				RpcTransactionLogsFilter::Mentions(vec![solana_ibc::ID.to_string()]),
 				RpcTransactionLogsConfig { commitment: Some(CommitmentConfig::processed()) },
 			)
@@ -918,6 +914,7 @@ deserialize client state"
 			.map_err(|_| Error::Custom("value is sealed and cannot be fetched".to_owned()))?;
 		let next_seq = &storage
 			.port_channel
+			.0
 			.get(&next_sequence_recv_path)
 			.ok_or(Error::Custom("No value at given key".to_owned()))?
 			.next_sequence;
@@ -1130,6 +1127,7 @@ deserialize client state"
 		let storage = self.get_ibc_storage().await;
 		let channels: Vec<IdentifiedChannel> = storage
 			.port_channel
+			.0
 			.into_iter()
 			.map(|(key, value)| {
 				let channel = value.channel_end().unwrap().unwrap();
@@ -1420,12 +1418,14 @@ deserialize client state"
 		.unwrap();
 		let height = client_store
 			.consensus_states
+			.0
 			.get(&inner_client_height)
 			.ok_or("No host height found with the given height".to_owned())?
 			.processed_height()
 			.ok_or("No height found".to_owned())?;
 		let timestamp = client_store
 			.consensus_states
+			.0
 			.get(&inner_client_height)
 			.ok_or("No timestamp found with the given height".to_owned())?
 			.processed_time()
@@ -1561,7 +1561,7 @@ deserialize client state"
 		Self::Error,
 	> {
 		let storage = self.get_ibc_storage().await;
-		let channels: Vec<(ChannelId, PortId)> = BTreeMap::keys(&storage.port_channel)
+		let channels: Vec<(ChannelId, PortId)> = storage.port_channel.0.keys()
 			.map(|channel_store| {
 				(
 					ChannelId::from_str(&channel_store.channel_id().as_str()).unwrap(),
@@ -1593,10 +1593,7 @@ deserialize client state"
 						.versions()
 						.iter()
 						.map(|version| {
-							let proto_version =
-								ibc_proto_new::ibc::core::connection::v1::Version::from(
-									version.clone(),
-								);
+							let proto_version: ibc_proto_new::ibc::core::connection::v1::Version = version.clone().try_into().unwrap();
 							Version {
 								identifier: proto_version.identifier,
 								features: proto_version.features,
@@ -1859,10 +1856,10 @@ impl Chain for SolanaClient {
 		tokio::task::spawn_blocking(move || {
 			let (_logs_listener, receiver) = PubsubClient::block_subscribe(
 				&ws_url, /* Quicknode rpc should be used for devnet/mainnet and
-				                        * incase of localnet,
-				                        * the flag `--rpc-pubsub-enable-block-subscription` has
-				                        * to be passed to
-				                        * local validator. */
+				          * incase of localnet,
+				          * the flag `--rpc-pubsub-enable-block-subscription` has
+				          * to be passed to
+				          * local validator. */
 				RpcBlockSubscribeFilter::All,
 				Some(RpcBlockSubscribeConfig {
 					commitment: Some(CommitmentConfig::finalized()),
@@ -1907,72 +1904,60 @@ impl Chain for SolanaClient {
 		let solana_ibc_storage_key = self.get_ibc_storage_key();
 		let trie_key = self.get_trie_key();
 		let chain_key = self.get_chain_key();
-		let msg_chunks = self.get_msg_chunks_key();
 		let mut signature = String::new();
+		let rpc = program.async_rpc();
 
 		for message in messages {
 			let my_message = Ics26Envelope::<LocalClientTypes>::try_from(message.clone()).unwrap();
-			let messages = convert_old_msgs_to_new(vec![my_message]);
-			let any_message = &convert_messages_to_any(messages.clone())[0];
+			let new_messages = convert_old_msgs_to_new(vec![my_message]);
+			let message = new_messages[0].clone();
+			// let any_message = &convert_messages_to_any(messages.clone())[0];
+			let mut instruction_data =
+				anchor_lang::InstructionData::data(&solana_ibc::instruction::Deliver {
+					message: message.clone(),
+				});
+			let instruction_len = instruction_data.len() as u32;
+			instruction_data.splice(..0, instruction_len.to_le_bytes());
 
 			let balance = program.async_rpc().get_balance(&authority.pubkey()).await.unwrap();
 			println!("This is balance {}", balance);
 			println!("This is start of payload ---------------------------------");
-			println!("{:?}", messages[0].clone());
+			println!("{:?}", message);
 			println!("This is end of payload ----------------------------------");
 
 			// if any_message.type_url == "/ibc.core.client.v1.MsgUpdateClient" {
-			let length = any_message.value.len();
 			let chunk_size = 500;
 			let mut offset = 4;
 			let max_tries = 5;
 
-			for i in any_message.value.chunks(chunk_size) {
-				let mut tries = 0;
-				while tries < max_tries {
-					println!("Try For chunks: {}", tries);
-					let mut status = true;
-					let sig = program
-						.request()
-						.instruction(ComputeBudgetInstruction::set_compute_unit_price(50000000))
-						.accounts(solana_ibc::accounts::FormMessageChunks {
-							sender: authority.pubkey(),
-							msg_chunks,
-							system_program: system_program::ID,
-						})
-						.args(solana_ibc::instruction::FormMsgChunks {
-							total_len: length as u32,
-							offset: offset as u32,
-							bytes: i.to_vec(),
-							type_url: any_message.type_url.clone(),
-						})
-						.payer(authority.clone())
-						.signer(&*authority)
-						.send_with_spinner_and_config(RpcSendTransactionConfig {
-							skip_preflight: true,
-							..RpcSendTransactionConfig::default()
-						})
-						.await
-						.or_else(|e| {
-							println!("This is error {:?}", e);
-							status = false;
-							ibc::prelude::Err("Error".to_owned())
-						});
+			let blockhash = rpc.get_latest_blockhash().await.unwrap();
 
-					if status {
-						println!("  Signature for message chunks : {}", sig.unwrap());
-						offset += chunk_size;
-						break
-					}
-					sleep(Duration::from_millis(500));
-				  tries += 1;	
-				}
-				if tries == max_tries {
-					panic!("Max retries reached for chunks in solana");
-				}
+			let write_account_program_id = Pubkey::from_str("BHgp5XwSmDpbVQXy5vFkExjEhKL86hBy1JBTHCYDtA4e").unwrap();
+
+			let (mut chunks, chunk_account, _) = write::instruction::WriteIter::new(
+				&write_account_program_id,
+				authority.pubkey(),
+				WRITE_ACCOUNT_SEED,
+				instruction_data,
+			)
+			.unwrap();
+			// Note: We’re using small chunks size on purpose to test the behaviour of
+			// the write account program.
+			chunks.chunk_size = core::num::NonZeroU16::new(500).unwrap();
+			for instruction in &mut chunks {
+				let transaction = Transaction::new_signed_with_payer(
+					&[instruction],
+					Some(&authority.pubkey()),
+					&[&*authority],
+					blockhash,
+				);
+				let sig =
+					rpc.send_and_confirm_transaction_with_spinner(&transaction).await.unwrap();
+				println!("  Signature {sig}");
 			}
+			let (write_account, write_account_bump) = chunks.into_account();
+
 			let mut tries = 0;
-			let rpc = program.async_rpc();
 			while tries < max_tries {
 				println!("Try For Tx: {}", tries);
 				let mut status = true;
@@ -1980,23 +1965,25 @@ impl Chain for SolanaClient {
 					.request()
 					.instruction(ComputeBudgetInstruction::set_compute_unit_limit(1_000_000u32))
 					.instruction(ComputeBudgetInstruction::request_heap_frame(128 * 1024))
-					.instruction(ComputeBudgetInstruction::set_compute_unit_price(50000000))
-					.accounts(solana_ibc::accounts::DeliverWithChunks {
-						sender: authority.pubkey(),
-						receiver: None,
-						storage: solana_ibc_storage_key,
-						trie: trie_key,
-						chain: chain_key,
-						system_program: system_program::ID,
-						mint_authority: None,
-						token_mint: None,
-						escrow_account: None,
-						receiver_token_account: None,
-						associated_token_program: None,
-						token_program: None,
-						msg_chunks,
-					})
-					.args(solana_ibc::instruction::DeliverWithChunks {})
+					.instruction(ComputeBudgetInstruction::set_compute_unit_price(500000))
+					.accounts(solana_ibc::ix_data_account::Accounts::new(
+						solana_ibc::accounts::Deliver {
+							sender: authority.pubkey(),
+							receiver: None,
+							storage: solana_ibc_storage_key,
+							trie: trie_key,
+							chain: chain_key,
+							system_program: system_program::ID,
+							mint_authority: None,
+							token_mint: None,
+							escrow_account: None,
+							receiver_token_account: None,
+							associated_token_program: None,
+							token_program: None,
+						},
+						chunk_account,
+					))
+					.args(ix_data_account::Instruction)
 					// .payer(Arc::new(keypair))
 					.signer(&*authority)
 					.send_with_spinner_and_config(RpcSendTransactionConfig {

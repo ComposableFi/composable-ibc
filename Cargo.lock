@@ -172,6 +172,7 @@ checksum = "4436e0292ab1bb631b42973c61205e704475fe8126af845c8d923c0996328127"
 [[package]]
 name = "anchor-attribute-access-control"
 version = "0.29.0"
+source = "git+https://github.com/dhruvja/anchor#90a3008fcbbc5bcbc704cd6cccf61ef130c5f9eb"
 dependencies = [
  "anchor-syn",
  "proc-macro2",
@@ -182,6 +183,7 @@ dependencies = [
 [[package]]
 name = "anchor-attribute-account"
 version = "0.29.0"
+source = "git+https://github.com/dhruvja/anchor#90a3008fcbbc5bcbc704cd6cccf61ef130c5f9eb"
 dependencies = [
  "anchor-syn",
  "bs58 0.5.0",
@@ -193,6 +195,7 @@ dependencies = [
 [[package]]
 name = "anchor-attribute-constant"
 version = "0.29.0"
+source = "git+https://github.com/dhruvja/anchor#90a3008fcbbc5bcbc704cd6cccf61ef130c5f9eb"
 dependencies = [
  "anchor-syn",
  "quote",
@@ -202,6 +205,7 @@ dependencies = [
 [[package]]
 name = "anchor-attribute-error"
 version = "0.29.0"
+source = "git+https://github.com/dhruvja/anchor#90a3008fcbbc5bcbc704cd6cccf61ef130c5f9eb"
 dependencies = [
  "anchor-syn",
  "quote",
@@ -211,6 +215,7 @@ dependencies = [
 [[package]]
 name = "anchor-attribute-event"
 version = "0.29.0"
+source = "git+https://github.com/dhruvja/anchor#90a3008fcbbc5bcbc704cd6cccf61ef130c5f9eb"
 dependencies = [
  "anchor-syn",
  "proc-macro2",
@@ -221,6 +226,7 @@ dependencies = [
 [[package]]
 name = "anchor-attribute-program"
 version = "0.29.0"
+source = "git+https://github.com/dhruvja/anchor#90a3008fcbbc5bcbc704cd6cccf61ef130c5f9eb"
 dependencies = [
  "anchor-syn",
  "quote",
@@ -230,6 +236,7 @@ dependencies = [
 [[package]]
 name = "anchor-client"
 version = "0.29.0"
+source = "git+https://github.com/dhruvja/anchor#90a3008fcbbc5bcbc704cd6cccf61ef130c5f9eb"
 dependencies = [
  "anchor-lang",
  "anyhow",
@@ -248,6 +255,7 @@ dependencies = [
 [[package]]
 name = "anchor-derive-accounts"
 version = "0.29.0"
+source = "git+https://github.com/dhruvja/anchor#90a3008fcbbc5bcbc704cd6cccf61ef130c5f9eb"
 dependencies = [
  "anchor-syn",
  "quote",
@@ -257,6 +265,7 @@ dependencies = [
 [[package]]
 name = "anchor-derive-serde"
 version = "0.29.0"
+source = "git+https://github.com/dhruvja/anchor#90a3008fcbbc5bcbc704cd6cccf61ef130c5f9eb"
 dependencies = [
  "anchor-syn",
  "borsh-derive-internal 0.10.3",
@@ -268,6 +277,7 @@ dependencies = [
 [[package]]
 name = "anchor-derive-space"
 version = "0.29.0"
+source = "git+https://github.com/dhruvja/anchor#90a3008fcbbc5bcbc704cd6cccf61ef130c5f9eb"
 dependencies = [
  "proc-macro2",
  "quote",
@@ -277,6 +287,7 @@ dependencies = [
 [[package]]
 name = "anchor-lang"
 version = "0.29.0"
+source = "git+https://github.com/dhruvja/anchor#90a3008fcbbc5bcbc704cd6cccf61ef130c5f9eb"
 dependencies = [
  "anchor-attribute-access-control",
  "anchor-attribute-account",
@@ -313,6 +324,7 @@ dependencies = [
 [[package]]
 name = "anchor-syn"
 version = "0.29.0"
+source = "git+https://github.com/dhruvja/anchor#90a3008fcbbc5bcbc704cd6cccf61ef130c5f9eb"
 dependencies = [
  "anyhow",
  "bs58 0.5.0",
@@ -1012,7 +1024,7 @@ dependencies = [
  "bitflags 1.3.2",
  "bytes",
  "futures-util",
- "http",
+ "http 0.2.11",
  "http-body",
  "hyper",
  "itoa",
@@ -1038,7 +1050,7 @@ dependencies = [
  "async-trait",
  "bytes",
  "futures-util",
- "http",
+ "http 0.2.11",
  "http-body",
  "mime",
  "rustversion",
@@ -1462,11 +1474,11 @@ dependencies = [
  "borsh 0.10.3",
  "bytemuck",
  "derive_more",
- "ibc-core-client-context 0.49.1",
- "ibc-core-commitment-types 0.49.1",
- "ibc-core-host 0.49.1",
- "ibc-primitives 0.49.1",
- "ibc-proto 0.39.1",
+ "ibc-core-client-context",
+ "ibc-core-commitment-types",
+ "ibc-core-host",
+ "ibc-primitives 0.50.0",
+ "ibc-proto 0.41.0",
  "lib 0.0.0",
  "prost 0.12.3",
  "prost-build 0.12.3",
@@ -1499,7 +1511,7 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "4114279215a005bc675e386011e594e1d9b800918cea18fcadadcce864a2046b"
 dependencies = [
  "borsh-derive 0.10.3",
- "hashbrown 0.13.2",
+ "hashbrown 0.11.2",
 ]
 
 [[package]]
@@ -2037,7 +2049,7 @@ dependencies = [
  "clap 3.2.25",
  "frame-metadata 15.1.0",
  "hex",
- "http",
+ "http 0.2.11",
  "jsonrpsee",
  "parity-scale-codec",
  "serde_json",
@@ -5049,7 +5061,7 @@ dependencies = [
  "futures-core",
  "futures-sink",
  "futures-util",
- "http",
+ "http 0.2.11",
  "indexmap 2.1.0",
  "slab",
  "tokio",
@@ -5143,7 +5155,7 @@ dependencies = [
  "base64 0.21.7",
  "bytes",
  "headers-core",
- "http",
+ "http 0.2.11",
  "httpdate",
  "mime",
  "sha1",
@@ -5155,7 +5167,7 @@ version = "0.2.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "e7f66481bfee273957b1f20485a4ff3362987f85b2c236580d81b4eb7a326429"
 dependencies = [
- "http",
+ "http 0.2.11",
 ]
 
 [[package]]
@@ -5284,13 +5296,24 @@ dependencies = [
 ]
 
 [[package]]
+name = "http"
+version = "1.0.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "b32afd38673a8016f7c9ae69e5af41a58f81b1d31689040f2f1959594ce194ea"
+dependencies = [
+ "bytes",
+ "fnv",
+ "itoa",
+]
+
+[[package]]
 name = "http-body"
 version = "0.4.6"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "7ceab25649e9960c0311ea418d17bee82c0dcec1bd053b5f9a66e265a693bed2"
 dependencies = [
  "bytes",
- "http",
+ "http 0.2.11",
  "pin-project-lite 0.2.13",
 ]
 
@@ -5329,7 +5352,7 @@ dependencies = [
  "futures-core",
  "futures-util",
  "h2",
- "http",
+ "http 0.2.11",
  "http-body",
  "httparse",
  "httpdate",
@@ -5351,7 +5374,7 @@ dependencies = [
  "bytes",
  "futures",
  "headers",
- "http",
+ "http 0.2.11",
  "hyper",
  "hyper-rustls 0.22.1",
  "rustls-native-certs 0.5.0",
@@ -5385,7 +5408,7 @@ version = "0.23.2"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "1788965e61b367cd03a62950836d5cd41560c3577d90e40e0819373194d1661c"
 dependencies = [
- "http",
+ "http 0.2.11",
  "hyper",
  "log",
  "rustls 0.20.9",
@@ -5401,7 +5424,7 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "ec3efd23720e2049821a693cbc7e65ea87c72f1c58ff2f9522ff332b1491e590"
 dependencies = [
  "futures-util",
- "http",
+ "http 0.2.11",
  "hyper",
  "log",
  "rustls 0.21.10",
@@ -5658,12 +5681,12 @@ dependencies = [
  "hex",
  "hyperspace-primitives",
  "ibc 0.15.0",
- "ibc 0.48.1",
+ "ibc 0.50.0",
  "ibc-primitives 0.1.0",
  "ibc-proto 0.18.0",
- "ibc-proto 0.38.0",
+ "ibc-proto 0.41.0",
  "ibc-rpc",
- "ibc-testkit 0.48.1",
+ "ibc-testkit",
  "ics07-tendermint",
  "ics08-wasm",
  "itertools 0.10.5",
@@ -5685,6 +5708,7 @@ dependencies = [
  "solana-ibc",
  "solana-transaction-status",
  "solana-trie 0.0.0 (git+https://github.com/ComposableFi/emulated-light-client.git)",
+ "solana-write-account",
  "stdx 0.0.0 (git+https://github.com/ComposableFi/emulated-light-client.git)",
  "tendermint 0.28.0",
  "tendermint-light-client",
@@ -5803,78 +5827,62 @@ dependencies = [
 
 [[package]]
 name = "ibc"
-version = "0.48.1"
-source = "git+https://github.com/dhruvja/ibc-rs?branch=mock-sig-verification#2c358e8854e3ba9f83f0c0a2bed865f5d538b8c7"
+version = "0.50.0"
 dependencies = [
- "ibc-apps 0.48.1",
- "ibc-clients 0.48.1",
- "ibc-core 0.48.1",
- "ibc-core-host-cosmos 0.48.1",
- "ibc-derive 0.4.0",
- "ibc-primitives 0.48.1",
+ "ibc-apps",
+ "ibc-clients",
+ "ibc-core",
+ "ibc-core-host-cosmos",
+ "ibc-derive 0.6.0",
+ "ibc-primitives 0.50.0",
 ]
 
 [[package]]
-name = "ibc"
-version = "0.49.1"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "08258907d8b5b20b5de6eb064d17bc45fd4f48e64e96efbe62e035150a7d150e"
+name = "ibc-app-nft-transfer"
+version = "0.50.0"
 dependencies = [
- "ibc-apps 0.49.1",
- "ibc-clients 0.49.1",
- "ibc-core 0.49.1",
- "ibc-core-host-cosmos 0.49.1",
- "ibc-derive 0.5.0",
- "ibc-primitives 0.49.1",
-]
-
-[[package]]
-name = "ibc-app-transfer"
-version = "0.48.1"
-source = "git+https://github.com/dhruvja/ibc-rs?branch=mock-sig-verification#2c358e8854e3ba9f83f0c0a2bed865f5d538b8c7"
-dependencies = [
- "ibc-app-transfer-types 0.48.1",
- "ibc-core 0.48.1",
+ "ibc-app-nft-transfer-types",
+ "ibc-core",
  "serde-json-wasm 1.0.0",
 ]
 
 [[package]]
-name = "ibc-app-transfer"
-version = "0.49.1"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "038cacbeb1658ee4295449676a4870fdc79b1edbcb5905f6ad64e68f200d1488"
+name = "ibc-app-nft-transfer-types"
+version = "0.50.0"
 dependencies = [
- "ibc-app-transfer-types 0.49.1",
- "ibc-core 0.49.1",
- "serde-json-wasm 1.0.0",
-]
-
-[[package]]
-name = "ibc-app-transfer-types"
-version = "0.48.1"
-source = "git+https://github.com/dhruvja/ibc-rs?branch=mock-sig-verification#2c358e8854e3ba9f83f0c0a2bed865f5d538b8c7"
-dependencies = [
+ "base64 0.21.7",
  "borsh 0.10.3",
  "derive_more",
  "displaydoc",
- "ibc-core 0.48.1",
- "ibc-proto 0.38.0",
- "primitive-types",
+ "http 1.0.0",
+ "ibc-core",
+ "ibc-proto 0.41.0",
+ "mime",
+ "parity-scale-codec",
+ "scale-info",
+ "schemars",
  "serde",
- "uint",
+ "serde-json-wasm 1.0.0",
+]
+
+[[package]]
+name = "ibc-app-transfer"
+version = "0.50.0"
+dependencies = [
+ "ibc-app-transfer-types",
+ "ibc-core",
+ "serde-json-wasm 1.0.0",
 ]
 
 [[package]]
 name = "ibc-app-transfer-types"
-version = "0.49.1"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "9d89a3a0233a4e5927b116a9e6dc222cbdab0cf0fd7f0dee6308c8eefc00bb63"
+version = "0.50.0"
 dependencies = [
  "borsh 0.10.3",
  "derive_more",
  "displaydoc",
- "ibc-core 0.49.1",
- "ibc-proto 0.39.1",
+ "ibc-core",
+ "ibc-proto 0.41.0",
  "primitive-types",
  "serde",
  "uint",
@@ -5882,50 +5890,22 @@ dependencies = [
 
 [[package]]
 name = "ibc-apps"
-version = "0.48.1"
-source = "git+https://github.com/dhruvja/ibc-rs?branch=mock-sig-verification#2c358e8854e3ba9f83f0c0a2bed865f5d538b8c7"
+version = "0.50.0"
 dependencies = [
- "ibc-app-transfer 0.48.1",
-]
-
-[[package]]
-name = "ibc-apps"
-version = "0.49.1"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "61d7aafdb984fcfbbc9268fd9fa924964c2f5dfd036c5bbe3695cf28b2b2f0ea"
-dependencies = [
- "ibc-app-transfer 0.49.1",
+ "ibc-app-nft-transfer",
+ "ibc-app-transfer",
 ]
 
 [[package]]
 name = "ibc-client-tendermint"
-version = "0.48.1"
-source = "git+https://github.com/dhruvja/ibc-rs?branch=mock-sig-verification#2c358e8854e3ba9f83f0c0a2bed865f5d538b8c7"
+version = "0.50.0"
 dependencies = [
- "ibc-client-tendermint-types 0.48.1",
- "ibc-core-client 0.48.1",
- "ibc-core-commitment-types 0.48.1",
- "ibc-core-handler-types 0.48.1",
- "ibc-core-host 0.48.1",
- "ibc-primitives 0.48.1",
- "prost 0.12.3",
- "serde",
- "tendermint 0.34.0",
- "tendermint-light-client-verifier 0.34.0",
-]
-
-[[package]]
-name = "ibc-client-tendermint"
-version = "0.49.1"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "189dd739853e9cef400b4cb91e58ba261b85f17002caa862a7af924237d14879"
-dependencies = [
- "ibc-client-tendermint-types 0.49.1",
- "ibc-core-client 0.49.1",
- "ibc-core-commitment-types 0.49.1",
- "ibc-core-handler-types 0.49.1",
- "ibc-core-host 0.49.1",
- "ibc-primitives 0.49.1",
+ "ibc-client-tendermint-types",
+ "ibc-core-client",
+ "ibc-core-commitment-types",
+ "ibc-core-handler-types",
+ "ibc-core-host",
+ "ibc-primitives 0.50.0",
  "serde",
  "tendermint 0.34.0",
  "tendermint-light-client-verifier 0.34.0",
@@ -5933,159 +5913,90 @@ dependencies = [
 
 [[package]]
 name = "ibc-client-tendermint-types"
-version = "0.48.1"
-source = "git+https://github.com/dhruvja/ibc-rs?branch=mock-sig-verification#2c358e8854e3ba9f83f0c0a2bed865f5d538b8c7"
+version = "0.50.0"
 dependencies = [
  "borsh 0.10.3",
  "bytes",
  "displaydoc",
- "ibc-core-client-types 0.48.1",
- "ibc-core-commitment-types 0.48.1",
- "ibc-core-host-types 0.48.1",
- "ibc-primitives 0.48.1",
- "ibc-proto 0.38.0",
+ "ibc-core-client-types",
+ "ibc-core-commitment-types",
+ "ibc-core-host-types",
+ "ibc-primitives 0.50.0",
+ "ibc-proto 0.41.0",
  "prost 0.12.3",
  "serde",
+ "solana-ed25519 0.0.0 (git+https://github.com/ComposableFi/emulated-light-client/?branch=master)",
  "tendermint 0.34.0",
  "tendermint-light-client-verifier 0.34.0",
  "tendermint-proto 0.34.0",
 ]
 
 [[package]]
-name = "ibc-client-tendermint-types"
-version = "0.49.1"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "8fc6e8ff8d3a4477bfe8bc97f100dd7f13a7710e9de6e1541b76d33fa6a472ef"
+name = "ibc-client-wasm-types"
+version = "0.50.0"
 dependencies = [
- "borsh 0.10.3",
+ "base64 0.21.7",
  "displaydoc",
- "ibc-core-client-types 0.49.1",
- "ibc-core-commitment-types 0.49.1",
- "ibc-core-host-types 0.49.1",
- "ibc-primitives 0.49.1",
- "ibc-proto 0.39.1",
+ "ibc-core-client",
+ "ibc-core-host-types",
+ "ibc-primitives 0.50.0",
+ "ibc-proto 0.41.0",
  "serde",
- "tendermint 0.34.0",
- "tendermint-light-client-verifier 0.34.0",
- "tendermint-proto 0.34.0",
 ]
 
 [[package]]
 name = "ibc-clients"
-version = "0.48.1"
-source = "git+https://github.com/dhruvja/ibc-rs?branch=mock-sig-verification#2c358e8854e3ba9f83f0c0a2bed865f5d538b8c7"
+version = "0.50.0"
 dependencies = [
- "ibc-client-tendermint 0.48.1",
-]
-
-[[package]]
-name = "ibc-clients"
-version = "0.49.1"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "875afb9fd11cfeaa23de0234b5a353781fb18b4c4fb165719eb29a9c69a3fae6"
-dependencies = [
- "ibc-client-tendermint 0.49.1",
+ "ibc-client-tendermint",
+ "ibc-client-wasm-types",
 ]
 
 [[package]]
 name = "ibc-core"
-version = "0.48.1"
-source = "git+https://github.com/dhruvja/ibc-rs?branch=mock-sig-verification#2c358e8854e3ba9f83f0c0a2bed865f5d538b8c7"
+version = "0.50.0"
 dependencies = [
- "ibc-core-channel 0.48.1",
- "ibc-core-client 0.48.1",
- "ibc-core-commitment-types 0.48.1",
- "ibc-core-connection 0.48.1",
- "ibc-core-handler 0.48.1",
- "ibc-core-host 0.48.1",
- "ibc-core-router 0.48.1",
- "ibc-primitives 0.48.1",
-]
-
-[[package]]
-name = "ibc-core"
-version = "0.49.1"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "91444e562962b9dab6f44117cb8a20a2a681733108343c4d9fbf89c506fa8081"
-dependencies = [
- "ibc-core-channel 0.49.1",
- "ibc-core-client 0.49.1",
- "ibc-core-commitment-types 0.49.1",
- "ibc-core-connection 0.49.1",
- "ibc-core-handler 0.49.1",
- "ibc-core-host 0.49.1",
- "ibc-core-router 0.49.1",
- "ibc-primitives 0.49.1",
+ "ibc-core-channel",
+ "ibc-core-client",
+ "ibc-core-commitment-types",
+ "ibc-core-connection",
+ "ibc-core-handler",
+ "ibc-core-host",
+ "ibc-core-router",
+ "ibc-derive 0.6.0",
+ "ibc-primitives 0.50.0",
 ]
 
 [[package]]
 name = "ibc-core-channel"
-version = "0.48.1"
-source = "git+https://github.com/dhruvja/ibc-rs?branch=mock-sig-verification#2c358e8854e3ba9f83f0c0a2bed865f5d538b8c7"
+version = "0.50.0"
 dependencies = [
- "ibc-core-channel-types 0.48.1",
- "ibc-core-client 0.48.1",
- "ibc-core-commitment-types 0.48.1",
- "ibc-core-connection 0.48.1",
- "ibc-core-handler-types 0.48.1",
- "ibc-core-host 0.48.1",
- "ibc-core-router 0.48.1",
- "ibc-primitives 0.48.1",
- "prost 0.12.3",
-]
-
-[[package]]
-name = "ibc-core-channel"
-version = "0.49.1"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "6279ffdba5f9ea605688d2e769f5cefecd77c888d9b9d001862d2d9dfa16ee4d"
-dependencies = [
- "ibc-core-channel-types 0.49.1",
- "ibc-core-client 0.49.1",
- "ibc-core-commitment-types 0.49.1",
- "ibc-core-connection 0.49.1",
- "ibc-core-handler-types 0.49.1",
- "ibc-core-host 0.49.1",
- "ibc-core-router 0.49.1",
- "ibc-primitives 0.49.1",
+ "ibc-core-channel-types",
+ "ibc-core-client",
+ "ibc-core-commitment-types",
+ "ibc-core-connection",
+ "ibc-core-handler-types",
+ "ibc-core-host",
+ "ibc-core-router",
+ "ibc-primitives 0.50.0",
 ]
 
 [[package]]
 name = "ibc-core-channel-types"
-version = "0.48.1"
-source = "git+https://github.com/dhruvja/ibc-rs?branch=mock-sig-verification#2c358e8854e3ba9f83f0c0a2bed865f5d538b8c7"
+version = "0.50.0"
 dependencies = [
  "borsh 0.10.3",
  "derive_more",
  "displaydoc",
- "ibc-core-client-types 0.48.1",
- "ibc-core-commitment-types 0.48.1",
- "ibc-core-connection-types 0.48.1",
- "ibc-core-host-types 0.48.1",
- "ibc-primitives 0.48.1",
- "ibc-proto 0.38.0",
- "prost 0.12.3",
- "serde",
- "sha2 0.10.8",
- "subtle-encoding",
- "tendermint 0.34.0",
-]
-
-[[package]]
-name = "ibc-core-channel-types"
-version = "0.49.1"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "445888ebca9e2e72a3c03a758254887ef5ef9a1bae6baf204f2b1f6f656f70ff"
-dependencies = [
- "borsh 0.10.3",
- "derive_more",
- "displaydoc",
- "ibc-core-client-types 0.49.1",
- "ibc-core-commitment-types 0.49.1",
- "ibc-core-connection-types 0.49.1",
- "ibc-core-host-types 0.49.1",
- "ibc-primitives 0.49.1",
- "ibc-proto 0.39.1",
+ "ibc-core-client-types",
+ "ibc-core-commitment-types",
+ "ibc-core-connection-types",
+ "ibc-core-host-types",
+ "ibc-primitives 0.50.0",
+ "ibc-proto 0.41.0",
+ "parity-scale-codec",
+ "scale-info",
+ "schemars",
  "serde",
  "sha2 0.10.8",
  "subtle-encoding",
@@ -6094,99 +6005,45 @@ dependencies = [
 
 [[package]]
 name = "ibc-core-client"
-version = "0.48.1"
-source = "git+https://github.com/dhruvja/ibc-rs?branch=mock-sig-verification#2c358e8854e3ba9f83f0c0a2bed865f5d538b8c7"
+version = "0.50.0"
 dependencies = [
- "ibc-core-client-context 0.48.1",
- "ibc-core-client-types 0.48.1",
- "ibc-core-commitment-types 0.48.1",
- "ibc-core-handler-types 0.48.1",
- "ibc-core-host 0.48.1",
- "ibc-primitives 0.48.1",
- "prost 0.12.3",
-]
-
-[[package]]
-name = "ibc-core-client"
-version = "0.49.1"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "8744739af25917b484d1030712af53331e62f0477b8411bd9ce5691c46a1b6dc"
-dependencies = [
- "ibc-core-client-context 0.49.1",
- "ibc-core-client-types 0.49.1",
- "ibc-core-commitment-types 0.49.1",
- "ibc-core-handler-types 0.49.1",
- "ibc-core-host 0.49.1",
- "ibc-primitives 0.49.1",
+ "ibc-core-client-context",
+ "ibc-core-client-types",
+ "ibc-core-commitment-types",
+ "ibc-core-handler-types",
+ "ibc-core-host",
+ "ibc-primitives 0.50.0",
 ]
 
 [[package]]
 name = "ibc-core-client-context"
-version = "0.48.1"
-source = "git+https://github.com/dhruvja/ibc-rs?branch=mock-sig-verification#2c358e8854e3ba9f83f0c0a2bed865f5d538b8c7"
+version = "0.50.0"
 dependencies = [
  "derive_more",
  "displaydoc",
- "ibc-core-client-types 0.48.1",
- "ibc-core-commitment-types 0.48.1",
- "ibc-core-handler-types 0.48.1",
- "ibc-core-host-types 0.48.1",
- "ibc-derive 0.4.0",
- "ibc-primitives 0.48.1",
- "prost 0.12.3",
- "subtle-encoding",
- "tendermint 0.34.0",
-]
-
-[[package]]
-name = "ibc-core-client-context"
-version = "0.49.1"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "7a87a59fa85ceb0bcf5973e2327094605d2a0ef7f51e519a47f242d6d1322fe0"
-dependencies = [
- "derive_more",
- "displaydoc",
- "ibc-core-client-types 0.49.1",
- "ibc-core-commitment-types 0.49.1",
- "ibc-core-handler-types 0.49.1",
- "ibc-core-host-types 0.49.1",
- "ibc-derive 0.5.0",
- "ibc-primitives 0.49.1",
+ "ibc-core-client-types",
+ "ibc-core-commitment-types",
+ "ibc-core-handler-types",
+ "ibc-core-host-types",
+ "ibc-primitives 0.50.0",
  "subtle-encoding",
  "tendermint 0.34.0",
 ]
 
 [[package]]
 name = "ibc-core-client-types"
-version = "0.48.1"
-source = "git+https://github.com/dhruvja/ibc-rs?branch=mock-sig-verification#2c358e8854e3ba9f83f0c0a2bed865f5d538b8c7"
+version = "0.50.0"
 dependencies = [
  "borsh 0.10.3",
  "derive_more",
  "displaydoc",
- "ibc-core-commitment-types 0.48.1",
- "ibc-core-host-types 0.48.1",
- "ibc-primitives 0.48.1",
- "ibc-proto 0.38.0",
- "prost 0.12.3",
- "serde",
- "subtle-encoding",
- "tendermint 0.34.0",
-]
-
-[[package]]
-name = "ibc-core-client-types"
-version = "0.49.1"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "20be8f5b66c483810ff3bda67db59e5dedeeb5cef0edd18dc08f8c1f32804a2d"
-dependencies = [
- "borsh 0.10.3",
- "derive_more",
- "displaydoc",
- "ibc-core-commitment-types 0.49.1",
- "ibc-core-host-types 0.49.1",
- "ibc-primitives 0.49.1",
- "ibc-proto 0.39.1",
+ "ibc-core-commitment-types",
+ "ibc-core-host-types",
+ "ibc-primitives 0.50.0",
+ "ibc-proto 0.41.0",
+ "parity-scale-codec",
+ "scale-info",
+ "schemars",
  "serde",
  "subtle-encoding",
  "tendermint 0.34.0",
@@ -6194,95 +6051,47 @@ dependencies = [
 
 [[package]]
 name = "ibc-core-commitment-types"
-version = "0.48.1"
-source = "git+https://github.com/dhruvja/ibc-rs?branch=mock-sig-verification#2c358e8854e3ba9f83f0c0a2bed865f5d538b8c7"
+version = "0.50.0"
 dependencies = [
  "borsh 0.10.3",
  "derive_more",
  "displaydoc",
- "ibc-primitives 0.48.1",
- "ibc-proto 0.38.0",
+ "ibc-primitives 0.50.0",
+ "ibc-proto 0.41.0",
  "ics23 0.11.0",
- "prost 0.12.3",
- "serde",
- "subtle-encoding",
-]
-
-[[package]]
-name = "ibc-core-commitment-types"
-version = "0.49.1"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "f784dd0a1d15430dee55558b3f7d270d3a52539ad20e1e4530bd60959e590324"
-dependencies = [
- "borsh 0.10.3",
- "derive_more",
- "displaydoc",
- "ibc-primitives 0.49.1",
- "ibc-proto 0.39.1",
- "ics23 0.11.0",
+ "parity-scale-codec",
+ "scale-info",
+ "schemars",
  "serde",
  "subtle-encoding",
 ]
 
 [[package]]
 name = "ibc-core-connection"
-version = "0.48.1"
-source = "git+https://github.com/dhruvja/ibc-rs?branch=mock-sig-verification#2c358e8854e3ba9f83f0c0a2bed865f5d538b8c7"
+version = "0.50.0"
 dependencies = [
- "ibc-core-client 0.48.1",
- "ibc-core-connection-types 0.48.1",
- "ibc-core-handler-types 0.48.1",
- "ibc-core-host 0.48.1",
- "ibc-primitives 0.48.1",
- "prost 0.12.3",
-]
-
-[[package]]
-name = "ibc-core-connection"
-version = "0.49.1"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "0075f40dae0d9d18b3e4335db78ec7cda962ba2ed791673d9015e636810b04fb"
-dependencies = [
- "ibc-core-client 0.49.1",
- "ibc-core-connection-types 0.49.1",
- "ibc-core-handler-types 0.49.1",
- "ibc-core-host 0.49.1",
- "ibc-primitives 0.49.1",
+ "ibc-core-client",
+ "ibc-core-connection-types",
+ "ibc-core-handler-types",
+ "ibc-core-host",
+ "ibc-primitives 0.50.0",
 ]
 
 [[package]]
 name = "ibc-core-connection-types"
-version = "0.48.1"
-source = "git+https://github.com/dhruvja/ibc-rs?branch=mock-sig-verification#2c358e8854e3ba9f83f0c0a2bed865f5d538b8c7"
+version = "0.50.0"
 dependencies = [
  "borsh 0.10.3",
  "derive_more",
  "displaydoc",
- "ibc-core-client-types 0.48.1",
- "ibc-core-commitment-types 0.48.1",
- "ibc-core-host-types 0.48.1",
- "ibc-primitives 0.48.1",
- "ibc-proto 0.38.0",
- "prost 0.12.3",
- "serde",
- "subtle-encoding",
- "tendermint 0.34.0",
-]
-
-[[package]]
-name = "ibc-core-connection-types"
-version = "0.49.1"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "b27882397e2d105ddc57718b18c74c5b6db76ed40c97c5c53dc1620c99d0554c"
-dependencies = [
- "borsh 0.10.3",
- "derive_more",
- "displaydoc",
- "ibc-core-client-types 0.49.1",
- "ibc-core-commitment-types 0.49.1",
- "ibc-core-host-types 0.49.1",
- "ibc-primitives 0.49.1",
- "ibc-proto 0.39.1",
+ "ibc-core-client-types",
+ "ibc-core-commitment-types",
+ "ibc-core-host-types",
+ "ibc-primitives 0.50.0",
+ "ibc-proto 0.41.0",
+ "parity-scale-codec",
+ "scale-info",
+ "schemars",
  "serde",
  "subtle-encoding",
  "tendermint 0.34.0",
@@ -6290,74 +6099,36 @@ dependencies = [
 
 [[package]]
 name = "ibc-core-handler"
-version = "0.48.1"
-source = "git+https://github.com/dhruvja/ibc-rs?branch=mock-sig-verification#2c358e8854e3ba9f83f0c0a2bed865f5d538b8c7"
+version = "0.50.0"
 dependencies = [
- "ibc-core-channel 0.48.1",
- "ibc-core-client 0.48.1",
- "ibc-core-commitment-types 0.48.1",
- "ibc-core-connection 0.48.1",
- "ibc-core-handler-types 0.48.1",
- "ibc-core-host 0.48.1",
- "ibc-core-router 0.48.1",
- "ibc-primitives 0.48.1",
-]
-
-[[package]]
-name = "ibc-core-handler"
-version = "0.49.1"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "9dd99fb91b3a2a4fe410a7d3f91a177f0cec32e4b29d878a334503d2341ea226"
-dependencies = [
- "ibc-core-channel 0.49.1",
- "ibc-core-client 0.49.1",
- "ibc-core-commitment-types 0.49.1",
- "ibc-core-connection 0.49.1",
- "ibc-core-handler-types 0.49.1",
- "ibc-core-host 0.49.1",
- "ibc-core-router 0.49.1",
- "ibc-primitives 0.49.1",
+ "ibc-core-channel",
+ "ibc-core-client",
+ "ibc-core-commitment-types",
+ "ibc-core-connection",
+ "ibc-core-handler-types",
+ "ibc-core-host",
+ "ibc-core-router",
+ "ibc-primitives 0.50.0",
 ]
 
 [[package]]
 name = "ibc-core-handler-types"
-version = "0.48.1"
-source = "git+https://github.com/dhruvja/ibc-rs?branch=mock-sig-verification#2c358e8854e3ba9f83f0c0a2bed865f5d538b8c7"
+version = "0.50.0"
 dependencies = [
  "borsh 0.10.3",
  "derive_more",
  "displaydoc",
- "ibc-core-channel-types 0.48.1",
- "ibc-core-client-types 0.48.1",
- "ibc-core-commitment-types 0.48.1",
- "ibc-core-connection-types 0.48.1",
- "ibc-core-host-types 0.48.1",
- "ibc-core-router-types 0.48.1",
- "ibc-primitives 0.48.1",
- "ibc-proto 0.38.0",
- "prost 0.12.3",
- "serde",
- "subtle-encoding",
- "tendermint 0.34.0",
-]
-
-[[package]]
-name = "ibc-core-handler-types"
-version = "0.49.1"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "3bf5890e3a731ba6f615853858b73f5db91f5f31648208250e64473c44d90e36"
-dependencies = [
- "borsh 0.10.3",
- "derive_more",
- "displaydoc",
- "ibc-core-channel-types 0.49.1",
- "ibc-core-client-types 0.49.1",
- "ibc-core-commitment-types 0.49.1",
- "ibc-core-connection-types 0.49.1",
- "ibc-core-host-types 0.49.1",
- "ibc-core-router-types 0.49.1",
- "ibc-primitives 0.49.1",
- "ibc-proto 0.39.1",
+ "ibc-core-channel-types",
+ "ibc-core-client-types",
+ "ibc-core-commitment-types",
+ "ibc-core-connection-types",
+ "ibc-core-host-types",
+ "ibc-core-router-types",
+ "ibc-primitives 0.50.0",
+ "ibc-proto 0.41.0",
+ "parity-scale-codec",
+ "scale-info",
+ "schemars",
  "serde",
  "subtle-encoding",
  "tendermint 0.34.0",
@@ -6365,86 +6136,38 @@ dependencies = [
 
 [[package]]
 name = "ibc-core-host"
-version = "0.48.1"
-source = "git+https://github.com/dhruvja/ibc-rs?branch=mock-sig-verification#2c358e8854e3ba9f83f0c0a2bed865f5d538b8c7"
+version = "0.50.0"
 dependencies = [
  "derive_more",
  "displaydoc",
- "ibc-core-channel-types 0.48.1",
- "ibc-core-client-context 0.48.1",
- "ibc-core-client-types 0.48.1",
- "ibc-core-commitment-types 0.48.1",
- "ibc-core-connection-types 0.48.1",
- "ibc-core-handler-types 0.48.1",
- "ibc-core-host-types 0.48.1",
- "ibc-primitives 0.48.1",
- "prost 0.12.3",
- "subtle-encoding",
-]
-
-[[package]]
-name = "ibc-core-host"
-version = "0.49.1"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "c0e4e1f9e595af3f371e5cbeca6916e23eab1d2c172591fab51c21c0307642d7"
-dependencies = [
- "derive_more",
- "displaydoc",
- "ibc-core-channel-types 0.49.1",
- "ibc-core-client-context 0.49.1",
- "ibc-core-client-types 0.49.1",
- "ibc-core-commitment-types 0.49.1",
- "ibc-core-connection-types 0.49.1",
- "ibc-core-handler-types 0.49.1",
- "ibc-core-host-types 0.49.1",
- "ibc-primitives 0.49.1",
+ "ibc-core-channel-types",
+ "ibc-core-client-context",
+ "ibc-core-client-types",
+ "ibc-core-commitment-types",
+ "ibc-core-connection-types",
+ "ibc-core-handler-types",
+ "ibc-core-host-types",
+ "ibc-primitives 0.50.0",
  "subtle-encoding",
 ]
 
 [[package]]
 name = "ibc-core-host-cosmos"
-version = "0.48.1"
-source = "git+https://github.com/dhruvja/ibc-rs?branch=mock-sig-verification#2c358e8854e3ba9f83f0c0a2bed865f5d538b8c7"
+version = "0.50.0"
 dependencies = [
  "borsh 0.10.3",
  "derive_more",
  "displaydoc",
- "ibc-app-transfer-types 0.48.1",
- "ibc-client-tendermint 0.48.1",
- "ibc-core-client-context 0.48.1",
- "ibc-core-client-types 0.48.1",
- "ibc-core-commitment-types 0.48.1",
- "ibc-core-connection-types 0.48.1",
- "ibc-core-handler-types 0.48.1",
- "ibc-core-host-types 0.48.1",
- "ibc-primitives 0.48.1",
- "ibc-proto 0.38.0",
- "prost 0.12.3",
- "serde",
- "sha2 0.10.8",
- "subtle-encoding",
- "tendermint 0.34.0",
-]
-
-[[package]]
-name = "ibc-core-host-cosmos"
-version = "0.49.1"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "c0d7c5228389e154b3a5ba9cc1c33eb481855aa8ae732a9135cb205a0acbca0a"
-dependencies = [
- "borsh 0.10.3",
- "derive_more",
- "displaydoc",
- "ibc-app-transfer-types 0.49.1",
- "ibc-client-tendermint 0.49.1",
- "ibc-core-client-context 0.49.1",
- "ibc-core-client-types 0.49.1",
- "ibc-core-commitment-types 0.49.1",
- "ibc-core-connection-types 0.49.1",
- "ibc-core-handler-types 0.49.1",
- "ibc-core-host-types 0.49.1",
- "ibc-primitives 0.49.1",
- "ibc-proto 0.39.1",
+ "ibc-app-transfer-types",
+ "ibc-client-tendermint",
+ "ibc-core-client-context",
+ "ibc-core-client-types",
+ "ibc-core-commitment-types",
+ "ibc-core-connection-types",
+ "ibc-core-handler-types",
+ "ibc-core-host-types",
+ "ibc-primitives 0.50.0",
+ "ibc-proto 0.41.0",
  "serde",
  "sha2 0.10.8",
  "subtle-encoding",
@@ -6453,89 +6176,44 @@ dependencies = [
 
 [[package]]
 name = "ibc-core-host-types"
-version = "0.48.1"
-source = "git+https://github.com/dhruvja/ibc-rs?branch=mock-sig-verification#2c358e8854e3ba9f83f0c0a2bed865f5d538b8c7"
+version = "0.50.0"
 dependencies = [
  "borsh 0.10.3",
  "derive_more",
  "displaydoc",
- "ibc-primitives 0.48.1",
- "serde",
-]
-
-[[package]]
-name = "ibc-core-host-types"
-version = "0.49.1"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "02ecf33c6a328b922b819c336a85a8ca9ff404c64ce024d01181754b3c2671f1"
-dependencies = [
- "borsh 0.10.3",
- "derive_more",
- "displaydoc",
- "ibc-primitives 0.49.1",
+ "ibc-primitives 0.50.0",
+ "parity-scale-codec",
+ "scale-info",
+ "schemars",
  "serde",
 ]
 
 [[package]]
 name = "ibc-core-router"
-version = "0.48.1"
-source = "git+https://github.com/dhruvja/ibc-rs?branch=mock-sig-verification#2c358e8854e3ba9f83f0c0a2bed865f5d538b8c7"
+version = "0.50.0"
 dependencies = [
  "derive_more",
  "displaydoc",
- "ibc-core-channel-types 0.48.1",
- "ibc-core-host-types 0.48.1",
- "ibc-core-router-types 0.48.1",
- "ibc-primitives 0.48.1",
- "prost 0.12.3",
- "subtle-encoding",
-]
-
-[[package]]
-name = "ibc-core-router"
-version = "0.49.1"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "6bc590d9460935782d15f9ec307fa705847f88ca0a271c417f8b61ac4b7b55e0"
-dependencies = [
- "derive_more",
- "displaydoc",
- "ibc-core-channel-types 0.49.1",
- "ibc-core-host-types 0.49.1",
- "ibc-core-router-types 0.49.1",
- "ibc-primitives 0.49.1",
+ "ibc-core-channel-types",
+ "ibc-core-host-types",
+ "ibc-core-router-types",
+ "ibc-primitives 0.50.0",
  "subtle-encoding",
 ]
 
 [[package]]
 name = "ibc-core-router-types"
-version = "0.48.1"
-source = "git+https://github.com/dhruvja/ibc-rs?branch=mock-sig-verification#2c358e8854e3ba9f83f0c0a2bed865f5d538b8c7"
+version = "0.50.0"
 dependencies = [
  "borsh 0.10.3",
  "derive_more",
  "displaydoc",
- "ibc-core-host-types 0.48.1",
- "ibc-primitives 0.48.1",
- "ibc-proto 0.38.0",
- "ics23 0.11.0",
- "prost 0.12.3",
- "serde",
- "subtle-encoding",
- "tendermint 0.34.0",
-]
-
-[[package]]
-name = "ibc-core-router-types"
-version = "0.49.1"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "81c009c007673cfc677b120577dd11d95e8a7613eed5a8f0b9a9f0a23f9a4895"
-dependencies = [
- "borsh 0.10.3",
- "derive_more",
- "displaydoc",
- "ibc-core-host-types 0.49.1",
- "ibc-primitives 0.49.1",
- "ibc-proto 0.39.1",
+ "ibc-core-host-types",
+ "ibc-primitives 0.50.0",
+ "ibc-proto 0.41.0",
+ "parity-scale-codec",
+ "scale-info",
+ "schemars",
  "serde",
  "subtle-encoding",
  "tendermint 0.34.0",
@@ -6554,22 +6232,8 @@ dependencies = [
 
 [[package]]
 name = "ibc-derive"
-version = "0.4.0"
-source = "git+https://github.com/dhruvja/ibc-rs?branch=mock-sig-verification#2c358e8854e3ba9f83f0c0a2bed865f5d538b8c7"
+version = "0.6.0"
 dependencies = [
- "darling 0.20.3",
- "proc-macro2",
- "quote",
- "syn 2.0.48",
-]
-
-[[package]]
-name = "ibc-derive"
-version = "0.5.0"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "8cac1e3c7ab92abf785bb86675bdc02e3d67e9e4624c1d513e83ff3098f9c461"
-dependencies = [
- "darling 0.20.3",
  "proc-macro2",
  "quote",
  "syn 2.0.48",
@@ -6600,30 +6264,16 @@ dependencies = [
 
 [[package]]
 name = "ibc-primitives"
-version = "0.48.1"
-source = "git+https://github.com/dhruvja/ibc-rs?branch=mock-sig-verification#2c358e8854e3ba9f83f0c0a2bed865f5d538b8c7"
+version = "0.50.0"
 dependencies = [
  "borsh 0.10.3",
  "derive_more",
  "displaydoc",
- "ibc-proto 0.38.0",
+ "ibc-proto 0.41.0",
+ "parity-scale-codec",
  "prost 0.12.3",
- "serde",
- "tendermint 0.34.0",
- "time",
-]
-
-[[package]]
-name = "ibc-primitives"
-version = "0.49.1"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "ff38e0e738c53cb38fe8a7b52571a7205c3014fa194dcebc018b5f0528258cc5"
-dependencies = [
- "borsh 0.10.3",
- "derive_more",
- "displaydoc",
- "ibc-proto 0.39.1",
- "prost 0.12.3",
+ "scale-info",
+ "schemars",
  "serde",
  "tendermint 0.34.0",
  "time",
@@ -6644,33 +6294,20 @@ dependencies = [
 
 [[package]]
 name = "ibc-proto"
-version = "0.38.0"
+version = "0.41.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "93cbf4cbe9e5113cc7c70f3208a7029b2205c629502cbb2ae7ea0a09a97d3005"
+checksum = "dd4ee32b22d3b06f31529b956f4928e5c9a068d71e46cf6abfa19c31ca550553"
 dependencies = [
  "base64 0.21.7",
  "borsh 0.10.3",
  "bytes",
  "flex-error",
  "ics23 0.11.0",
+ "informalsystems-pbjson 0.7.0",
+ "parity-scale-codec",
  "prost 0.12.3",
- "serde",
- "subtle-encoding",
- "tendermint-proto 0.34.0",
-]
-
-[[package]]
-name = "ibc-proto"
-version = "0.39.1"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "c8a8b1356652b9f160f5a010dd6b084675b8a28e163bf2b41ca5abecf27d9701"
-dependencies = [
- "base64 0.21.7",
- "borsh 0.10.3",
- "bytes",
- "flex-error",
- "ics23 0.11.0",
- "prost 0.12.3",
+ "scale-info",
+ "schemars",
  "serde",
  "subtle-encoding",
  "tendermint-proto 0.34.0",
@@ -6726,34 +6363,12 @@ dependencies = [
 
 [[package]]
 name = "ibc-testkit"
-version = "0.48.1"
-source = "git+https://github.com/dhruvja/ibc-rs?branch=mock-sig-verification#2c358e8854e3ba9f83f0c0a2bed865f5d538b8c7"
-dependencies = [
- "bytes",
- "derive_more",
- "displaydoc",
- "ibc 0.48.1",
- "ibc-proto 0.38.0",
- "parking_lot 0.12.1",
- "primitive-types",
- "prost 0.12.3",
- "subtle-encoding",
- "tendermint 0.34.0",
- "tendermint-testgen 0.34.0",
- "tracing",
- "typed-builder",
-]
-
-[[package]]
-name = "ibc-testkit"
-version = "0.49.1"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "18d5f48ab07acbbf1f05fdc05ebe128610c83c21b9d3381a75cfeec7427c0bd5"
+version = "0.50.0"
 dependencies = [
  "derive_more",
  "displaydoc",
- "ibc 0.49.1",
- "ibc-proto 0.39.1",
+ "ibc 0.50.0",
+ "ibc-proto 0.41.0",
  "parking_lot 0.12.1",
  "subtle-encoding",
  "tendermint 0.34.0",
@@ -7019,7 +6634,7 @@ dependencies = [
  "anyhow",
  "bytes",
  "hex",
- "informalsystems-pbjson",
+ "informalsystems-pbjson 0.6.0",
  "prost 0.12.3",
  "ripemd",
  "serde",
@@ -7224,6 +6839,16 @@ dependencies = [
 ]
 
 [[package]]
+name = "informalsystems-pbjson"
+version = "0.7.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "9aa4a0980c8379295100d70854354e78df2ee1c6ca0f96ffe89afeb3140e3a3d"
+dependencies = [
+ "base64 0.21.7",
+ "serde",
+]
+
+[[package]]
 name = "inout"
 version = "0.1.3"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -7382,7 +7007,7 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "c8b3815d9f5d5de348e5f162b316dc9cdf4548305ebb15b4eb9328e66cf27d7a"
 dependencies = [
  "futures-util",
- "http",
+ "http 0.2.11",
  "jsonrpsee-core",
  "jsonrpsee-types",
  "pin-project",
@@ -7464,7 +7089,7 @@ checksum = "cf4d945a6008c9b03db3354fb3c83ee02d2faa9f2e755ec1dfb69c3551b8f4ba"
 dependencies = [
  "futures-channel",
  "futures-util",
- "http",
+ "http 0.2.11",
  "hyper",
  "jsonrpsee-core",
  "jsonrpsee-types",
@@ -7498,7 +7123,7 @@ version = "0.16.3"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "4e1b3975ed5d73f456478681a417128597acd6a2487855fdb7b4a3d4d195bf5e"
 dependencies = [
- "http",
+ "http 0.2.11",
  "jsonrpsee-client-transport",
  "jsonrpsee-core",
  "jsonrpsee-types",
@@ -7714,7 +7339,7 @@ dependencies = [
 [[package]]
 name = "lib"
 version = "0.0.0"
-source = "git+https://github.com/ComposableFi/emulated-light-client.git#a8fee582fcdb1232670e25fe53c98885b8e8b191"
+source = "git+https://github.com/ComposableFi/emulated-light-client.git#118d4bc0f1f8effd9afc9a6f9426b1ebaf99134a"
 dependencies = [
  "base64 0.21.7",
  "bytemuck",
@@ -8583,7 +8208,7 @@ dependencies = [
 [[package]]
 name = "memory"
 version = "0.0.0"
-source = "git+https://github.com/ComposableFi/emulated-light-client.git#a8fee582fcdb1232670e25fe53c98885b8e8b191"
+source = "git+https://github.com/ComposableFi/emulated-light-client.git#118d4bc0f1f8effd9afc9a6f9426b1ebaf99134a"
 dependencies = [
  "derive_more",
 ]
@@ -13073,7 +12698,7 @@ dependencies = [
  "futures-core",
  "futures-util",
  "h2",
- "http",
+ "http 0.2.11",
  "http-body",
  "hyper",
  "hyper-rustls 0.24.2",
@@ -14497,7 +14122,7 @@ name = "sc-rpc-server"
 version = "4.0.0-dev"
 source = "git+https://github.com/paritytech//substrate.git?branch=polkadot-v0.9.43#5e49f6e44820affccaf517fd22af564f4b495d40"
 dependencies = [
- "http",
+ "http 0.2.11",
  "jsonrpsee",
  "log",
  "serde_json",
@@ -15073,7 +14698,7 @@ dependencies = [
 [[package]]
 name = "sealable-trie"
 version = "0.0.0"
-source = "git+https://github.com/ComposableFi/emulated-light-client.git#a8fee582fcdb1232670e25fe53c98885b8e8b191"
+source = "git+https://github.com/ComposableFi/emulated-light-client.git#118d4bc0f1f8effd9afc9a6f9426b1ebaf99134a"
 dependencies = [
  "ascii 1.1.0",
  "base64 0.21.7",
@@ -15519,7 +15144,7 @@ dependencies = [
  "bytes",
  "ics23 0.10.0",
  "proptest",
- "rand 0.8.5",
+ "rand 0.4.6",
  "sha2 0.10.8",
  "tendermint 0.28.0",
 ]
@@ -15640,7 +15265,7 @@ dependencies = [
  "bytes",
  "flate2",
  "futures",
- "http",
+ "http 0.2.11",
  "httparse",
  "log",
  "rand 0.8.5",
@@ -15670,6 +15295,14 @@ dependencies = [
  "spl-token-metadata-interface",
  "thiserror",
  "zstd 0.11.2+zstd.1.5.2",
+]
+
+[[package]]
+name = "solana-allocator"
+version = "0.0.0"
+dependencies = [
+ "bytemuck",
+ "solana-program",
 ]
 
 [[package]]
@@ -15759,6 +15392,31 @@ dependencies = [
 ]
 
 [[package]]
+name = "solana-ed25519"
+version = "0.0.0"
+dependencies = [
+ "base64 0.21.7",
+ "blockchain",
+ "borsh 0.10.3",
+ "bs58 0.5.0",
+ "bytemuck",
+ "derive_more",
+ "solana-program",
+]
+
+[[package]]
+name = "solana-ed25519"
+version = "0.0.0"
+source = "git+https://github.com/ComposableFi/emulated-light-client/?branch=master#118d4bc0f1f8effd9afc9a6f9426b1ebaf99134a"
+dependencies = [
+ "base64 0.21.7",
+ "bs58 0.5.0",
+ "bytemuck",
+ "derive_more",
+ "solana-program",
+]
+
+[[package]]
 name = "solana-frozen-abi"
 version = "1.17.14"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -15810,14 +15468,16 @@ dependencies = [
  "blockchain",
  "bytemuck",
  "derive_more",
- "ibc 0.49.1",
- "ibc-testkit 0.49.1",
+ "ibc 0.50.0",
+ "ibc-testkit",
  "lib 0.0.0",
  "linear-map",
  "memory 0.0.0",
  "primitive-types",
  "serde",
  "serde_json",
+ "solana-allocator",
+ "solana-ed25519 0.0.0",
  "solana-trie 0.0.0",
  "spl-associated-token-account",
  "spl-token",
@@ -16314,17 +15974,19 @@ dependencies = [
  "lib 0.0.0",
  "memory 0.0.0",
  "sealable-trie 0.0.0",
+ "solana-program",
  "stdx 0.0.0",
 ]
 
 [[package]]
 name = "solana-trie"
 version = "0.0.0"
-source = "git+https://github.com/ComposableFi/emulated-light-client.git#a8fee582fcdb1232670e25fe53c98885b8e8b191"
+source = "git+https://github.com/ComposableFi/emulated-light-client.git#118d4bc0f1f8effd9afc9a6f9426b1ebaf99134a"
 dependencies = [
  "lib 0.0.0 (git+https://github.com/ComposableFi/emulated-light-client.git)",
  "memory 0.0.0 (git+https://github.com/ComposableFi/emulated-light-client.git)",
  "sealable-trie 0.0.0 (git+https://github.com/ComposableFi/emulated-light-client.git)",
+ "solana-program",
  "stdx 0.0.0 (git+https://github.com/ComposableFi/emulated-light-client.git)",
 ]
 
@@ -16379,6 +16041,14 @@ dependencies = [
  "solana-program-runtime",
  "solana-sdk",
  "thiserror",
+]
+
+[[package]]
+name = "solana-write-account"
+version = "0.0.0"
+dependencies = [
+ "solana-program",
+ "stdx 0.0.0",
 ]
 
 [[package]]
@@ -18420,7 +18090,7 @@ version = "0.0.0"
 [[package]]
 name = "stdx"
 version = "0.0.0"
-source = "git+https://github.com/ComposableFi/emulated-light-client.git#a8fee582fcdb1232670e25fe53c98885b8e8b191"
+source = "git+https://github.com/ComposableFi/emulated-light-client.git#118d4bc0f1f8effd9afc9a6f9426b1ebaf99134a"
 
 [[package]]
 name = "strsim"
@@ -18839,7 +18509,7 @@ dependencies = [
 [[package]]
 name = "tendermint"
 version = "0.34.0"
-source = "git+https://github.com/dhruvja/tendermint-rs?branch=skip-sig-verification#ff66d6fa8402aaa113b4f1fa639e112720cfee2d"
+source = "git+https://github.com/informalsystems/tendermint-rs?rev=37822e540e272d2ca9e763769ad20c581203ff9a#37822e540e272d2ca9e763769ad20c581203ff9a"
 dependencies = [
  "bytes",
  "digest 0.10.7",
@@ -18943,7 +18613,7 @@ dependencies = [
 [[package]]
 name = "tendermint-proto"
 version = "0.34.0"
-source = "git+https://github.com/dhruvja/tendermint-rs?branch=skip-sig-verification#ff66d6fa8402aaa113b4f1fa639e112720cfee2d"
+source = "git+https://github.com/informalsystems/tendermint-rs?rev=37822e540e272d2ca9e763769ad20c581203ff9a#37822e540e272d2ca9e763769ad20c581203ff9a"
 dependencies = [
  "bytes",
  "flex-error",
@@ -18968,7 +18638,7 @@ dependencies = [
  "flex-error",
  "futures",
  "getrandom 0.2.12",
- "http",
+ "http 0.2.11",
  "hyper",
  "hyper-proxy",
  "hyper-rustls 0.22.1",
@@ -19452,7 +19122,7 @@ dependencies = [
  "futures-core",
  "futures-util",
  "h2",
- "http",
+ "http 0.2.11",
  "http-body",
  "hyper",
  "hyper-timeout",
@@ -19516,7 +19186,7 @@ dependencies = [
  "bytes",
  "futures-core",
  "futures-util",
- "http",
+ "http 0.2.11",
  "http-body",
  "http-range-header",
  "pin-project-lite 0.2.13",
@@ -19713,10 +19383,10 @@ dependencies = [
  "borsh 0.10.3",
  "bytemuck",
  "derive_more",
- "ibc-core-channel-types 0.49.1",
- "ibc-core-client-types 0.49.1",
- "ibc-core-connection-types 0.49.1",
- "ibc-core-host-types 0.49.1",
+ "ibc-core-channel-types",
+ "ibc-core-client-types",
+ "ibc-core-connection-types",
+ "ibc-core-host-types",
  "strum 0.25.0",
 ]
 
@@ -19832,7 +19502,7 @@ dependencies = [
  "base64 0.13.1",
  "byteorder",
  "bytes",
- "http",
+ "http 0.2.11",
  "httparse",
  "log",
  "rand 0.8.5",
@@ -19853,7 +19523,7 @@ dependencies = [
  "byteorder",
  "bytes",
  "data-encoding",
- "http",
+ "http 0.2.11",
  "httparse",
  "log",
  "rand 0.8.5",
@@ -19872,9 +19542,9 @@ version = "1.6.3"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "97fee6b57c6a41524a810daee9286c02d7752c4253064d0b05472833a438f675"
 dependencies = [
- "cfg-if 1.0.0",
+ "cfg-if 0.1.10",
  "digest 0.10.7",
- "rand 0.8.5",
+ "rand 0.4.6",
  "static_assertions",
 ]
 

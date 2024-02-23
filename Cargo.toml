@@ -60,16 +60,40 @@ aes-gcm-siv = { git = "https://github.com/dhruvja/AEADs", branch = "main-aes-gcm
 curve25519-dalek = { git = "https://github.com/dhruvja/curve25519-dalek", branch = "master" }
 anchor-client = { git = "https://github.com/dhruvja/anchor" }
 anchor-lang = { git = "https://github.com/dhruvja/anchor" }
-ibc-testkit = { git = "https://github.com/dhruvja/ibc-rs", branch = "mock-sig-verification"}
-ibc = { git = "https://github.com/dhruvja/ibc-rs", branch = "mock-sig-verification" }
-ibc-core-channel-types = { git = "https://github.com/dhruvja/ibc-rs", branch = "mock-sig-verification"}
-ibc-core-client-types = { git = "https://github.com/dhruvja/ibc-rs", branch = "mock-sig-verification"}
-ibc-core-commitment-types = { git = "https://github.com/dhruvja/ibc-rs", branch = "mock-sig-verification"}
-ibc-core-connection-types = { git = "https://github.com/dhruvja/ibc-rs", branch = "mock-sig-verification"}
-ibc-core-host-types = { git = "https://github.com/dhruvja/ibc-rs", branch = "mock-sig-verification"}
+ibc = { git = "https://github.com/mina86/ibc-rs", branch = "solana-verifier" }
+ibc-app-nft-transfer = { git = "https://github.com/mina86/ibc-rs", branch = "solana-verifier" }
+ibc-app-nft-transfer-types = { git = "https://github.com/mina86/ibc-rs", branch = "solana-verifier" }
+ibc-app-transfer = { git = "https://github.com/mina86/ibc-rs", branch = "solana-verifier" }
+ibc-app-transfer-types = { git = "https://github.com/mina86/ibc-rs", branch = "solana-verifier" }
+ibc-apps = { git = "https://github.com/mina86/ibc-rs", branch = "solana-verifier" }
+ibc-client-tendermint = { git = "https://github.com/mina86/ibc-rs", branch = "solana-verifier" }
+ibc-client-tendermint-types = { git = "https://github.com/mina86/ibc-rs", branch = "solana-verifier" }
+ibc-client-wasm-types = { git = "https://github.com/mina86/ibc-rs", branch = "solana-verifier" }
+ibc-clients = { git = "https://github.com/mina86/ibc-rs", branch = "solana-verifier" }
+ibc-core = { git = "https://github.com/mina86/ibc-rs", branch = "solana-verifier" }
+ibc-core-channel = { git = "https://github.com/mina86/ibc-rs", branch = "solana-verifier" }
+ibc-core-channel-types = { git = "https://github.com/mina86/ibc-rs", branch = "solana-verifier" }
+ibc-core-client = { git = "https://github.com/mina86/ibc-rs", branch = "solana-verifier" }
+ibc-core-client-context = { git = "https://github.com/mina86/ibc-rs", branch = "solana-verifier" }
+ibc-core-client-types = { git = "https://github.com/mina86/ibc-rs", branch = "solana-verifier" }
+ibc-core-commitment-types = { git = "https://github.com/mina86/ibc-rs", branch = "solana-verifier" }
+ibc-core-connection = { git = "https://github.com/mina86/ibc-rs", branch = "solana-verifier" }
+ibc-core-connection-types = { git = "https://github.com/mina86/ibc-rs", branch = "solana-verifier" }
+ibc-core-handler = { git = "https://github.com/mina86/ibc-rs", branch = "solana-verifier" }
+ibc-core-handler-types = { git = "https://github.com/mina86/ibc-rs", branch = "solana-verifier" }
+ibc-core-host = { git = "https://github.com/mina86/ibc-rs", branch = "solana-verifier" }
+ibc-core-host-cosmos = { git = "https://github.com/mina86/ibc-rs", branch = "solana-verifier" }
+ibc-core-host-types = { git = "https://github.com/mina86/ibc-rs", branch = "solana-verifier" }
+ibc-core-router = { git = "https://github.com/mina86/ibc-rs", branch = "solana-verifier" }
+ibc-core-router-types = { git = "https://github.com/mina86/ibc-rs", branch = "solana-verifier" }
+#ibc-data-types = { git = "https://github.com/mina86/ibc-rs", branch = "solana-verifier" }
+ibc-derive = { git = "https://github.com/mina86/ibc-rs", branch = "solana-verifier" }
+ibc-primitives = { git = "https://github.com/mina86/ibc-rs", branch = "solana-verifier" }
+#ibc-query = { git = "https://github.com/mina86/ibc-rs", branch = "solana-verifier" }
+ibc-testkit = { git = "https://github.com/mina86/ibc-rs", branch = "solana-verifier" }
 bip39 = { git="https://github.com/dhruvja/rust-bip39.git" }
-tendermint = { git = "https://github.com/dhruvja/tendermint-rs", branch = "skip-sig-verification" }
-tendermint-proto = { git = "https://github.com/dhruvja/tendermint-rs", branch = "skip-sig-verification" }
+tendermint = { git = "https://github.com/informalsystems/tendermint-rs", rev = "37822e540e272d2ca9e763769ad20c581203ff9a" }
+tendermint-proto = { git = "https://github.com/informalsystems/tendermint-rs", rev = "37822e540e272d2ca9e763769ad20c581203ff9a" }
 # cfg-expr = { git = "https://github.com/EmbarkStudios/cfg-expr", tag="0.15.0" }
 
 

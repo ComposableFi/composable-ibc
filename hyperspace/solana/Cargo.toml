@@ -43,11 +43,11 @@ base64 = { version = "0.21.4", default-features = false, features = ["alloc"] }
 borsh = { version = "0.10.3", default-features = false }
 
 # composable
-ibc-new = { version = "0.48.1", default-features = false, features = ["borsh", "serde"],package="ibc" }
+ibc-new = { version = "0.50.0", default-features = false, features = ["borsh", "serde"],package="ibc" }
 # ibc-new = { path = "../../../ibc-rs/ibc", default-features = false, features = ["borsh", "serde"], package = "ibc" }
 # ibc-testkit = { path = "../../../ibc-rs/ibc-testkit", default-features = false }
- ibc-testkit = { version = "0.48.1", default-features = false }
-ibc-proto-new = { version = "0.38.0", default-features = false, package="ibc-proto" }
+ ibc-testkit = { version = "0.50.0", default-features = false }
+ibc-proto-new = { version = "0.41.0", default-features = false, package="ibc-proto" }
 ibc = { path = "../../ibc/modules", features = [] }
 ibc-proto = { path = "../../ibc/proto", package="ibc-proto" }
 ibc-primitives = { path = "../../contracts/pallet-ibc/primitives" }
@@ -62,12 +62,13 @@ memory = { git = "https://github.com/ComposableFi/emulated-light-client.git" }
 sealable-trie = { git = "https://github.com/ComposableFi/emulated-light-client.git", features = ["borsh"] }
 stdx = { git = "https://github.com/ComposableFi/emulated-light-client.git" }
 solana-trie = { git = "https://github.com/ComposableFi/emulated-light-client.git" }
-# trie-ids = { git = "https://github.com/ComposableFi/emulated-light-client.git", branch = "deliver-chunks", features = ["borsh"] }
-trie-ids = { path = "../../../emulated-light-client/common/trie-ids", features = ["borsh"] }
+trie-ids = { git = "https://github.com/ComposableFi/emulated-light-client.git", features = ["borsh"] }
+# trie-ids = { path = "../../../emulated-light-client/common/trie-ids", features = ["borsh"] }
 
 #Contract
-# solana-ibc = { git = "https://github.com/ComposableFi/emulated-light-client.git", branch="deliver-chunks", features = ["mocks"]}
-solana-ibc = { path = "../../../emulated-light-client/solana/solana-ibc/programs/solana-ibc", features = ["mocks"] }
+solana-ibc = { git = "https://github.com/ComposableFi/emulated-light-client.git", features = ["mocks", "no-entrypoint"]}
+solana-write-account = { git = "https://github.com/ComposableFi/emulated-light-client.git", features = ["no-entrypoint"] }
+# solana-ibc = { path = "../../../emulated-light-client/solana/solana-ibc/programs/solana-ibc", features = ["mocks"] }
 
 tracing = "0.1.36"
 

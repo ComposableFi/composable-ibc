@@ -27,7 +27,7 @@ use ibc_new::{
 		handler::types::msgs::MsgEnvelope,
 		host::types::identifiers::{ChannelId, ClientId, ConnectionId, PortId, Sequence},
 	},
-	primitives::{proto::Protobuf, Msg, Signer, Timestamp},
+	primitives::{proto::Protobuf, Signer, Timestamp},
 };
 use ibc_proto_new::{google::protobuf::Any, ibc::core::connection::v1::Version};
 use primitives::mock::LocalClientTypes;
@@ -512,53 +512,3 @@ pub fn convert_old_msgs_to_new(messages: Vec<Ics26Envelope<LocalClientTypes>>) -
 	new_messages
 }
 
-pub fn convert_messages_to_any(messages: Vec<MsgEnvelope>) -> Vec<Any> {
-	let msgs: Vec<Any> = messages
-		.iter()
-		.map(|message| match message {
-			MsgEnvelope::Client(msg) => match msg {
-				ClientMsg::CreateClient(e) =>
-					Any { type_url: e.type_url(), value: e.clone().encode_vec() },
-				ClientMsg::UpdateClient(e) =>
-					Any { type_url: e.type_url(), value: e.clone().encode_vec() },
-				ClientMsg::Misbehaviour(e) =>
-					Any { type_url: e.type_url(), value: e.clone().encode_vec() },
-				ClientMsg::UpgradeClient(e) =>
-					Any { type_url: e.type_url(), value: e.clone().encode_vec() },
-			},
-			MsgEnvelope::Connection(msg) => match msg {
-				ConnectionMsg::OpenInit(e) =>
-					Any { type_url: e.type_url(), value: e.clone().encode_vec() },
-				ConnectionMsg::OpenTry(e) =>
-					Any { type_url: e.type_url(), value: e.clone().encode_vec() },
-				ConnectionMsg::OpenAck(e) =>
-					Any { type_url: e.type_url(), value: e.clone().encode_vec() },
-				ConnectionMsg::OpenConfirm(e) =>
-					Any { type_url: e.type_url(), value: e.clone().encode_vec() },
-			},
-			MsgEnvelope::Channel(msg) => match msg {
-				ChannelMsg::OpenInit(e) =>
-					Any { type_url: e.type_url(), value: e.clone().encode_vec() },
-				ChannelMsg::OpenTry(e) =>
-					Any { type_url: e.type_url(), value: e.clone().encode_vec() },
-				ChannelMsg::OpenAck(e) =>
-					Any { type_url: e.type_url(), value: e.clone().encode_vec() },
-				ChannelMsg::OpenConfirm(e) =>
-					Any { type_url: e.type_url(), value: e.clone().encode_vec() },
-				ChannelMsg::CloseInit(e) =>
-					Any { type_url: e.type_url(), value: e.clone().encode_vec() },
-				ChannelMsg::CloseConfirm(e) =>
-					Any { type_url: e.type_url(), value: e.clone().encode_vec() },
-			},
-			MsgEnvelope::Packet(msg) => match msg {
-				PacketMsg::Recv(e) => Any { type_url: e.type_url(), value: e.clone().encode_vec() },
-				PacketMsg::Ack(e) => Any { type_url: e.type_url(), value: e.clone().encode_vec() },
-				PacketMsg::Timeout(e) =>
-					Any { type_url: e.type_url(), value: e.clone().encode_vec() },
-				PacketMsg::TimeoutOnClose(e) =>
-					Any { type_url: e.type_url(), value: e.clone().encode_vec() },
-			},
-		})
-		.collect();
-	msgs
-}

@@ -49,9 +49,9 @@ pub struct Args {
 
 impl Default for Args {
 	fn default() -> Self {
-		let relay = std::env::var("RELAY_HOST").unwrap_or_else(|_| "192.168.0.101".to_string());
-		let solana = std::env::var("SOLANA_HOST").unwrap_or_else(|_| "192.168.0.101".to_string());
-		let cosmos = std::env::var("COSMOS_HOST").unwrap_or_else(|_| "192.168.0.101".to_string());
+		let relay = std::env::var("RELAY_HOST").unwrap_or_else(|_| "10.0.0.100".to_string());
+		let solana = std::env::var("SOLANA_HOST").unwrap_or_else(|_| "10.0.0.100".to_string());
+		let cosmos = std::env::var("COSMOS_HOST").unwrap_or_else(|_| "10.0.0.100".to_string());
 		let wasm_path = std::env::var("WASM_PATH").unwrap_or_else(|_| {
 			"../../target/wasm32-unknown-unknown/release/icsxx_solana_cw.wasm".to_string()
 		});
@@ -275,8 +275,8 @@ async fn solana_to_cosmos_ibc_messaging_full_integration_test() {
 }
 
 // #[tokio::test]
-#[tokio::test(flavor = "multi_thread", worker_threads = 5)]
-#[ignore]
+// #[tokio::test(flavor = "multi_thread", worker_threads = 5)]
+// #[ignore]
 async fn cosmos_to_solana_ibc_messaging_full_integration_test() {
 	logging::setup_logging();
 
