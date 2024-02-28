@@ -98,6 +98,7 @@ use icsxx_ethereum::{
 	client_message::{ClientMessage, Header},
 	client_state::ClientState,
 	consensus_state::ConsensusState,
+	Network,
 };
 use log::info;
 use pallet_ibc::light_clients::{
@@ -487,6 +488,8 @@ impl EthereumClient {
 		});
 		if let Some(remove_up_to) = idx {
 			updates.drain(0..remove_up_to);
+		} else {
+			updates.clear();
 		}
 
 		if updates.is_empty() {
@@ -557,7 +560,7 @@ impl IbcProvider for EthereumClient {
 		counterparty: &T,
 	) -> Result<Vec<(Any, Height, Vec<IbcEvent>, UpdateType)>, anyhow::Error>
 	where
-		T: primitives::Chain,
+		T: Chain,
 	{
 		let client_id = self.client_id();
 		let latest_cp_height = counterparty.latest_height_and_timestamp().await.unwrap().0;
@@ -1808,7 +1811,7 @@ impl IbcProvider for EthereumClient {
 		&self,
 	) -> Result<(AnyClientState, AnyConsensusState), Self::Error> {
 		let sync_committee_prover = self.prover();
-		let block_id = "head";
+		let block_id = "finalized";
 		let block_header = sync_committee_prover.fetch_header(&block_id).await.map_err(|err| {
 			ClientError::Other(format!(
 				"failed to fetch header in initialize_client_state: {}",
@@ -1830,11 +1833,11 @@ impl IbcProvider for EthereumClient {
 		// sync_committee_prover.fetch_finalized_checkpoint().await.unwrap();
 
 		let epoch = state.current_justified_checkpoint.epoch;
-		let period_at_slot = compute_sync_committee_period_at_slot(block_header.slot);
-		info!(target: "hyperspace_ethereum", "Using init state period: {period_at_slot}");
+		let period_at_slot = compute_sync_committee_period_at_slot::<Network>(block_header.slot);
+		info!(target: "hyperspace_ethereum", "Using init state period: {period_at_slot}, slot: {}", block_header.slot);
 		let client_state = LightClientState {
 			finalized_header: block_header.clone(),
-			latest_finalized_epoch: compute_epoch_at_slot(block_header.slot),
+			latest_finalized_epoch: compute_epoch_at_slot::<Network>(block_header.slot),
 			current_sync_committee: state.current_sync_committee,
 			next_sync_committee: state.next_sync_committee,
 			state_period: period_at_slot,

@@ -49,6 +49,17 @@ pub const ETHEREUM_GOERLI: Chain = Chain {
 	tokens_lists: &[],
 };
 
+pub const ETHEREUM_SEPOLIA: Chain = Chain {
+	id: 11155111,
+	name: "sepolia",
+	block_explorer: "https://sepolia.etherscan.io/",
+	abi_source_api: "https://api-sepolia.etherscan.io/api",
+	abi_source_require_auth: true,
+	supports_blocks_receipts: true,
+	public_rpc: "http://localhost:8545",
+	tokens_lists: &[],
+};
+
 pub const ETHEREUM_DEVNET: Chain = Chain {
 	id: 32382,
 	name: "devnet",
@@ -201,9 +212,10 @@ pub const CELO: Chain = Chain {
 	],
 };
 
-pub static CHAINS: [Chain; 14] = [
+pub static CHAINS: [Chain; 15] = [
 	ETHEREUM,
 	ETHEREUM_GOERLI,
+	ETHEREUM_SEPOLIA,
 	ETHEREUM_DEVNET,
 	POLYGON,
 	FANTOM,
@@ -225,7 +237,7 @@ pub fn get_chains() -> HashMap<String, Chain> {
 		chains.insert(String::from(chain.name), chain);
 	}
 
-	return chains
+	return chains;
 }
 
 pub fn get_chain(chain: String) -> Chain {
@@ -233,5 +245,5 @@ pub fn get_chain(chain: String) -> Chain {
 
 	let selected_chain = chains.get(&chain).expect("Chain not found");
 
-	return Chain::new_from_borrowed(selected_chain)
+	return Chain::new_from_borrowed(selected_chain);
 }

@@ -19,9 +19,9 @@ icsxx-ethereum = { path = "../../light-clients/icsxx-ethereum" }
 pallet-ibc = { path = "../../contracts/pallet-ibc" }
 hyperspace-cosmos = { path = "../cosmos" }
 
-sync-committee-primitives = { git = "https://github.com/polytope-labs/hyperbridge.git", rev = "7adb936a6fdf4a9cc418259bf0cec35a31ce35d8" }
-sync-committee-verifier = { git = "https://github.com/polytope-labs/hyperbridge.git", rev = "7adb936a6fdf4a9cc418259bf0cec35a31ce35d8" }
-sync-committee-prover = { git = "https://github.com/polytope-labs/hyperbridge.git", rev = "7adb936a6fdf4a9cc418259bf0cec35a31ce35d8" }
+sync-committee-primitives = { git = "https://github.com/polytope-labs/hyperbridge", rev = "c3e940c60b718eaf5ac02a96c4801814a555dcf7" }
+sync-committee-verifier = { git = "https://github.com/polytope-labs/hyperbridge", rev = "c3e940c60b718eaf5ac02a96c4801814a555dcf7" }
+sync-committee-prover = { git = "https://github.com/polytope-labs/hyperbridge", rev = "c3e940c60b718eaf5ac02a96c4801814a555dcf7" }
 #light-client-common = { path = "../common"  }
 ssz-rs = { git = "https://github.com/polytope-labs/ssz-rs", branch = "main" }
 
@@ -58,7 +58,7 @@ itertools = "0.11.0"
 hex-literal = "0.4.1"
 
 redis = "0.22"
-sqlx = { version = "0.6", features = [ "runtime-tokio-native-tls" , "postgres" ] }
+sqlx = { version = "0.6", features = ["runtime-tokio-native-tls", "postgres"] }
 ics23 = { git = "https://github.com/cosmos/ics23", rev = "74ce807b7be39a7e0afb4e2efb8e28a57965f57b", default-features = false }
 reqwest-eventsource = "0.4.0"
 derivative = "2.2.0"
@@ -71,15 +71,10 @@ tendermint = { git = "https://github.com/informalsystems/tendermint-rs", rev = "
 [features]
 default = []
 testnet = [
-    "sync-committee-primitives/sepolia",
-    "sync-committee-verifier/sepolia",
-    "sync-committee-prover/sepolia",
+    "sync-committee-primitives/sepolia-deneb",
     "icsxx-ethereum/testnet"
 ]
 mainnet = [
-    "sync-committee-primitives/mainnet",
-    "sync-committee-verifier/mainnet",
-    "sync-committee-prover/mainnet",
     "icsxx-ethereum/mainnet"
 ]
 no_beacon = []

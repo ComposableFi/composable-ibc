@@ -44,3 +44,10 @@ pub trait HostFunctions: Sized + Send + Sync {}
 
 pub const IBC_CORE_STORAGE_PREFIX: &[u8] = b".core";
 pub const IBC_COMMITMENT_STORAGE_INDEX: u32 = 0;
+
+#[cfg(feature = "testnet")]
+pub type Network = sync_committee_primitives::constants::sepolia::Sepolia;
+#[cfg(feature = "mainnet")]
+pub type Network = sync_committee_primitives::constants::mainnet::Mainnet;
+#[cfg(all(not(feature = "testnet"), not(feature = "mainnet")))]
+pub type Network = sync_committee_primitives::constants::devnet::Devnet;

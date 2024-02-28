@@ -33,7 +33,7 @@ use ibc::{
 };
 use ibc_primitives::Timeout;
 use icsxx_ethereum::{
-	client_message::Header, client_state::ClientState, utils::commitment_storage_raw_key,
+	client_message::Header, client_state::ClientState, utils::commitment_storage_raw_key, Network,
 };
 use log::info;
 use once_cell::sync::Lazy;
@@ -221,7 +221,7 @@ pub struct DatabaseLog {
 pub fn run_updates_fetcher(
 	mut client_state: ClientState<HostFunctionsManager>,
 	client: EthereumClient,
-	prover: SyncCommitteeProver,
+	prover: SyncCommitteeProver<Network>,
 	updates: Arc<AsyncMutex<Vec<Header>>>,
 ) -> JoinHandle<()> {
 	log::info!(target: "hyperspace_ethereum", "Update fetcher started");
@@ -338,7 +338,7 @@ impl EthereumClient {
 		self.http_rpc.clone()
 	}
 
-	pub fn prover(&self) -> SyncCommitteeProver {
+	pub fn prover(&self) -> SyncCommitteeProver<Network> {
 		let mut string = self.config.beacon_rpc_url.to_string();
 		string.pop();
 		SyncCommitteeProver::new(string)

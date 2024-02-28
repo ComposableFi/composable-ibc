@@ -1412,7 +1412,7 @@ mod indexer {
 
 	pub async fn run_indexer(db_url: String, redis_url: String, contract_address: Option<Address>) {
 		let config = EVMIndexerConfig {
-			start_block: 0,
+			start_block: None,
 			db_url,
 			redis_url,
 			debug: false,

@@ -7,7 +7,7 @@ use ethers::{
 	types::BlockNumber,
 };
 use ethers_providers::Middleware;
-use icsxx_ethereum::{client_message::Header, client_state::ClientState};
+use icsxx_ethereum::{client_message::Header, client_state::ClientState, Network};
 use log::{debug, error, info};
 use pallet_ibc::light_clients::HostFunctionsManager;
 use primitives::mock::LocalClientTypes;
@@ -17,7 +17,7 @@ use ssz_rs::{
 use std::time::Duration;
 use sync_committee_primitives::{
 	consensus_types::{BeaconBlockHeader, Checkpoint},
-	constants::{Root, EPOCHS_PER_SYNC_COMMITTEE_PERIOD, SLOTS_PER_EPOCH, SYNC_COMMITTEE_SIZE},
+	constants::{Config, Root, SYNC_COMMITTEE_SIZE},
 	types::{
 		ExecutionPayloadProof, FinalityProof, SyncCommitteeUpdate, VerifierState,
 		VerifierStateUpdate as LightClientUpdate, VerifierStateUpdate,
@@ -93,7 +93,7 @@ pub struct EventResponse {
 }
 
 pub async fn fetch_light_client_update2(
-	prover: &SyncCommitteeProver,
+	prover: &SyncCommitteeProver<Network>,
 	mut client_state: VerifierState,
 	finality_checkpoint: Checkpoint,
 	latest_block_id: Option<&str>,
@@ -109,7 +109,10 @@ pub async fn fetch_light_client_update2(
 	// Find the highest block with the a threshhold number of sync committee signatures
 	let latest_header = prover.fetch_header(latest_block_id.unwrap_or("head")).await?;
 	let state_period = client_state.state_period;
-	let max_slot = (state_period + 2) * EPOCHS_PER_SYNC_COMMITTEE_PERIOD * SLOTS_PER_EPOCH - 1;
+	let max_slot = (state_period + 2) *
+		<Network as Config>::EPOCHS_PER_SYNC_COMMITTEE_PERIOD *
+		<Network as Config>::SLOTS_PER_EPOCH -
+		1;
 	let slot = latest_header.slot.min(max_slot);
 	debug!(target: debug_target, "Using slot {slot}, max: {max_slot}");
 	// let latest_root = latest_header.clone().hash_tree_root()?;
@@ -141,7 +144,7 @@ pub async fn fetch_light_client_update2(
 			return Ok(None)
 		}
 
-		let signature_period = compute_sync_committee_period_at_slot(block.slot);
+		let signature_period = compute_sync_committee_period_at_slot::<Network>(block.slot);
 
 		debug!(target: debug_target, "Required {num_signatures} >= {min_signatures}, {signature_period} in [{state_period}, {}], {} > {}",  state_period + 1, parent_block_finality_checkpoint.epoch, client_state.latest_finalized_epoch);
 
@@ -170,30 +173,30 @@ pub async fn fetch_light_client_update2(
 		prover.fetch_beacon_state(&get_block_id(finalized_header.state_root)).await?;
 	let finality_proof = FinalityProof {
 		epoch: attested_state.finalized_checkpoint.epoch,
-		finality_branch: prove_finalized_header(&mut attested_state)?,
+		finality_branch: prove_finalized_header::<Network>(&mut attested_state)?,
 	};
 
 	debug!(target: debug_target, "Fetching update #2");
-	let execution_payload_proof = prove_execution_payload(&mut finalized_state)?;
+	let execution_payload_proof = prove_execution_payload::<Network>(&mut finalized_state)?;
 
-	let signature_period = compute_sync_committee_period_at_slot(block.slot);
+	let signature_period = compute_sync_committee_period_at_slot::<Network>(block.slot);
 	let client_state_next_sync_committee_root =
 		client_state.next_sync_committee.hash_tree_root()?;
 	let attested_state_current_sync_committee_root =
 		attested_state.current_sync_committee.hash_tree_root()?;
 	debug!(target: debug_target, "Fetching update #3");
 	let sync_committee_update =
-		// We must make sure we switch the sync comittee only when the finalized header has changed sync committees
-		if should_have_sync_committee_update(state_period, signature_period) && client_state_next_sync_committee_root == attested_state_current_sync_committee_root {
-			debug!(target: debug_target, "Fetching update #4");
-			let sync_committee_proof = prove_sync_committee_update(&mut attested_state)?;
-			Some(SyncCommitteeUpdate {
-				next_sync_committee: attested_state.next_sync_committee,
-				next_sync_committee_branch: sync_committee_proof,
-			})
-		} else {
-			None
-		};
+        // We must make sure we switch the sync comittee only when the finalized header has changed sync committees
+        if should_have_sync_committee_update(state_period, signature_period) && client_state_next_sync_committee_root == attested_state_current_sync_committee_root {
+            debug!(target: debug_target, "Fetching update #4");
+            let sync_committee_proof = prove_sync_committee_update::<Network>(&mut attested_state)?;
+            Some(SyncCommitteeUpdate {
+                next_sync_committee: attested_state.next_sync_committee,
+                next_sync_committee_branch: sync_committee_proof,
+            })
+        } else {
+            None
+        };
 
 	// construct light client
 	let light_client_update = VerifierStateUpdate {
@@ -210,7 +213,7 @@ pub async fn fetch_light_client_update2(
 }
 
 pub async fn fetch_light_client_update(
-	prover: &SyncCommitteeProver,
+	prover: &SyncCommitteeProver<Network>,
 	mut client_state: VerifierState,
 	finality_checkpoint: Checkpoint,
 	latest_block_id: Option<&str>,
@@ -244,7 +247,7 @@ pub async fn fetch_light_client_update(
 		let state_id = get_block_id(next_block.state_root);
 		let block_finality_checkpoint =
 			prover.fetch_finalized_checkpoint(Some(&state_id)).await?.finalized;
-		let epoch = compute_epoch_at_slot(next_block.slot);
+		let epoch = compute_epoch_at_slot::<Network>(next_block.slot);
 
 		if block_finality_checkpoint.epoch <= client_state.latest_finalized_epoch {
 			debug!(target: "hyperspace_ethereum", "Signature block search has reached an invalid epoch {} latest finalized_block_epoch {}", block_finality_checkpoint.epoch, client_state.latest_finalized_epoch);
@@ -255,7 +258,7 @@ pub async fn fetch_light_client_update(
 
 		let num_signatures = next_block.body.sync_aggregate.sync_committee_bits.count_ones();
 
-		let signature_period = compute_sync_committee_period_at_slot(next_block.slot);
+		let signature_period = compute_sync_committee_period_at_slot::<Network>(next_block.slot);
 
 		debug!(target: debug_target, "Required {num_signatures} >= {min_signatures}, {signature_period} in [{state_period}, {}], {} > {}",  state_period + 1, block_finality_checkpoint.epoch, client_state.latest_finalized_epoch);
 
@@ -293,30 +296,30 @@ pub async fn fetch_light_client_update(
 		prover.fetch_beacon_state(&get_block_id(finalized_header.state_root)).await?;
 	let finality_proof = FinalityProof {
 		epoch: attested_state.finalized_checkpoint.epoch,
-		finality_branch: prove_finalized_header(&mut attested_state)?,
+		finality_branch: prove_finalized_header::<Network>(&mut attested_state)?,
 	};
 	debug!(target: debug_target, "Fetching update #2");
 
-	let execution_payload_proof = prove_execution_payload(&mut finalized_state)?;
+	let execution_payload_proof = prove_execution_payload::<Network>(&mut finalized_state)?;
 
-	let signature_period = compute_sync_committee_period_at_slot(block.slot);
+	let signature_period = compute_sync_committee_period_at_slot::<Network>(block.slot);
 	let client_state_next_sync_committee_root =
 		client_state.next_sync_committee.hash_tree_root()?;
 	let attested_state_current_sync_committee_root =
 		attested_state.current_sync_committee.hash_tree_root()?;
 	debug!(target: debug_target, "Fetching update #3");
 	let sync_committee_update =
-		// We must make sure we switch the sync comittee only when the finalized header has changed sync committees
-		if should_have_sync_committee_update(state_period, signature_period) && client_state_next_sync_committee_root == attested_state_current_sync_committee_root {
-			debug!(target: debug_target, "Fetching update #4");
-			let sync_committee_proof = prove_sync_committee_update(&mut attested_state)?;
-			Some(SyncCommitteeUpdate {
-				next_sync_committee: attested_state.next_sync_committee,
-				next_sync_committee_branch: sync_committee_proof,
-			})
-		} else {
-			None
-		};
+        // We must make sure we switch the sync comittee only when the finalized header has changed sync committees
+        if should_have_sync_committee_update(state_period, signature_period) && client_state_next_sync_committee_root == attested_state_current_sync_committee_root {
+            debug!(target: debug_target, "Fetching update #4");
+            let sync_committee_proof = prove_sync_committee_update::<Network>(&mut attested_state)?;
+            Some(SyncCommitteeUpdate {
+                next_sync_committee: attested_state.next_sync_committee,
+                next_sync_committee_branch: sync_committee_proof,
+            })
+        } else {
+            None
+        };
 
 	// construct light client
 	let light_client_update = VerifierStateUpdate {
@@ -335,7 +338,7 @@ pub async fn fetch_light_client_update(
 #[cfg(not(feature = "no_beacon"))]
 pub async fn prove(
 	_client: &EthereumClient,
-	sync_committee_prover: &SyncCommitteeProver,
+	sync_committee_prover: &SyncCommitteeProver<Network>,
 	eth_client_state: &ClientState<HostFunctionsManager>,
 	_block_number: u64,
 	_up_to: u64,
@@ -417,7 +420,7 @@ pub async fn prove(
 #[cfg(feature = "no_beacon")]
 pub async fn prove(
 	client: &EthereumClient,
-	sync_committee_prover: &SyncCommitteeProver,
+	sync_committee_prover: &SyncCommitteeProver<Network>,
 	eth_client_state: &ClientState<HostFunctionsManager>,
 	_block_number: u64,
 	up_to: u64,

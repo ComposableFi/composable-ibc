@@ -11,8 +11,8 @@ pub struct EVMIndexerArgs {
 	#[arg(long, help = "Chain name to sync.", default_value_t = String::from("mainnet"))]
 	pub chain: String,
 
-	#[arg(long, help = "Block to start syncing.", default_value_t = 0)]
-	pub start_block: i64,
+	#[arg(long, help = "Block to start syncing.")]
+	pub start_block: Option<i64>,
 
 	#[arg(long, help = "Amount of blocks to fetch at the same time.", default_value_t = 200)]
 	pub batch_size: usize,
@@ -32,7 +32,7 @@ pub struct EVMIndexerArgs {
 
 #[derive(Debug, Clone)]
 pub struct EVMIndexerConfig {
-	pub start_block: i64,
+	pub start_block: Option<i64>,
 	pub db_url: String,
 	pub redis_url: String,
 	pub debug: bool,
