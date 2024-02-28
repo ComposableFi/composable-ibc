@@ -17,7 +17,7 @@ use crate::{
 	abi::EthereumClientAbi::EthereumClientPrimitivesConsensusState, alloc::string::ToString,
 	error::Error, proto::ConsensusState as RawConsensusState,
 };
-use alloc::{vec::Vec};
+use alloc::vec::Vec;
 use alloy_sol_types::SolValue;
 use core::{convert::Infallible, fmt::Debug};
 use ibc::{core::ics23_commitment::commitment::CommitmentRoot, timestamp::Timestamp};
@@ -25,7 +25,7 @@ use ibc_proto::google::protobuf::Any;
 use primitive_types::H256;
 use serde::{Deserialize, Serialize};
 use tendermint::time::Time;
-use tendermint_proto::{Protobuf};
+use tendermint_proto::Protobuf;
 
 /// Protobuf type url for GRANDPA Consensus State
 pub const ETHEREUM_CONSENSUS_STATE_TYPE_URL: &str = "/ibc.lightclients.ethereum.v1.ConsensusState";

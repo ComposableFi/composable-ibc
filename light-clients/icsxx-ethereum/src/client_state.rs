@@ -15,7 +15,7 @@
 
 use crate::{
 	abi::EthereumClientAbi::EthereumClientPrimitivesClientState, client_def::EthereumClient,
-	error::Error, proto::ClientState as RawClientState,
+	error::Error, proto::ClientState as RawClientState, Network,
 };
 use alloc::{format, string::ToString, vec::Vec};
 use alloy_sol_types::SolValue;
@@ -28,10 +28,7 @@ use ibc::{
 };
 use ibc_proto::google::protobuf::Any;
 use serde::{Deserialize, Serialize};
-use sync_committee_primitives::{
-	constants::{EPOCHS_PER_SYNC_COMMITTEE_PERIOD, SLOTS_PER_EPOCH},
-	types::VerifierState as LightClientState,
-};
+use sync_committee_primitives::{constants::Config, types::VerifierState as LightClientState};
 use tendermint_proto::Protobuf;
 
 /// Protobuf type url for GRANDPA ClientState
@@ -131,7 +128,9 @@ impl<H> ClientState<H> {
 		// https://consensys.io/shanghai-capella-upgrade
 		let beacon_slot_time = 12; // in seconds
 		let duration_sync_commitee_change = Duration::from_secs(
-			beacon_slot_time * EPOCHS_PER_SYNC_COMMITTEE_PERIOD * SLOTS_PER_EPOCH,
+			beacon_slot_time *
+				<Network as Config>::EPOCHS_PER_SYNC_COMMITTEE_PERIOD *
+				<Network as Config>::SLOTS_PER_EPOCH,
 		);
 		elapsed > duration_sync_commitee_change
 	}

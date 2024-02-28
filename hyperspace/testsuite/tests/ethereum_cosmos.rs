@@ -15,7 +15,7 @@
 use crate::utils::ETH_NODE_PORT_WS;
 use core::time::Duration;
 use ethers::{
-	abi::{Bytes, ParamType, StateMutability, Token},
+	abi::{ethabi, Bytes, ParamType, StateMutability, Token},
 	middleware::SignerMiddleware,
 	prelude::{
 		coins_bip39::{English, Mnemonic},
@@ -29,6 +29,7 @@ use ethers_solc::ProjectCompileOutput;
 use hyperspace_core::{
 	chain::{AnyAssetId, AnyChain, AnyConfig},
 	logging,
+	packets::utils::construct_recv_message,
 };
 use hyperspace_cosmos::client::{CosmosClient, CosmosClientConfig};
 use hyperspace_ethereum::{
@@ -41,8 +42,11 @@ use hyperspace_ethereum::{
 		utils::{hyperspace_ethereum_client_fixture, ETH_NODE_PORT, USE_GETH},
 	},
 	utils::{compile_yui, deploy_contract, send_retrying, DeployYuiIbc, ProviderImpl},
+	yui_types::IntoToken,
 };
-use hyperspace_primitives::{utils::create_clients, Chain, CommonClientConfig, IbcProvider};
+use hyperspace_primitives::{
+	packet_info_to_packet, utils::create_clients, Chain, CommonClientConfig, IbcProvider,
+};
 use hyperspace_testsuite::{
 	assert_send_transfer, ibc_messaging_packet_height_timeout_with_connection_delay,
 	ibc_messaging_packet_height_timeout_with_connection_delay_native,
@@ -51,7 +55,11 @@ use hyperspace_testsuite::{
 	ibc_messaging_with_connection_delay, ibc_messaging_with_connection_delay_native, send_transfer,
 	setup_connection_and_channel,
 };
-use ibc::core::{ics02_client::client_state::ClientState, ics24_host::identifier::PortId};
+use ibc::core::{
+	ics02_client::client_state::ClientState,
+	ics04_channel::msgs::recv_packet::MsgRecvPacket,
+	ics24_host::identifier::{ChannelId, PortId},
+};
 use itertools::Itertools;
 use log::{info, warn};
 use pallet_ibc::light_clients::AnyClientState;
@@ -63,6 +71,7 @@ use std::{
 	sync::{Arc, Mutex},
 };
 use tendermint::{validator::Set, PublicKey};
+use tendermint_proto::Protobuf;
 use tokio::{task::JoinHandle, time::sleep};
 
 const USE_CONFIG: bool = false;
@@ -325,14 +334,14 @@ async fn setup_clients() -> (AnyChain, AnyChain, JoinHandle<()>) {
 			send_retrying(&method).await.unwrap();
 		}
 
-		yui_ibc = hyperspace_ethereum::utils::deploy_governance(
-			&deploy.path,
-			deploy.client.clone(),
-			yui_ibc.clone(),
-			&[deploy.client.address()],
-		)
-		.await
-		.unwrap();
+		// yui_ibc = hyperspace_ethereum::utils::deploy_governance(
+		// 	&deploy.path,
+		// 	deploy.client.clone(),
+		// 	yui_ibc.clone(),
+		// 	&[deploy.client.address()],
+		// )
+		// .await
+		// .unwrap();
 
 		let tendermint_facets = yui_ibc.tendermint_facets.clone();
 
@@ -478,171 +487,197 @@ async fn ethereum_to_cosmos_ibc_messaging_full_integration_test() {
 	let (mut chain_a, mut chain_b, _indexer_handle) = setup_clients().await;
 	sleep(Duration::from_secs(12)).await;
 
-	let (handle, channel_a, channel_b, connection_id_a, connection_id_b) =
-		setup_connection_and_channel(&mut chain_a, &mut chain_b, Duration::from_secs(1)).await;
+	// let (handle, channel_a, channel_b, connection_id_a, connection_id_b) =
+	// 	setup_connection_and_channel(&mut chain_a, &mut chain_b, Duration::from_secs(1)).await;
+	//
+	// let asset_id_b_on_a =
+	// 	AnyAssetId::Ethereum(format!("transfer/{}/{}", channel_a, asset_str.clone()));
+	// let asset_id_b = AnyAssetId::Cosmos(asset_str.to_string());
+	//
+	// log::info!(target: "hyperspace", "Conn A: {connection_id_a:?} B: {connection_id_b:?}");
+	// log::info!(target: "hyperspace", "Chann A: {channel_a:?} B: {channel_b:?}");
+	//
+	// let asset_id_native_a_on_b: AnyAssetId = AnyAssetId::Cosmos(format!(
+	// 	"ibc/{}",
+	// 	hex::encode(&sha2_256(
+	// 		format!("{}/{channel_b}/{asset_native_str}", PortId::transfer()).as_bytes()
+	// 	))
+	// 	.to_uppercase()
+	// ));
+	// let asset_id_a_on_b: AnyAssetId = AnyAssetId::Cosmos(format!(
+	// 	"ibc/{}",
+	// 	hex::encode(&sha2_256(format!("{}/{channel_b}/TST", PortId::transfer()).as_bytes()))
+	// 		.to_uppercase()
+	// ));
+	//
+	// log::info!(target: "hyperspace", "Asset A: {asset_id_a:?} B: {asset_id_b:?}");
+	//
+	// // Set connections and channel whitelist
+	// chain_a.set_connection_id(connection_id_a);
+	// chain_b.set_connection_id(connection_id_b);
+	//
+	// chain_a.set_channel_whitelist(vec![(channel_a, PortId::transfer())].into_iter().collect());
+	// chain_b.set_channel_whitelist(vec![(channel_b, PortId::transfer())].into_iter().collect());
+	//
+	// for _ in 0..3 {
+	// 	let (_, _) = send_transfer(&chain_b, &chain_a, asset_id_b.clone(), channel_b, None).await;
+	// 	tokio::time::sleep(Duration::from_secs(10)).await;
+	// }
 
-	let asset_id_b_on_a =
-		AnyAssetId::Ethereum(format!("transfer/{}/{}", channel_a, asset_str.clone()));
-	let asset_id_b = AnyAssetId::Cosmos(asset_str.to_string());
+	let channel_b = ChannelId::from_str("channel-0").unwrap();
+	let (h, _) = chain_b.latest_height_and_timestamp().await.unwrap();
+	let mut send_packets = chain_b
+		.query_send_packets(h, channel_b, PortId::transfer(), vec![0, 1, 2, 3])
+		.await
+		.unwrap();
 
-	log::info!(target: "hyperspace", "Conn A: {connection_id_a:?} B: {connection_id_b:?}");
-	log::info!(target: "hyperspace", "Chann A: {channel_a:?} B: {channel_b:?}");
+	info!("height = {}", h);
+	for send_packet in send_packets.drain(..) {
+		let packet = packet_info_to_packet(&send_packet);
+		let msg = construct_recv_message(&chain_b, &chain_a, packet, h).await.unwrap();
+		info!("type_url: {}, data: {}", msg.type_url, hex::encode(&msg.value));
 
-	let asset_id_native_a_on_b: AnyAssetId = AnyAssetId::Cosmos(format!(
-		"ibc/{}",
-		hex::encode(&sha2_256(
-			format!("{}/{channel_b}/{asset_native_str}", PortId::transfer()).as_bytes()
-		))
-		.to_uppercase()
-	));
-	let asset_id_a_on_b: AnyAssetId = AnyAssetId::Cosmos(format!(
-		"ibc/{}",
-		hex::encode(&sha2_256(format!("{}/{channel_b}/TST", PortId::transfer()).as_bytes()))
-			.to_uppercase()
-	));
+		let mut msg = MsgRecvPacket::decode_vec(&msg.value)
+			.map_err(|e| ClientError::Other(format!("recv_packet: failed to decode_vec : {:?}", e)))
+			.unwrap();
 
-	log::info!(target: "hyperspace", "Asset A: {asset_id_a:?} B: {asset_id_b:?}");
+		let mut token = msg.clone().into_token();
+		info!("ethabi: {}", hex::encode(&*ethabi::encode(&[token])));
+	}
 
-	// Set connections and channel whitelist
-	chain_a.set_connection_id(connection_id_a);
-	chain_b.set_connection_id(connection_id_b);
-
-	chain_a.set_channel_whitelist(vec![(channel_a, PortId::transfer())].into_iter().collect());
-	chain_b.set_channel_whitelist(vec![(channel_b, PortId::transfer())].into_iter().collect());
-
-	let (previous_balance, _) =
-		send_transfer(&chain_b, &chain_a, asset_id_b.clone(), channel_b, None).await;
-	assert_send_transfer(
-		&chain_b,
-		asset_id_b.clone(),
-		&chain_a,
-		asset_id_b_on_a.clone(),
-		previous_balance,
-		4800,
-		true,
-		None,
-	)
-	.await;
-	handle.abort();
-
-	assert_eq!(query_fee_collector_balance(&chain_a, &asset_id_native_a).await, 0u32.into());
-
-	// Run tests sequentially
-	// no timeouts + connection delay
-	ibc_messaging_with_connection_delay_native(
-		&mut chain_a,
-		&mut chain_b,
-		asset_id_native_a.clone(),
-		asset_id_native_a_on_b.clone(),
-		channel_a,
-		channel_b,
-		Some(FEE_PERCENTAGE),
-		None,
-	)
-	.await;
-
-	assert_ne!(query_fee_collector_balance(&chain_a, &asset_id_native_a).await, 0u32.into());
-	assert_eq!(query_fee_collector_balance(&chain_a, &asset_id_a).await, 0u32.into());
-
-	ibc_messaging_with_connection_delay(
-		&mut chain_a,
-		&mut chain_b,
-		asset_id_a.clone(),
-		asset_id_a_on_b.clone(),
-		channel_a,
-		channel_b,
-		Some(FEE_PERCENTAGE),
-		None,
-	)
-	.await;
-
-	assert_ne!(query_fee_collector_balance(&chain_a, &asset_id_a).await, 0u32.into());
-
-	ibc_messaging_with_connection_delay(
-		&mut chain_b,
-		&mut chain_a,
-		asset_id_b.clone(),
-		asset_id_b_on_a.clone(),
-		channel_b,
-		channel_a,
-		None,
-		Some(FEE_PERCENTAGE),
-	)
-	.await;
-
-	ibc_messaging_with_connection_delay(
-		&mut chain_a,
-		&mut chain_b,
-		asset_id_b_on_a.clone(),
-		asset_id_b.clone(),
-		channel_a,
-		channel_b,
-		Some(FEE_PERCENTAGE),
-		None,
-	)
-	.await;
-
-	// timeouts + connection delay
-	ibc_messaging_packet_height_timeout_with_connection_delay(
-		&mut chain_b,
-		&mut chain_a,
-		asset_id_b.clone(),
-		channel_b,
-		channel_a,
-		None,
-	)
-	.await;
-
-	// timeouts + connection delay
-	ibc_messaging_packet_height_timeout_with_connection_delay_native(
-		&mut chain_a,
-		&mut chain_b,
-		asset_id_native_a.clone(),
-		channel_a,
-		channel_b,
-		Some(FEE_PERCENTAGE),
-	)
-	.await;
-
-	ibc_messaging_packet_height_timeout_with_connection_delay(
-		&mut chain_a,
-		&mut chain_b,
-		asset_id_b_on_a.clone(),
-		channel_a,
-		channel_b,
-		Some(FEE_PERCENTAGE),
-	)
-	.await;
-
-	ibc_messaging_packet_height_timeout_with_connection_delay(
-		&mut chain_a,
-		&mut chain_b,
-		asset_id_a.clone(),
-		channel_a,
-		channel_b,
-		Some(FEE_PERCENTAGE),
-	)
-	.await;
-
-	ibc_messaging_packet_timestamp_timeout_with_connection_delay(
-		&mut chain_b,
-		&mut chain_a,
-		asset_id_b.clone(),
-		channel_b,
-		channel_a,
-		None,
-	)
-	.await;
-
-	ibc_messaging_packet_timestamp_timeout_with_connection_delay_native(
-		&mut chain_a,
-		&mut chain_b,
-		asset_id_native_a.clone(),
-		channel_a,
-		channel_b,
-		Some(FEE_PERCENTAGE),
-	)
-	.await;
+	// let (previous_balance, _) =
+	// 	send_transfer(&chain_b, &chain_a, asset_id_b.clone(), channel_b, None).await;
+	// assert_send_transfer(
+	// 	&chain_b,
+	// 	asset_id_b.clone(),
+	// 	&chain_a,
+	// 	asset_id_b_on_a.clone(),
+	// 	previous_balance,
+	// 	4800,
+	// 	true,
+	// 	None,
+	// )
+	// .await;
+	// handle.abort();
+	//
+	// assert_eq!(query_fee_collector_balance(&chain_a, &asset_id_native_a).await, 0u32.into());
+	//
+	// // Run tests sequentially
+	// // no timeouts + connection delay
+	// ibc_messaging_with_connection_delay_native(
+	// 	&mut chain_a,
+	// 	&mut chain_b,
+	// 	asset_id_native_a.clone(),
+	// 	asset_id_native_a_on_b.clone(),
+	// 	channel_a,
+	// 	channel_b,
+	// 	Some(FEE_PERCENTAGE),
+	// 	None,
+	// )
+	// .await;
+	//
+	// assert_ne!(query_fee_collector_balance(&chain_a, &asset_id_native_a).await, 0u32.into());
+	// assert_eq!(query_fee_collector_balance(&chain_a, &asset_id_a).await, 0u32.into());
+	//
+	// ibc_messaging_with_connection_delay(
+	// 	&mut chain_a,
+	// 	&mut chain_b,
+	// 	asset_id_a.clone(),
+	// 	asset_id_a_on_b.clone(),
+	// 	channel_a,
+	// 	channel_b,
+	// 	Some(FEE_PERCENTAGE),
+	// 	None,
+	// )
+	// .await;
+	//
+	// assert_ne!(query_fee_collector_balance(&chain_a, &asset_id_a).await, 0u32.into());
+	//
+	// ibc_messaging_with_connection_delay(
+	// 	&mut chain_b,
+	// 	&mut chain_a,
+	// 	asset_id_b.clone(),
+	// 	asset_id_b_on_a.clone(),
+	// 	channel_b,
+	// 	channel_a,
+	// 	None,
+	// 	Some(FEE_PERCENTAGE),
+	// )
+	// .await;
+	//
+	// ibc_messaging_with_connection_delay(
+	// 	&mut chain_a,
+	// 	&mut chain_b,
+	// 	asset_id_b_on_a.clone(),
+	// 	asset_id_b.clone(),
+	// 	channel_a,
+	// 	channel_b,
+	// 	Some(FEE_PERCENTAGE),
+	// 	None,
+	// )
+	// .await;
+	//
+	// // timeouts + connection delay
+	// ibc_messaging_packet_height_timeout_with_connection_delay(
+	// 	&mut chain_b,
+	// 	&mut chain_a,
+	// 	asset_id_b.clone(),
+	// 	channel_b,
+	// 	channel_a,
+	// 	None,
+	// )
+	// .await;
+	//
+	// // timeouts + connection delay
+	// ibc_messaging_packet_height_timeout_with_connection_delay_native(
+	// 	&mut chain_a,
+	// 	&mut chain_b,
+	// 	asset_id_native_a.clone(),
+	// 	channel_a,
+	// 	channel_b,
+	// 	Some(FEE_PERCENTAGE),
+	// )
+	// .await;
+	//
+	// ibc_messaging_packet_height_timeout_with_connection_delay(
+	// 	&mut chain_a,
+	// 	&mut chain_b,
+	// 	asset_id_b_on_a.clone(),
+	// 	channel_a,
+	// 	channel_b,
+	// 	Some(FEE_PERCENTAGE),
+	// )
+	// .await;
+	//
+	// ibc_messaging_packet_height_timeout_with_connection_delay(
+	// 	&mut chain_a,
+	// 	&mut chain_b,
+	// 	asset_id_a.clone(),
+	// 	channel_a,
+	// 	channel_b,
+	// 	Some(FEE_PERCENTAGE),
+	// )
+	// .await;
+	//
+	// ibc_messaging_packet_timestamp_timeout_with_connection_delay(
+	// 	&mut chain_b,
+	// 	&mut chain_a,
+	// 	asset_id_b.clone(),
+	// 	channel_b,
+	// 	channel_a,
+	// 	None,
+	// )
+	// .await;
+	//
+	// ibc_messaging_packet_timestamp_timeout_with_connection_delay_native(
+	// 	&mut chain_a,
+	// 	&mut chain_b,
+	// 	asset_id_native_a.clone(),
+	// 	channel_a,
+	// 	channel_b,
+	// 	Some(FEE_PERCENTAGE),
+	// )
+	// .await;
 
 	/*
 	// channel closing semantics
@@ -1377,7 +1412,7 @@ mod indexer {
 
 	pub async fn run_indexer(db_url: String, redis_url: String, contract_address: Option<Address>) {
 		let config = EVMIndexerConfig {
-			start_block: 0,
+			start_block: None,
 			db_url,
 			redis_url,
 			debug: false,

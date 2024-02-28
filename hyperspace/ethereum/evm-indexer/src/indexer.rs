@@ -30,7 +30,8 @@ pub async fn sync_chain(
 
 	let last_block = rpc.get_last_block().await.unwrap();
 
-	let full_block_range = HashSet::<i64>::from_iter(config.start_block..last_block);
+	let full_block_range =
+		HashSet::<i64>::from_iter(config.start_block.unwrap_or(last_block)..last_block);
 
 	let mut missing_blocks: Vec<i64> = (&full_block_range - &indexed_blocks).into_iter().collect();
 	missing_blocks.sort();

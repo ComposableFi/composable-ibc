@@ -19,6 +19,7 @@ use crate::{
 	consensus_state::ConsensusState,
 	error::Error,
 	verify::{verify_ibc_proof, Verified},
+	Network,
 };
 use alloc::{borrow::Cow, format, vec, vec::Vec};
 use anyhow::anyhow;
@@ -174,7 +175,7 @@ where
 		#[cfg(not(feature = "no_beacon"))]
 		let new_light_client_state = {
 			let cs = client_state.inner;
-			verify_sync_committee_attestation(cs, header)
+			verify_sync_committee_attestation::<Network>(cs, header)
 				.map_err(|e| Ics02Error::implementation_specific(e.to_string()))?
 		};
 		#[cfg(feature = "no_beacon")]
