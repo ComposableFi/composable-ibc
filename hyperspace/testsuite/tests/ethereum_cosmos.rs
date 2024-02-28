@@ -15,16 +15,12 @@
 use crate::utils::{BEACON_NODE_PORT, ETH_NODE_PORT_WS};
 use core::time::Duration;
 use ethers::{
-	abi::{ethabi, Bytes, ParamType, StateMutability, Token},
-	middleware::SignerMiddleware,
-	prelude::{
+	abi::{ethabi, Bytes, ParamType, StateMutability, Token}, core::k256::elliptic_curve::consts::U265, middleware::SignerMiddleware, prelude::{
 		coins_bip39::{English, Mnemonic},
 		transaction::eip2718::TypedTransaction,
 		ContractInstance, Http, JsonRpcClient, LocalWallet, Middleware, MnemonicBuilder, Provider,
 		Signer, H256,
-	},
-	types::{Address, BlockNumber, TransactionRequest, U256},
-	utils::{keccak256, AnvilInstance},
+	}, types::{Address, BlockNumber, TransactionRequest, U256}, utils::{keccak256, AnvilInstance}
 };
 use ethers_solc::ProjectCompileOutput;
 use futures::StreamExt;
@@ -537,17 +533,86 @@ async fn zk_prover_integration_test() {
 	let proof = zk_prover.poll_proof(&resp.proof_id.clone().unwrap(), h).unwrap();
 	println!("proof: {:?}", proof);
 	assert!(proof.is_some());
-	println!("proof: {:?}", proof.unwrap());
+	println!("proof: {:?}", proof.clone().unwrap());
+
+	let json_data: json::Value = json::from_str(proof.unwrap().as_str()).unwrap();
+	//take a first element of the array as a array of strings
+	let s1 = json_data[0].as_array().unwrap().iter().map(|x| x.as_str().unwrap().to_string()).collect::<Vec<_>>();
+	//take second element of the array as a array of arrays of strings
+	let s2 = json_data[1].as_array().unwrap().iter().map(|x| x.as_array().unwrap().iter().map(|x| x.as_str().unwrap().to_string()).collect::<Vec<_>>()).collect::<Vec<_>>();
+	//take third element of the array as a array of strings
+	let s3 = json_data[2].as_array().unwrap().iter().map(|x| x.as_str().unwrap().to_string()).collect::<Vec<_>>();
+
+	// let pa_1 = get_number_from_hex_string(s1[0].clone());
+	// assert_eq!(pa_1, U256::from("8863094613666630156452150948347003576288661784136564298813652772034157843685"));
+
 
 	let proof = zk_prover.poll_proof(&new_reqeust.height.to_string(), new_reqeust.height).unwrap();
 	assert!(proof.is_none());
 	return;
 }
 
+// fn get_number_from_hex_string(s: String) -> U256 {
+// 	let xxx = s.replace("0x", "");
+// 	let f : &'static str = xxx.as_str();
+// 	let x = U256::from();
+// 	x
+// }
+
+#[derive(Debug, Deserialize)]
+struct DataStructure(Vec<Vec<DataItem>>);
+use serde::Deserialize;
+#[derive(Debug, Deserialize)]
+enum DataItem {
+	Inner(Vec<String>),
+	Outer(String),
+}
+
+#[tokio::test(flavor = "multi_thread", worker_threads = 10)]
+#[ignore]
+async fn test_de(){
+	let data = r#"[
+        ["0x139855728d26774998f6a74260935dbf2b41a2e1e12ff0ef546605ac921d94e5", "0x0c6f6e5ab5df25ea175f8831649bd2f0154ca8544043c61b450b12118d4d6b1f"],
+        [["0x2ac4e68c7d097f2ba324b71166e313585b77e13e1d6faae52ffea257d951d88e", "0x00514c55fcab6a307d412bac507efd1bdb2e032763210c8179a9141a81d84c5b"],
+        ["0x0668d08425135c162009904e97c22e8588b17c6241b4ab9da812902f253d09a5", "0x2fd2174a9298f2ccc505ca4a3aac4c8ea67de8ba8ed0fa0ac22c26f693d6d551"]],
+        ["0x0d779a0cfb66e2a20e9e87f82dce62932ee6b168c31a46073f9e77c24bc10c16", "0x2c2e380c15566e22acfd22aba8eec47e0d9575dabec24e7f75d4d5a05c25e551"],
+        ["0x0000000000000000000000000000000000000000000000000000000000000000","0x0000000000000000000000000000000013b7cff91a80a211b9ce7146aea27e4b","0x00000000000000000000000000000000c2d1b2e882294a7aa8f726e774bb008c"]
+    ]"#;
+
+    let json_data: json::Value = json::from_str(data).unwrap();
+	//take a first element of the array as a array of strings
+	let s1 = json_data[0].as_array().unwrap().iter().map(|x| x.as_str().unwrap().to_string()).collect::<Vec<_>>();
+	//take second element of the array as a array of arrays of strings
+	let s2 = json_data[1].as_array().unwrap().iter().map(|x| x.as_array().unwrap().iter().map(|x| x.as_str().unwrap().to_string()).collect::<Vec<_>>()).collect::<Vec<_>>();
+	//take third element of the array as a array of strings
+	let s3 = json_data[2].as_array().unwrap().iter().map(|x| x.as_str().unwrap().to_string()).collect::<Vec<_>>();
+    println!("{:?}", json_data);
+	println!();
+    println!("{:?}", s1);
+	println!();
+    println!("{:?}", s2);
+	println!();
+	println!("{:?}", s3);
+	//convert hex string to number
+	// Hexadecimal to Decimal converter
+	//0x139855728d26774998f6a74260935dbf2b41a2e1e12ff0ef546605ac921d94e5
+	let s = "0x139855728d26774998f6a74260935dbf2b41a2e1e12ff0ef546605ac921d94e5";
+	let s = s.trim_start_matches("0x");
+	//it is a u256 from ethereum
+	// let s = u128::from_str_radix(s, 16).unwrap();
+	let x = U256::from(s);
+	println!("s: {:?}", s);
+	println!("x: {:?}", x);
+
+	assert_eq!(x.to_string(), "8863094613666630156452150948347003576288661784136564298813652772034157843685");
+	
+}
+
+
 #[tokio::test(flavor = "multi_thread", worker_threads = 10)]
 #[ignore]
 async fn decode_yui_error(){
-	let error = "08c379a00000000000000000000000000000000000000000000000000000000000000020000000000000000000000000000000000000000000000000000000000000006a4865696768743a203532322c2048617368313a2037353734353338393537383637393839353833363238363933343935353138353334323935312c2048617368323a2031323030353639343237323630333430373934363531323431373331383835393034373133333800000000000000000000000000000000000000000000";
+	let error = "0x08c379a00000000000000000000000000000000000000000000000000000000000000020000000000000000000000000000000000000000000000000000000000000001570726f6f665f726573756c742069732066616c73650000000";
 	let error = hex::decode(error).unwrap();
 	let s = String::from_utf8_lossy(&error);
 	println!("s: {:?}", s);
