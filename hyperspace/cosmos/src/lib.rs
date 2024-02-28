@@ -25,5 +25,6 @@ pub mod provider;
 #[cfg(any(test, feature = "testing"))]
 pub mod test_provider;
 pub mod tx;
+pub mod utils;
 
 pub type TimeoutHeight = Option<Height>;
