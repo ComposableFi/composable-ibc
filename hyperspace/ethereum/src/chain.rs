@@ -67,6 +67,7 @@ use primitives::{
 	MisbehaviourHandler,
 };
 use serde::{Deserialize, Serialize, __private::de};
+use tracing_subscriber::fmt::format;
 use std::{
 	fmt::Debug,
 	pin::Pin,
@@ -1565,37 +1566,54 @@ impl EthereumClient {
 					pub pi_c: Vec<String>,  // 3 elements
 				}
 
-				//deserialze zk_proof
-				let proof: Proof = serde_json::from_str(&s).unwrap();
+				let s = format!(" [{}]", s);
 
-				// for i in proof.pi_a.iter(){
 
-					
-				// }
+				let json_data: serde_json::Value = serde_json::from_str(s.as_str()).unwrap();
+				println!("json_data: {:?}", json_data);
+				//take a first element of the array as a array of strings
+				let sa = json_data[0].as_array().unwrap().iter().map(|x| x.as_str().unwrap().to_string()).collect::<Vec<_>>();
+				//take second element of the array as a array of arrays of strings
+				let sb = json_data[1].as_array().unwrap().iter().map(|x| x.as_array().unwrap().iter().map(|x| x.as_str().unwrap().to_string()).collect::<Vec<_>>()).collect::<Vec<_>>();
+				//take third element of the array as a array of strings
+				let sc = json_data[2].as_array().unwrap().iter().map(|x| x.as_str().unwrap().to_string()).collect::<Vec<_>>();
 
+				error!(target: "hyperspace_ethereum", "json_data: {:?}", json_data.clone());
+				error!(target: "hyperspace_ethereum", "____________________________________");
+				error!(target: "hyperspace_ethereum", "json   sa: {:?}", sa);
+				error!(target: "hyperspace_ethereum", "____________________________________");
+				error!(target: "hyperspace_ethereum", "json   sb: {:?}", sb);
+				error!(target: "hyperspace_ethereum", "____________________________________");
+				error!(target: "hyperspace_ethereum", "json   sc: {:?}", sc);
+
+				fn get_u256(s0x : &str) -> U256{
+					let s : &'static str = Box::leak(s0x.to_string().into_boxed_str());
+					let s = s.trim_start_matches("0x");
+					let pi_a_0 = U256::from(s);
+					return pi_a_0;
+				}
+
+				let pi_a_0 = sa[0].clone();
+				let pi_a_1 = sa[1].clone();
+
+				let pi_b_0 = sb[0][0].clone();
+				let pi_b_1 = sb[0][1].clone();
+				let pi_b_2 = sb[1][0].clone();
+				let pi_b_3 = sb[1][1].clone();
+
+				let pi_c_0 = sc[0].clone();
+				let pi_c_1 = sc[1].clone();
 				
+				let pi_a_0 = get_u256(pi_a_0.as_str());
+				let pi_a_1 = get_u256(pi_a_1.as_str());
 
-				let pi_a_0 = proof.pi_a[0].clone();
-				let pi_a_1 = proof.pi_a[1].clone();
+				let pi_b_0 = get_u256(pi_b_0.as_str());
+				let pi_b_1 = get_u256(pi_b_1.as_str());
+				let pi_b_2 = get_u256(pi_b_2.as_str());
+				let pi_b_3 = get_u256(pi_b_3.as_str());
 
-				let pi_b_0 = proof.pi_b[0][0].clone();
-				let pi_b_1 = proof.pi_b[0][1].clone();
-				let pi_b_2 = proof.pi_b[1][0].clone();
-				let pi_b_3 = proof.pi_b[1][1].clone();
-
-				let pi_c_0 = proof.pi_c[0].clone();
-				let pi_c_1 = proof.pi_c[1].clone();
-				
-				let pi_a_0 = U256::from_dec_str(pi_a_0.as_str()).expect(format!("Failed to convert pi_a_1 to U256, : {}", pi_a_0).as_str());
-				let pi_a_1 = U256::from_dec_str(pi_a_1.as_str()).expect(format!("Failed to convert pi_a_1 to U256, : {}", pi_a_1).as_str());
-
-				let pi_b_0 = U256::from_dec_str(pi_b_0.as_str()).expect(format!("Failed to convert pi_b_0 to U256, : {}", pi_b_0).as_str());
-				let pi_b_1 = U256::from_dec_str(pi_b_1.as_str()).expect(format!("Failed to convert pi_b_1 to U256, : {}", pi_b_1).as_str());
-				let pi_b_2 = U256::from_dec_str(pi_b_2.as_str()).expect(format!("Failed to convert pi_b_2 to U256, : {}", pi_b_2).as_str());
-				let pi_b_3 = U256::from_dec_str(pi_b_3.as_str()).expect(format!("Failed to convert pi_b_3 to U256, : {}", pi_b_3).as_str());
-
-				let pi_c_0 = U256::from_dec_str(pi_c_0.as_str()).expect(format!("Failed to convert pi_c_0 to U256, : {}", pi_c_0).as_str());
-				let pi_c_1 = U256::from_dec_str(pi_c_1.as_str()).expect(format!("Failed to convert pi_c_1 to U256, : {}", pi_c_1).as_str());
+				let pi_c_0 = get_u256(pi_c_0.as_str());
+				let pi_c_1 = get_u256(pi_c_1.as_str());
 
 
 
