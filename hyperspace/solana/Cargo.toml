@@ -41,6 +41,7 @@ anchor-spl = "0.29.0"
 solana-transaction-status = "1.16.18"
 base64 = { version = "0.21.4", default-features = false, features = ["alloc"] }
 borsh = { version = "0.10.3", default-features = false }
+bytemuck = { version = "1.14", default-features = false }
 
 # composable
 ibc-new = { version = "0.50.0", default-features = false, features = ["borsh", "serde"],package="ibc" }
@@ -76,6 +77,7 @@ tracing = "0.1.36"
 tendermint = { git = "https://github.com/informalsystems/tendermint-rs", rev = "e81f7bf23d63ffbcd242381d1ce5e35da3515ff1", default-features = false, features = [
     "secp256k1",
 ] }
+tendermint_new = { version = "0.34.1", default-features = false, package = "tendermint" }
 tendermint-proto = { git = "https://github.com/informalsystems/tendermint-rs", rev = "e81f7bf23d63ffbcd242381d1ce5e35da3515ff1", default-features = false }
 tendermint-rpc = { git = "https://github.com/informalsystems/tendermint-rs", rev = "e81f7bf23d63ffbcd242381d1ce5e35da3515ff1", default-features = false, features = [
     "http-client",
@@ -88,6 +90,7 @@ tendermint-light-client = { git = "https://github.com/informalsystems/tendermint
 #    "testing"
 ] }
 tendermint-light-client-verifier = { git = "https://github.com/informalsystems/tendermint-rs", rev = "e81f7bf23d63ffbcd242381d1ce5e35da3515ff1", default-features = false }
+tendermint-light-client-verifier_new = { version = "0.34.1", default-features = false, package = "tendermint-light-client-verifier" }
 
 [features]
 testing = [

@@ -1470,6 +1470,7 @@ checksum = "8d696c370c750c948ada61c69a0ee2cbbb9c50b1019ddb86d9317157a99c2cae"
 [[package]]
 name = "blockchain"
 version = "0.0.0"
+source = "git+https://github.com/ComposableFi/emulated-light-client.git#118d4bc0f1f8effd9afc9a6f9426b1ebaf99134a"
 dependencies = [
  "borsh 0.10.3",
  "bytemuck",
@@ -1479,11 +1480,11 @@ dependencies = [
  "ibc-core-host",
  "ibc-primitives 0.50.0",
  "ibc-proto 0.41.0",
- "lib 0.0.0",
+ "lib",
  "prost 0.12.3",
  "prost-build 0.12.3",
- "sealable-trie 0.0.0",
- "stdx 0.0.0",
+ "sealable-trie",
+ "stdx",
  "strum 0.25.0",
  "trie-ids",
 ]
@@ -5358,7 +5359,7 @@ dependencies = [
  "httpdate",
  "itoa",
  "pin-project-lite 0.2.13",
- "socket2 0.5.5",
+ "socket2 0.4.10",
  "tokio",
  "tower-service",
  "tracing",
@@ -5674,6 +5675,7 @@ dependencies = [
  "bech32",
  "bip32",
  "borsh 0.10.3",
+ "bytemuck",
  "derive_more",
  "digest 0.10.7",
  "ed25519-zebra",
@@ -5691,9 +5693,9 @@ dependencies = [
  "ics08-wasm",
  "itertools 0.10.5",
  "k256 0.11.6",
- "lib 0.0.0 (git+https://github.com/ComposableFi/emulated-light-client.git)",
+ "lib",
  "log",
- "memory 0.0.0 (git+https://github.com/ComposableFi/emulated-light-client.git)",
+ "memory",
  "pallet-ibc",
  "parity-scale-codec",
  "prost 0.11.9",
@@ -5701,18 +5703,20 @@ dependencies = [
  "rand 0.8.5",
  "ripemd",
  "rs_merkle",
- "sealable-trie 0.0.0 (git+https://github.com/ComposableFi/emulated-light-client.git)",
+ "sealable-trie",
  "serde",
  "serde_json",
  "sha2 0.10.8",
  "solana-ibc",
  "solana-transaction-status",
- "solana-trie 0.0.0 (git+https://github.com/ComposableFi/emulated-light-client.git)",
+ "solana-trie",
  "solana-write-account",
- "stdx 0.0.0 (git+https://github.com/ComposableFi/emulated-light-client.git)",
+ "stdx",
  "tendermint 0.28.0",
+ "tendermint 0.34.1",
  "tendermint-light-client",
  "tendermint-light-client-verifier 0.28.0",
+ "tendermint-light-client-verifier 0.34.1",
  "tendermint-proto 0.28.0",
  "tendermint-rpc",
  "thiserror",
@@ -5907,8 +5911,8 @@ dependencies = [
  "ibc-core-host",
  "ibc-primitives 0.50.0",
  "serde",
- "tendermint 0.34.0",
- "tendermint-light-client-verifier 0.34.0",
+ "tendermint 0.34.1",
+ "tendermint-light-client-verifier 0.34.1",
 ]
 
 [[package]]
@@ -5926,9 +5930,9 @@ dependencies = [
  "prost 0.12.3",
  "serde",
  "solana-ed25519 0.0.0 (git+https://github.com/ComposableFi/emulated-light-client/?branch=master)",
- "tendermint 0.34.0",
- "tendermint-light-client-verifier 0.34.0",
- "tendermint-proto 0.34.0",
+ "tendermint 0.34.1",
+ "tendermint-light-client-verifier 0.34.1",
+ "tendermint-proto 0.34.1",
 ]
 
 [[package]]
@@ -6000,7 +6004,7 @@ dependencies = [
  "serde",
  "sha2 0.10.8",
  "subtle-encoding",
- "tendermint 0.34.0",
+ "tendermint 0.34.1",
 ]
 
 [[package]]
@@ -6027,7 +6031,7 @@ dependencies = [
  "ibc-core-host-types",
  "ibc-primitives 0.50.0",
  "subtle-encoding",
- "tendermint 0.34.0",
+ "tendermint 0.34.1",
 ]
 
 [[package]]
@@ -6046,7 +6050,7 @@ dependencies = [
  "schemars",
  "serde",
  "subtle-encoding",
- "tendermint 0.34.0",
+ "tendermint 0.34.1",
 ]
 
 [[package]]
@@ -6094,7 +6098,7 @@ dependencies = [
  "schemars",
  "serde",
  "subtle-encoding",
- "tendermint 0.34.0",
+ "tendermint 0.34.1",
 ]
 
 [[package]]
@@ -6131,7 +6135,7 @@ dependencies = [
  "schemars",
  "serde",
  "subtle-encoding",
- "tendermint 0.34.0",
+ "tendermint 0.34.1",
 ]
 
 [[package]]
@@ -6171,7 +6175,7 @@ dependencies = [
  "serde",
  "sha2 0.10.8",
  "subtle-encoding",
- "tendermint 0.34.0",
+ "tendermint 0.34.1",
 ]
 
 [[package]]
@@ -6216,7 +6220,7 @@ dependencies = [
  "schemars",
  "serde",
  "subtle-encoding",
- "tendermint 0.34.0",
+ "tendermint 0.34.1",
 ]
 
 [[package]]
@@ -6275,7 +6279,7 @@ dependencies = [
  "scale-info",
  "schemars",
  "serde",
- "tendermint 0.34.0",
+ "tendermint 0.34.1",
  "time",
 ]
 
@@ -6310,7 +6314,7 @@ dependencies = [
  "schemars",
  "serde",
  "subtle-encoding",
- "tendermint-proto 0.34.0",
+ "tendermint-proto 0.34.1",
 ]
 
 [[package]]
@@ -6371,8 +6375,8 @@ dependencies = [
  "ibc-proto 0.41.0",
  "parking_lot 0.12.1",
  "subtle-encoding",
- "tendermint 0.34.0",
- "tendermint-testgen 0.34.0",
+ "tendermint 0.34.1",
+ "tendermint-testgen 0.34.1",
  "tracing",
  "typed-builder",
 ]
@@ -7326,6 +7330,7 @@ checksum = "830d08ce1d1d941e6b30645f1a0eb5643013d835ce3779a5fc208261dbe10f55"
 [[package]]
 name = "lib"
 version = "0.0.0"
+source = "git+https://github.com/ComposableFi/emulated-light-client.git#118d4bc0f1f8effd9afc9a6f9426b1ebaf99134a"
 dependencies = [
  "base64 0.21.7",
  "borsh 0.10.3",
@@ -7333,20 +7338,7 @@ dependencies = [
  "derive_more",
  "sha2 0.10.8",
  "solana-program",
- "stdx 0.0.0",
-]
-
-[[package]]
-name = "lib"
-version = "0.0.0"
-source = "git+https://github.com/ComposableFi/emulated-light-client.git#118d4bc0f1f8effd9afc9a6f9426b1ebaf99134a"
-dependencies = [
- "base64 0.21.7",
- "bytemuck",
- "derive_more",
- "sha2 0.10.8",
- "solana-program",
- "stdx 0.0.0 (git+https://github.com/ComposableFi/emulated-light-client.git)",
+ "stdx",
 ]
 
 [[package]]
@@ -8196,13 +8188,6 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "5a634b1c61a95585bd15607c6ab0c4e5b226e695ff2800ba0cdccddf208c406c"
 dependencies = [
  "autocfg",
-]
-
-[[package]]
-name = "memory"
-version = "0.0.0"
-dependencies = [
- "derive_more",
 ]
 
 [[package]]
@@ -14682,22 +14667,6 @@ dependencies = [
 [[package]]
 name = "sealable-trie"
 version = "0.0.0"
-dependencies = [
- "ascii 1.1.0",
- "base64 0.21.7",
- "borsh 0.10.3",
- "bytemuck",
- "derive_more",
- "lib 0.0.0",
- "memory 0.0.0",
- "sha2 0.10.8",
- "stdx 0.0.0",
- "strum 0.25.0",
-]
-
-[[package]]
-name = "sealable-trie"
-version = "0.0.0"
 source = "git+https://github.com/ComposableFi/emulated-light-client.git#118d4bc0f1f8effd9afc9a6f9426b1ebaf99134a"
 dependencies = [
  "ascii 1.1.0",
@@ -14705,10 +14674,10 @@ dependencies = [
  "borsh 0.10.3",
  "bytemuck",
  "derive_more",
- "lib 0.0.0 (git+https://github.com/ComposableFi/emulated-light-client.git)",
- "memory 0.0.0 (git+https://github.com/ComposableFi/emulated-light-client.git)",
+ "lib",
+ "memory",
  "sha2 0.10.8",
- "stdx 0.0.0 (git+https://github.com/ComposableFi/emulated-light-client.git)",
+ "stdx",
  "strum 0.25.0",
 ]
 
@@ -15138,6 +15107,12 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "cc47a29ce97772ca5c927f75bac34866b16d64e07f330c3248e2d7226623901b"
 
 [[package]]
+name = "simple-error"
+version = "0.3.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "8542b68b8800c3cda649d2c72d688b6907b30f1580043135d61669d4aad1c175"
+
+[[package]]
 name = "simple-iavl"
 version = "0.1.0"
 dependencies = [
@@ -15300,6 +15275,7 @@ dependencies = [
 [[package]]
 name = "solana-allocator"
 version = "0.0.0"
+source = "git+https://github.com/ComposableFi/emulated-light-client.git#118d4bc0f1f8effd9afc9a6f9426b1ebaf99134a"
 dependencies = [
  "bytemuck",
  "solana-program",
@@ -15394,10 +15370,9 @@ dependencies = [
 [[package]]
 name = "solana-ed25519"
 version = "0.0.0"
+source = "git+https://github.com/ComposableFi/emulated-light-client/?branch=master#118d4bc0f1f8effd9afc9a6f9426b1ebaf99134a"
 dependencies = [
  "base64 0.21.7",
- "blockchain",
- "borsh 0.10.3",
  "bs58 0.5.0",
  "bytemuck",
  "derive_more",
@@ -15407,9 +15382,11 @@ dependencies = [
 [[package]]
 name = "solana-ed25519"
 version = "0.0.0"
-source = "git+https://github.com/ComposableFi/emulated-light-client/?branch=master#118d4bc0f1f8effd9afc9a6f9426b1ebaf99134a"
+source = "git+https://github.com/ComposableFi/emulated-light-client.git#118d4bc0f1f8effd9afc9a6f9426b1ebaf99134a"
 dependencies = [
  "base64 0.21.7",
+ "blockchain",
+ "borsh 0.10.3",
  "bs58 0.5.0",
  "bytemuck",
  "derive_more",
@@ -15461,6 +15438,7 @@ dependencies = [
 [[package]]
 name = "solana-ibc"
 version = "0.1.0"
+source = "git+https://github.com/ComposableFi/emulated-light-client.git#118d4bc0f1f8effd9afc9a6f9426b1ebaf99134a"
 dependencies = [
  "anchor-lang",
  "anchor-spl",
@@ -15470,18 +15448,18 @@ dependencies = [
  "derive_more",
  "ibc 0.50.0",
  "ibc-testkit",
- "lib 0.0.0",
+ "lib",
  "linear-map",
- "memory 0.0.0",
+ "memory",
  "primitive-types",
  "serde",
  "serde_json",
  "solana-allocator",
- "solana-ed25519 0.0.0",
- "solana-trie 0.0.0",
+ "solana-ed25519 0.0.0 (git+https://github.com/ComposableFi/emulated-light-client.git)",
+ "solana-trie",
  "spl-associated-token-account",
  "spl-token",
- "stdx 0.0.0",
+ "stdx",
  "strum 0.25.0",
  "trie-ids",
  "uint",
@@ -15970,24 +15948,13 @@ dependencies = [
 [[package]]
 name = "solana-trie"
 version = "0.0.0"
-dependencies = [
- "lib 0.0.0",
- "memory 0.0.0",
- "sealable-trie 0.0.0",
- "solana-program",
- "stdx 0.0.0",
-]
-
-[[package]]
-name = "solana-trie"
-version = "0.0.0"
 source = "git+https://github.com/ComposableFi/emulated-light-client.git#118d4bc0f1f8effd9afc9a6f9426b1ebaf99134a"
 dependencies = [
- "lib 0.0.0 (git+https://github.com/ComposableFi/emulated-light-client.git)",
- "memory 0.0.0 (git+https://github.com/ComposableFi/emulated-light-client.git)",
- "sealable-trie 0.0.0 (git+https://github.com/ComposableFi/emulated-light-client.git)",
+ "lib",
+ "memory",
+ "sealable-trie",
  "solana-program",
- "stdx 0.0.0 (git+https://github.com/ComposableFi/emulated-light-client.git)",
+ "stdx",
 ]
 
 [[package]]
@@ -16046,9 +16013,10 @@ dependencies = [
 [[package]]
 name = "solana-write-account"
 version = "0.0.0"
+source = "git+https://github.com/ComposableFi/emulated-light-client.git#118d4bc0f1f8effd9afc9a6f9426b1ebaf99134a"
 dependencies = [
  "solana-program",
- "stdx 0.0.0",
+ "stdx",
 ]
 
 [[package]]
@@ -18086,10 +18054,6 @@ dependencies = [
 [[package]]
 name = "stdx"
 version = "0.0.0"
-
-[[package]]
-name = "stdx"
-version = "0.0.0"
 source = "git+https://github.com/ComposableFi/emulated-light-client.git#118d4bc0f1f8effd9afc9a6f9426b1ebaf99134a"
 
 [[package]]
@@ -18508,8 +18472,9 @@ dependencies = [
 
 [[package]]
 name = "tendermint"
-version = "0.34.0"
-source = "git+https://github.com/informalsystems/tendermint-rs?rev=37822e540e272d2ca9e763769ad20c581203ff9a#37822e540e272d2ca9e763769ad20c581203ff9a"
+version = "0.34.1"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "15ab8f0a25d0d2ad49ac615da054d6a76aa6603ff95f7d18bafdd34450a1a04b"
 dependencies = [
  "bytes",
  "digest 0.10.7",
@@ -18529,7 +18494,7 @@ dependencies = [
  "signature 2.2.0",
  "subtle",
  "subtle-encoding",
- "tendermint-proto 0.34.0",
+ "tendermint-proto 0.34.1",
  "time",
  "zeroize",
 ]
@@ -18582,14 +18547,14 @@ dependencies = [
 
 [[package]]
 name = "tendermint-light-client-verifier"
-version = "0.34.0"
+version = "0.34.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "74994da9de4b1144837a367ca2c60c650f5526a7c1a54760a3020959b522e474"
+checksum = "9b8090d0eef9ad57b1b913b5e358e26145c86017e87338136509b94383a4af25"
 dependencies = [
  "derive_more",
  "flex-error",
  "serde",
- "tendermint 0.34.0",
+ "tendermint 0.34.1",
  "time",
 ]
 
@@ -18612,8 +18577,9 @@ dependencies = [
 
 [[package]]
 name = "tendermint-proto"
-version = "0.34.0"
-source = "git+https://github.com/informalsystems/tendermint-rs?rev=37822e540e272d2ca9e763769ad20c581203ff9a#37822e540e272d2ca9e763769ad20c581203ff9a"
+version = "0.34.1"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "b797dd3d2beaaee91d2f065e7bdf239dc8d80bba4a183a288bc1279dd5a69a1e"
 dependencies = [
  "bytes",
  "flex-error",
@@ -18669,7 +18635,7 @@ dependencies = [
  "gumdrop",
  "serde",
  "serde_json",
- "simple-error",
+ "simple-error 0.2.3",
  "tempfile",
  "tendermint 0.28.0",
  "time",
@@ -18677,17 +18643,17 @@ dependencies = [
 
 [[package]]
 name = "tendermint-testgen"
-version = "0.34.0"
+version = "0.34.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "a19d4f02b7e38ce790da973fdc9edc71a0e35340ac57737bf278c8379037c1f5"
+checksum = "ae652e9e8b23f27f6a4fbeb29ead22ff4c2256b8d32df226b73258ba2a4ce11e"
 dependencies = [
  "ed25519-consensus",
  "gumdrop",
  "serde",
  "serde_json",
- "simple-error",
+ "simple-error 0.3.0",
  "tempfile",
- "tendermint 0.34.0",
+ "tendermint 0.34.1",
  "time",
 ]
 
@@ -19377,6 +19343,7 @@ dependencies = [
 [[package]]
 name = "trie-ids"
 version = "0.0.0"
+source = "git+https://github.com/ComposableFi/emulated-light-client.git#118d4bc0f1f8effd9afc9a6f9426b1ebaf99134a"
 dependencies = [
  "ascii 1.1.0",
  "base64 0.21.7",
@@ -20939,3 +20906,13 @@ dependencies = [
  "cc",
  "pkg-config",
 ]
+
+[[patch.unused]]
+name = "tendermint"
+version = "0.34.0"
+source = "git+https://github.com/informalsystems/tendermint-rs#6160d0b1b385f29739762d0dbcbd3c00160847c1"
+
+[[patch.unused]]
+name = "tendermint-proto"
+version = "0.34.0"
+source = "git+https://github.com/informalsystems/tendermint-rs#6160d0b1b385f29739762d0dbcbd3c00160847c1"

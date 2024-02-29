@@ -49,9 +49,9 @@ pub struct Args {
 
 impl Default for Args {
 	fn default() -> Self {
-		let relay = std::env::var("RELAY_HOST").unwrap_or_else(|_| "10.0.0.100".to_string());
-		let solana = std::env::var("SOLANA_HOST").unwrap_or_else(|_| "10.0.0.100".to_string());
-		let cosmos = std::env::var("COSMOS_HOST").unwrap_or_else(|_| "10.0.0.100".to_string());
+		let relay = std::env::var("RELAY_HOST").unwrap_or_else(|_| "192.168.54.157".to_string());
+		let solana = std::env::var("SOLANA_HOST").unwrap_or_else(|_| "192.168.54.157".to_string());
+		let cosmos = std::env::var("COSMOS_HOST").unwrap_or_else(|_| "192.168.54.157".to_string());
 		let wasm_path = std::env::var("WASM_PATH").unwrap_or_else(|_| {
 			"../../target/wasm32-unknown-unknown/release/icsxx_solana_cw.wasm".to_string()
 		});
@@ -178,6 +178,7 @@ async fn setup_clients() -> (AnyChain, AnyChain) {
 	// 	.collect::<Vec<_>>()
 	// 	.await;
 	// log::info!(target: "hyperspace", "Parachain have started block production");
+	
 
 	let clients_on_a = chain_a_wrapped.query_clients().await.unwrap();
 	let clients_on_b = chain_b_wrapped.query_clients().await.unwrap();
@@ -206,20 +207,35 @@ async fn setup_clients() -> (AnyChain, AnyChain) {
 }
 
 // #[tokio::test]
-#[tokio::test(flavor = "multi_thread", worker_threads = 5)]
+#[tokio::test(flavor = "multi_thread", worker_threads = 12)]
 // #[ignore]
 async fn solana_to_cosmos_ibc_messaging_full_integration_test() {
+	use ibc::core::ics24_host::identifier::ConnectionId;
+	use ibc::core::ics24_host::identifier::ChannelId;
+	use std::str::FromStr;
 	logging::setup_logging();
 
 	let asset_id_a = AnyAssetId::Solana("33WVSef9zaw49KbNdPGTmACVRnAXzN3o1fsqbUrLp2mh".to_string());
 	let asset_id_b = AnyAssetId::Cosmos(
-		"ibc/47B97D8FF01DA03FCB2F4B1FFEC931645F254E21EF465FA95CBA6888CB964DC4".to_string(),
+		"stake".to_string(),
 	);
 	let (mut chain_a, mut chain_b) = setup_clients().await;
 	let (handle, channel_a, channel_b, connection_id_a, connection_id_b) =
 		setup_connection_and_channel(&mut chain_a, &mut chain_b, Duration::from_secs(60 * 2)).await;
 
 	handle.abort();
+	
+
+	// let connection_id_a = ConnectionId::from_str("connection-0").unwrap();
+	// let connection_id_b = ConnectionId::from_str("connection-30").unwrap();
+
+	// let channel_a = ChannelId::from_str("channel-0").unwrap();
+	// let channel_b = ChannelId::from_str("channel-16").unwrap();
+
+	log::info!("Channel A: {:?}", channel_a);
+	log::info!("Channel B: {:?}", channel_b);
+	log::info!("Connection A: {:?}", connection_id_a);
+	log::info!("Connection B: {:?}", connection_id_b);
 
 	// Set connections and channel whitelist
 	chain_a.set_connection_id(connection_id_a);

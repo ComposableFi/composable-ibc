@@ -207,6 +207,7 @@ where
 	async fn ibc_events(&self) -> Pin<Box<dyn Stream<Item = IbcEvent> + Send + 'static>> {
 		// Create websocket client. Like what `EventMonitor::subscribe()` does in `hermes`
 		let ws_client = self.rpc_client.clone();
+		log::info!("Inside cosmos ibc events");
 
 		let query_all = vec![
 			Query::from(EventType::NewBlock),
