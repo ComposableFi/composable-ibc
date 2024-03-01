@@ -7,123 +7,107 @@ name = "ethereum-client"
 client_id = "07-tendermint-0"
 channel_whitelist = []
 commitment_prefix = "696263"
-ibc_core_diamond_address = "0xd6085b6c6503b0fc994fdbdd4b780a6e819e882a"
+ibc_core_diamond_address = "0x56378f9b88f341b1913a2fc6ac2bcbaa1b9a9f9f"
 ibc_core_facets = [
     [
-    "DiamondCutFacet",
-    "0x844d2447e6c00cf6a5fbe9ad5eebebe31e40368e",
-],
+        "DiamondCutFacet",
+        "0xb7198a3674e37433579be45aa9dd09f5ab4b314a",
+    ],
     [
-    "DiamondLoupeFacet",
-    "0x992966599e81b9d4a3ef92172b9fa162d2e50d5b",
-],
+        "DiamondLoupeFacet",
+        "0xb26397cfa7e111e844086bdd3da5080f9de65cb7",
+    ],
     [
-    "OwnershipFacet",
-    "0x3bf46cf159422e1791d20d45683b21f34ecae4be",
-],
+        "OwnershipFacet",
+        "0xfbf766071d0fdee42b78ab029b97194543b6d7a5",
+    ],
     [
-    "GovernanceFacet",
-    "0xb16af4cfc553ae0a8f43e812e22dc6caabdf5e63",
-],
+        "CallBatchFacet",
+        "0x844d2447e6c00cf6a5fbe9ad5eebebe31e40368e",
+    ],
     [
-    "CallBatchFacet",
-    "0x4f6e145fbaf72be9ea283f5793e70a1c594d5ceb",
-],
+        "IBCClient",
+        "0x992966599e81b9d4a3ef92172b9fa162d2e50d5b",
+    ],
     [
-    "IBCClient",
-    "0xd0017ae5068faa14eaa547ba1c47fdc7afdf1230",
-],
+        "IBCConnection",
+        "0x3bf46cf159422e1791d20d45683b21f34ecae4be",
+    ],
     [
-    "IBCConnection",
-    "0xe566a7e344f2aef783319a76233e54e7f8b47823",
-],
+        "IBCChannelHandshake",
+        "0xb16af4cfc553ae0a8f43e812e22dc6caabdf5e63",
+    ],
     [
-    "IBCChannelHandshake",
-    "0x56378f9b88f341b1913a2fc6ac2bcbaa1b9a9f9f",
-],
+        "IBCPacket",
+        "0x4f6e145fbaf72be9ea283f5793e70a1c594d5ceb",
+    ],
     [
-    "IBCPacket",
-    "0xec2e07c3e20ea4248f663ebd4cac75aa349a0463",
-],
+        "IBCQuerier",
+        "0xd0017ae5068faa14eaa547ba1c47fdc7afdf1230",
+    ],
     [
-    "IBCQuerier",
-    "0x0486ee42d89d569c4d8143e47a82c4b14545ae43",
-],
-    [
-    "RelayerWhitelistFacet",
-    "0x4976bb932815783f092dd0e3cca567d5502be46e",
-],
+        "RelayerWhitelistFacet",
+        "0xe566a7e344f2aef783319a76233e54e7f8b47823",
+    ],
 ]
-tendermint_diamond_address = "0x40ec3b1c0dc9332fe3202328a11b4805331e2b3a"
+tendermint_diamond_address = "0xd6085b6c6503b0fc994fdbdd4b780a6e819e882a"
 tendermint_facets = [
     [
-    "DiamondCutFacet",
-    "0x844d2447e6c00cf6a5fbe9ad5eebebe31e40368e",
-],
+        "DiamondCutFacet",
+        "0xb7198a3674e37433579be45aa9dd09f5ab4b314a",
+    ],
     [
-    "DiamondLoupeFacet",
-    "0x992966599e81b9d4a3ef92172b9fa162d2e50d5b",
-],
+        "DiamondLoupeFacet",
+        "0xb26397cfa7e111e844086bdd3da5080f9de65cb7",
+    ],
     [
-    "OwnershipFacet",
-    "0x3bf46cf159422e1791d20d45683b21f34ecae4be",
-],
+        "OwnershipFacet",
+        "0xfbf766071d0fdee42b78ab029b97194543b6d7a5",
+    ],
     [
-    "GovernanceFacet",
-    "0xb16af4cfc553ae0a8f43e812e22dc6caabdf5e63",
-],
-    [
-    "TendermintLightClientZK",
-    "0xce2a47f9cdd0556c71ce434c3b6f809606448ded",
-],
+        "TendermintLightClientZK",
+        "0x4976bb932815783f092dd0e3cca567d5502be46e",
+    ],
 ]
-ibc_transfer_diamond_address = "0x2de2ce2858096a4a3e0ce01cab750293b51d4b0a"
+ibc_transfer_diamond_address = "0x481796b2a6cf91a68e18b42dedc98c035734043f"
 ibc_transfer_facets = [
     [
-    "ICS20TransferBank",
-    "0xa702cb28df2fb6642c46c32e8ab8d826a21083aa",
-],
+        "ICS20TransferBank",
+        "0xcf4210c1f5e1558f58300fea9b8398ab74f8900a",
+    ],
     [
-    "DiamondCutFacet",
-    "0x844d2447e6c00cf6a5fbe9ad5eebebe31e40368e",
-],
+        "DiamondCutFacet",
+        "0xb7198a3674e37433579be45aa9dd09f5ab4b314a",
+    ],
     [
-    "DiamondLoupeFacet",
-    "0x992966599e81b9d4a3ef92172b9fa162d2e50d5b",
-],
+        "DiamondLoupeFacet",
+        "0xb26397cfa7e111e844086bdd3da5080f9de65cb7",
+    ],
     [
-    "OwnershipFacet",
-    "0x3bf46cf159422e1791d20d45683b21f34ecae4be",
-],
-    [
-    "GovernanceFacet",
-    "0xb16af4cfc553ae0a8f43e812e22dc6caabdf5e63",
-],
+        "OwnershipFacet",
+        "0xfbf766071d0fdee42b78ab029b97194543b6d7a5",
+    ],
 ]
-bank_diamond_address = "0xec509da1cb1284f6b3899fcf33c3f208dd4e1f72"
+bank_diamond_address = "0xbc9098af79b4a35defef8a16098b94454849a540"
 bank_facets = [
     [
-    "ICS20Bank",
-    "0x481796b2a6cf91a68e18b42dedc98c035734043f",
-],
+        "ICS20Bank",
+        "0x40ec3b1c0dc9332fe3202328a11b4805331e2b3a",
+    ],
     [
-    "DiamondCutFacet",
-    "0x844d2447e6c00cf6a5fbe9ad5eebebe31e40368e",
-],
+        "DiamondCutFacet",
+        "0xb7198a3674e37433579be45aa9dd09f5ab4b314a",
+    ],
     [
-    "DiamondLoupeFacet",
-    "0x992966599e81b9d4a3ef92172b9fa162d2e50d5b",
-],
+        "DiamondLoupeFacet",
+        "0xb26397cfa7e111e844086bdd3da5080f9de65cb7",
+    ],
     [
-    "OwnershipFacet",
-    "0x3bf46cf159422e1791d20d45683b21f34ecae4be",
-],
-    [
-    "GovernanceFacet",
-    "0xb16af4cfc553ae0a8f43e812e22dc6caabdf5e63",
-],
+        "OwnershipFacet",
+        "0xfbf766071d0fdee42b78ab029b97194543b6d7a5",
+    ],
 ]
-gov_proxy_address = "0x294aacef1ca646f96ae1d26c4b914f7c62b00a59"
+gov_proxy_address = "0xd82c3e06ba4a201680f27d0f0530fe00718a109f"
 client_type = "07-tendermint"
 jwt_secret_path = "/Users/vmark/work/eth-pos-devnet/execution/jwtsecret"
 indexer_pg_url = "pg://postgres:password@localhost/postgres"

@@ -41,8 +41,12 @@ async fn main() {
 	if !config.reset {
 		let mut indexed_blocks = db.get_indexed_blocks().await.unwrap();
 
+		let from_block = match config.start_block {
+			Some(n) => n,
+			None => rpc.get_last_block().await.unwrap(),
+		};
 		loop {
-			indexer::sync_chain(&rpc, &db, &mut config, &mut indexed_blocks).await;
+			indexer::sync_chain(&rpc, &db, &mut config, &mut indexed_blocks, from_block).await;
 			sleep(Duration::from_millis(50)).await;
 		}
 	} else {

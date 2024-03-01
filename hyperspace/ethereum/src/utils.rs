@@ -22,7 +22,10 @@ use ethers::{
 		Middleware, Provider, Signer, TransactionReceipt, TransactionRequest, H256, U256,
 	},
 	types::{BlockNumber, Bloom, H160, H64, U64},
-	utils::{rlp, rlp::RlpStream},
+	utils::{
+		rlp,
+		rlp::{Encodable, RlpStream},
+	},
 };
 use ethers_solc::{
 	artifacts::{
@@ -1440,8 +1443,14 @@ pub struct Header {
 	pub nonce: H64,
 	/// BaseFee was added by EIP-1559 and is ignored in legacy headers.
 	pub base_fee_per_gas: Option<U256>,
-	/// Ignored in legacy headers
+	/// WithdrawalsHash was added by EIP-4895 and is ignored in legacy headers.
 	pub withdrawals_root: Option<H256>,
+	/// BlobGasUsed was added by EIP-4844 and is ignored in legacy headers.
+	pub blob_gas_used: Option<U256>,
+	/// ExcessBlobGas was added by EIP-4844 and is ignored in legacy headers.
+	pub excess_blob_gas: Option<U256>,
+	/// ParentBeaconRoot was added by EIP-4788 and is ignored in legacy headers.
+	pub parent_beacon_block_root: Option<H256>,
 }
 
 impl rlp::Encodable for Header {
@@ -1464,14 +1473,27 @@ impl rlp::Encodable for Header {
 			nonce,
 			base_fee_per_gas,
 			withdrawals_root,
+			blob_gas_used,
+			excess_blob_gas,
+			parent_beacon_block_root,
 		} = self;
-		let mut list_len = 15;
-		if base_fee_per_gas.is_some() {
-			list_len += 1;
-		}
-		if withdrawals_root.is_some() {
-			list_len += 1;
-		}
+
+		let additional_fields: Vec<Option<&dyn Encodable>> = vec![
+			base_fee_per_gas.as_ref().map(|x| x as _),
+			withdrawals_root.as_ref().map(|x| x as _),
+			blob_gas_used.as_ref().map(|x| x as _),
+			excess_blob_gas.as_ref().map(|x| x as _),
+			parent_beacon_block_root.as_ref().map(|x| x as _),
+		];
+
+		let last_some_idx = additional_fields
+			.iter()
+			.enumerate()
+			.filter(|x| x.1.is_some())
+			.last()
+			.map(|x| x.0);
+		let list_len = 15 + last_some_idx.map(|x| x + 1).unwrap_or_default();
+
 		s.begin_list(list_len);
 		s.append(parent_hash);
 		s.append(ommers_hash);
@@ -1488,11 +1510,15 @@ impl rlp::Encodable for Header {
 		s.append(&extra_data.as_ref());
 		s.append(mix_hash);
 		s.append(nonce);
-		if let Some(ref base_fee) = base_fee_per_gas {
-			s.append(base_fee);
-		}
-		if let Some(ref root) = withdrawals_root {
-			s.append(root);
+
+		if let Some(last_idx) = last_some_idx {
+			for i in 0..=last_idx {
+				if let Some(field) = additional_fields[i] {
+					s.append_raw(&field.rlp_bytes(), 1);
+				} else {
+					s.append_empty_data();
+				}
+			}
 		}
 	}
 }
@@ -1517,6 +1543,9 @@ impl<T> From<Block<T>> for Header {
 			nonce: value.nonce.expect("nonce not found"),
 			base_fee_per_gas: value.base_fee_per_gas,
 			withdrawals_root: value.withdrawals_root,
+			blob_gas_used: value.blob_gas_used,
+			excess_blob_gas: value.excess_blob_gas,
+			parent_beacon_block_root: value.parent_beacon_block_root,
 		}
 	}
 }
@@ -1569,30 +1598,34 @@ fn test_block_header_rlp_encoding() {
 
 	let block = serde_json::from_str::<Block<()>>(r#"
 	{
-	  "baseFeePerGas": "0x7",
-	  "difficulty": "0x0",
-	  "extraData": "0xd883010d01846765746888676f312e32312e31856c696e7578",
-	  "gasLimit": "0x1c9c380",
-	  "gasUsed": "0x570c1",
-	  "hash": "0x89f2e55516b1ec33275f67fb08864b269f29d682c4294692bd7885ff98022376",
-	  "logsBloom": "0x00000000000000002000000000000000000000000800000000800000000000000000000100000000000200000000000000000000000000000000000000000000000000080000000000000000000000000000000000040000000000000000000000000000000000000000000000000000000000001000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000100000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000",
-	  "miner": "0x123463a4b065722e99115d6c222f267d9cabb524",
-	  "mixHash": "0x9465af5f5db63c8abc700d61e60baae7f386479c78d8cfd1013ce98663aa2399",
-	  "nonce": "0x0000000000000000",
-	  "number": "0x3c28",
-	  "parentHash": "0xdc31160f48f2a7338b2943077e639019ba7478f2ba00c96d59e9aa1f27e24cba",
-	  "receiptsRoot": "0xd80423deccefededa1392413952297320135f4414ddca1850cfea1ae3527d3c1",
-	  "sha3Uncles": "0x1dcc4de8dec75d7aab85b567b6ccd41ad312451b948a7413f0a142fd40d49347",
-	  "size": "0x53c",
-	  "stateRoot": "0x51fa3910be4db6c196677c750ee9b3126e334f71e795ac17475a345da8b9ad6a",
-	  "timestamp": "0x6537f3ce",
-	  "totalDifficulty": "0x1",
-	  "transactions": [],
-	  "transactionsRoot": "0x931a3d5aca9f9ea1a61e9b6642f69f9943dcde5ebb92030edcd03a959d33e968",
-	  "uncles": [],
-	  "withdrawals": [],
-	  "withdrawalsRoot": "0x56e81f171bcc55a6ff8345e692c0f86e5b48e01b996cadc001622fb5e363b421"
-	}"#).unwrap();
+    "baseFeePerGas": "0xb430",
+	"parentBeaconBlockRoot": "0x4fd4634fa8e704d13027d6b4c9000e002f9ba90d3c7960f42d676917c37b3e75",
+    "difficulty": "0x0",
+	"excessBlobGas": "0x0",
+	"blobGasUsed": "0x0",
+    "extraData": "0xd883010d0b846765746888676f312e32312e36856c696e7578",
+    "gasLimit": "0x1c9c380",
+    "gasUsed": "0x0",
+    "hash": "0x81724d2116bf9e14f550acec8513834a7eddc3471b07ab7ece3df004cf31c7a9",
+    "logsBloom": "0x00000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000",
+    "miner": "0x123463a4b065722e99115d6c222f267d9cabb524",
+    "mixHash": "0x3654514ecacdf19eb0ba0849207fb97eef2898f6b9953575665426b83ab30d99",
+    "nonce": "0x0000000000000000",
+    "number": "0x50",
+    "parentHash": "0xb661624fca4fcb8e1493ae4079cd6b623a7b14ca8ad01fd07e85d5d49110a834",
+    "receiptsRoot": "0x56e81f171bcc55a6ff8345e692c0f86e5b48e01b996cadc001622fb5e363b421",
+    "sha3Uncles": "0x1dcc4de8dec75d7aab85b567b6ccd41ad312451b948a7413f0a142fd40d49347",
+    "size": "0x25e",
+    "stateRoot": "0xb9c835df6403833ab99d7676c87050438fcf63593cb1d9d2f59a1870863447db",
+    "timestamp": "0x65dfaf0c",
+    "totalDifficulty": "0x1",
+    "transactions": [],
+    "transactionsRoot": "0x56e81f171bcc55a6ff8345e692c0f86e5b48e01b996cadc001622fb5e363b421",
+    "uncles": [],
+    "withdrawals": [],
+    "withdrawalsRoot": "0x56e81f171bcc55a6ff8345e692c0f86e5b48e01b996cadc001622fb5e363b421"
+  }"#).unwrap();
+	dbg!(&block);
 	let header: Header = block.clone().into();
 	let rlp_encoded_header = rlp::encode(&header).to_vec();
 	let hash = keccak256(rlp_encoded_header);

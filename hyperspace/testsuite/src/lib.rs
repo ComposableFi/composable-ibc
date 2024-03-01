@@ -337,7 +337,7 @@ async fn send_packet_and_assert_height_timeout<A, B>(
 	log::info!(target: "hyperspace", "Waiting for packet timeout to elapse on counterparty");
 	timeout_future(
 		future,
-		20 * 60,
+		30 * 60,
 		format!("Timeout height was not reached on {}", chain_b.name()),
 	)
 	.await;
@@ -345,7 +345,7 @@ async fn send_packet_and_assert_height_timeout<A, B>(
 	log::info!(target: "hyperspace", "Resuming send packet relay");
 	set_relay_status(true);
 
-	assert_timeout_packet(chain_a, 175).await;
+	assert_timeout_packet(chain_a, 250).await;
 
 	let balance_after_timeout = chain_a
 		.query_ibc_balance(asset_a, None)

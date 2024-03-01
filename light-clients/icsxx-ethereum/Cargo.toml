@@ -61,7 +61,10 @@ sync-committee-prover = { git = "https://github.com/polytope-labs/hyperbridge", 
 trie-db = { version = "0.28.0" }
 
 [features]
-default = ["std"]
+default = [
+    "std",
+    "sync-committee-primitives/sepolia-deneb",
+]
 std = [
     "ibc/std",
     "ibc-proto/std",
@@ -82,4 +85,3 @@ testnet = [
 mainnet = []
 no_beacon = []
 no_proof_verification = []
-# 4438641, 4438656

@@ -253,7 +253,10 @@ pub fn query(deps: Deps, _env: Env, msg: QueryMsg) -> StdResult<Binary> {
 		QueryMsg::ExportMetadata(ExportMetadataMsg {}) =>
 			to_binary(&QueryResponse::genesis_metadata(None)),
 		QueryMsg::Status(StatusMsg {}) => {
-			let client_state = match get_client_state::<HostFunctions>(deps) {
+			let client_state = match get_client_state::<HostFunctions>(
+				ClientId::from_str("00-unknown-0").unwrap(),
+				deps,
+			) {
 				Ok(client_state) => client_state,
 				Err(_) => return to_binary(&QueryResponse::status("Unknown".to_string())),
 			};

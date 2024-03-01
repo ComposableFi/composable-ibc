@@ -1435,9 +1435,15 @@ mod indexer {
 				.await
 				.expect("Unable to start DB connection.");
 
+		let from_block = match config.start_block {
+			Some(n) => n,
+			None => rpc.get_last_block().await.unwrap(),
+		};
+
 		loop {
 			let mut indexed_blocks = db.get_indexed_blocks().await.unwrap();
-			evm_indexer::indexer::sync_chain(&rpc, &db, &config, &mut indexed_blocks).await;
+			evm_indexer::indexer::sync_chain(&rpc, &db, &config, &mut indexed_blocks, from_block)
+				.await;
 			tokio::time::sleep(std::time::Duration::from_millis(50)).await;
 		}
 	}

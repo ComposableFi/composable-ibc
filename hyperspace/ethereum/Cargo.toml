@@ -69,7 +69,9 @@ git2 = "0.17.1"
 tendermint = { git = "https://github.com/informalsystems/tendermint-rs", rev = "e81f7bf23d63ffbcd242381d1ce5e35da3515ff1", default-features = false }
 
 [features]
-default = []
+default = [
+    "sync-committee-primitives/sepolia-deneb",
+]
 testnet = [
     "sync-committee-primitives/sepolia-deneb",
     "icsxx-ethereum/testnet"
