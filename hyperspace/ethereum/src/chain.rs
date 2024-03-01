@@ -58,7 +58,7 @@ use ics23::commitment_proof::Proof;
 use icsxx_ethereum::{
 	abi::EthereumClientAbi::EthereumClientPrimitivesConsensusStateProof, utils::keccak256,
 };
-use log::{error, info};
+use log::{error, info, debug};
 use pallet_ibc::light_clients::{
 	AnyClientMessage, AnyClientState, AnyConsensusState, HostFunctionsManager,
 };
@@ -67,6 +67,7 @@ use primitives::{
 	MisbehaviourHandler,
 };
 use serde::{Deserialize, Serialize, __private::de};
+use tracing_subscriber::fmt::format;
 use std::{
 	fmt::Debug,
 	pin::Pin,
@@ -1540,64 +1541,84 @@ impl EthereumClient {
 					cs.latest_height.revision_height = header.signed_header.header.height.value();
 				}
 
-				assert!(header.zk_proof.len() > 0, "zk_proof is missing");
-				assert!(header.zk_bitmask > 0, "zk_proof is missing");
+				if header.zk_proof.len() <= 0 {
+					let error_message = format!("zk_proof is missing for update_client for client_id: {:?} height: {:?}", client_id, header.height());
+					error!(target: "hyperspace_ethereum", "{}", error_message);
+					return Err(ClientError::Other(error_message));
+				}
+
+				if header.zk_bitmask <= 0 {
+					let error_message = format!("zk_bitmask is missing for update_client for client_id: {:?} height: {:?}", client_id, header.height());
+					error!(target: "hyperspace_ethereum", "{}", error_message);
+					return Err(ClientError::Other(error_message));
+				}
 
 				//get abi token to update client
 				let tm_header_abi_token = tm_header_abi_token(header)?;
 				let tm_header_bytes = ethers_encode(&[tm_header_abi_token]);
 
-				info!(target: "hyperspace_ethereum", "Submitting header.signed_header.header to ethereum: {:?}", header.signed_header.header);
-
-				error!(target: "hyperspace_ethereum", "client update msg ____________________________________________");
-				error!(target: "hyperspace_ethereum", "Submitting client_update to ethereum: {:?}", header.height());
-
 				let zk_proof = header.zk_proof.clone();
-				//vec bytes convert to string
-				let s = String::from_utf8(zk_proof).expect("Invalid UTF-8");
+				let s = String::from_utf8(zk_proof).map_err(|e| {
+					let error_message = format!("failed to convert zk_proof into string: {:?} for client_id: {:?} height: {:?}", e, client_id, header.height());
+					error!(target: "hyperspace_ethereum", "{}", error_message);
+					ClientError::Other(error_message)
+				})?;
 
-				println!("zk_proof: {:?}", s);
+				let s = format!(" [{}]", s);
 
-				#[derive(Debug, Clone, Serialize, Deserialize)]
-				struct Proof{
-					pub pi_a: Vec<String>, // 3 elements 
-					pub pi_b: Vec<Vec<String>>, // 3 array with 2 elements
-					pub pi_c: Vec<String>,  // 3 elements
+
+				//todo. add map error here once i get a new zk curctui strucutre with a data from remote ZK api service
+				let json_data: serde_json::Value = serde_json::from_str(s.as_str()).unwrap();
+				//take a first element of the array as a array of strings
+				let sa = json_data[0].as_array().unwrap().iter().map(|x| x.as_str().unwrap().to_string()).collect::<Vec<_>>();
+				//take second element of the array as a array of arrays of strings
+				let sb = json_data[1].as_array().unwrap().iter().map(|x| x.as_array().unwrap().iter().map(|x| x.as_str().unwrap().to_string()).collect::<Vec<_>>()).collect::<Vec<_>>();
+				//take third element of the array as a array of strings
+				let sc = json_data[2].as_array().unwrap().iter().map(|x| x.as_str().unwrap().to_string()).collect::<Vec<_>>();
+
+				debug!(target: "hyperspace_ethereum", "json_data: {:?}", json_data.clone());
+				debug!(target: "hyperspace_ethereum", "____________________________________");
+				debug!(target: "hyperspace_ethereum", "json   sa: {:?}", sa);
+				debug!(target: "hyperspace_ethereum", "____________________________________");
+				debug!(target: "hyperspace_ethereum", "json   sb: {:?}", sb);
+				debug!(target: "hyperspace_ethereum", "____________________________________");
+				debug!(target: "hyperspace_ethereum", "json   sc: {:?}", sc);
+
+				fn get_u256(s0x : &str) -> U256{
+					let s : &'static str = Box::leak(s0x.to_string().into_boxed_str());
+					let s = s.trim_start_matches("0x");
+					let pi_a_0 = U256::from(s);
+					return pi_a_0;
 				}
 
-				//deserialze zk_proof
-				let proof: Proof = serde_json::from_str(&s).unwrap();
+				let pi_a_0 = sa[0].clone();
+				let pi_a_1 = sa[1].clone();
 
-				// for i in proof.pi_a.iter(){
+				let pi_b_0 = sb[0][0].clone();
+				let pi_b_1 = sb[0][1].clone();
+				let pi_b_2 = sb[1][0].clone();
+				let pi_b_3 = sb[1][1].clone();
 
-					
-				// }
-
+				let pi_c_0 = sc[0].clone();
+				let pi_c_1 = sc[1].clone();
 				
+				let pi_a_0 = get_u256(pi_a_0.as_str());
+				let pi_a_1 = get_u256(pi_a_1.as_str());
 
-				let pi_a_0 = proof.pi_a[0].clone();
-				let pi_a_1 = proof.pi_a[1].clone();
+				let pi_b_0 = get_u256(pi_b_0.as_str());
+				let pi_b_1 = get_u256(pi_b_1.as_str());
+				let pi_b_2 = get_u256(pi_b_2.as_str());
+				let pi_b_3 = get_u256(pi_b_3.as_str());
 
-				let pi_b_0 = proof.pi_b[0][0].clone();
-				let pi_b_1 = proof.pi_b[0][1].clone();
-				let pi_b_2 = proof.pi_b[1][0].clone();
-				let pi_b_3 = proof.pi_b[1][1].clone();
+				let pi_c_0 = get_u256(pi_c_0.as_str());
+				let pi_c_1 = get_u256(pi_c_1.as_str());
 
-				let pi_c_0 = proof.pi_c[0].clone();
-				let pi_c_1 = proof.pi_c[1].clone();
-				
-				let pi_a_0 = U256::from_dec_str(pi_a_0.as_str()).expect(format!("Failed to convert pi_a_1 to U256, : {}", pi_a_0).as_str());
-				let pi_a_1 = U256::from_dec_str(pi_a_1.as_str()).expect(format!("Failed to convert pi_a_1 to U256, : {}", pi_a_1).as_str());
-
-				let pi_b_0 = U256::from_dec_str(pi_b_0.as_str()).expect(format!("Failed to convert pi_b_0 to U256, : {}", pi_b_0).as_str());
-				let pi_b_1 = U256::from_dec_str(pi_b_1.as_str()).expect(format!("Failed to convert pi_b_1 to U256, : {}", pi_b_1).as_str());
-				let pi_b_2 = U256::from_dec_str(pi_b_2.as_str()).expect(format!("Failed to convert pi_b_2 to U256, : {}", pi_b_2).as_str());
-				let pi_b_3 = U256::from_dec_str(pi_b_3.as_str()).expect(format!("Failed to convert pi_b_3 to U256, : {}", pi_b_3).as_str());
-
-				let pi_c_0 = U256::from_dec_str(pi_c_0.as_str()).expect(format!("Failed to convert pi_c_0 to U256, : {}", pi_c_0).as_str());
-				let pi_c_1 = U256::from_dec_str(pi_c_1.as_str()).expect(format!("Failed to convert pi_c_1 to U256, : {}", pi_c_1).as_str());
-
-
+				/*
+					uint[2] _pA;
+					uint[2][2] _pB;
+					uint[2] _pC;
+					uint[3] _pubSignals;
+				*/
 
 				let token = EthersToken::Tuple(vec![
 					//should be the same that we use to create client
@@ -1639,12 +1660,7 @@ impl EthereumClient {
 						EthersToken::Uint(1.into()),
 					]),
 				]);
-				/*
-					uint[2] _pA;
-					uint[2][2] _pB;
-					uint[2] _pC;
-					uint[3] _pubSignals;
-				*/
+				
 
 				calls.push(self.yui.update_client_calldata(token).await);
 			} else if msg.type_url == ibc::core::ics03_connection::msgs::conn_open_init::TYPE_URL {
