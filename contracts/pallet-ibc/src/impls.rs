@@ -507,7 +507,7 @@ where
 		key: (PortId, ChannelId, Sequence),
 		ack: Vec<u8>,
 	) -> Result<(), Error<T>> {
-		let channel_id = key.1.to_string().as_bytes().to_vec();
+		let channel_id = key.1.to_string().into_bytes();
 		let port_id = key.0.as_bytes().to_vec();
 		let seq = u64::from(key.2);
 
