@@ -239,7 +239,7 @@ impl<'a, H: HostFunctionsProvider + 'static> ClientKeeper for Context<'a, H> {
 		timestamp: Timestamp,
 	) -> Result<(), Error> {
 		let mut processed_state = ProcessedStates::new(self.storage_mut());
-		processed_state.set_processed_time(height, timestamp.nanoseconds(), &mut Vec::new());
+		processed_state.set_processed_time(height, timestamp.nanoseconds(), "");
 
 		Ok(())
 	}
@@ -251,8 +251,8 @@ impl<'a, H: HostFunctionsProvider + 'static> ClientKeeper for Context<'a, H> {
 		host_height: Height,
 	) -> Result<(), Error> {
 		let mut processed_state = ProcessedStates::new(self.storage_mut());
-		processed_state.set_processed_height(height, host_height.revision_height, &mut Vec::new());
-		processed_state.set_iteration_key(height, &mut Vec::new());
+		processed_state.set_processed_height(height, host_height.revision_height, "");
+		processed_state.set_iteration_key(height, "");
 		Ok(())
 	}
 

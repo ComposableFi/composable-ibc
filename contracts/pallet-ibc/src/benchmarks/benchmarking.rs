@@ -915,7 +915,7 @@ benchmarks! {
 		let timeout = Timeout::Offset { timestamp: Some(1690894363), height: Some(2000) };
 
 		let transfer_params = TransferParams {
-			to:  MultiAddress::Raw("bob".to_string().as_bytes().to_vec()),
+			to:  MultiAddress::Raw("bob".to_string().into_bytes()),
 			source_channel: channel_id.sequence(),
 			timeout,
 		};
@@ -988,7 +988,7 @@ benchmarks! {
 		let mut output = HandlerOutputBuilder::new();
 		let port_id = PortId::transfer();
 		let channel_id = ChannelId::new(0);
-		let channel_ids = vec![channel_id.to_string().as_bytes().to_vec()];
+		let channel_ids = vec![channel_id.to_string().into_bytes()];
 		ChannelIds::<T>::put(channel_ids);
 		let mut handler = IbcModule::<T>::default();
 	}:{
@@ -1003,7 +1003,7 @@ benchmarks! {
 		let mut output = HandlerOutputBuilder::new();
 		let port_id = PortId::transfer();
 		let channel_id = ChannelId::new(0);
-		let channel_ids = vec![channel_id.to_string().as_bytes().to_vec()];
+		let channel_ids = vec![channel_id.to_string().into_bytes()];
 		ChannelIds::<T>::put(channel_ids);
 		let mut handler = IbcModule::<T>::default();
 	}:{
@@ -1351,7 +1351,7 @@ benchmarks! {
 			}
 		}
 
-		let channel_id_bytes = channel_id.to_string().as_bytes().to_vec();
+		let channel_id_bytes = channel_id.to_string().into_bytes();
 		let port_id_bytes = port_id.as_bytes().to_vec();
 
 		let (send_seq_set, _) =

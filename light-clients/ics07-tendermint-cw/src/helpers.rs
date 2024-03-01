@@ -171,12 +171,14 @@ pub fn verify_upgrade_and_update_state<H: HostFunctionsProvider + 'static>(
 pub fn check_substitute_and_update_state<H: HostFunctionsProvider + 'static>(
 	ctx: &mut Context<H>,
 ) -> Result<(ClientState<H>, ConsensusState), Ics02Error> {
-	let mut subject_client_state = ctx.client_state_prefixed(SUBJECT_PREFIX).map_err(|_| {
-		Ics02Error::implementation_specific("subject client state not found".to_string())
-	})?;
-	let substitute_client_state = ctx.client_state_prefixed(SUBSTITUTE_PREFIX).map_err(|_| {
-		Ics02Error::implementation_specific("substitute client state not found".to_string())
-	})?;
+	let mut subject_client_state =
+		ctx.client_state_prefixed(SUBJECT_PREFIX.as_bytes()).map_err(|_| {
+			Ics02Error::implementation_specific("subject client state not found".to_string())
+		})?;
+	let substitute_client_state =
+		ctx.client_state_prefixed(SUBSTITUTE_PREFIX.as_bytes()).map_err(|_| {
+			Ics02Error::implementation_specific("substitute client state not found".to_string())
+		})?;
 
 	if subject_client_state.trust_level != substitute_client_state.trust_level ||
 		subject_client_state.unbonding_period != substitute_client_state.unbonding_period ||
@@ -188,32 +190,22 @@ pub fn check_substitute_and_update_state<H: HostFunctionsProvider + 'static>(
 	}
 
 	let height = substitute_client_state.latest_height();
-	let substitute_consensus_state =
-		ctx.consensus_state_prefixed(height, SUBSTITUTE_PREFIX).map_err(|_| {
+	let substitute_consensus_state = ctx
+		.consensus_state_prefixed(height, SUBSTITUTE_PREFIX.as_bytes())
+		.map_err(|_| {
 			Ics02Error::implementation_specific("substitute consensus state not found".to_string())
 		})?;
 
 	let mut process_states = ProcessedStates::new(ctx.storage_mut());
-	let substitute_processed_time = process_states
-		.get_processed_time(height, &mut SUBSTITUTE_PREFIX.to_vec())
-		.unwrap();
-	let substitute_processed_height = process_states
-		.get_processed_height(height, &mut SUBSTITUTE_PREFIX.to_vec())
-		.unwrap();
-	let substitute_iteration_key = process_states
-		.get_iteration_key(height, &mut SUBSTITUTE_PREFIX.to_vec())
-		.unwrap();
-	process_states.set_processed_time(
-		height,
-		substitute_processed_time,
-		&mut SUBJECT_PREFIX.to_vec(),
-	);
-	process_states.set_processed_height(
-		height,
-		substitute_processed_height,
-		&mut SUBJECT_PREFIX.to_vec(),
-	);
-	process_states.set_iteration_key(substitute_iteration_key, &mut SUBJECT_PREFIX.to_vec());
+	let substitute_processed_time =
+		process_states.get_processed_time(height, SUBSTITUTE_PREFIX).unwrap();
+	let substitute_processed_height =
+		process_states.get_processed_height(height, SUBSTITUTE_PREFIX).unwrap();
+	let substitute_iteration_key =
+		process_states.get_iteration_key(height, SUBSTITUTE_PREFIX).unwrap();
+	process_states.set_processed_time(height, substitute_processed_time, SUBJECT_PREFIX);
+	process_states.set_processed_height(height, substitute_processed_height, SUBJECT_PREFIX);
+	process_states.set_iteration_key(substitute_iteration_key, SUBJECT_PREFIX);
 
 	subject_client_state.latest_height = substitute_client_state.latest_height;
 	subject_client_state.chain_id = substitute_client_state.chain_id;
@@ -231,8 +223,7 @@ pub fn prune_oldest_consensus_state<H: HostFunctionsProvider + 'static>(
 	let mut processed_states = ProcessedStates::new(ctx.storage_mut());
 	if let Some(earliest_height) = processed_states.get_earliest_height(client_state.latest_height)
 	{
-		let processed_time =
-			processed_states.get_processed_time(earliest_height, &mut Vec::new()).unwrap();
+		let processed_time = processed_states.get_processed_time(earliest_height, "").unwrap();
 		let elapsed = Duration::from_nanos(current_time - processed_time);
 		if client_state.expired(elapsed) {
 			processed_states.remove_states_at_height(earliest_height);

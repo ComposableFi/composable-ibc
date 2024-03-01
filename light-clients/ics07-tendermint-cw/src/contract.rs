@@ -238,8 +238,8 @@ fn process_message(
 				.map_err(|e| ContractError::Tendermint(e.to_string()))
 				.and_then(|(cs, cu)| {
 					let height = cs.latest_height();
-					ctx.store_consensus_state_prefixed(height, cu, SUBJECT_PREFIX);
-					ctx.store_client_state_prefixed(cs, SUBJECT_PREFIX, client_id)
+					ctx.store_consensus_state_prefixed(height, cu, SUBJECT_PREFIX.as_bytes());
+					ctx.store_client_state_prefixed(cs, SUBJECT_PREFIX.as_bytes(), client_id)
 						.map_err(|e| ContractError::Tendermint(e.to_string()))?;
 					Ok(to_binary(&ContractResult::success()))
 				}),
