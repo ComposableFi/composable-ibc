@@ -408,6 +408,8 @@ async fn setup_clients() -> (AnyChain, AnyChain, JoinHandle<()>) {
 			max_packets_to_process: 200,
 			client_update_interval_sec: 10,
 		},
+		zk_prover_remote_uri: "http://127.0.0.1:8000".to_string(),
+		zk_prover_allowed_delay_secs: 160,
 	};
 
 	let chain_b = CosmosClient::<()>::new(config_b.clone()).await.unwrap();
@@ -543,21 +545,10 @@ async fn zk_prover_integration_test() {
 	//take third element of the array as a array of strings
 	let s3 = json_data[2].as_array().unwrap().iter().map(|x| x.as_str().unwrap().to_string()).collect::<Vec<_>>();
 
-	// let pa_1 = get_number_from_hex_string(s1[0].clone());
-	// assert_eq!(pa_1, U256::from("8863094613666630156452150948347003576288661784136564298813652772034157843685"));
-
-
 	let proof = zk_prover.poll_proof(&new_reqeust.height.to_string(), new_reqeust.height).unwrap();
 	assert!(proof.is_none());
 	return;
 }
-
-// fn get_number_from_hex_string(s: String) -> U256 {
-// 	let xxx = s.replace("0x", "");
-// 	let f : &'static str = xxx.as_str();
-// 	let x = U256::from();
-// 	x
-// }
 
 #[derive(Debug, Deserialize)]
 struct DataStructure(Vec<Vec<DataItem>>);
@@ -593,17 +584,11 @@ async fn test_de(){
     println!("{:?}", s2);
 	println!();
 	println!("{:?}", s3);
-	//convert hex string to number
-	// Hexadecimal to Decimal converter
-	//0x139855728d26774998f6a74260935dbf2b41a2e1e12ff0ef546605ac921d94e5
 	let s = "0x139855728d26774998f6a74260935dbf2b41a2e1e12ff0ef546605ac921d94e5";
 	let s = s.trim_start_matches("0x");
-	//it is a u256 from ethereum
-	// let s = u128::from_str_radix(s, 16).unwrap();
 	let x = U256::from(s);
 	println!("s: {:?}", s);
 	println!("x: {:?}", x);
-
 	assert_eq!(x.to_string(), "8863094613666630156452150948347003576288661784136564298813652772034157843685");
 	
 }
@@ -616,8 +601,6 @@ async fn decode_yui_error(){
 	let error = hex::decode(error).unwrap();
 	let s = String::from_utf8_lossy(&error);
 	println!("s: {:?}", s);
-	// let error = ethabi::decode(&[ParamType::String], &error).unwrap();
-	// println!("error: {:?}", error);
 }
 
 #[tokio::test(flavor = "multi_thread", worker_threads = 10)]

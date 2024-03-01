@@ -58,7 +58,7 @@ use ics23::commitment_proof::Proof;
 use icsxx_ethereum::{
 	abi::EthereumClientAbi::EthereumClientPrimitivesConsensusStateProof, utils::keccak256,
 };
-use log::{error, info};
+use log::{error, info, debug};
 use pallet_ibc::light_clients::{
 	AnyClientMessage, AnyClientState, AnyConsensusState, HostFunctionsManager,
 };
@@ -1541,36 +1541,34 @@ impl EthereumClient {
 					cs.latest_height.revision_height = header.signed_header.header.height.value();
 				}
 
-				assert!(header.zk_proof.len() > 0, "zk_proof is missing");
-				assert!(header.zk_bitmask > 0, "zk_proof is missing");
+				if header.zk_proof.len() <= 0 {
+					let error_message = format!("zk_proof is missing for update_client for client_id: {:?} height: {:?}", client_id, header.height());
+					error!(target: "hyperspace_ethereum", "{}", error_message);
+					return Err(ClientError::Other(error_message));
+				}
+
+				if header.zk_bitmask <= 0 {
+					let error_message = format!("zk_bitmask is missing for update_client for client_id: {:?} height: {:?}", client_id, header.height());
+					error!(target: "hyperspace_ethereum", "{}", error_message);
+					return Err(ClientError::Other(error_message));
+				}
 
 				//get abi token to update client
 				let tm_header_abi_token = tm_header_abi_token(header)?;
 				let tm_header_bytes = ethers_encode(&[tm_header_abi_token]);
 
-				info!(target: "hyperspace_ethereum", "Submitting header.signed_header.header to ethereum: {:?}", header.signed_header.header);
-
-				error!(target: "hyperspace_ethereum", "client update msg ____________________________________________");
-				error!(target: "hyperspace_ethereum", "Submitting client_update to ethereum: {:?}", header.height());
-
 				let zk_proof = header.zk_proof.clone();
-				//vec bytes convert to string
-				let s = String::from_utf8(zk_proof).expect("Invalid UTF-8");
-
-				println!("zk_proof: {:?}", s);
-
-				#[derive(Debug, Clone, Serialize, Deserialize)]
-				struct Proof{
-					pub pi_a: Vec<String>, // 3 elements 
-					pub pi_b: Vec<Vec<String>>, // 3 array with 2 elements
-					pub pi_c: Vec<String>,  // 3 elements
-				}
+				let s = String::from_utf8(zk_proof).map_err(|e| {
+					let error_message = format!("failed to convert zk_proof into string: {:?} for client_id: {:?} height: {:?}", e, client_id, header.height());
+					error!(target: "hyperspace_ethereum", "{}", error_message);
+					ClientError::Other(error_message)
+				})?;
 
 				let s = format!(" [{}]", s);
 
 
+				//todo. add map error here once i get a new zk curctui strucutre with a data from remote ZK api service
 				let json_data: serde_json::Value = serde_json::from_str(s.as_str()).unwrap();
-				println!("json_data: {:?}", json_data);
 				//take a first element of the array as a array of strings
 				let sa = json_data[0].as_array().unwrap().iter().map(|x| x.as_str().unwrap().to_string()).collect::<Vec<_>>();
 				//take second element of the array as a array of arrays of strings
@@ -1578,13 +1576,13 @@ impl EthereumClient {
 				//take third element of the array as a array of strings
 				let sc = json_data[2].as_array().unwrap().iter().map(|x| x.as_str().unwrap().to_string()).collect::<Vec<_>>();
 
-				error!(target: "hyperspace_ethereum", "json_data: {:?}", json_data.clone());
-				error!(target: "hyperspace_ethereum", "____________________________________");
-				error!(target: "hyperspace_ethereum", "json   sa: {:?}", sa);
-				error!(target: "hyperspace_ethereum", "____________________________________");
-				error!(target: "hyperspace_ethereum", "json   sb: {:?}", sb);
-				error!(target: "hyperspace_ethereum", "____________________________________");
-				error!(target: "hyperspace_ethereum", "json   sc: {:?}", sc);
+				debug!(target: "hyperspace_ethereum", "json_data: {:?}", json_data.clone());
+				debug!(target: "hyperspace_ethereum", "____________________________________");
+				debug!(target: "hyperspace_ethereum", "json   sa: {:?}", sa);
+				debug!(target: "hyperspace_ethereum", "____________________________________");
+				debug!(target: "hyperspace_ethereum", "json   sb: {:?}", sb);
+				debug!(target: "hyperspace_ethereum", "____________________________________");
+				debug!(target: "hyperspace_ethereum", "json   sc: {:?}", sc);
 
 				fn get_u256(s0x : &str) -> U256{
 					let s : &'static str = Box::leak(s0x.to_string().into_boxed_str());
@@ -1615,7 +1613,12 @@ impl EthereumClient {
 				let pi_c_0 = get_u256(pi_c_0.as_str());
 				let pi_c_1 = get_u256(pi_c_1.as_str());
 
-
+				/*
+					uint[2] _pA;
+					uint[2][2] _pB;
+					uint[2] _pC;
+					uint[3] _pubSignals;
+				*/
 
 				let token = EthersToken::Tuple(vec![
 					//should be the same that we use to create client
@@ -1657,12 +1660,7 @@ impl EthereumClient {
 						EthersToken::Uint(1.into()),
 					]),
 				]);
-				/*
-					uint[2] _pA;
-					uint[2][2] _pB;
-					uint[2] _pC;
-					uint[3] _pubSignals;
-				*/
+				
 
 				calls.push(self.yui.update_client_calldata(token).await);
 			} else if msg.type_url == ibc::core::ics03_connection::msgs::conn_open_init::TYPE_URL {
