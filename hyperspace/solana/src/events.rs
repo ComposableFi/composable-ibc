@@ -32,7 +32,7 @@ use ibc::{
 
 pub fn convert_new_event_to_old(
 	event: ibc_new::core::handler::types::events::IbcEvent,
-	height: Height
+	height: Height,
 ) -> Option<IbcEvent> {
 	match event {
 		ibc_new::core::handler::types::events::IbcEvent::CreateClient(e) => {
@@ -107,14 +107,12 @@ pub fn convert_new_event_to_old(
 		ibc_new::core::handler::types::events::IbcEvent::OpenTryConnection(e) => {
 			let eve = ConnOpenTry(ConnAttributes {
 				height,
-				client_id: ClientId::from_str(e.client_id_on_a().as_str()).unwrap(),
+				client_id: ClientId::from_str(e.client_id_on_b().as_str()).unwrap(),
 				counterparty_client_id: ClientId::from_str(e.client_id_on_b().as_str()).unwrap(),
-				counterparty_connection_id: Some(
-					ConnectionId::from_str(e.conn_id_on_b().as_str()).unwrap(),
-				),
-				connection_id: e
+				counterparty_connection_id: e
 					.conn_id_on_a()
-					.and_then(|conn| Some(ConnectionId::from_str(conn.as_str()).unwrap())),
+					.and_then(|conn_id| Some(ConnectionId::from_str(conn_id.clone().as_str()).unwrap())),
+				connection_id: Some(ConnectionId::from_str(e.conn_id_on_b().clone().as_str()).unwrap()),
 			});
 			Some(IbcEvent::OpenTryConnection(eve))
 		},

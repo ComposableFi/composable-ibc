@@ -177,7 +177,7 @@ where
 		}
 	} else {
 		// Default to 200 blocks and 1 hour offset respectively
-		(200, 60 * 60)
+		(2000, 60 * 60)
 	};
 
 	let (mut timeout_height, timestamp) = chain_b

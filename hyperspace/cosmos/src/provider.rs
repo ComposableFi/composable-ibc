@@ -661,7 +661,7 @@ where
 		port_id: PortId,
 		seqs: Vec<u64>,
 	) -> Result<Vec<PacketInfo>, Self::Error> {
-		log::debug!(
+		log::info!(
 			target: "hyperspace_cosmos",
 			"query_send_packets: channel_id: {}, port_id: {}, seqs: {:?}", channel_id, port_id, seqs
 		);

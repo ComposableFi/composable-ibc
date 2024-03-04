@@ -291,8 +291,8 @@ async fn solana_to_cosmos_ibc_messaging_full_integration_test() {
 }
 
 // #[tokio::test]
-// #[tokio::test(flavor = "multi_thread", worker_threads = 5)]
-// #[ignore]
+#[tokio::test(flavor = "multi_thread", worker_threads = 5)]
+#[ignore]
 async fn cosmos_to_solana_ibc_messaging_full_integration_test() {
 	logging::setup_logging();
 
@@ -311,7 +311,7 @@ async fn cosmos_to_solana_ibc_messaging_full_integration_test() {
 	chain_b.set_channel_whitelist(vec![(channel_b, PortId::transfer())].into_iter().collect());
 
 	let asset_id_a = AnyAssetId::Cosmos("stake".to_string());
-	let asset_id_b = AnyAssetId::Solana(2.to_string());
+	let asset_id_b = AnyAssetId::Solana("33WVSef9zaw49KbNdPGTmACVRnAXzN3o1fsqbUrLp2mh".to_string());
 
 	// Run tests sequentially
 

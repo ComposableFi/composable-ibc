@@ -58,18 +58,21 @@ ibc-rpc = { path = "../../contracts/pallet-ibc/rpc" }
 pallet-ibc = { path = "../../contracts/pallet-ibc", features = ["testing"]}
 
 # Trie
-lib = { git = "https://github.com/ComposableFi/emulated-light-client.git" }
+# lib = { git = "https://github.com/ComposableFi/emulated-light-client.git" }
+lib = { path = "../../../emulated-light-client/common/lib" }
 memory = { git = "https://github.com/ComposableFi/emulated-light-client.git" }
 sealable-trie = { git = "https://github.com/ComposableFi/emulated-light-client.git", features = ["borsh"] }
 stdx = { git = "https://github.com/ComposableFi/emulated-light-client.git" }
 solana-trie = { git = "https://github.com/ComposableFi/emulated-light-client.git" }
-trie-ids = { git = "https://github.com/ComposableFi/emulated-light-client.git", features = ["borsh"] }
-# trie-ids = { path = "../../../emulated-light-client/common/trie-ids", features = ["borsh"] }
+# trie-ids = { git = "https://github.com/ComposableFi/emulated-light-client.git", features = ["borsh"] }
+trie-ids = { path = "../../../emulated-light-client/common/trie-ids", features = ["borsh"] }
 
 #Contract
-solana-ibc = { git = "https://github.com/ComposableFi/emulated-light-client.git", features = ["mocks", "no-entrypoint"]}
-solana-write-account = { git = "https://github.com/ComposableFi/emulated-light-client.git", features = ["no-entrypoint"] }
-# solana-ibc = { path = "../../../emulated-light-client/solana/solana-ibc/programs/solana-ibc", features = ["mocks"] }
+# solana-ibc = { git = "https://github.com/ComposableFi/emulated-light-client.git", features = ["mocks", "no-entrypoint"]}
+# solana-write-account = { git = "https://github.com/ComposableFi/emulated-light-client.git", features = ["no-entrypoint"] }
+solana-ibc = { path = "../../../emulated-light-client/solana/solana-ibc/programs/solana-ibc", features = ["mocks", "no-entrypoint"] }
+solana-write-account = { path = "../../../emulated-light-client/solana/write-account", features = ["no-entrypoint"] }
+solana-ed25519 = { path = "../../../emulated-light-client/solana/ed25519" }
 
 tracing = "0.1.36"
 

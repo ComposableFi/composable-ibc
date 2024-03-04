@@ -152,6 +152,7 @@ pub async fn parse_events(
 			},
 			IbcEvent::OpenTryConnection(open_try) => {
 				if let Some(connection_id) = open_try.connection_id() {
+					log::info!("THis is open try {:?} and connection id {:?}", open_try, connection_id);
 					let connection_id = connection_id.clone();
 					// Get connection end with proof
 					let connection_response = source
@@ -453,8 +454,10 @@ pub async fn parse_events(
 			IbcEvent::SendPacket(send_packet) => {
 				#[cfg(feature = "testing")]
 				if !packet_relay_status() {
+					log::info!("Skipping packet relay status");
 					continue
 				}
+				log::info!("Found send packet {:?}", send_packet);
 				// can we send this packet?
 				// 1. query the connection and get the connection delay.
 				// 2. if none, send message immediately
@@ -484,7 +487,7 @@ pub async fn parse_events(
 					})?)?;
 				if !connection_end.delay_period().is_zero() {
 					// We can't send this packet immediately because of connection delays
-					log::debug!(
+					log::info!(
 						target: "hyperspace",
 						"Skipping packet relay because of connection delays {:?}",
 						connection_end.delay_period()
@@ -495,7 +498,7 @@ pub async fn parse_events(
 				let packet = send_packet.packet;
 
 				if packet.timeout_height.is_zero() && packet.timeout_timestamp.nanoseconds() == 0 {
-					log::warn!(
+					log::info!(
 						target: "hyperspace",
 						"Skipping packet relay because packet timeout is zero: {}",
 						packet.sequence
@@ -523,7 +526,7 @@ pub async fn parse_events(
 				let value = msg.encode_vec()?;
 				let msg = Any { value, type_url: msg.type_url() };
 				messages.push(msg);
-				log::debug!(target: "hyperspace", "Sending packet {:?}", packet);
+				log::info!(target: "hyperspace", "Sending packet {:?}", packet);
 			},
 			IbcEvent::WriteAcknowledgement(write_ack) => {
 				let port_id = &write_ack.packet.destination_port.clone();

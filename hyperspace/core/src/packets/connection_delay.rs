@@ -25,7 +25,7 @@ pub fn has_delay_elapsed(
 	delay_period_time: Duration,
 	delay_period_blocks: u64,
 ) -> Result<bool, anyhow::Error> {
-	log::trace!(target: "hyperspace",
+	log::info!(target: "hyperspace",
 		"Checking if delay has elapsed: current_time: {}, current_height: {}, client_update_time: {}, client_update_height: {}, delay_period_time: {:?}, delay_period_blocks: {}",
 		current_time, current_height, client_update_time, client_update_height, delay_period_time, delay_period_blocks
 	);

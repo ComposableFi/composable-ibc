@@ -194,7 +194,7 @@ pub async fn query_ready_and_timed_out_packets(
 		.take(max_packets_to_process)
 		.collect::<Vec<_>>();
 
-		log::debug!(target: "hyperspace", "Found {} undelivered packets for {:?}/{:?} for {seqs:?}", seqs.len(), channel_id, port_id.clone());
+		log::info!(target: "hyperspace", "Found {} undelivered packets for {:?}/{:?} for {seqs:?}", seqs.len(), channel_id, port_id.clone());
 
 		let mut send_packets = source.query_send_packets(channel_id, port_id.clone(), seqs).await?;
 		log::trace!(target: "hyperspace", "SendPackets count before deduplication: {}", send_packets.len());
@@ -251,7 +251,7 @@ pub async fn query_ready_and_timed_out_packets(
 						{
 							proof_height
 						} else {
-							log::trace!(target: "hyperspace", "Skipping packet as no timeout proof height could be found: {:?}", packet);
+							log::info!(target: "hyperspace", "Skipping packet as no timeout proof height could be found: {:?}", packet);
 							return Ok(None)
 						};
 
@@ -299,6 +299,7 @@ pub async fn query_ready_and_timed_out_packets(
 					#[cfg(feature = "testing")]
 					// If packet relay status is paused skip
 					if !packet_relay_status() {
+						log::info!("skipping due to Packet relay status");
 						return Ok(None)
 					}
 

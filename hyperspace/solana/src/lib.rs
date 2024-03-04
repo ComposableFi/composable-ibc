@@ -1,7 +1,6 @@
 #![feature(more_qualified_paths)]
 extern crate alloc;
 
-use alloc::rc::Rc;
 use anchor_client::solana_sdk::{
 	compute_budget::ComputeBudgetInstruction,
 	ed25519_instruction::SIGNATURE_OFFSETS_SERIALIZED_SIZE, instruction::Instruction,
@@ -12,32 +11,32 @@ use base64::Engine;
 use client_state::convert_new_client_state_to_old;
 use consensus_state::convert_new_consensus_state_to_old;
 use core::{pin::Pin, str::FromStr, time::Duration};
-use futures::future::join_all;
 use ibc_new::core::{
-	channel::types::msgs::PacketMsg, client::types::msgs::ClientMsg, handler::types::msgs::MsgEnvelope, host::types::{identifiers::ClientId as ClientIdNew, path::ClientConsensusStatePath}
+	channel::types::msgs::PacketMsg,
+	client::types::msgs::ClientMsg,
+	handler::types::msgs::MsgEnvelope,
+	host::types::identifiers::ClientId as ClientIdNew,
 };
-use ibc_proto_new::cosmos::crypto::keyring::v1::record::Local;
 use ics07_tendermint::{
-	client_message::{ClientMessage, Header},
+	client_message::ClientMessage,
 	client_state::ClientState as TmClientState,
 	consensus_state::ConsensusState as TmConsensusState,
 };
 use lib::hash::CryptoHash;
 use msgs::convert_old_msgs_to_new;
-use prost::Message;
 use serde::{Deserialize, Serialize};
-use solana_transaction_status::{EncodedConfirmedTransactionWithStatusMeta, UiTransactionEncoding};
+use solana_transaction_status::UiTransactionEncoding;
 use std::ops::Deref;
 use tendermint::{Hash, Time};
 use tendermint_light_client_verifier_new::types::{Commit, TrustedBlockState, UntrustedBlockState};
 use tendermint_proto::Protobuf;
-use tokio::{sync::mpsc::unbounded_channel, task::JoinSet};
+use tokio::sync::mpsc::unbounded_channel;
 
 use anchor_client::{
 	solana_client::{
 		nonblocking::rpc_client::RpcClient as AsyncRpcClient,
 		pubsub_client::PubsubClient,
-		rpc_client::{GetConfirmedSignaturesForAddress2Config, RpcClient},
+		rpc_client::GetConfirmedSignaturesForAddress2Config,
 		rpc_config::{
 			RpcBlockSubscribeConfig, RpcBlockSubscribeFilter, RpcSendTransactionConfig,
 			RpcTransactionLogsConfig, RpcTransactionLogsFilter,
@@ -86,31 +85,28 @@ use ibc_proto::{
 	},
 };
 use pallet_ibc::light_clients::{
-	AnyClientMessage, AnyClientState, AnyConsensusState, HostFunctionsManager,
+	AnyClientMessage, AnyClientState, AnyConsensusState
 };
 use primitives::{
 	mock::LocalClientTypes, Chain, CommonClientConfig, CommonClientState, IbcProvider, KeyProvider,
 	LightClientSync, MisbehaviourHandler, UndeliveredType, UpdateType,
 };
 use std::{
-	collections::{BTreeMap, HashSet},
+	collections::HashSet,
 	result::Result,
-	sync::{Arc, Mutex, RwLock},
+	sync::{Arc, Mutex},
 	thread::sleep,
 };
-use tendermint_rpc::{endpoint::consensus_state::ValidatorInfo, Url};
-use tokio_stream::{Stream, StreamExt};
+use tendermint_rpc::Url;
+use tokio_stream::Stream;
 
-// use crate::ibc_storage::{AnyConsensusState, Serialised};
 use solana_ibc::{
 	chain::ChainData,
 	ix_data_account,
 	storage::{PrivateStorage, SequenceKind, Serialised},
 };
-// use solana_trie::trie;
 use tendermint_new::{
 	block::CommitSig,
-	trust_threshold::TrustThreshold as _,
 	vote::{SignedVote, ValidatorIndex, Vote},
 };
 use trie_ids::{ClientIdx, ConnectionIdx, PortChannelPK, Tag, TrieKey};
@@ -125,11 +121,6 @@ mod events;
 mod msgs;
 #[cfg(feature = "testing")]
 mod test_provider;
-// mod ibc_storage;
-// mod ids;
-// mod instructions;
-// mod trie;
-// mod trie_key;
 
 const SOLANA_IBC_STORAGE_SEED: &[u8] = b"private";
 const TRIE_SEED: &[u8] = b"trie";
@@ -146,11 +137,9 @@ pub enum DeliverIxType {
 		client_id: ClientIdNew,
 	},
 	PacketTransfer {
-		token_mint: Pubkey,
-		receive_token_account: Pubkey,
 		denom: String,
-		port_id: String,
-		channel_id: String,
+		port_id: ibc_new::core::host::types::identifiers::PortId,
+		channel_id: ibc_new::core::host::types::identifiers::ChannelId,
 	},
 	Normal,
 }
@@ -387,11 +376,12 @@ impl SolanaClient {
 					.unwrap();
 					let trusted_state = {
 						let storage = self.get_ibc_storage().await;
+						log::info!("This is client ID {:?}", client_id);
 						let client_store = storage
 							.clients
 							.iter()
 							.find(|&client| client.client_id.as_str() == client_id.as_str())
-							.ok_or("Client not found with the given client id".to_owned())
+							.ok_or("Client not found with the given client id while sending update client message".to_owned())
 							.unwrap();
 						let serialized_consensus_state = client_store
 							.consensus_states
@@ -561,17 +551,68 @@ deserialize consensus state"
 							ibc::prelude::Err("Error".to_owned())
 						})
 				},
-				DeliverIxType::PacketTransfer {
-					token_mint,
-					receive_token_account,
-					ref denom,
-					ref port_id,
-					ref channel_id,
-				} => {
+				DeliverIxType::PacketTransfer { ref denom, ref port_id, ref channel_id } => {
 					let mint_authority = self.get_mint_auth_key();
 					let hashed_denom = CryptoHash::digest(&denom.as_bytes());
-					let seeds = [port_id.as_bytes(), channel_id.as_bytes(), hashed_denom.as_ref()];
-					let escrow_account = Pubkey::find_program_address(&seeds, &self.program_id).0;
+					let escrow_seeds =
+						[port_id.as_bytes(), channel_id.as_bytes(), hashed_denom.as_ref()];
+					let escrow_account =
+						Pubkey::find_program_address(&escrow_seeds, &self.program_id).0;
+					let token_mint_seeds = [hashed_denom.as_ref()];
+					let token_mint =
+						Pubkey::find_program_address(&token_mint_seeds, &self.program_id).0;
+					// Check if token exists
+					let token_mint_info = rpc.get_token_supply(&token_mint).await;
+					if token_mint_info.is_err() {
+						// Create token Mint token since token doesnt exist
+						let tx = program
+							.request()
+							.instruction(ComputeBudgetInstruction::set_compute_unit_limit(
+								1_000_000u32,
+							))
+							.instruction(ComputeBudgetInstruction::set_compute_unit_price(500000))
+							.accounts(solana_ibc::accounts::InitMint {
+								sender: authority.pubkey(),
+								mint_authority,
+								token_mint,
+								associated_token_program: anchor_spl::associated_token::ID,
+								token_program: anchor_spl::token::ID,
+								system_program: system_program::ID,
+							})
+							.args(solana_ibc::instruction::InitMint {
+								port_id: port_id.clone(),
+								channel_id_on_b: channel_id.clone(),
+								hashed_base_denom: hashed_denom.clone(),
+							})
+							.signer(&*authority)
+							.send_with_spinner_and_config(RpcSendTransactionConfig {
+								skip_preflight: true,
+								..RpcSendTransactionConfig::default()
+							})
+							.await
+							.or_else(|e| {
+								println!("This is error {:?}", e);
+								status = false;
+								ibc::prelude::Err("Error".to_owned())
+							});
+						if status {
+							let blockhash = rpc.get_latest_blockhash().await.unwrap();
+							// Wait for finalizing the transaction
+							let _ = rpc
+								.confirm_transaction_with_spinner(
+									&tx.clone().unwrap(),
+									&blockhash,
+									CommitmentConfig::finalized(),
+								)
+								.await
+								.unwrap();
+						}
+					}
+					if !status {
+						continue
+					}
+					let receiver_token_account =
+						get_associated_token_address(&authority.pubkey(), &token_mint);
 					program
 						.request()
 						.instruction(ComputeBudgetInstruction::set_compute_unit_limit(1_000_000u32))
@@ -580,15 +621,15 @@ deserialize consensus state"
 						.accounts(solana_ibc::ix_data_account::Accounts::new(
 							solana_ibc::accounts::Deliver {
 								sender: authority.pubkey(),
-								receiver: None,
+								receiver: Some(authority.pubkey()),
 								storage: solana_ibc_storage_key,
 								trie: trie_key,
 								chain: chain_key,
 								system_program: system_program::ID,
 								mint_authority: Some(mint_authority),
 								token_mint: Some(token_mint),
-								escrow_account: Some(escrow_account),
-								receiver_token_account: Some(receive_token_account),
+								escrow_account: None,
+								receiver_token_account: Some(receiver_token_account),
 								associated_token_program: Some(anchor_spl::associated_token::ID),
 								token_program: Some(anchor_spl::token::ID),
 							},
@@ -814,7 +855,7 @@ impl IbcProvider for SolanaClient {
 		let client_state_response = latest_cp_client_state
 			.client_state
 			.ok_or_else(|| Error::Custom("counterparty returned empty client state".to_string()))?;
-		log::info!("This is the type url {:?}", client_state_response.type_url);
+		log::info!("This is the type url in solana {:?}", client_state_response.type_url);
 		let AnyClientState::Tendermint(client_state) =
 			AnyClientState::decode_recursive(client_state_response, |c| {
 				matches!(c, AnyClientState::Tendermint(_))
@@ -891,7 +932,6 @@ impl IbcProvider for SolanaClient {
 					.unwrap();
 				(
 					Any { type_url: msg.type_url(), value },
-					// Any { type_url: Default::default(), value: Default::default() },
 					Height::new(1, latest_height.revision_height),
 					event.1.clone(),
 					if event.1.len() > 0 { UpdateType::Mandatory } else { UpdateType::Optional },
@@ -905,7 +945,6 @@ impl IbcProvider for SolanaClient {
 
 	async fn ibc_events(&self) -> Pin<Box<dyn Stream<Item = IbcEvent> + Send + 'static>> {
 		let (tx, rx) = unbounded_channel();
-		let cluster = Cluster::from_str(&self.rpc_url).unwrap();
 		let ws_url = self.ws_url.clone();
 		tokio::task::spawn_blocking(move || {
 			let (_logs_subscription, receiver) = PubsubClient::logs_subscribe(
@@ -919,32 +958,25 @@ impl IbcProvider for SolanaClient {
 				match receiver.recv() {
 					Ok(logs) => {
 						let events = get_events_from_logs(logs.value.logs);
-						log::info!("These are events {:?}", events);
+						log::info!("These are events {:?} ", events);
+						log::info!("Total {:?} events", events.len());
+						let mut broke = false;
 						events.iter().for_each(|event| {
 							log::info!("Came into ibc events");
 							let height = Height::new(1, 100);
 							let converted_event =
 								events::convert_new_event_to_old(event.clone(), height);
 							if let Some(event) = converted_event {
-								// let res = 
-								tx.send(event.clone()).unwrap();
-								// if let Err(e) = res {
-								// 	log::info!("This is error while fetching event {:?}", event);
-								// 	log::info!("Sleeping for few seconds");
-								// 	sleep(Duration::from_secs(2));
-								// 	let (tx, mut rex) = unbounded_channel();
-								// 	rx = rex;
-								// 	// let (_logs_subscription, rec) = PubsubClient::logs_subscribe(
-								// 	// 	&ws_url,
-								// 	// 	RpcTransactionLogsFilter::Mentions(vec![solana_ibc::ID.to_string()]),
-								// 	// 	RpcTransactionLogsConfig { commitment: Some(CommitmentConfig::processed()) },
-								// 	// )
-								// 	// .unwrap();
-								// 	// receiver = rec;
-								// 	log::info!("Got a new receiver");
-								// }
+								log::info!("Sending message");
+								tx.send(event.clone()).unwrap_or_else(|_| {
+									log::info!("Broke");
+									broke = true;
+								});
 							}
 						});
+						if broke {
+							break
+						}
 					},
 					Err(err) => {
 						panic!("{}", format!("Disconnected: {err}"));
@@ -952,7 +984,6 @@ impl IbcProvider for SolanaClient {
 				}
 			}
 		});
-
 		let streams = tokio_stream::wrappers::UnboundedReceiverStream::new(rx);
 		Box::pin(streams)
 	}
@@ -985,7 +1016,10 @@ impl IbcProvider for SolanaClient {
 			.clients
 			.iter()
 			.find(|&client| client.client_id.as_str() == client_id.as_str())
-			.ok_or("Client not found with the given client id".to_owned())?;
+			.ok_or(
+				"Client not found with the given client id while querying client consensus"
+					.to_owned(),
+			)?;
 		let serialized_consensus_state = client_store
 			.consensus_states
 			.get(
@@ -1011,7 +1045,6 @@ deserialize consensus state"
 		})
 	}
 
-	// WIP
 	async fn query_client_state(
 		&self,
 		at: Height,
@@ -1032,7 +1065,9 @@ deserialize consensus state"
 			.clients
 			.iter()
 			.find(|&client| client.client_id.as_str() == client_id.as_str())
-			.ok_or("Client not found with the given client id".to_owned())?;
+			.ok_or(
+				"Client not found with the given client id while querying client state".to_owned(),
+			)?;
 		let serialized_client_state = &client_store.client_state;
 		let client_state = serialized_client_state
 			.get()
@@ -1064,10 +1099,12 @@ deserialize client state"
 				.unwrap(),
 		)
 		.unwrap();
+		log::info!("This is connection ID {:?} and index {:?} while querying connection end", connection_id, connection_idx);
 		let connection_end_trie_key = TrieKey::for_connection(connection_idx);
 		let (_, connection_end_proof) = trie
 			.prove(&connection_end_trie_key)
 			.map_err(|_| Error::Custom("value is sealed and cannot be fetched".to_owned()))?;
+		log::info!("This is serialized connection {:?}", storage.connections);
 		let serialized_connection_end =
 			storage.connections.get(usize::from(connection_idx)).ok_or(
 				"Connection not found with the given
@@ -1328,7 +1365,7 @@ deserialize client state"
 			)
 		})?;
 		Ok((
-			Height::new(1, height),
+			Height::new(1, slot),
 			Timestamp::from_nanoseconds((timestamp * 10_i64.pow(9)).try_into().unwrap()).unwrap(),
 		))
 	}
@@ -1757,7 +1794,7 @@ deserialize client state"
 			.clients
 			.iter()
 			.find(|&client| client.client_id.as_str() == client_id.as_str())
-			.ok_or("Client not found with the given client id".to_owned())?;
+			.ok_or("Client not found with the given client id while querying client update time and height".to_owned())?;
 		let inner_client_height = ibc_new::core::client::types::Height::new(
 			client_height.revision_number,
 			client_height.revision_height,
@@ -1781,7 +1818,7 @@ deserialize client state"
 			Height {
 				revision_height: u64::from(height),
 				// TODO: Use epoch
-				revision_number: u64::from(height),
+				revision_number: 1_u64,
 			},
 			Timestamp::from_nanoseconds(u64::from(timestamp)).unwrap(),
 		))
@@ -2305,7 +2342,7 @@ impl Chain for SolanaClient {
 					rpc.send_and_confirm_transaction_with_spinner(&transaction).await.unwrap();
 				println!("  Signature {sig}");
 			}
-			let (write_account, write_account_bump) = chunks.into_account();
+			// let (write_account, write_account_bump) = chunks.into_account();
 			if matches!(message, MsgEnvelope::Client(ClientMsg::UpdateClient(_))) {
 				match message {
 					MsgEnvelope::Client(msg) => match msg {
@@ -2329,26 +2366,28 @@ impl Chain for SolanaClient {
 				log::info!("----------------------------");
 				log::info!("Inside Recv");
 				log::info!("----------------------------");
-				// 	match message {
-				// 		MsgEnvelope::Packet(msg) => match msg {
-				// 			PacketMsg::Recv(e) => {
-				// 				signature = self
-				// 					.send_deliver(
-				// 						DeliverIxType::PacketTransfer {
-        //     token_mint: ,
-        //     receive_token_account: todo!(),
-        //     denom: todo!(),
-        //     port_id: e.packet.port_id_on_a,
-        //     channel_id: e.packet.channel_id_on_a,
-        // },
-				// 						chunk_account,
-				// 						max_tries,
-				// 					)
-				// 					.await?;
-				// 			},
-				// 			_ => panic!(""),
-				// 		},
-				// 		_ => panic!(""),
+				match message {
+					MsgEnvelope::Packet(msg) => match msg {
+						PacketMsg::Recv(e) => {
+							// let denom: ibc_new::apps::transfer::types::packet::PacketData
+							let packet_data: ibc_new::apps::transfer::types::packet::PacketData =
+								serde_json::from_slice(&e.packet.data).unwrap();
+							signature = self
+								.send_deliver(
+									DeliverIxType::PacketTransfer {
+										denom: packet_data.token.denom.to_string(),
+										port_id: e.packet.port_id_on_a,
+										channel_id: e.packet.chan_id_on_a,
+									},
+									chunk_account,
+									max_tries,
+								)
+								.await?;
+						},
+						_ => panic!(""),
+					},
+					_ => panic!(""),
+				}
 			} else {
 				signature =
 					self.send_deliver(DeliverIxType::Normal, chunk_account, max_tries).await?;
@@ -2560,7 +2599,7 @@ pub fn test_state() {
 #[tokio::test]
 // #[test]
 pub async fn test_storage_deserialization() {
-	println!("How is this test, do you like it?");
+	use tokio_stream::StreamExt;
 	let authority = Arc::new(Keypair::new());
 	let cluster = Cluster::from_str("http://192.168.0.101:8899").unwrap();
 	let client =
