@@ -77,7 +77,6 @@ impl ZKProver {
 			.into_string()?;
 
         let resp: ResponseProofRequest = serde_json::from_str(&resp)?;
-        println!("resp: {:?}", resp);
 
 		// TOOD: handle some edge cases
 		match resp.status.as_str() {
