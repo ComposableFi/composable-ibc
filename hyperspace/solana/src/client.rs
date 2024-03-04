@@ -22,7 +22,9 @@ use ibc::{
 	},
 };
 use ibc_new::{
-	apps::transfer::types::{is_receiver_chain_source, Coin, PrefixedDenom, TracePrefix},
+	apps::transfer::types::{
+		is_receiver_chain_source, is_sender_chain_source, Coin, PrefixedDenom, TracePrefix,
+	},
 	core::host::types::identifiers::ClientId as ClientIdNew,
 };
 use lib::hash::CryptoHash;
@@ -234,7 +236,7 @@ impl SolanaClient {
 		anchor_client.program(self.program_id).unwrap()
 	}
 
-  #[allow(dead_code)]
+	#[allow(dead_code)]
 	pub fn new(config: SolanaClientConfig) -> Result<Self, Error> {
 		Ok(Self {
 			name: config.name,
@@ -653,28 +655,39 @@ deserialize consensus state"
 			)
 			.unwrap(),
 		};
-		let denom = msg.token.denom.base_denom.to_string();
-		let hashed_denom = CryptoHash::digest(denom.as_bytes());
-		let split_denom: Vec<&str> = denom.as_str().split('/').collect();
-		let split_denom = split_denom.last().unwrap();
-		let token_mint = Pubkey::from_str(split_denom).unwrap();
+		let token = ibc_new::apps::transfer::types::PrefixedCoin {
+			denom: prefixed_denom,
+			amount: ibc_new::apps::transfer::types::Amount::from(msg.token.amount.as_u256().0),
+		};
+		let hashed_denom = CryptoHash::digest(&token.denom.base_denom.as_str().as_bytes());
+		let (escrow_account, token_mint) =
+			if is_sender_chain_source(port_id.clone(), channel_id.clone(), &token.denom) {
+				let escrow_seeds =
+					[port_id.as_bytes(), channel_id.as_bytes(), hashed_denom.as_ref()];
+				let escrow_account =
+					Pubkey::find_program_address(&escrow_seeds, &self.program_id).0;
+				let prefix = TracePrefix::new(port_id.clone(), channel_id.clone());
+				let mut trace_path = token.denom.trace_path.clone();
+				trace_path.remove_prefix(&prefix);
+				let token_mint = Pubkey::from_str(&trace_path.to_string()).unwrap();
+				(Some(escrow_account), token_mint)
+			} else {
+				let token_mint_seeds = [hashed_denom.as_ref()];
+				let token_mint =
+					Pubkey::find_program_address(&token_mint_seeds, &self.program_id).0;
+				(None, token_mint)
+			};
+
 		let sender_token_address = get_associated_token_address(
 			&Pubkey::from_str(msg.sender.as_ref()).unwrap(),
 			&token_mint,
 		);
 		let packet_data = ibc_new::apps::transfer::types::packet::PacketData {
-			token: ibc_new::apps::transfer::types::PrefixedCoin {
-				denom: prefixed_denom,
-				amount: ibc_new::apps::transfer::types::Amount::from(msg.token.amount.as_u256().0),
-			},
+			token,
 			sender: ibc_new::primitives::Signer::from(sender_token_address.to_string()),
 			receiver: ibc_new::primitives::Signer::from(msg.receiver.as_ref().to_string()),
 			memo: ibc_new::apps::transfer::types::Memo::from(msg.memo),
 		};
-
-		let token_account = get_associated_token_address(&authority.pubkey(), &token_mint);
-		let seeds = [port_id.as_bytes(), channel_id.as_bytes(), hashed_denom.as_ref()];
-		let escrow_account = Pubkey::find_program_address(&seeds, &self.program_id).0;
 
 		let new_msg_transfer = ibc_new::apps::transfer::types::msgs::transfer::MsgTransfer {
 			port_id_on_a: port_id.clone(),
@@ -705,8 +718,8 @@ deserialize consensus state"
 				system_program: system_program::ID,
 				mint_authority: Some(mint_authority),
 				token_mint: Some(token_mint),
-				escrow_account: Some(escrow_account),
-				receiver_token_account: Some(token_account),
+				escrow_account,
+				receiver_token_account: Some(sender_token_address),
 				associated_token_program: Some(anchor_spl::associated_token::ID),
 				token_program: Some(anchor_spl::token::ID),
 			})
