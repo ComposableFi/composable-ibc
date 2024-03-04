@@ -1,4 +1,4 @@
-use super::SolanaClient;
+use crate::client::SolanaClient;
 use crate::error::Error;
 use anchor_client::{
 	solana_client::{

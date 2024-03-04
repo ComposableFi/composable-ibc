@@ -1,66 +1,51 @@
 #![feature(more_qualified_paths)]
 extern crate alloc;
 
-use anchor_client::solana_sdk::{
-	compute_budget::ComputeBudgetInstruction,
-	ed25519_instruction::SIGNATURE_OFFSETS_SERIALIZED_SIZE, instruction::Instruction,
-	transaction::Transaction,
-};
+use anchor_client::solana_sdk::transaction::Transaction;
 use anchor_spl::associated_token::get_associated_token_address;
-use base64::Engine;
+use client::FinalityEvent;
 use client_state::convert_new_client_state_to_old;
 use consensus_state::convert_new_consensus_state_to_old;
 use core::{pin::Pin, str::FromStr, time::Duration};
 use ibc_new::core::{
-	channel::types::msgs::PacketMsg,
-	client::types::msgs::ClientMsg,
+	channel::types::msgs::PacketMsg, client::types::msgs::ClientMsg,
 	handler::types::msgs::MsgEnvelope,
-	host::types::identifiers::ClientId as ClientIdNew,
 };
 use ics07_tendermint::{
-	client_message::ClientMessage,
-	client_state::ClientState as TmClientState,
+	client_message::ClientMessage, client_state::ClientState as TmClientState,
 	consensus_state::ConsensusState as TmConsensusState,
 };
-use lib::hash::CryptoHash;
 use msgs::convert_old_msgs_to_new;
-use serde::{Deserialize, Serialize};
 use solana_transaction_status::UiTransactionEncoding;
 use std::ops::Deref;
 use tendermint::{Hash, Time};
-use tendermint_light_client_verifier_new::types::{Commit, TrustedBlockState, UntrustedBlockState};
 use tendermint_proto::Protobuf;
 use tokio::sync::mpsc::unbounded_channel;
 
 use anchor_client::{
 	solana_client::{
-		nonblocking::rpc_client::RpcClient as AsyncRpcClient,
 		pubsub_client::PubsubClient,
 		rpc_client::GetConfirmedSignaturesForAddress2Config,
 		rpc_config::{
-			RpcBlockSubscribeConfig, RpcBlockSubscribeFilter, RpcSendTransactionConfig,
-			RpcTransactionLogsConfig, RpcTransactionLogsFilter,
+			RpcBlockSubscribeConfig, RpcBlockSubscribeFilter, RpcTransactionLogsConfig,
+			RpcTransactionLogsFilter,
 		},
 	},
 	solana_sdk::{
-		commitment_config::{CommitmentConfig, CommitmentLevel},
-		signature::{Keypair, Signature},
-		signer::Signer as AnchorSigner,
+		commitment_config::CommitmentConfig, signature::Signature, signer::Signer as AnchorSigner,
 	},
-	Client as AnchorClient, Cluster, Program,
+	Cluster,
 };
-use anchor_lang::{prelude::*, system_program};
+use anchor_lang::prelude::*;
 use error::Error;
 use ibc::{
-	applications::transfer::{
-		msgs::transfer::MsgTransfer, Amount, BaseDenom, PrefixedCoin, PrefixedDenom, TracePath,
-	},
+	applications::transfer::{Amount, BaseDenom, PrefixedCoin, PrefixedDenom, TracePath},
 	core::{
 		ics02_client::{
-			client_state::ClientType, events::UpdateClient,
-			msgs::update_client::MsgUpdateAnyClient, trust_threshold::TrustThreshold,
+			events::UpdateClient, msgs::update_client::MsgUpdateAnyClient,
+			trust_threshold::TrustThreshold,
 		},
-		ics23_commitment::{commitment::CommitmentPrefix, specs::ProofSpecs},
+		ics23_commitment::specs::ProofSpecs,
 		ics24_host::identifier::{ChainId, ChannelId, ClientId, ConnectionId, PortId},
 		ics26_routing::msgs::Ics26Envelope,
 	},
@@ -84,35 +69,24 @@ use ibc_proto::{
 		},
 	},
 };
-use pallet_ibc::light_clients::{
-	AnyClientMessage, AnyClientState, AnyConsensusState
-};
+use pallet_ibc::light_clients::{AnyClientMessage, AnyClientState, AnyConsensusState};
 use primitives::{
-	mock::LocalClientTypes, Chain, CommonClientConfig, CommonClientState, IbcProvider, KeyProvider,
-	LightClientSync, MisbehaviourHandler, UndeliveredType, UpdateType,
+	mock::LocalClientTypes, Chain, CommonClientState, IbcProvider, KeyProvider, LightClientSync,
+	MisbehaviourHandler, UndeliveredType, UpdateType,
 };
-use std::{
-	collections::HashSet,
-	result::Result,
-	sync::{Arc, Mutex},
-	thread::sleep,
-};
-use tendermint_rpc::Url;
+use std::{result::Result, sync::Arc};
 use tokio_stream::Stream;
 
-use solana_ibc::{
-	chain::ChainData,
-	ix_data_account,
-	storage::{PrivateStorage, SequenceKind, Serialised},
-};
-use tendermint_new::{
-	block::CommitSig,
-	vote::{SignedVote, ValidatorIndex, Vote},
-};
+use solana_ibc::storage::{SequenceKind, Serialised};
+
 use trie_ids::{ClientIdx, ConnectionIdx, PortChannelPK, Tag, TrieKey};
 
-use crate::events::convert_new_event_to_old;
+use crate::{
+	client::{DeliverIxType, SolanaClient},
+	events::convert_new_event_to_old,
+};
 
+mod client;
 mod client_state;
 mod consensus_state;
 mod error;
@@ -120,701 +94,17 @@ mod events;
 mod msgs;
 #[cfg(feature = "testing")]
 mod test_provider;
+mod utils;
 
 const SOLANA_IBC_STORAGE_SEED: &[u8] = b"private";
 const TRIE_SEED: &[u8] = b"trie";
 const CHAIN_SEED: &[u8] = b"chain";
+pub const NUMBER_OF_BLOCKS_TO_PROCESS_PER_ITER: u64 = 250;
+pub const WRITE_ACCOUNT_SEED: &[u8] = b"write";
 
 pub struct InnerAny {
 	pub type_url: String,
 	pub value: Vec<u8>,
-}
-
-pub enum DeliverIxType {
-	UpdateClient {
-		client_message: ibc_proto_new::google::protobuf::Any,
-		client_id: ClientIdNew,
-	},
-	PacketTransfer {
-		denom: String,
-		port_id: ibc_new::core::host::types::identifiers::PortId,
-		channel_id: ibc_new::core::host::types::identifiers::ChannelId,
-	},
-	Normal,
-}
-
-/// Implements the [`crate::Chain`] trait for solana
-#[derive(Clone)]
-pub struct SolanaClient {
-	/// Chain name
-	pub name: String,
-	/// rpc url for solana
-	pub rpc_url: String,
-	/// websocket url for solana
-	pub ws_url: String,
-	/// Solana chain Id
-	pub chain_id: String,
-	/// Light client id on counterparty chain
-	pub client_id: Option<ClientId>,
-	/// Connection Id
-	pub connection_id: Option<ConnectionId>,
-	/// Account prefix
-	pub account_prefix: String,
-	pub fee_denom: String,
-	/// The key that signs transactions
-	pub keybase: KeyEntry,
-	/// Maximun transaction size
-	pub max_tx_size: usize,
-	pub commitment_level: CommitmentLevel,
-	pub program_id: Pubkey,
-	pub common_state: CommonClientState,
-	pub client_type: ClientType,
-	pub last_searched_sig_for_send_packets: Arc<tokio::sync::Mutex<String>>,
-	pub last_searched_sig_for_recv_packets: Arc<tokio::sync::Mutex<String>>,
-	/// Reference to commitment
-	pub commitment_prefix: CommitmentPrefix,
-	/// Channels cleared for packet relay
-	pub channel_whitelist: Arc<Mutex<HashSet<(ChannelId, PortId)>>>,
-}
-
-#[derive(std::fmt::Debug, Serialize, Deserialize, Clone)]
-pub struct SolanaClientConfig {
-	/// Chain name
-	pub name: String,
-	/// rpc url for solana
-	pub rpc_url: Url,
-	/// websocket url for solana
-	pub ws_url: Url,
-	/// Solana chain Id
-	pub chain_id: String,
-	/// Light client id on counterparty chain
-	pub client_id: Option<ClientId>,
-	/// Connection Id
-	pub connection_id: Option<ConnectionId>,
-	/// Account prefix
-	pub account_prefix: String,
-	/// Fee denom
-	pub fee_denom: String,
-	/// Fee amount
-	pub fee_amount: String,
-	/// Fee amount
-	pub gas_limit: u64,
-	/// Store prefix
-	pub store_prefix: String,
-	/// Maximun transaction size
-	pub max_tx_size: usize,
-	/// All the client states and headers will be wrapped in WASM ones using the WASM code ID.
-	pub wasm_code_id: Option<String>,
-	pub common_state_config: CommonClientConfig,
-	/// Reference to commitment
-	pub commitment_prefix: Vec<u8>,
-	/// Channels cleared for packet relay
-	pub channel_whitelist: Vec<(ChannelId, PortId)>,
-	pub commitment_level: String,
-	pub private_key: Vec<u8>,
-}
-
-pub const NUMBER_OF_BLOCKS_TO_PROCESS_PER_ITER: u64 = 250;
-pub const WRITE_ACCOUNT_SEED: &[u8] = b"write";
-
-#[derive(Debug, Clone)]
-pub enum FinalityEvent {
-	Tendermint {
-		previous_blockhash: String,
-		blockhash: String,
-		height: u64,
-		timestamp: u64,
-		slot: u64,
-	},
-}
-
-#[derive(Clone)]
-pub struct KeyEntry {
-	pub public_key: Pubkey,
-	pub private_key: Vec<u8>,
-}
-
-impl KeyEntry {
-	fn keypair(&self) -> Keypair {
-		Keypair::from_bytes(&self.private_key).unwrap()
-	}
-}
-
-impl From<Vec<u8>> for KeyEntry {
-	fn from(value: Vec<u8>) -> Self {
-		let keypair = Keypair::from_bytes(&value).unwrap();
-		Self { public_key: keypair.pubkey(), private_key: value }
-	}
-}
-
-impl SolanaClient {
-	pub fn get_trie_key(&self) -> Pubkey {
-		let trie_seeds = &[TRIE_SEED];
-		let trie = Pubkey::find_program_address(trie_seeds, &self.program_id).0;
-		trie
-	}
-
-	pub fn get_ibc_storage_key(&self) -> Pubkey {
-		let storage_seeds = &[SOLANA_IBC_STORAGE_SEED];
-		let ibc_storage = Pubkey::find_program_address(storage_seeds, &self.program_id).0;
-		ibc_storage
-	}
-
-	pub fn get_chain_key(&self) -> Pubkey {
-		let chain_seeds = &[CHAIN_SEED];
-		let chain = Pubkey::find_program_address(chain_seeds, &self.program_id).0;
-		chain
-	}
-
-	pub fn get_mint_auth_key(&self) -> Pubkey {
-		let mint_auth_seeds = &[solana_ibc::MINT_ESCROW_SEED];
-		let mint_auth = Pubkey::find_program_address(mint_auth_seeds, &self.program_id).0;
-		mint_auth
-	}
-
-	pub async fn get_trie(&self) -> solana_trie::TrieAccount<Vec<u8>> {
-		let trie_key = self.get_trie_key();
-		let rpc_client = self.rpc_client();
-		let trie_account = rpc_client
-			.get_account_with_commitment(&trie_key, CommitmentConfig::processed())
-			.await
-			.unwrap()
-			.value
-			.unwrap();
-		let trie = solana_trie::TrieAccount::new(trie_account.data).unwrap();
-		trie
-	}
-
-	pub async fn get_ibc_storage(&self) -> PrivateStorage {
-		let program = self.program();
-		let ibc_storage_key = self.get_ibc_storage_key();
-		let storage: PrivateStorage = program.account(ibc_storage_key).await.unwrap();
-		// let storage = tokio::task::spawn_blocking(move || {
-		// 	program.account(ibc_storage_key).unwrap()
-		// }).await.unwrap();
-		storage
-	}
-
-	pub async fn get_chain_storage(&self) -> ChainData {
-		let program = self.program();
-		let chain_storage_key = self.get_chain_key();
-		let storage = program.account(chain_storage_key).await.unwrap();
-		storage
-	}
-
-	pub fn rpc_client(&self) -> AsyncRpcClient {
-		let program = self.program();
-		program.async_rpc()
-	}
-
-	pub fn client(&self) -> AnchorClient<Arc<Keypair>> {
-		let cluster = Cluster::from_str(&self.rpc_url).unwrap();
-		let signer = self.keybase.keypair();
-		let authority = Arc::new(signer);
-		let client =
-			AnchorClient::new_with_options(cluster, authority, CommitmentConfig::processed());
-		client
-	}
-
-	pub fn program(&self) -> Program<Arc<Keypair>> {
-		let anchor_client = self.client();
-		anchor_client.program(self.program_id).unwrap()
-	}
-
-	pub async fn new(config: SolanaClientConfig) -> Result<Self, Error> {
-		Ok(Self {
-			name: config.name,
-			rpc_url: config.rpc_url.to_string(),
-			ws_url: config.ws_url.to_string(),
-			chain_id: config.chain_id,
-			client_id: config.client_id,
-			connection_id: config.connection_id,
-			account_prefix: config.account_prefix,
-			fee_denom: config.fee_denom,
-			keybase: config.private_key.into(),
-			max_tx_size: config.max_tx_size,
-			commitment_level: CommitmentLevel::from_str(&config.commitment_level).unwrap(),
-			program_id: solana_ibc::ID,
-			common_state: CommonClientState::default(),
-			client_type: "07-tendermint".to_string(),
-			last_searched_sig_for_send_packets: Arc::new(
-				tokio::sync::Mutex::new(String::default()),
-			),
-			last_searched_sig_for_recv_packets: Arc::new(
-				tokio::sync::Mutex::new(String::default()),
-			),
-			commitment_prefix: CommitmentPrefix::try_from(config.commitment_prefix).unwrap(),
-			channel_whitelist: Arc::new(Mutex::new(config.channel_whitelist.into_iter().collect())),
-		})
-	}
-
-	pub async fn send_deliver(
-		&self,
-		instruction_type: DeliverIxType,
-
-		chunk_account: Pubkey,
-		max_tries: u8,
-	) -> Result<<SolanaClient as IbcProvider>::TransactionId, Error> {
-		let program = self.program();
-		let signer = self.keybase.keypair();
-		let authority = Arc::new(signer);
-		let rpc = self.rpc_client();
-		let mut tries = 0;
-		let mut signature = String::new();
-		let solana_ibc_storage_key = self.get_ibc_storage_key();
-		let trie_key = self.get_trie_key();
-		let chain_key = self.get_chain_key();
-		while tries < max_tries {
-			println!("Try For Tx: {}", tries);
-			let mut status = true;
-			let sig = match instruction_type {
-				DeliverIxType::UpdateClient { ref client_message, ref client_id } => {
-					let header = ibc_new::clients::tendermint::types::Header::try_from(
-						client_message.clone(),
-					)
-					.unwrap();
-					let trusted_state = {
-						let storage = self.get_ibc_storage().await;
-						log::info!("This is client ID {:?}", client_id);
-						let client_store = storage
-							.clients
-							.iter()
-							.find(|&client| client.client_id.as_str() == client_id.as_str())
-							.ok_or("Client not found with the given client id while sending update client message".to_owned())
-							.unwrap();
-						let serialized_consensus_state = client_store
-							.consensus_states
-							.deref()
-							.get(
-								&ibc_new::core::client::types::Height::new(
-									header.trusted_height.revision_number(),
-									header.trusted_height.revision_height(),
-								)
-								.unwrap(),
-							)
-							.ok_or(Error::Custom("No value at given key".to_owned()))
-							.unwrap();
-						let consensus_state = serialized_consensus_state
-							.state()
-							.map_err(|_| {
-								Error::Custom(
-									"Could not
-deserialize consensus state"
-										.to_owned(),
-								)
-							})
-							.unwrap();
-						let trusted_consensus_state = match consensus_state {
-							solana_ibc::consensus_state::AnyConsensusState::Tendermint(e) => e,
-							_ => panic!(),
-						};
-
-						header
-							.check_trusted_next_validator_set(trusted_consensus_state.inner())
-							.unwrap();
-
-						TrustedBlockState {
-							chain_id: &self.chain_id.to_string().try_into().unwrap(),
-							header_time: trusted_consensus_state.timestamp(),
-							height: header.trusted_height.revision_height().try_into().unwrap(),
-							next_validators: &header.trusted_next_validator_set,
-							next_validators_hash: trusted_consensus_state.next_validators_hash(),
-						}
-					};
-
-					let untrusted_state = UntrustedBlockState {
-						signed_header: &header.signed_header,
-						validators: &header.validator_set,
-						// NB: This will skip the
-						// VerificationPredicates::next_validators_match check for the
-						// untrusted state.
-						next_validators: None,
-					};
-					let signed_header = untrusted_state.signed_header;
-					let validator_set = trusted_state.next_validators;
-					let signatures = &signed_header.commit.signatures;
-					log::info!("These are signatures {:?}", signatures);
-
-					let mut tallied_voting_power = 0_u64;
-					let mut seen_validators = HashSet::new();
-
-					// Get non-absent votes from the signatures
-					let non_absent_votes =
-						signatures.iter().enumerate().flat_map(|(idx, signature)| {
-							non_absent_vote(
-								signature,
-								ValidatorIndex::try_from(idx).unwrap(),
-								&signed_header.commit,
-							)
-							.map(|vote| (signature, vote))
-						});
-					let mut pubkeys = Vec::new();
-					let mut final_signatures = Vec::new();
-					let mut messages = Vec::new();
-					for (signature, vote) in non_absent_votes {
-						// Ensure we only count a validator's power once
-						if seen_validators.contains(&vote.validator_address) {
-							// return Err(VerificationError::duplicate_validator(
-							// 	vote.validator_address,
-							// ))
-							panic!("Duplicate validator");
-						} else {
-							seen_validators.insert(vote.validator_address);
-						}
-
-						let validator = match validator_set.validator(vote.validator_address) {
-							Some(validator) => validator,
-							None => continue, // Cannot find matching validator, so we skip the vote
-						};
-
-						let signed_vote = SignedVote::from_vote(
-							vote.clone(),
-							signed_header.header.chain_id.clone(),
-						)
-						.unwrap();
-
-						// Check vote is valid
-						let sign_bytes = signed_vote.sign_bytes();
-						pubkeys.push(validator.pub_key.to_bytes());
-						final_signatures.push(signed_vote.signature().clone().into_bytes());
-						messages.push(sign_bytes);
-						// if validator
-						// 	.verify_signature::<V>(&sign_bytes, signed_vote.signature())
-						// 	.is_err()
-						// {
-						// 	panic!("invalid signature");
-						// 	// return Err(VerificationError::invalid_signature(
-						// 	// 	signed_vote.signature().as_bytes().to_vec(),
-						// 	// 	Box::new(validator),
-						// 	// 	sign_bytes,
-						// 	// ))
-						// }
-
-						// If the vote is neither absent nor nil, tally its power
-						if signature.is_commit() {
-							tallied_voting_power += validator.power();
-						} else {
-							// It's OK. We include stray signatures (~votes for nil)
-							// to measure validator availability.
-						}
-
-						// TODO: Break out of the loop when we have enough voting power.
-						// See https://github.com/informalsystems/tendermint-rs/issues/235
-					}
-					program
-						.request()
-						.instruction(ComputeBudgetInstruction::set_compute_unit_limit(1_000_000u32))
-						.instruction(ComputeBudgetInstruction::request_heap_frame(128 * 1024))
-						.instruction(ComputeBudgetInstruction::set_compute_unit_price(500000))
-						.instruction(new_ed25519_instruction_with_signature(
-							pubkeys,
-							final_signatures,
-							messages,
-						))
-						.accounts(solana_ibc::accounts::Deliver {
-							sender: authority.pubkey(),
-							receiver: None,
-							storage: solana_ibc_storage_key,
-							trie: trie_key,
-							chain: chain_key,
-							system_program: system_program::ID,
-							mint_authority: None,
-							token_mint: None,
-							escrow_account: None,
-							receiver_token_account: None,
-							associated_token_program: None,
-							token_program: None,
-						})
-						.accounts(vec![
-							AccountMeta {
-								pubkey: anchor_lang::solana_program::sysvar::instructions::ID,
-								is_signer: false,
-								is_writable: true,
-							},
-							AccountMeta {
-								pubkey: chunk_account,
-								is_signer: false,
-								is_writable: true,
-							},
-						])
-						.args(ix_data_account::Instruction)
-						.signer(&*authority)
-						.send_with_spinner_and_config(RpcSendTransactionConfig {
-							skip_preflight: true,
-							..RpcSendTransactionConfig::default()
-						})
-						.await
-						.or_else(|e| {
-							println!("This is error {:?}", e);
-							status = false;
-							ibc::prelude::Err("Error".to_owned())
-						})
-				},
-				DeliverIxType::PacketTransfer { ref denom, ref port_id, ref channel_id } => {
-					let mint_authority = self.get_mint_auth_key();
-					let hashed_denom = CryptoHash::digest(&denom.as_bytes());
-					let escrow_seeds =
-						[port_id.as_bytes(), channel_id.as_bytes(), hashed_denom.as_ref()];
-					let escrow_account =
-						Pubkey::find_program_address(&escrow_seeds, &self.program_id).0;
-					let token_mint_seeds = [hashed_denom.as_ref()];
-					let token_mint =
-						Pubkey::find_program_address(&token_mint_seeds, &self.program_id).0;
-					// Check if token exists
-					let token_mint_info = rpc.get_token_supply(&token_mint).await;
-					if token_mint_info.is_err() {
-						// Create token Mint token since token doesnt exist
-						let tx = program
-							.request()
-							.instruction(ComputeBudgetInstruction::set_compute_unit_limit(
-								1_000_000u32,
-							))
-							.instruction(ComputeBudgetInstruction::set_compute_unit_price(500000))
-							.accounts(solana_ibc::accounts::InitMint {
-								sender: authority.pubkey(),
-								mint_authority,
-								token_mint,
-								associated_token_program: anchor_spl::associated_token::ID,
-								token_program: anchor_spl::token::ID,
-								system_program: system_program::ID,
-							})
-							.args(solana_ibc::instruction::InitMint {
-								port_id: port_id.clone(),
-								channel_id_on_b: channel_id.clone(),
-								hashed_base_denom: hashed_denom.clone(),
-							})
-							.signer(&*authority)
-							.send_with_spinner_and_config(RpcSendTransactionConfig {
-								skip_preflight: true,
-								..RpcSendTransactionConfig::default()
-							})
-							.await
-							.or_else(|e| {
-								println!("This is error {:?}", e);
-								status = false;
-								ibc::prelude::Err("Error".to_owned())
-							});
-						if status {
-							let blockhash = rpc.get_latest_blockhash().await.unwrap();
-							// Wait for finalizing the transaction
-							let _ = rpc
-								.confirm_transaction_with_spinner(
-									&tx.clone().unwrap(),
-									&blockhash,
-									CommitmentConfig::finalized(),
-								)
-								.await
-								.unwrap();
-						}
-					}
-					if !status {
-						continue
-					}
-					let receiver_token_account =
-						get_associated_token_address(&authority.pubkey(), &token_mint);
-					program
-						.request()
-						.instruction(ComputeBudgetInstruction::set_compute_unit_limit(1_000_000u32))
-						.instruction(ComputeBudgetInstruction::request_heap_frame(128 * 1024))
-						.instruction(ComputeBudgetInstruction::set_compute_unit_price(500000))
-						.accounts(solana_ibc::ix_data_account::Accounts::new(
-							solana_ibc::accounts::Deliver {
-								sender: authority.pubkey(),
-								receiver: Some(authority.pubkey()),
-								storage: solana_ibc_storage_key,
-								trie: trie_key,
-								chain: chain_key,
-								system_program: system_program::ID,
-								mint_authority: Some(mint_authority),
-								token_mint: Some(token_mint),
-								escrow_account: None,
-								receiver_token_account: Some(receiver_token_account),
-								associated_token_program: Some(anchor_spl::associated_token::ID),
-								token_program: Some(anchor_spl::token::ID),
-							},
-							chunk_account,
-						))
-						.args(ix_data_account::Instruction)
-						.signer(&*authority)
-						.send_with_spinner_and_config(RpcSendTransactionConfig {
-							skip_preflight: true,
-							..RpcSendTransactionConfig::default()
-						})
-						.await
-						.or_else(|e| {
-							println!("This is error {:?}", e);
-							status = false;
-							ibc::prelude::Err("Error".to_owned())
-						})
-				},
-				DeliverIxType::Normal => program
-					.request()
-					.instruction(ComputeBudgetInstruction::set_compute_unit_limit(1_000_000u32))
-					.instruction(ComputeBudgetInstruction::request_heap_frame(128 * 1024))
-					.instruction(ComputeBudgetInstruction::set_compute_unit_price(500000))
-					.accounts(solana_ibc::ix_data_account::Accounts::new(
-						solana_ibc::accounts::Deliver {
-							sender: authority.pubkey(),
-							receiver: None,
-							storage: solana_ibc_storage_key,
-							trie: trie_key,
-							chain: chain_key,
-							system_program: system_program::ID,
-							mint_authority: None,
-							token_mint: None,
-							escrow_account: None,
-							receiver_token_account: None,
-							associated_token_program: None,
-							token_program: None,
-						},
-						chunk_account,
-					))
-					.args(ix_data_account::Instruction)
-					.signer(&*authority)
-					.send_with_spinner_and_config(RpcSendTransactionConfig {
-						skip_preflight: true,
-						..RpcSendTransactionConfig::default()
-					})
-					.await
-					.or_else(|e| {
-						println!("This is error {:?}", e);
-						status = false;
-						ibc::prelude::Err("Error".to_owned())
-					}),
-			};
-
-			if status {
-				let blockhash = rpc.get_latest_blockhash().await.unwrap();
-				// Wait for finalizing the transaction
-				let _ = rpc
-					.confirm_transaction_with_spinner(
-						&sig.clone().unwrap(),
-						&blockhash,
-						CommitmentConfig::finalized(),
-					)
-					.await
-					.unwrap();
-				signature = sig.unwrap().to_string();
-				break
-			}
-			sleep(Duration::from_millis(500));
-			tries += 1;
-		}
-		if tries == max_tries {
-			panic!("Max retries reached for normal tx in solana");
-		}
-		Ok(signature)
-	}
-
-	pub async fn send_transfer_inner(
-		&self,
-		msg: MsgTransfer<PrefixedCoin>,
-	) -> Result<<SolanaClient as IbcProvider>::TransactionId, Error> {
-		let keypair = self.keybase.keypair();
-		println!("submitting tx now, {}", keypair.pubkey());
-		let authority = Arc::new(keypair);
-		let program = self.program();
-
-		// Build, sign, and send program instruction
-		let solana_ibc_storage_key = self.get_ibc_storage_key();
-		let trie_key = self.get_trie_key();
-		let chain_key = self.get_chain_key();
-
-		let mint_authority = self.get_mint_auth_key();
-
-		let channel_id =
-			ibc_new::core::host::types::identifiers::ChannelId::new(msg.source_channel.sequence());
-		let port_id =
-			ibc_new::core::host::types::identifiers::PortId::from_str(msg.source_port.as_str())
-				.unwrap();
-		let prefixed_denom = ibc_new::apps::transfer::types::PrefixedDenom {
-			trace_path: ibc_new::apps::transfer::types::TracePath::default(),
-			base_denom: ibc_new::apps::transfer::types::BaseDenom::from_str(
-				msg.token.denom.base_denom.as_str(),
-			)
-			.unwrap(),
-		};
-		let denom = msg.token.denom.base_denom.to_string();
-		let hashed_denom = CryptoHash::digest(denom.as_bytes());
-		let split_denom: Vec<&str> = denom.as_str().split('/').collect();
-		let split_denom = split_denom.last().unwrap();
-		let token_mint = Pubkey::from_str(split_denom).unwrap();
-		let sender_token_address = get_associated_token_address(
-			&Pubkey::from_str(msg.sender.as_ref()).unwrap(),
-			&token_mint,
-		);
-		let packet_data = ibc_new::apps::transfer::types::packet::PacketData {
-			token: ibc_new::apps::transfer::types::PrefixedCoin {
-				denom: prefixed_denom,
-				amount: ibc_new::apps::transfer::types::Amount::from(msg.token.amount.as_u256().0),
-			},
-			sender: ibc_new::primitives::Signer::from(sender_token_address.to_string()),
-			receiver: ibc_new::primitives::Signer::from(msg.receiver.as_ref().to_string()),
-			memo: ibc_new::apps::transfer::types::Memo::from(msg.memo),
-		};
-
-		let token_account = get_associated_token_address(&authority.pubkey(), &token_mint);
-		let seeds = [port_id.as_bytes(), channel_id.as_bytes(), hashed_denom.as_ref()];
-		let escrow_account = Pubkey::find_program_address(&seeds, &self.program_id).0;
-
-		let new_msg_transfer = ibc_new::apps::transfer::types::msgs::transfer::MsgTransfer {
-			port_id_on_a: port_id.clone(),
-			chan_id_on_a: channel_id.clone(),
-			packet_data,
-			timeout_height_on_b: ibc_new::core::channel::types::timeout::TimeoutHeight::At(
-				ibc_new::core::client::types::Height::new(
-					msg.timeout_height.revision_number,
-					msg.timeout_height.revision_height,
-				)
-				.unwrap(),
-			),
-			timeout_timestamp_on_b: ibc_new::primitives::Timestamp::from_nanoseconds(
-				msg.timeout_timestamp.nanoseconds(),
-			)
-			.unwrap(),
-		};
-
-		let sig = program
-			.request()
-			.instruction(ComputeBudgetInstruction::set_compute_unit_limit(1_000_000u32))
-			.accounts(solana_ibc::accounts::SendTransfer {
-				sender: authority.pubkey(),
-				receiver: None,
-				storage: solana_ibc_storage_key,
-				trie: trie_key,
-				chain: chain_key,
-				system_program: system_program::ID,
-				mint_authority: Some(mint_authority),
-				token_mint: Some(token_mint),
-				escrow_account: Some(escrow_account),
-				receiver_token_account: Some(token_account),
-				associated_token_program: Some(anchor_spl::associated_token::ID),
-				token_program: Some(anchor_spl::token::ID),
-			})
-			.args(solana_ibc::instruction::SendTransfer {
-				port_id,
-				channel_id,
-				hashed_base_denom: hashed_denom,
-				msg: new_msg_transfer,
-			})
-			// .payer(Arc::new(keypair))
-			.signer(&*authority)
-			.send_with_spinner_and_config(RpcSendTransactionConfig {
-				skip_preflight: true,
-				..RpcSendTransactionConfig::default()
-			})
-			.await
-			.unwrap();
-		let rpc = program.async_rpc();
-		let blockhash = rpc.get_latest_blockhash().await.unwrap();
-		// Wait for finalizing the transaction
-		let _ = rpc
-			.confirm_transaction_with_spinner(&sig, &blockhash, CommitmentConfig::finalized())
-			.await
-			.unwrap();
-		let signature = sig.to_string();
-		Ok(signature)
-	}
 }
 
 #[async_trait::async_trait]
@@ -836,7 +126,7 @@ impl IbcProvider for SolanaClient {
 		T: Chain,
 	{
 		log::info!("Came into solana lts events");
-		let (finality_event_height, finality_event_timestamp, finality_event_slot) =
+		let (_finality_event_height, _finality_event_timestamp, _finality_event_slot) =
 			match finality_event {
 				FinalityEvent::Tendermint {
 					previous_blockhash: _,
@@ -866,7 +156,6 @@ impl IbcProvider for SolanaClient {
 		let latest_cp_client_height = client_state.latest_height().revision_height;
 		println!("This is counterparty client height {:?}", latest_cp_client_height);
 		let latest_height = self.latest_height_and_timestamp().await?.0;
-		let latest_revision = latest_height.revision_number;
 		let mut block_events: Vec<(u64, Vec<IbcEvent>)> = Vec::new();
 		block_events.push((0, Vec::new()));
 		let rpc_client = self.rpc_client();
@@ -1094,7 +383,11 @@ deserialize client state"
 				.unwrap(),
 		)
 		.unwrap();
-		log::info!("This is connection ID {:?} and index {:?} while querying connection end", connection_id, connection_idx);
+		log::info!(
+			"This is connection ID {:?} and index {:?} while querying connection end",
+			connection_id,
+			connection_idx
+		);
 		let connection_end_trie_key = TrieKey::for_connection(connection_idx);
 		let (_, connection_end_proof) = trie
 			.prove(&connection_end_trie_key)
@@ -2458,264 +1751,4 @@ impl Chain for SolanaClient {
 	fn set_rpc_call_delay(&mut self, delay: Duration) {
 		self.common_state_mut().set_rpc_call_delay(delay)
 	}
-}
-
-fn increment_proof_height(
-	height: Option<ibc_proto::ibc::core::client::v1::Height>,
-) -> Option<ibc_proto::ibc::core::client::v1::Height> {
-	height.map(|height| ibc_proto::ibc::core::client::v1::Height {
-		revision_height: height.revision_height + 1,
-		..height
-	})
-}
-
-fn non_absent_vote(
-	commit_sig: &CommitSig,
-	validator_index: ValidatorIndex,
-	commit: &Commit,
-) -> Option<Vote> {
-	let (validator_address, timestamp, signature, block_id) = match commit_sig {
-		CommitSig::BlockIdFlagAbsent { .. } => return None,
-		CommitSig::BlockIdFlagCommit { validator_address, timestamp, signature } =>
-			(*validator_address, *timestamp, signature, Some(commit.block_id)),
-		CommitSig::BlockIdFlagNil { validator_address, timestamp, signature } =>
-			(*validator_address, *timestamp, signature, None),
-	};
-
-	Some(Vote {
-		vote_type: tendermint_new::vote::Type::Precommit,
-		height: commit.height,
-		round: commit.round,
-		block_id,
-		timestamp: Some(timestamp),
-		validator_address,
-		validator_index,
-		signature: signature.clone(),
-		extension: Default::default(),
-		extension_signature: None,
-	})
-}
-
-/// Solana sdk only accepts a keypair to form ed25519 instruction.
-/// Until they implement a method which accepts a pubkey and signature instead of keypair
-/// we have to use the below method instead.
-///
-/// Reference: https://github.com/solana-labs/solana/pull/32806
-pub fn new_ed25519_instruction_with_signature(
-	pubkeys: Vec<Vec<u8>>,
-	signatures: Vec<Vec<u8>>,
-	messages: Vec<Vec<u8>>,
-) -> Instruction {
-	use anchor_client::solana_sdk::ed25519_instruction::{
-		DATA_START, PUBKEY_SERIALIZED_SIZE, SIGNATURE_SERIALIZED_SIZE,
-	};
-	use bytemuck::bytes_of;
-	assert_eq!(signatures.len(), messages.len());
-	let num_signatures: u8 = signatures.len().try_into().unwrap();
-	let mut instruction_data = Vec::new();
-	instruction_data.extend_from_slice(&[num_signatures, 0]);
-	let mut offset = 0;
-	for (index, _) in signatures.iter().enumerate() {
-		let signature = &signatures[index];
-		let message = &messages[index];
-		let pubkey = &pubkeys[index];
-		assert_eq!(pubkey.len(), PUBKEY_SERIALIZED_SIZE);
-		assert_eq!(signature.len(), SIGNATURE_SERIALIZED_SIZE);
-
-		let public_key_offset = offset + DATA_START;
-		let signature_offset = public_key_offset.saturating_add(PUBKEY_SERIALIZED_SIZE);
-		let message_data_offset = signature_offset.saturating_add(SIGNATURE_SERIALIZED_SIZE);
-
-		let offsets = solana_ed25519::SignatureOffsets {
-			signature_offset: signature_offset as u16,
-			signature_instruction_index: u16::MAX,
-			public_key_offset: public_key_offset as u16,
-			public_key_instruction_index: u16::MAX,
-			message_data_offset: message_data_offset as u16,
-			message_data_size: message.len() as u16,
-			message_instruction_index: u16::MAX,
-		};
-		let current_instruction = [bytes_of(&offsets), &pubkey, &signature, &message].concat();
-		instruction_data.extend_from_slice(&current_instruction);
-		offset += SIGNATURE_OFFSETS_SERIALIZED_SIZE
-			.saturating_add(SIGNATURE_SERIALIZED_SIZE)
-			.saturating_add(PUBKEY_SERIALIZED_SIZE)
-			.saturating_add(message.len())
-	}
-
-	// let instruction =
-	// 	[&[num_signatures, 0], bytes_of(&offsets), pubkey, signature, message].concat();
-
-	Instruction {
-		program_id: anchor_client::solana_sdk::ed25519_program::id(),
-		accounts: vec![],
-		data: instruction_data,
-	}
-}
-
-#[test]
-pub fn test_state() {
-	let state = ibc_new::core::connection::types::State::Init;
-	let integer = match state {
-		ibc_new::core::connection::types::State::Uninitialized => 0,
-		ibc_new::core::connection::types::State::Init => 1,
-		ibc_new::core::connection::types::State::TryOpen => 2,
-		ibc_new::core::connection::types::State::Open => 3,
-	};
-	println!("This is state {} {}", integer, i32::from(state));
-}
-
-#[tokio::test]
-// #[test]
-pub async fn test_storage_deserialization() {
-	use tokio_stream::StreamExt;
-	let authority = Arc::new(Keypair::new());
-	let cluster = Cluster::from_str("http://192.168.0.101:8899").unwrap();
-	let client =
-		AnchorClient::new_with_options(cluster, authority.clone(), CommitmentConfig::finalized());
-	let program = client.program(solana_ibc::ID).unwrap();
-
-	let (tx, rx) = unbounded_channel();
-	let cluster = Cluster::Devnet;
-	tokio::task::spawn_blocking(move || {
-		let (_logs_listener, receiver) = PubsubClient::block_subscribe(
-			"wss://icy-wispy-tab.solana-devnet.quiknode.pro/584c25117b46df54bf9dab1e5836abfb2dfeba9f", /* Quicknode rpc should be used for devnet/mainnet and incase of localnet,
-					 * the flag `--rpc-pubsub-enable-block-subscription` has to be passed to
-					 * local validator. */
-			RpcBlockSubscribeFilter::All,
-			Some(RpcBlockSubscribeConfig {
-				commitment: Some(CommitmentConfig::finalized()),
-				..Default::default()
-			}),
-		)
-		.unwrap();
-
-		loop {
-			match receiver.recv() {
-				Ok(logs) =>
-					if logs.value.block.is_some() {
-						let block_info = logs.value.block.clone().unwrap();
-						let slot = logs.value.slot;
-						let finality_event = FinalityEvent::Tendermint {
-							previous_blockhash: block_info.previous_blockhash,
-							blockhash: block_info.blockhash,
-							height: block_info.block_height.unwrap(),
-							timestamp: block_info.parent_slot,
-							slot,
-						};
-						let _ = tx.send(finality_event);
-					},
-				Err(err) => {
-					panic!("{}", format!("Disconnected: {err}"));
-				},
-			}
-		}
-	});
-
-	let mut streams = tokio_stream::wrappers::UnboundedReceiverStream::new(rx);
-
-	loop {
-		let stream = streams.next().await.unwrap();
-		match stream {
-			FinalityEvent::Tendermint {
-				previous_blockhash,
-				blockhash,
-				height,
-				timestamp,
-				slot,
-			} => println!(
-				"This is height {} current slot {} parent slot {}",
-				height, slot, timestamp
-			),
-		};
-	}
-
-	// let mut streams = get_stream().await;
-
-	// loop {
-	// 	println!("This is streams {:?}", streams.next().await.unwrap());
-	// }
-
-	// let storage = Pubkey::find_program_address(&[SOLANA_IBC_STORAGE_SEED], &ID).0;
-	// // println!("THis is the sotrage key {} {}", storage, ID);
-	// let solana_ibc_storage_account: PrivateStorage = program.account(storage).unwrap();
-	// // println!("This is the storage account {:?} {}", solana_ibc_storage_account, ID);
-	// let serialized_consensus_state = solana_ibc_storage_account.clients[0]
-	// 	.consensus_states
-	// 	.get(&ibc_new::core::client::types::Height::new(1, 1).unwrap())
-	// 	.ok_or(Error::Custom("No value at given key".to_owned()))
-	// 	.unwrap();
-	// let serialized_connection_end = &solana_ibc_storage_account.connections[0];
-	// let connection_end = Serialised::get(serialized_connection_end).unwrap();
-	// let in_vec = serialized_consensus_state.try_to_vec().unwrap();
-	// // println!("This is invec {:?}", in_vec);
-
-	// let rpc_client = program.rpc();
-	// let sig = Signature::from_str("
-	// 4nYN7qkFcdnTLJnzUByid3AUstfn9hnKS5dd7Fym8phna8EQDWQtJ1VeRSnWAnKyqPJGqKk7Y86H3ffDquVjFndw").
-	// unwrap(); let tx = rpc_client.get_transaction(&sig, UiTransactionEncoding::Json).unwrap();
-
-	// let sigs = rpc_client.get_signatures_for_address_with_config(&solana_ibc::ID,
-	// GetConfirmedSignaturesForAddress2Config { until:
-	// Some(Signature::from_str("
-	// KXvtq4ogcKnPCLwEqDsdiPt7BPbZpFrxFg2wudnxMXpjRu7ox6vEGrfkUNHWFJwLx9cHpWURhJihCYrbdrL7qj9").
-	// unwrap()), ..GetConfirmedSignaturesForAddress2Config::default()  }).unwrap();
-
-	// println!("These are signs {}", sigs.len());
-	// sigs.iter().for_each(|sig| {
-	// 	println!("This is signature {}", sig.signature);
-	// 	let signature = Signature::from_str(&sig.signature).unwrap();
-	// 	let tx = rpc_client.get_transaction(&signature, UiTransactionEncoding::Json).unwrap();
-	// 	let logs = match tx.transaction.meta.unwrap().log_messages {
-	// 		solana_transaction_status::option_serializer::OptionSerializer::Some(e) => e,
-	// 		_ => panic!(),
-	// 	};
-	// 	let events = events::get_events_from_logs(logs);
-	// 	let send_packet_events: Vec<&ibc_new::core::handler::types::events::IbcEvent> = events
-	// 		.iter()
-	// 		.filter(|event| {
-	// 			matches!(event, ibc_new::core::handler::types::events::IbcEvent::SendPacket(_))
-	// 		})
-	// 		.collect();
-	// 	let recv_packet_events: Vec<&ibc_new::core::handler::types::events::IbcEvent> = events
-	// 		.iter()
-	// 		.filter(|event| {
-	// 			matches!(event, ibc_new::core::handler::types::events::IbcEvent::ReceivePacket(_))
-	// 		})
-	// 		.collect();
-	// 	println!("These are sent events {:?}", send_packet_events);
-	// 	println!("These are recv events {:?}", recv_packet_events);
-	// });
-
-	// let signature = Signature::from_str(
-	// 	"3dAyQEVTz7RpousUXWGfdunb8vxJgeehXLwQRB3gX7ngovQswhFZJuvjq49YLPpg53k5tLHG44vgK32BRBhesJJh",
-	// )
-	// .unwrap();
-	// let tx = rpc_client.get_transaction(&signature, UiTransactionEncoding::Json).unwrap();
-	// let logs = match tx.transaction.meta.unwrap().log_messages {
-	// 	solana_transaction_status::option_serializer::OptionSerializer::Some(e) => e,
-	// 	_ => panic!(),
-	// };
-	// let events = events::get_events_from_logs(logs);
-	// println!("THis is new 1 event {:?}", events[1].clone());
-	// let old_event = convert_new_event_to_old(events[1].clone());
-	// println!("THis is old 1 event {:?}", old_event);
-
-	// let trie_storage_key = Pubkey::find_program_address(&[TRIE_SEED], &ID).0;
-	// let trie_account = rpc_client
-	// 	.get_account_with_commitment(&trie_storage_key, CommitmentConfig::processed())
-	// 	.unwrap()
-	// 	.value
-	// 	.unwrap();
-	// let trie = trie::AccountTrie::new(trie_account.data).unwrap();
-
-	// let channel_id =
-	// 	ibc_new::core::host::types::identifiers::ChannelId::from_str("channel-0").unwrap();
-	// let port_id = ibc_new::core::host::types::identifiers::PortId::from_str("transfer").unwrap();
-
-	// let mut key =
-	// 	TrieKey::new(Tag::Commitment, PortChannelPK::try_from(port_id, channel_id).unwrap());
-
-	// let commitments = trie.get_subtrie(&key).unwrap();
-	// // println!("These are commitments {:?}", commitments.iter().map(|c| c.hash).collect());
 }
