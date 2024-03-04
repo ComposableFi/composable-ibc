@@ -21,7 +21,10 @@ use ibc::{
 		ics24_host::identifier::{ChannelId, ClientId, ConnectionId, PortId},
 	},
 };
-use ibc_new::core::host::types::identifiers::ClientId as ClientIdNew;
+use ibc_new::{
+	apps::transfer::types::{is_receiver_chain_source, Coin, PrefixedDenom, TracePrefix},
+	core::host::types::identifiers::ClientId as ClientIdNew,
+};
 use lib::hash::CryptoHash;
 use primitives::{CommonClientConfig, CommonClientState, IbcProvider};
 use serde::{Deserialize, Serialize};
@@ -49,7 +52,7 @@ pub enum DeliverIxType {
 		client_id: ClientIdNew,
 	},
 	PacketTransfer {
-		denom: String,
+		token: Coin<PrefixedDenom>,
 		port_id: ibc_new::core::host::types::identifiers::PortId,
 		channel_id: ibc_new::core::host::types::identifiers::ChannelId,
 	},
@@ -231,6 +234,7 @@ impl SolanaClient {
 		anchor_client.program(self.program_id).unwrap()
 	}
 
+  #[allow(dead_code)]
 	pub fn new(config: SolanaClientConfig) -> Result<Self, Error> {
 		Ok(Self {
 			name: config.name,
@@ -451,16 +455,30 @@ deserialize consensus state"
 							ibc::prelude::Err("Error".to_owned())
 						})
 				},
-				DeliverIxType::PacketTransfer { ref denom, ref port_id, ref channel_id } => {
+				DeliverIxType::PacketTransfer { ref token, ref port_id, ref channel_id } => {
+					let hashed_denom =
+						CryptoHash::digest(&token.denom.base_denom.as_str().as_bytes());
+					let (escrow_account, token_mint) = if is_receiver_chain_source(
+						port_id.clone(),
+						channel_id.clone(),
+						&token.denom,
+					) {
+						let escrow_seeds =
+							[port_id.as_bytes(), channel_id.as_bytes(), hashed_denom.as_ref()];
+						let escrow_account =
+							Pubkey::find_program_address(&escrow_seeds, &self.program_id).0;
+						let prefix = TracePrefix::new(port_id.clone(), channel_id.clone());
+						let mut trace_path = token.denom.trace_path.clone();
+						trace_path.remove_prefix(&prefix);
+						let token_mint = Pubkey::from_str(&trace_path.to_string()).unwrap();
+						(Some(escrow_account), token_mint)
+					} else {
+						let token_mint_seeds = [hashed_denom.as_ref()];
+						let token_mint =
+							Pubkey::find_program_address(&token_mint_seeds, &self.program_id).0;
+						(None, token_mint)
+					};
 					let mint_authority = self.get_mint_auth_key();
-					let hashed_denom = CryptoHash::digest(&denom.as_bytes());
-					let escrow_seeds =
-						[port_id.as_bytes(), channel_id.as_bytes(), hashed_denom.as_ref()];
-					let escrow_account =
-						Pubkey::find_program_address(&escrow_seeds, &self.program_id).0;
-					let token_mint_seeds = [hashed_denom.as_ref()];
-					let token_mint =
-						Pubkey::find_program_address(&token_mint_seeds, &self.program_id).0;
 					// Check if token exists
 					let token_mint_info = rpc.get_token_supply(&token_mint).await;
 					if token_mint_info.is_err() {
@@ -528,7 +546,7 @@ deserialize consensus state"
 								system_program: system_program::ID,
 								mint_authority: Some(mint_authority),
 								token_mint: Some(token_mint),
-								escrow_account: None,
+								escrow_account,
 								receiver_token_account: Some(receiver_token_account),
 								associated_token_program: Some(anchor_spl::associated_token::ID),
 								token_program: Some(anchor_spl::token::ID),

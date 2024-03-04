@@ -112,6 +112,7 @@ pub fn convert_old_msgs_to_new(messages: Vec<Ics26Envelope<LocalClientTypes>>) -
 						delay_period: e.delay_period,
 						signer: Signer::from(e.signer.as_ref().to_string()),
 					})),
+				#[allow(deprecated)]
 				ibc::core::ics03_connection::msgs::ConnectionMsg::ConnectionOpenTry(e) =>
 					MsgEnvelope::Connection(ConnectionMsg::OpenTry(MsgConnectionOpenTry {
 						counterparty: Counterparty {
@@ -270,6 +271,7 @@ pub fn convert_old_msgs_to_new(messages: Vec<Ics26Envelope<LocalClientTypes>>) -
 						version_proposal: ChanVersion::from_str(&e.channel.version.to_string())
 							.unwrap(),
 					})),
+				#[allow(deprecated)]
 				ibc::core::ics04_channel::msgs::ChannelMsg::ChannelOpenTry(e) =>
 					MsgEnvelope::Channel(ChannelMsg::OpenTry(MsgChannelOpenTry {
 						port_id_on_b: PortId::from_str(e.port_id.as_str()).unwrap(),

@@ -64,6 +64,7 @@ pub fn convert_old_client_state_to_new(
 	client_state: AnyClientState,
 ) -> solana_ibc::client_state::AnyClientState {
 	match client_state {
+		#[allow(deprecated)]
 		AnyClientState::Tendermint(cs) => solana_ibc::client_state::AnyClientState::Tendermint(
 			ClientState {
 				chain_id: cs.chain_id.to_string(),
@@ -115,6 +116,7 @@ pub fn convert_old_client_state_to_new(
 					)
 				}),
 			}),
+		#[allow(deprecated)]
 		AnyClientState::Wasm(cs) => {
 			let cs = AnyClientState::decode_vec(&cs.data).unwrap();
 			println!("This is tendermint\n {:?}", cs);

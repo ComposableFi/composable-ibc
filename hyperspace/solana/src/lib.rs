@@ -34,7 +34,6 @@ use anchor_client::{
 	solana_sdk::{
 		commitment_config::CommitmentConfig, signature::Signature, signer::Signer as AnchorSigner,
 	},
-	Cluster,
 };
 use anchor_lang::prelude::*;
 use error::Error;
@@ -641,7 +640,7 @@ deserialize client state"
 	) -> Result<(Height, ibc::timestamp::Timestamp), Self::Error> {
 		let rpc_client = self.rpc_client();
 		let chain = self.get_chain_storage().await;
-		let height: u64 = chain.head().unwrap().block_height.into();
+		let _height: u64 = chain.head().unwrap().block_height.into();
 		let slot = rpc_client.get_slot().await.map_err(|e| {
 			Error::RpcError(
 				serde_json::to_string(&e.kind.get_transaction_error().unwrap()).unwrap(),
@@ -847,12 +846,13 @@ deserialize client state"
 		seqs: Vec<u64>,
 	) -> Result<Vec<ibc_rpc::PacketInfo>, Self::Error> {
 		let rpc_client = self.rpc_client();
-		let mut last_sent_packet_hash = self.last_searched_sig_for_send_packets.lock().await;
-		let hash = if last_sent_packet_hash.is_empty() {
-			None
-		} else {
-			Some(Signature::from_str(&last_sent_packet_hash.as_str()).unwrap())
-		};
+		let hash = None;
+		// let mut last_sent_packet_hash = self.last_searched_sig_for_send_packets.lock().await;
+		// let hash = if last_sent_packet_hash.is_empty() {
+		// 	None
+		// } else {
+		// 	Some(Signature::from_str(&last_sent_packet_hash.as_str()).unwrap())
+		// };
 		let sigs = rpc_client
 			.get_signatures_for_address_with_config(
 				&solana_ibc::ID,
@@ -1468,7 +1468,7 @@ deserialize client state"
 		))
 	}
 
-	async fn upload_wasm(&self, wasm: Vec<u8>) -> Result<Vec<u8>, Self::Error> {
+	async fn upload_wasm(&self, _wasm: Vec<u8>) -> Result<Vec<u8>, Self::Error> {
 		todo!()
 	}
 }
@@ -1516,7 +1516,7 @@ impl Chain for SolanaClient {
 		self.max_tx_size as u64
 	}
 
-	async fn estimate_weight(&self, msg: Vec<Any>) -> Result<u64, Self::Error> {
+	async fn estimate_weight(&self, _msg: Vec<Any>) -> Result<u64, Self::Error> {
 		Ok(0)
 	}
 
@@ -1527,7 +1527,6 @@ impl Chain for SolanaClient {
 		Error,
 	> {
 		let (tx, rx) = unbounded_channel();
-		let cluster = Cluster::Devnet;
 		let ws_url = self.ws_url.clone();
 		tokio::task::spawn_blocking(move || {
 			let (_logs_listener, receiver) = PubsubClient::block_subscribe(
@@ -1577,9 +1576,6 @@ impl Chain for SolanaClient {
 		let program = self.program();
 
 		// Build, sign, and send program instruction
-		let solana_ibc_storage_key = self.get_ibc_storage_key();
-		let trie_key = self.get_trie_key();
-		let chain_key = self.get_chain_key();
 		let mut signature = String::new();
 		let rpc = program.async_rpc();
 
@@ -1600,9 +1596,6 @@ impl Chain for SolanaClient {
 			println!("{:?}", message);
 			println!("This is end of payload ----------------------------------");
 
-			// if any_message.type_url == "/ibc.core.client.v1.MsgUpdateClient" {
-			let chunk_size = 500;
-			let mut offset = 4;
 			let max_tries = 5;
 
 			let blockhash = rpc.get_latest_blockhash().await.unwrap();
@@ -1630,52 +1623,31 @@ impl Chain for SolanaClient {
 					rpc.send_and_confirm_transaction_with_spinner(&transaction).await.unwrap();
 				println!("  Signature {sig}");
 			}
-			// let (write_account, write_account_bump) = chunks.into_account();
-			if matches!(message, MsgEnvelope::Client(ClientMsg::UpdateClient(_))) {
-				match message {
-					MsgEnvelope::Client(msg) => match msg {
-						ClientMsg::UpdateClient(e) => {
-							signature = self
-								.send_deliver(
-									DeliverIxType::UpdateClient {
-										client_message: e.client_message,
-										client_id: e.client_id,
-									},
-									chunk_account,
-									max_tries,
-								)
-								.await?;
+			if let MsgEnvelope::Client(ClientMsg::UpdateClient(e)) = message {
+				signature = self
+					.send_deliver(
+						DeliverIxType::UpdateClient {
+							client_message: e.client_message,
+							client_id: e.client_id,
 						},
-						_ => panic!(""),
-					},
-					_ => panic!(""),
-				};
-			} else if matches!(message, MsgEnvelope::Packet(PacketMsg::Recv(_))) {
-				log::info!("----------------------------");
-				log::info!("Inside Recv");
-				log::info!("----------------------------");
-				match message {
-					MsgEnvelope::Packet(msg) => match msg {
-						PacketMsg::Recv(e) => {
-							// let denom: ibc_new::apps::transfer::types::packet::PacketData
-							let packet_data: ibc_new::apps::transfer::types::packet::PacketData =
-								serde_json::from_slice(&e.packet.data).unwrap();
-							signature = self
-								.send_deliver(
-									DeliverIxType::PacketTransfer {
-										denom: packet_data.token.denom.to_string(),
-										port_id: e.packet.port_id_on_a,
-										channel_id: e.packet.chan_id_on_a,
-									},
-									chunk_account,
-									max_tries,
-								)
-								.await?;
+						chunk_account,
+						max_tries,
+					)
+					.await?;
+			} else if let MsgEnvelope::Packet(PacketMsg::Recv(e)) = message {
+				let packet_data: ibc_new::apps::transfer::types::packet::PacketData =
+					serde_json::from_slice(&e.packet.data).unwrap();
+				signature = self
+					.send_deliver(
+						DeliverIxType::PacketTransfer {
+							token: packet_data.token,
+							port_id: e.packet.port_id_on_a,
+							channel_id: e.packet.chan_id_on_a,
 						},
-						_ => panic!(""),
-					},
-					_ => panic!(""),
-				}
+						chunk_account,
+						max_tries,
+					)
+					.await?;
 			} else {
 				signature =
 					self.send_deliver(DeliverIxType::Normal, chunk_account, max_tries).await?;
@@ -1686,7 +1658,7 @@ impl Chain for SolanaClient {
 
 	async fn query_client_message(
 		&self,
-		update: UpdateClient,
+		_update: UpdateClient,
 	) -> Result<AnyClientMessage, Self::Error> {
 		todo!()
 	}
