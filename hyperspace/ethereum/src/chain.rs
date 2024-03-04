@@ -1636,12 +1636,6 @@ impl EthereumClient {
 						EthersToken::Uint(pi_c_0),
 						EthersToken::Uint(pi_c_1),
 					]),
-					//uint[3] _pubSignals; //do not need pass anything. will be calculated on eth side.
-					EthersToken::FixedArray(vec![
-						EthersToken::Uint(1.into()),
-						EthersToken::Uint(1.into()),
-						EthersToken::Uint(1.into()),
-					]),
 				]);
 				
 
