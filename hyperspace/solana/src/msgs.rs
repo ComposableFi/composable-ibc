@@ -27,7 +27,7 @@ use ibc_new::{
 		handler::types::msgs::MsgEnvelope,
 		host::types::identifiers::{ChannelId, ClientId, ConnectionId, PortId, Sequence},
 	},
-	primitives::{proto::Protobuf, Signer, Timestamp},
+	primitives::Signer, Timestamp,
 };
 use ibc_proto_new::{google::protobuf::Any, ibc::core::connection::v1::Version};
 use primitives::mock::LocalClientTypes;

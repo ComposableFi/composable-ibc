@@ -113,7 +113,6 @@ use trie_ids::{ClientIdx, ConnectionIdx, PortChannelPK, Tag, TrieKey};
 
 use crate::events::convert_new_event_to_old;
 
-// mod accounts;
 mod client_state;
 mod consensus_state;
 mod error;
