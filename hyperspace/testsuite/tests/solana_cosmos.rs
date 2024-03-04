@@ -21,7 +21,7 @@ use hyperspace_core::{
 };
 use hyperspace_cosmos::client::{CosmosClient, CosmosClientConfig};
 use hyperspace_primitives::{utils::create_clients, CommonClientConfig, IbcProvider, KeyProvider};
-use hyperspace_solana::{SolanaClient, SolanaClientConfig};
+use hyperspace_solana::{client::SolanaClient, SolanaClientConfig};
 use hyperspace_testsuite::{
 	ibc_channel_close, ibc_messaging_packet_height_timeout_with_connection_delay,
 	ibc_messaging_packet_timeout_on_channel_close,
@@ -29,7 +29,9 @@ use hyperspace_testsuite::{
 	ibc_messaging_with_connection_delay, misbehaviour::ibc_messaging_submit_misbehaviour,
 	setup_connection_and_channel,
 };
-use ibc::core::{ics24_host::identifier::PortId, ics02_client::msgs::update_client::MsgUpdateAnyClient};
+use ibc::core::{
+	ics02_client::msgs::update_client::MsgUpdateAnyClient, ics24_host::identifier::PortId,
+};
 use ibc_proto::ibc::core::client::v1::MsgUpdateClient;
 use sp_core::hashing::sha2_256;
 
@@ -178,7 +180,6 @@ async fn setup_clients() -> (AnyChain, AnyChain) {
 	// 	.collect::<Vec<_>>()
 	// 	.await;
 	// log::info!(target: "hyperspace", "Parachain have started block production");
-	
 
 	let clients_on_a = chain_a_wrapped.query_clients().await.unwrap();
 	let clients_on_b = chain_b_wrapped.query_clients().await.unwrap();
@@ -191,8 +192,8 @@ async fn setup_clients() -> (AnyChain, AnyChain) {
 
 	// let update_client = MsgUpdateAnyClient::<LocalClientTypes> {
 	// 	client_id: client_on_b[0],
-  //   client_message: None,
-  //   signer: chain_a.account_id(),
+	//   client_message: None,
+	//   signer: chain_a.account_id(),
 	// };
 
 	// let msg = Any { type_url: update_client.type_url(), value: msg.encode_vec()? };
@@ -210,21 +211,17 @@ async fn setup_clients() -> (AnyChain, AnyChain) {
 #[tokio::test(flavor = "multi_thread", worker_threads = 12)]
 // #[ignore]
 async fn solana_to_cosmos_ibc_messaging_full_integration_test() {
-	use ibc::core::ics24_host::identifier::ConnectionId;
-	use ibc::core::ics24_host::identifier::ChannelId;
+	use ibc::core::ics24_host::identifier::{ChannelId, ConnectionId};
 	use std::str::FromStr;
 	logging::setup_logging();
 
 	let asset_id_a = AnyAssetId::Solana("33WVSef9zaw49KbNdPGTmACVRnAXzN3o1fsqbUrLp2mh".to_string());
-	let asset_id_b = AnyAssetId::Cosmos(
-		"stake".to_string(),
-	);
+	let asset_id_b = AnyAssetId::Cosmos("stake".to_string());
 	let (mut chain_a, mut chain_b) = setup_clients().await;
 	let (handle, channel_a, channel_b, connection_id_a, connection_id_b) =
 		setup_connection_and_channel(&mut chain_a, &mut chain_b, Duration::from_secs(60 * 2)).await;
 
 	handle.abort();
-	
 
 	// let connection_id_a = ConnectionId::from_str("connection-0").unwrap();
 	// let connection_id_b = ConnectionId::from_str("connection-30").unwrap();

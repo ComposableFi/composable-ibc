@@ -1,5 +1,4 @@
-use crate::client::SolanaClient;
-use crate::error::Error;
+use crate::{client::SolanaClient, error::Error};
 use anchor_client::{
 	solana_client::{
 		pubsub_client::PubsubClient,

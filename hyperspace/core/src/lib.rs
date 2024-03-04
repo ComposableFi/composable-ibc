@@ -286,7 +286,7 @@ async fn process_updates<A: Chain, B: Chain>(
 			}
 		}
 
-		// println!("These are events {:?}", events); 
+		// println!("These are events {:?}", events);
 
 		let event_types = events.iter().map(|ev| ev.event_type()).collect::<Vec<_>>();
 		let mut messages = parse_events(source, sink, events, mode)
@@ -306,7 +306,8 @@ async fn process_updates<A: Chain, B: Chain>(
 		let skip_optional_updates = common_state.skip_optional_client_updates;
 
 		// println!("These are messages len {}", messages.len());
-		// println!("update type: {:?}, skip_optional_updates {:?}", update_type, skip_optional_updates);
+		// println!("update type: {:?}, skip_optional_updates {:?}", update_type,
+		// skip_optional_updates);
 
 		// We want to send client update if packet messages exist but where not sent due
 		// to a connection delay even if client update message is optional
@@ -334,7 +335,12 @@ async fn process_updates<A: Chain, B: Chain>(
 				},
 			_ => log::info!("Received finalized events from: {} {event_types:#?}", source.name()),
 		};
-		log::info!("pushed msg update client for {} with msg {} of len {}", source.name(), msg_update_client.type_url, msg_update_client.value.len());
+		log::info!(
+			"pushed msg update client for {} with msg {} of len {}",
+			source.name(),
+			msg_update_client.type_url,
+			msg_update_client.value.len()
+		);
 		msgs.push(msg_update_client);
 		msgs.append(&mut messages);
 	}
@@ -350,21 +356,27 @@ async fn process_messages<B: Chain>(
 		if let Some(metrics) = metrics.as_ref() {
 			metrics.handle_messages(msgs.as_slice()).await;
 		}
-		let type_urls = msgs.iter().filter_map(|msg| {
-			let type_url = msg.type_url.as_str();
-			if type_url == "" {
-				return None
-			};
-			Some(type_url)
-		}).collect::<Vec<_>>();
+		let type_urls = msgs
+			.iter()
+			.filter_map(|msg| {
+				let type_url = msg.type_url.as_str();
+				if type_url == "" {
+					return None
+				};
+				Some(type_url)
+			})
+			.collect::<Vec<_>>();
 		log::info!("Submitting messages to {}: {type_urls:#?}", sink.name());
 
-		let filtered_msgs: Vec<_> = msgs.iter().filter_map(|msg| {
-			if msg.type_url == "" {
-				return None
-			}
-			Some(msg.clone())
-		}).collect();
+		let filtered_msgs: Vec<_> = msgs
+			.iter()
+			.filter_map(|msg| {
+				if msg.type_url == "" {
+					return None
+				}
+				Some(msg.clone())
+			})
+			.collect();
 
 		if !filtered_msgs.is_empty() {
 			queue::flush_message_batch(filtered_msgs, metrics.as_ref(), &*sink)

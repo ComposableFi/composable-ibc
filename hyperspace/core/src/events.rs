@@ -102,13 +102,12 @@ pub async fn parse_events(
 						.ok_or_else(|| Error::Custom("Client state is empty".to_string()))??;
 
 					let proof_height = connection_response.proof_height.ok_or_else(|| Error::Custom("[get_messages_for_events - open_conn_init] Proof height not found in response".to_string()))?;
-					let proof_height = 
+					let proof_height =
 						Height::new(proof_height.revision_number, proof_height.revision_height);
 					// client_state.latest_height();
 					let client_state_proof =
 						CommitmentProofBytes::try_from(client_state_response.proof).ok();
 
-					
 					let consensus_proof = source
 						.query_client_consensus(
 							open_init.height(),
@@ -135,16 +134,20 @@ pub async fn parse_events(
 							client_state_proof,
 							Some(ConsensusProof::new(
 								CommitmentProofBytes::try_from(consensus_proof.proof)?,
-								client_state.latest_height()
+								client_state.latest_height(),
 							)?),
 							None,
-							proof_height
+							proof_height,
 						)?,
 						delay_period: connection_end.delay_period(),
 						signer: sink.account_id(),
 						host_consensus_state_proof,
 					};
-					log::info!("Constructed open try {:?} with client height {:?}", proof_height, client_state.latest_height());
+					log::info!(
+						"Constructed open try {:?} with client height {:?}",
+						proof_height,
+						client_state.latest_height()
+					);
 					let value = msg.encode_vec()?;
 					let msg = Any { value, type_url: msg.type_url() };
 					messages.push(msg)
@@ -152,7 +155,11 @@ pub async fn parse_events(
 			},
 			IbcEvent::OpenTryConnection(open_try) => {
 				if let Some(connection_id) = open_try.connection_id() {
-					log::info!("THis is open try {:?} and connection id {:?}", open_try, connection_id);
+					log::info!(
+						"THis is open try {:?} and connection id {:?}",
+						open_try,
+						connection_id
+					);
 					let connection_id = connection_id.clone();
 					// Get connection end with proof
 					let connection_response = source
@@ -264,7 +271,11 @@ pub async fn parse_events(
 						Height::new(proof_height.revision_number, proof_height.revision_height);
 
 					println!("-----------------");
-					println!("Proof Height for OpenConfirm {:?} {:?}", proof_height, open_ack.height());
+					println!(
+						"Proof Height for OpenConfirm {:?} {:?}",
+						proof_height,
+						open_ack.height()
+					);
 					println!("-----------------");
 
 					// Construct OpenConfirm
@@ -553,8 +564,8 @@ pub async fn parse_events(
 						Error::Custom(format!("ConnectionEnd not found for {connection_id:?}"))
 					})?)?;
 				// if !connection_end.delay_period().is_zero() {
-				// 	log::debug!(target: "hyperspace", "Skipping write acknowledgement because of connection delay {:?}",
-				// 		connection_end.delay_period());
+				// 	log::debug!(target: "hyperspace", "Skipping write acknowledgement because of
+				// connection delay {:?}", 		connection_end.delay_period());
 				// 	// We can't send this packet immediately because of connection delays
 				// 	continue
 				// }

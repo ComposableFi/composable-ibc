@@ -123,10 +123,16 @@ where
 			.client_state
 			.ok_or_else(|| Error::Custom("counterparty returned empty client state".to_string()))?;
 		let client_state =
-			ics07_tendermint::client_state::ClientState::<LocalClientTypes>::decode_vec(&client_state_response.value)
-				.map_err(|_| Error::Custom("failed to decode client state response".to_string()))?;
+			ics07_tendermint::client_state::ClientState::<LocalClientTypes>::decode_vec(
+				&client_state_response.value,
+			)
+			.map_err(|_| Error::Custom("failed to decode client state response".to_string()))?;
 		let latest_cp_client_height = client_state.latest_height().revision_height;
-		log::info!("This is solana (cp) height on cosmos {:?} {:?}", client_state.latest_height(), client_state.chain_id());
+		log::info!(
+			"This is solana (cp) height on cosmos {:?} {:?}",
+			client_state.latest_height(),
+			client_state.chain_id()
+		);
 		let latest_height = self.latest_height_and_timestamp().await?.0;
 		let latest_revision = latest_height.revision_number;
 
@@ -1374,17 +1380,17 @@ where
 
 					if matches!(ev, IbcEvent::OpenTryConnection(_)) {
 						if is_filtered {
-							println!("This is is_filtered")	
+							println!("This is is_filtered")
 						}
 					}
 
 					// if is_filtered {
-						ev.set_height(ibc_height);
-						log::debug!(target: "hyperspace_cosmos", "Encountered event at {height}: {:?}", event.kind);
-						ibc_events.push(ev);
+					ev.set_height(ibc_height);
+					log::debug!(target: "hyperspace_cosmos", "Encountered event at {height}: {:?}", event.kind);
+					ibc_events.push(ev);
 					// } else {
-					// 	log::debug!(target: "hyperspace_cosmos", "Filtered out event: {:?}", event.kind);
-					// }
+					// 	log::debug!(target: "hyperspace_cosmos", "Filtered out event: {:?}",
+					// event.kind); }
 				},
 				None => {
 					let ignored_events = [

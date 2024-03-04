@@ -76,7 +76,9 @@ pub async fn simulate_tx(
 	log::info!("after conn, before request");
 	let response = tokio::time::timeout(
 		Duration::from_secs(15),
-		client.simulate(request).map_err(|e| format!("This is while making request {}", Error::from(e.to_string()))),
+		client
+			.simulate(request)
+			.map_err(|e| format!("This is while making request {}", Error::from(e.to_string()))),
 	)
 	.await
 	.map_err(|_| Error::from("simulation timeout".to_string()))??

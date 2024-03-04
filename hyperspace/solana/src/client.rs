@@ -231,7 +231,7 @@ impl SolanaClient {
 		anchor_client.program(self.program_id).unwrap()
 	}
 
-	pub async fn new(config: SolanaClientConfig) -> Result<Self, Error> {
+	pub fn new(config: SolanaClientConfig) -> Result<Self, Error> {
 		Ok(Self {
 			name: config.name,
 			rpc_url: config.rpc_url.to_string(),

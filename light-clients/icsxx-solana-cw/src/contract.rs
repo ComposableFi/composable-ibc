@@ -31,7 +31,9 @@ use crate::{
 };
 #[cfg(not(feature = "library"))]
 use cosmwasm_std::entry_point;
-use cosmwasm_std::{to_binary, Binary, Deps, DepsMut, Env, MessageInfo, Response, StdResult, Event};
+use cosmwasm_std::{
+	to_binary, Binary, Deps, DepsMut, Env, Event, MessageInfo, Response, StdResult,
+};
 // use ed25519_consensus::VerificationKey;
 use ibc::core::{
 	ics02_client::{
@@ -167,18 +169,13 @@ fn process_message(
 ) -> Result<Binary, ContractError> {
 	//log!(ctx, "process_message: {:?}", msg);
 	let result = match msg {
-		ExecuteMsg::VerifyMembership(msg) => {
-			Ok(()).map(|_| to_binary(&ContractResult::success()))
-		},
-		ExecuteMsg::VerifyNonMembership(msg) => {
-			Ok(()).map(|_| to_binary(&ContractResult::success()))
-		},
-		ExecuteMsg::VerifyClientMessage(msg) => {
-			Ok(()).map(|_| to_binary(&ContractResult::success()))
-		},
-		ExecuteMsg::CheckForMisbehaviour(msg) => {
-			Ok(false).map(|_| to_binary(&ContractResult::success()))
-		},
+		ExecuteMsg::VerifyMembership(msg) => Ok(()).map(|_| to_binary(&ContractResult::success())),
+		ExecuteMsg::VerifyNonMembership(msg) =>
+			Ok(()).map(|_| to_binary(&ContractResult::success())),
+		ExecuteMsg::VerifyClientMessage(msg) =>
+			Ok(()).map(|_| to_binary(&ContractResult::success())),
+		ExecuteMsg::CheckForMisbehaviour(msg) =>
+			Ok(false).map(|_| to_binary(&ContractResult::success())),
 		ExecuteMsg::UpdateStateOnMisbehaviour(msg_raw) => {
 			unimplemented!("Not needed for now")
 		},
@@ -190,7 +187,8 @@ fn process_message(
 			// panic!("I am in cosmwasm update state {:?}", msg_raw.client_message);
 			let msg = UpdateStateMsg::try_from(msg_raw)?;
 			let latest_revision_height = client_state.latest_height().revision_height;
-			// let event: Response<_> = Response::new().add_event(Event::new("Update state").add_attribute("height", latest_revision_height.to_string()));
+			// let event: Response<_> = Response::new().add_event(Event::new("Update
+			// state").add_attribute("height", latest_revision_height.to_string()));
 			prune_oldest_consensus_state(ctx, &client_state, ctx.host_timestamp().nanoseconds());
 			client
 				.update_state(ctx, client_id.clone(), client_state, msg.client_message)
@@ -218,8 +216,8 @@ fn process_message(
 		},
 		ExecuteMsg::CheckSubstituteAndUpdateState(_msg) =>
 			Ok(()).map(|_| to_binary(&ContractResult::success())),
-		ExecuteMsg::VerifyUpgradeAndUpdateState(msg) => 
-			Ok(()).map(|_| to_binary(&ContractResult::success()))
+		ExecuteMsg::VerifyUpgradeAndUpdateState(msg) =>
+			Ok(()).map(|_| to_binary(&ContractResult::success())),
 	};
 	Ok(result??)
 }
@@ -235,7 +233,6 @@ pub fn query(deps: Deps, env: Env, msg: QueryMsg) -> StdResult<Binary> {
 			let ro_proceeded_state = ReadonlyProcessedStates::new(deps.storage);
 			to_binary(&QueryResponse::genesis_metadata(ro_proceeded_state.get_metadata()))
 		},
-		QueryMsg::Status(StatusMsg {}) => 
-			to_binary(&QueryResponse::status("Active".to_string()))
+		QueryMsg::Status(StatusMsg {}) => to_binary(&QueryResponse::status("Active".to_string())),
 	}
 }

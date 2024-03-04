@@ -110,10 +110,12 @@ pub fn convert_new_event_to_old(
 				height,
 				client_id: ClientId::from_str(e.client_id_on_b().as_str()).unwrap(),
 				counterparty_client_id: ClientId::from_str(e.client_id_on_b().as_str()).unwrap(),
-				counterparty_connection_id: e
-					.conn_id_on_a()
-					.and_then(|conn_id| Some(ConnectionId::from_str(conn_id.clone().as_str()).unwrap())),
-				connection_id: Some(ConnectionId::from_str(e.conn_id_on_b().clone().as_str()).unwrap()),
+				counterparty_connection_id: e.conn_id_on_a().and_then(|conn_id| {
+					Some(ConnectionId::from_str(conn_id.clone().as_str()).unwrap())
+				}),
+				connection_id: Some(
+					ConnectionId::from_str(e.conn_id_on_b().clone().as_str()).unwrap(),
+				),
 			});
 			Some(IbcEvent::OpenTryConnection(eve))
 		},
@@ -361,7 +363,9 @@ pub fn convert_new_event_to_old(
 	}
 }
 
-pub fn get_events_from_logs(logs: Vec<String>) -> Vec<ibc_new::core::handler::types::events::IbcEvent> {
+pub fn get_events_from_logs(
+	logs: Vec<String>,
+) -> Vec<ibc_new::core::handler::types::events::IbcEvent> {
 	let serialized_events: Vec<&str> = logs
 		.iter()
 		.filter_map(|log| {
@@ -386,5 +390,3 @@ pub fn get_events_from_logs(logs: Vec<String>) -> Vec<ibc_new::core::handler::ty
 		.collect();
 	events
 }
-
-
