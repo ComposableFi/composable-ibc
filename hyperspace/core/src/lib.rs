@@ -313,7 +313,7 @@ async fn process_updates<A: Chain, B: Chain>(
 	);
 	if let Some(not_updated_during) = Timestamp::now().duration_since(&update_time) {
 		if not_updated_during < source.common_state().client_update_interval {
-			log::info!(target: "hyperspace", "Sending only mandatory updates, not updated during {} seconds, need {}", not_updated_during.as_secs(), sink.common_state().client_update_interval.as_secs());
+			log::debug!(target: "hyperspace", "Sending only mandatory updates, not updated during {} seconds, need {}", not_updated_during.as_secs(), sink.common_state().client_update_interval.as_secs());
 			update_delay_passed = false;
 		}
 	} else {

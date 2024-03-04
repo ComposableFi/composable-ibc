@@ -215,15 +215,6 @@ where
 
 					if true{
 						zk_proof = vec![1, 2, 3, 4, 5, 6, 7, 8, 9, 10];
-						/*
-						let expected_validators = vec![1]; all validators included in the proof
-						let mut zk_bitmask: u64 = 0;
-						for (index, &validator) in expected_validators.iter().enumerate() {
-							if validator == 1 {
-								zk_bitmask |= 1 << index;
-							}
-						}
-						 */
 						zk_bitmask = 1; //it is real bitmask for local tests with 1 validator [1]
 						is_request_ready = true;
 						exist_at_least_one_proof = true;
@@ -266,7 +257,7 @@ where
 					}
 					else{
 						// //todo size should be 32 for mainnets. 1 is only for local testing.
-						let size = 1;
+						let size = self.zk_prover_api.zk_val_len;
 						/* pub_key, signature, message  */
 						let zk_input = update_header.get_zk_input(size);
 						
@@ -287,7 +278,6 @@ where
 											zk_height_proof_id_map.insert(height, proof_id);
 										}
 										else{
-											//if proof id from zk remote server is none means that need to request server again. now server busy with other proof generation
 											log::info!(target: "hyperspace", "proof_id is None. It means that zk server busy generating other proof. height: {:?}", height);
 										}
 									},
@@ -309,7 +299,7 @@ where
 				}
 			};
 
-			if continew || (update_type.is_optional() && height > max_event_height /* && !height.is_zero()*/) {
+			if continew || (update_type.is_optional() && height > max_event_height) {
 				log::debug!(target: "hyperspace_cosmos", "skiped: {:?}", height);
 				continue;
 			}

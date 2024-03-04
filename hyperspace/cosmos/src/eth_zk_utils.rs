@@ -8,7 +8,8 @@ use ureq;
 #[derive(Debug, Clone)]
 pub struct ZKProver {
 	pub prover_url: String,
-	pub delay_secs: u64
+	pub delay_secs: u64,
+	pub zk_val_len: usize,
 }
 
 #[derive(Debug, serde::Deserialize, Clone)]
@@ -37,8 +38,8 @@ impl CreateProofInput{
 }
 
 impl ZKProver {
-	pub fn new(prover_url: String, delay_secs: u64) -> Self {
-		Self { prover_url, delay_secs: delay_secs }
+	pub fn new(prover_url: String, delay_secs: u64, zk_val_len: usize) -> Self {
+		Self { prover_url, delay_secs: delay_secs, zk_val_len: zk_val_len }
 	}
 
     pub fn status(&self) -> Result<String, Error> {

@@ -410,6 +410,7 @@ async fn setup_clients() -> (AnyChain, AnyChain, JoinHandle<()>) {
 		},
 		zk_prover_remote_uri: "http://127.0.0.1:8000".to_string(),
 		zk_prover_allowed_delay_secs: 160,
+		zk_val_len: 1usize,
 	};
 
 	let chain_b = CosmosClient::<()>::new(config_b.clone()).await.unwrap();
@@ -508,7 +509,7 @@ async fn zk_prover_integration_test() {
 
 	let h = 0;
 
-	let zk_prover = ZKProver::new("http://127.0.0.1:8000".to_string(), Duration::from_secs(60).as_secs());
+	let zk_prover = ZKProver::new("http://127.0.0.1:8000".to_string(), Duration::from_secs(60).as_secs(), 1);
 	let proof_input = CreateProofInput {
 		signatures: vec![vec![101, 168, 183, 134, 143, 54, 1, 63, 148, 125, 195, 152, 170, 120, 195, 218, 68, 126, 139, 93, 180, 148, 179, 82, 108, 189, 188, 127, 111, 147, 233, 36, 70, 169, 214, 104, 165, 109, 216, 165, 7, 246, 111, 41, 104, 152, 168, 234, 251, 37, 43, 20, 57, 185, 154, 38, 159, 204, 186, 76, 153, 87, 85, 14]],
 		msgs: vec![vec![111, 8, 2, 17, 36, 0, 0, 0, 0, 0, 0, 0, 34, 72, 10, 32, 66, 15, 32, 152, 208, 7, 69, 219, 166, 26, 244, 231, 127, 247, 196, 94, 155, 127, 207, 55, 136, 84, 147, 228, 153, 98, 60, 132, 217, 5, 138, 158, 18, 36, 8, 1, 18, 32, 11, 240, 43, 121, 197, 33, 157, 232, 109, 180, 116, 4, 121, 90, 247, 22, 40, 58, 232, 238, 206, 228, 227, 85, 28, 80, 93, 168, 110, 223, 49, 183, 42, 12, 8, 176, 194, 170, 174, 6, 16, 144, 206, 240, 168, 2, 50, 10, 99, 101, 110, 116, 97, 117, 114, 105, 45, 49]],
