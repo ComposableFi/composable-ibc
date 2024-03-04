@@ -1549,23 +1549,88 @@ impl EthereumClient {
 
 				let s = format!(" [{}]", s);
 
-
-				//todo. add map error here once i get a new zk curctui strucutre with a data from remote ZK api service
-				let json_data: serde_json::Value = serde_json::from_str(s.as_str()).unwrap();
-				//take a first element of the array as a array of strings
-				let sa = json_data[0].as_array().unwrap().iter().map(|x| x.as_str().unwrap().to_string()).collect::<Vec<_>>();
-				//take second element of the array as a array of arrays of strings
-				let sb = json_data[1].as_array().unwrap().iter().map(|x| x.as_array().unwrap().iter().map(|x| x.as_str().unwrap().to_string()).collect::<Vec<_>>()).collect::<Vec<_>>();
-				//take third element of the array as a array of strings
-				let sc = json_data[2].as_array().unwrap().iter().map(|x| x.as_str().unwrap().to_string()).collect::<Vec<_>>();
+				let json_data: serde_json::Value = serde_json::from_str(s.as_str()).map_err(|e| {
+					let error_message = format!("failed to convert zk_proof into json: {:?} for client_id: {:?} height: {:?}, string : {:?}", e, client_id, header.height(), s.as_str());
+					error!(target: "hyperspace_ethereum", "{}", error_message);
+					ClientError::Other(error_message)
+				})?;
 
 				trace!(target: "hyperspace_ethereum", "json_data: {:?}", json_data.clone());
-				trace!(target: "hyperspace_ethereum", "____________________________________");
-				trace!(target: "hyperspace_ethereum", "json   sa: {:?}", sa);
-				trace!(target: "hyperspace_ethereum", "____________________________________");
-				trace!(target: "hyperspace_ethereum", "json   sb: {:?}", sb);
-				trace!(target: "hyperspace_ethereum", "____________________________________");
-				trace!(target: "hyperspace_ethereum", "json   sc: {:?}", sc);
+				
+
+				//take a first element of the array as a array of strings
+				let sa: Result<Vec<String>, ClientError> = match json_data.get(0) {
+					Some(array) => {
+						if let Some(arr) = array.as_array() {
+							let strings: Result<Vec<String>, ClientError> = arr
+								.iter()
+								.map(|x| {
+									x.as_str()
+										.ok_or_else(|| ClientError::Other("json_data[0] contains non-string elements".to_string()))
+										.map(|s| s.to_string())
+								})
+								.collect();
+							strings
+						} else {
+							Err(ClientError::Other("json_data[0] is not an array".to_string()))
+						}
+					}
+					None => Err(ClientError::Other("json_data[0] not found".to_string())),
+				};
+				let sa = sa?;
+
+				//take second element of the array as a array of arrays of strings
+				let sb: Result<Vec<Vec<String>>, ClientError> = match json_data.get(1) {
+					Some(array) => {
+						if let Some(arr) = array.as_array() {
+							let inner_vecs: Result<Vec<Vec<String>>, ClientError> = arr
+								.iter()
+								.map(|inner_array| {
+									if let Some(inner_arr) = inner_array.as_array() {
+										let inner_strings: Result<Vec<String>, ClientError> = inner_arr
+											.iter()
+											.map(|x| {
+												x.as_str()
+													.ok_or_else(|| ClientError::Other("inner array contains non-string elements".to_string()))
+													.map(|s| s.to_string())
+											})
+											.collect();
+										inner_strings
+									} else {
+										Err(ClientError::Other("inner array contains non-array elements".to_string()))
+									}
+								})
+								.collect();
+							inner_vecs
+						} else {
+							Err(ClientError::Other("json_data[1] is not an array".to_string()))
+						}
+					}
+					None => Err(ClientError::Other("json_data[1] not found".to_string())),
+				};
+				let sb = sb?;
+				//take third element of the array as a array of strings
+				let sc: Result<Vec<String>, ClientError> = match json_data.get(2) {
+					Some(array) => {
+						if let Some(arr) = array.as_array() {
+							let strings: Result<Vec<String>, ClientError> = arr
+								.iter()
+								.map(|x| {
+									x.as_str()
+										.ok_or_else(|| ClientError::Other("json_data[2] contains non-string elements".to_string()))
+										.map(|s| s.to_string())
+								})
+								.collect();
+							strings
+						} else {
+							Err(ClientError::Other("json_data[2] is not an array".to_string()))
+						}
+					}
+					None => Err(ClientError::Other("json_data[2] not found".to_string())),
+				};
+				let sc = sc?;
+
+				
 
 				fn get_u256(s0x : &str) -> U256{
 					let s : &'static str = Box::leak(s0x.to_string().into_boxed_str());
