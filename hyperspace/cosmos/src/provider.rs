@@ -196,7 +196,7 @@ where
 			.zip(update_headers)
 			.enumerate()
 		{
-			if i == NUMBER_OF_BLOCKS_TO_PROCESS_PER_ITER as usize - 1 /* -2 */ {
+			if i == NUMBER_OF_BLOCKS_TO_PROCESS_PER_ITER as usize - 1 {
 				update_type = UpdateType::Mandatory;
 			}
 			let height = update_header.height();
@@ -336,10 +336,6 @@ where
 				})?;
 				Any { value, type_url: msg.type_url() }
 			};
-			//if proof does not exist then do not add into the updates
-			for i in events.iter(){
-				log::error!(target: "hyperspace_cosmos", "i: {:?}", i);
-			}
 			updates.push((update_client_header, height, events, update_type));
 
 		}
