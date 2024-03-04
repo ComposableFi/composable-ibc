@@ -892,7 +892,7 @@ impl IbcProvider for SolanaClient {
 						Error::Custom(String::from("Logs were skipped, so not available")).into()
 					),
 			};
-			let events = get_events_from_logs(logs);
+			let events = events::get_events_from_logs(logs);
 			let converted_events = events
 				.iter()
 				.filter_map(|event| {
@@ -919,10 +919,6 @@ impl IbcProvider for SolanaClient {
 					)),
 					signer: counterparty.account_id(),
 				};
-				let test_header =
-					AnyClientMessage::Tendermint(ClientMessage::Header(header.clone()))
-						.encode_vec()
-						.unwrap();
 				let value = msg
 					.encode_vec()
 					.map_err(|e| {
@@ -956,7 +952,7 @@ impl IbcProvider for SolanaClient {
 			loop {
 				match receiver.recv() {
 					Ok(logs) => {
-						let events = get_events_from_logs(logs.value.logs);
+						let events = events::get_events_from_logs(logs.value.logs);
 						log::info!("These are events {:?} ", events);
 						log::info!("Total {:?} events", events.len());
 						let mut broke = false;
@@ -1595,7 +1591,7 @@ deserialize client state"
 					solana_transaction_status::option_serializer::OptionSerializer::Some(e) => e,
 					_ => Vec::new(),
 				};
-				let events = get_events_from_logs(logs);
+				let events = events::get_events_from_logs(logs);
 				let send_packet_event = events.iter().find(|event| {
 					matches!(event, ibc_new::core::handler::types::events::IbcEvent::SendPacket(_))
 				});
@@ -1688,7 +1684,7 @@ deserialize client state"
 							e,
 						_ => Vec::new(),
 					};
-					let events = get_events_from_logs(logs);
+					let events = events::get_events_from_logs(logs);
 					let send_packet_event =
 						events.iter().find(|event| {
 							matches!(event, ibc_new::core::handler::types::events::IbcEvent::ReceivePacket(_)) ||
@@ -2082,7 +2078,7 @@ deserialize client state"
 			solana_transaction_status::option_serializer::OptionSerializer::Skip =>
 				return Err(Error::Custom(String::from("Logs were skipped, so not available"))),
 		};
-		let events = get_events_from_logs(logs);
+		let events = events::get_events_from_logs(logs);
 		let result: Vec<&ibc_new::core::client::types::events::CreateClient> = events
 			.iter()
 			.filter_map(|event| match event {
@@ -2118,7 +2114,7 @@ deserialize client state"
 			solana_transaction_status::option_serializer::OptionSerializer::Skip =>
 				return Err(Error::Custom(String::from("Logs were skipped, so not available"))),
 		};
-		let events = get_events_from_logs(logs);
+		let events = events::get_events_from_logs(logs);
 		let result: Vec<&ibc_new::core::connection::types::events::OpenInit> = events
 			.iter()
 			.filter_map(|event| match event {
@@ -2157,7 +2153,7 @@ deserialize client state"
 			solana_transaction_status::option_serializer::OptionSerializer::Skip =>
 				return Err(Error::Custom(String::from("Logs were skipped, so not available"))),
 		};
-		let events = get_events_from_logs(logs);
+		let events = events::get_events_from_logs(logs);
 		let result: Vec<&ibc_new::core::channel::types::events::OpenInit> = events
 			.iter()
 			.filter_map(|event| match event {
@@ -2473,32 +2469,6 @@ fn increment_proof_height(
 	})
 }
 
-fn get_events_from_logs(logs: Vec<String>) -> Vec<ibc_new::core::handler::types::events::IbcEvent> {
-	let serialized_events: Vec<&str> = logs
-		.iter()
-		.filter_map(|log| {
-			if log.starts_with("Program data: ") {
-				Some(log.strip_prefix("Program data: ").unwrap())
-			} else {
-				None
-			}
-		})
-		.collect();
-	let events: Vec<ibc_new::core::handler::types::events::IbcEvent> = serialized_events
-		.iter()
-		.filter_map(|event| {
-			let decoded_event = base64::prelude::BASE64_STANDARD.decode(event).unwrap();
-			let decoded_event: solana_ibc::events::Event =
-				borsh::BorshDeserialize::try_from_slice(&decoded_event).unwrap();
-			match decoded_event {
-				solana_ibc::events::Event::IbcEvent(e) => Some(e),
-				_ => None,
-			}
-		})
-		.collect();
-	events
-}
-
 fn non_absent_vote(
 	commit_sig: &CommitSig,
 	validator_index: ValidatorIndex,
@@ -2700,7 +2670,7 @@ pub async fn test_storage_deserialization() {
 	// 		solana_transaction_status::option_serializer::OptionSerializer::Some(e) => e,
 	// 		_ => panic!(),
 	// 	};
-	// 	let events = get_events_from_logs(logs);
+	// 	let events = events::get_events_from_logs(logs);
 	// 	let send_packet_events: Vec<&ibc_new::core::handler::types::events::IbcEvent> = events
 	// 		.iter()
 	// 		.filter(|event| {
@@ -2726,7 +2696,7 @@ pub async fn test_storage_deserialization() {
 	// 	solana_transaction_status::option_serializer::OptionSerializer::Some(e) => e,
 	// 	_ => panic!(),
 	// };
-	// let events = get_events_from_logs(logs);
+	// let events = events::get_events_from_logs(logs);
 	// println!("THis is new 1 event {:?}", events[1].clone());
 	// let old_event = convert_new_event_to_old(events[1].clone());
 	// println!("THis is old 1 event {:?}", old_event);

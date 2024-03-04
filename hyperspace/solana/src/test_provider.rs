@@ -6,20 +6,14 @@ use anchor_client::{
 		rpc_config::{RpcBlockSubscribeConfig, RpcBlockSubscribeFilter},
 	},
 	solana_sdk::commitment_config::CommitmentConfig,
-	Cluster,
 };
 use core::pin::Pin;
-use futures::{Stream, StreamExt};
+use futures::Stream;
 use ibc::{
 	applications::transfer::{msgs::transfer::MsgTransfer, PrefixedCoin},
 	core::ics24_host::identifier::ChannelId,
-	tx_msg::Msg,
 };
-use primitives::{Chain, TestProvider};
-use tendermint_rpc::{
-	event::{Event, EventData},
-	query::{EventType, Query},
-};
+use primitives::TestProvider;
 use tokio::sync::mpsc::unbounded_channel;
 
 #[async_trait::async_trait]
@@ -43,13 +37,12 @@ impl TestProvider for SolanaClient {
 	/// Returns a stream that yields chain Block number
 	async fn subscribe_blocks(&self) -> Pin<Box<dyn Stream<Item = u64> + Send + Sync>> {
 		let (tx, rx) = unbounded_channel();
-		let cluster = Cluster::Localnet;
 		let ws_url = self.ws_url.clone();
 		tokio::task::spawn_blocking(move || {
 			let (_logs_listener, receiver) = PubsubClient::block_subscribe(
-				&ws_url, /* Quicknode rpc should be used for devnet/mainnet and incase of localnet,
-				     * the flag `--rpc-pubsub-enable-block-subscription` has to be passed to
-				     * local validator. */
+				&ws_url, /* Quicknode rpc should be used for devnet/mainnet and incase of
+				          * localnet, the flag `--rpc-pubsub-enable-block-subscription`
+				          * has to be passed to local validator. */
 				RpcBlockSubscribeFilter::All,
 				Some(RpcBlockSubscribeConfig {
 					commitment: Some(CommitmentConfig::finalized()),

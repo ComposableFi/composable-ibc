@@ -1,33 +1,31 @@
 use ibc::core::ics26_routing::msgs::Ics26Envelope;
-use ibc_new::{
-	core::{
-		channel::types::{
-			channel::Order,
-			msgs::{
-				ChannelMsg, MsgAcknowledgement, MsgChannelCloseConfirm, MsgChannelCloseInit,
-				MsgChannelOpenAck, MsgChannelOpenConfirm, MsgChannelOpenInit, MsgChannelOpenTry,
-				MsgRecvPacket, MsgTimeout, MsgTimeoutOnClose, PacketMsg,
-			},
-			packet::Packet,
-			timeout::TimeoutHeight,
-			Version as ChanVersion,
+use ibc_new::core::{
+	channel::types::{
+		channel::Order,
+		msgs::{
+			ChannelMsg, MsgAcknowledgement, MsgChannelCloseConfirm, MsgChannelCloseInit,
+			MsgChannelOpenAck, MsgChannelOpenConfirm, MsgChannelOpenInit, MsgChannelOpenTry,
+			MsgRecvPacket, MsgTimeout, MsgTimeoutOnClose, PacketMsg,
 		},
-		client::types::{
-			msgs::{ClientMsg, MsgCreateClient, MsgUpdateClient, MsgUpgradeClient},
-			Height,
-		},
-		commitment_types::commitment::{CommitmentPrefix, CommitmentProofBytes},
-		connection::types::{
-			msgs::{
-				ConnectionMsg, MsgConnectionOpenAck, MsgConnectionOpenConfirm,
-				MsgConnectionOpenInit, MsgConnectionOpenTry,
-			},
-			Counterparty,
-		},
-		handler::types::msgs::MsgEnvelope,
-		host::types::identifiers::{ChannelId, ClientId, ConnectionId, PortId, Sequence},
+		packet::Packet,
+		timeout::TimeoutHeight,
+		Version as ChanVersion,
 	},
-	primitives::Signer, Timestamp,
+	client::types::{
+		msgs::{ClientMsg, MsgCreateClient, MsgUpdateClient, MsgUpgradeClient},
+		Height,
+	},
+	commitment_types::commitment::{CommitmentPrefix, CommitmentProofBytes},
+	connection::types::{
+		msgs::{
+			ConnectionMsg, MsgConnectionOpenAck, MsgConnectionOpenConfirm, MsgConnectionOpenInit,
+			MsgConnectionOpenTry,
+		},
+		Counterparty,
+	},
+	handler::types::msgs::MsgEnvelope,
+	host::types::identifiers::{ChannelId, ClientId, ConnectionId, PortId, Sequence},
+	primitives::{Signer, Timestamp},
 };
 use ibc_proto_new::{google::protobuf::Any, ibc::core::connection::v1::Version};
 use primitives::mock::LocalClientTypes;
@@ -511,4 +509,3 @@ pub fn convert_old_msgs_to_new(messages: Vec<Ics26Envelope<LocalClientTypes>>) -
 		.collect();
 	new_messages
 }
-

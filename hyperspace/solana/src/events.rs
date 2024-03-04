@@ -1,5 +1,6 @@
 use std::str::FromStr;
 
+use base64::Engine;
 use ibc::{
 	core::{
 		ics02_client::{
@@ -359,3 +360,31 @@ pub fn convert_new_event_to_old(
 		ibc_new::core::handler::types::events::IbcEvent::Message(_) => None,
 	}
 }
+
+pub fn get_events_from_logs(logs: Vec<String>) -> Vec<ibc_new::core::handler::types::events::IbcEvent> {
+	let serialized_events: Vec<&str> = logs
+		.iter()
+		.filter_map(|log| {
+			if log.starts_with("Program data: ") {
+				Some(log.strip_prefix("Program data: ").unwrap())
+			} else {
+				None
+			}
+		})
+		.collect();
+	let events: Vec<ibc_new::core::handler::types::events::IbcEvent> = serialized_events
+		.iter()
+		.filter_map(|event| {
+			let decoded_event = base64::prelude::BASE64_STANDARD.decode(event).unwrap();
+			let decoded_event: solana_ibc::events::Event =
+				borsh::BorshDeserialize::try_from_slice(&decoded_event).unwrap();
+			match decoded_event {
+				solana_ibc::events::Event::IbcEvent(e) => Some(e),
+				_ => None,
+			}
+		})
+		.collect();
+	events
+}
+
+

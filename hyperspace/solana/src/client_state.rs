@@ -10,8 +10,7 @@ use ibc::{
 };
 use ibc_proto_new::ibc::lightclients::tendermint::v1::{ClientState, Fraction};
 use ibc_testkit::testapp::ibc::clients::mock::client_state::MockClientState;
-use pallet_ibc::light_clients::{AnyClientState, HostFunctionsManager};
-use primitives::mock::LocalClientTypes;
+use pallet_ibc::light_clients::AnyClientState;
 use tendermint_proto::Protobuf;
 
 pub fn convert_new_client_state_to_old(
