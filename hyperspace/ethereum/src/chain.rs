@@ -593,12 +593,6 @@ fn tm_header_abi_token(header: &ics07_tendermint_zk::client_message::ZkHeader) -
 		.to_vec(),
 	);
 
-	// let validator_set = hea
-
-	// for i in header.validator_set.validators().iter(){
-
-	// }
-
 	let validators = header
 		.validator_set
 		.validators()
@@ -617,9 +611,6 @@ fn tm_header_abi_token(header: &ics07_tendermint_zk::client_message::ZkHeader) -
 			EthersToken::Int(header.validator_set.total_voting_power().value().into()),
 		]
 	);
-
-
-	
 
 	let trusted_validators = header
 		.trusted_validator_set
@@ -683,7 +674,6 @@ fn validator_info_token(validator: &tendermint::validator::Info) -> Result<Token
 						    "unsupported public key type, only ed25519 is supported".to_string(),
 					    )),
 			    };
-    // Ok(EthersToken::Tuple(vec![pub_key, EthersToken::Int(voting_power.into())]))
     Ok(EthersToken::Tuple(vec![address, pub_key,voting_power, proposer_priority ]))
 }
 
@@ -1459,9 +1449,6 @@ impl EthereumClient {
 		sleep(self.expected_block_time() * INDEXER_DELAY_BLOCKS as u32).await;
 
 		info!(target: "hyperspace_ethereum", "Submitting messages: {:?}", messages.iter().map(|x| x.type_url.clone()).collect::<Vec<_>>().join(", "));
-		error!(target: "hyperspace_ethereum", "all messages ____________________________________________");
-		error!(target: "hyperspace_ethereum", "Submitting messages to ethereum: {:?}", messages.iter().map(|x| x.type_url.clone()).collect::<Vec<_>>().join(", "));
-		
 
 		let mut temp_client_state: Option<ClientState<()>> = None;
 
@@ -1524,17 +1511,13 @@ impl EthereumClient {
 				}
 
 				let latest_client_state = if let Some(cs) = &temp_client_state {
-					info!(target: "hyperspace_ethereum", "Submitting temp_client_state 1 to ethereum: {:?}", cs);
 					Token::Bytes(ethabi::encode(&[client_state_abi_token(cs)]))
 				} else {
 					let (state, _) =
 						self.get_latest_client_state_exact_token(client_id.clone()).await?;
 					let x = client_state_from_abi_token::<()>(state.clone())?;
 					temp_client_state = Some(x.clone());
-					info!(target: "hyperspace_ethereum", "Submitting temp_client_state 2 to ethereum: {:?}", temp_client_state);
-					info!(target: "hyperspace_ethereum", "Submitting temp_client_state chain id to ethereum: {:?}", x.chain_id);
 					Token::Bytes(ethabi::encode(&[client_state_abi_token(&x)]))
-					// state
 				};
 
 				if let Some(cs) = &mut temp_client_state {

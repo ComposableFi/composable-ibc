@@ -46,7 +46,6 @@ impl ZKProver {
 		let result= ureq::get(url.as_str())
             .call()?
             .into_string()?;
-        println!("result: {:?}", result);
         Ok(result)
 	}
 
@@ -57,7 +56,6 @@ impl ZKProver {
 		let result= ureq::post(url.as_str())
 			.send_json(ureq::json!(proof_input))?
 			.into_string();
-        println!("result: {:?}", result);
         match result {
             Ok(r) => {
                 let resp: Response = serde_json::from_str(&r)?;

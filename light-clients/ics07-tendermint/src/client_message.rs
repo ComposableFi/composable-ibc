@@ -179,18 +179,6 @@ impl Header {
 	}
 
 	pub fn get_zk_input(&self, size: usize) -> Result<(Vec<(Vec<u8>, Vec<u8>, Vec<u8>)>, u64), Error> {
-		//todo we need to take a pub key from the validator to get 32 bytes to create a zk input 
-		let v = &self.validator_set.validators();
-		let p = v[0].pub_key;
-		match p {
-			PublicKey::Ed25519(e) => {
-				println!("Ed25519");
-				println!("{:?}", e.as_bytes());
-			},
-			_ => {}
-		};
-
-
 		#[derive(Clone)]
 		struct ZKInput {
 			pub_key: Vec<u8>,
@@ -298,8 +286,7 @@ impl Header {
 
 		// signed votes haven't
 		if voting_power_amount_validator_size * 2 <= total_voting_power * 3 {
-			//TODO uncomment. commented for the local testing with a 1 validator on cosmos chain
-			// return Err(Error::validation("voting power is not > 2/3 + 1".to_string()))
+			return Err(Error::validation("voting power is not > 2/3 + 1".to_string()))
 		}
 
 		
@@ -310,8 +297,6 @@ impl Header {
 			.take(size)
 			.map(|ZKInput { pub_key, signature, message, .. }| (pub_key, signature, message))
 			.collect();
-
-		let mut validators = vec![0; size];
 
 		let validators: Vec<u64> = not_sorted_pre_input
 			.iter()
@@ -330,11 +315,6 @@ impl Header {
 				bitmask |= 1 << index;
 			}
 		}
-
-
-		//extra return parameter for eth to verify zk proof after we got response from remote prover
-		//bitmask preserving order of validators that is initial order not sorted by voting power
-		//todo create some input for zk prover as bitmask
 
 		Ok((ret, bitmask))
 	}

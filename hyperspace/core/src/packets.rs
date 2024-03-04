@@ -255,7 +255,6 @@ pub async fn query_ready_and_timed_out_packets(
 						{
 							proof_height
 						} else {
-							//todo!!! but with a loop zk relayer proably because of this
 							timeout_packets_count.fetch_add(1, Ordering::SeqCst);
 							log::trace!(target: "hyperspace", "Skipping packet as no timeout proof height could be found: {:?}", packet);
 							return Ok(None)
