@@ -360,7 +360,6 @@ async fn process_updates<A: Chain, B: Chain>(
 		}
 	}
 
-	log::error!(target: "hyperspace", "Received finalized events from: {} {event_types:#?}", source.name());
 	if mandatory_updates.is_empty() && !has_events {
 		log::info!(target: "hyperspace", "No messages to send");
 		return Ok(())
@@ -373,7 +372,6 @@ async fn process_updates<A: Chain, B: Chain>(
 		return Ok(())
 	};
 
-	log::error!(target: "hyperspace", "Received finalized events from: {} {event_types:#?}", source.name());
 	let mut new_height = source.get_proof_height(latest_update_height).await;
 	if new_height != latest_update_height {
 		new_height.revision_height -=
