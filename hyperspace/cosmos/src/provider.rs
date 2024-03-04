@@ -145,7 +145,6 @@ where
 						client.parse_ibc_events_at(&counterparty, latest_revision, height),
 					)
 					.await??;
-				log::info!("Parsed events {:#?} at {:?}", xs.iter().map(|x| x.event_type()).collect::<Vec<_>>(), height);
 					Ok((height, xs))
 				});
 			}

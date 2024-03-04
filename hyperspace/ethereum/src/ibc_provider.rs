@@ -375,7 +375,7 @@ impl EthereumClient {
 					)
 					.await?
 					.pop()
-					.ok_or_else(|| ClientError::Other("no events found test1".to_string()))?;
+					.ok_or_else(|| ClientError::Other("no events found".to_string()))?;
 
 				let tx_hash = log
 					.transaction_hash
