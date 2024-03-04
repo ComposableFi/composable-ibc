@@ -58,7 +58,7 @@ use ics23::commitment_proof::Proof;
 use icsxx_ethereum::{
 	abi::EthereumClientAbi::EthereumClientPrimitivesConsensusStateProof, utils::keccak256,
 };
-use log::{error, info, debug};
+use log::{error, info, debug, trace};
 use pallet_ibc::light_clients::{
 	AnyClientMessage, AnyClientState, AnyConsensusState, HostFunctionsManager,
 };
@@ -1559,13 +1559,13 @@ impl EthereumClient {
 				//take third element of the array as a array of strings
 				let sc = json_data[2].as_array().unwrap().iter().map(|x| x.as_str().unwrap().to_string()).collect::<Vec<_>>();
 
-				debug!(target: "hyperspace_ethereum", "json_data: {:?}", json_data.clone());
-				debug!(target: "hyperspace_ethereum", "____________________________________");
-				debug!(target: "hyperspace_ethereum", "json   sa: {:?}", sa);
-				debug!(target: "hyperspace_ethereum", "____________________________________");
-				debug!(target: "hyperspace_ethereum", "json   sb: {:?}", sb);
-				debug!(target: "hyperspace_ethereum", "____________________________________");
-				debug!(target: "hyperspace_ethereum", "json   sc: {:?}", sc);
+				trace!(target: "hyperspace_ethereum", "json_data: {:?}", json_data.clone());
+				trace!(target: "hyperspace_ethereum", "____________________________________");
+				trace!(target: "hyperspace_ethereum", "json   sa: {:?}", sa);
+				trace!(target: "hyperspace_ethereum", "____________________________________");
+				trace!(target: "hyperspace_ethereum", "json   sb: {:?}", sb);
+				trace!(target: "hyperspace_ethereum", "____________________________________");
+				trace!(target: "hyperspace_ethereum", "json   sc: {:?}", sc);
 
 				fn get_u256(s0x : &str) -> U256{
 					let s : &'static str = Box::leak(s0x.to_string().into_boxed_str());

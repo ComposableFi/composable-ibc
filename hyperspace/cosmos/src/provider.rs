@@ -185,7 +185,6 @@ where
 					&IbcEventType::TimeoutOnClose
 			)
 		}).map(|ev| ev.height().increment() ).max().unwrap_or_else(|| Height::zero());
-		log::debug!(target: "hyperspace_cosmos", "max_event_height blocks {}..{}. h :{}", from, to2, max_event_height);
 
 		let mut updates = Vec::new();
 		let mut continew = false;
@@ -256,7 +255,6 @@ where
 						}
 					}
 					else{
-						// //todo size should be 32 for mainnets. 1 is only for local testing.
 						let size = self.zk_prover_api.zk_val_len;
 						/* pub_key, signature, message  */
 						let zk_input = update_header.get_zk_input(size);

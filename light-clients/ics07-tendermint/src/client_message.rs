@@ -253,8 +253,6 @@ impl Header {
 			let p = pub_key;
 			match p {
 				PublicKey::Ed25519(e) => {
-					println!("Ed25519");
-					println!("{:?}", e.as_bytes());
 					zk_input.pub_key = e.as_bytes().to_vec();
 				},
 				_ => {}

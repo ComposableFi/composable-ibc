@@ -343,6 +343,8 @@ async fn process_updates<A: Chain, B: Chain>(
 		)
 	});
 
+	log::debug!(target: "hyperspace", "Received'' {}, has_instant_events = {has_instant_events}, update_delay_passed = {update_delay_passed}, need_to_update = {need_to_update}", mandatory_updates.len(), );
+
 	
 	if !updates.is_empty() &&
 		(mandatory_updates.is_empty() && update_delay_passed && need_to_update) ||
