@@ -13,11 +13,13 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-use cosmwasm_std::{Binary, Deps, DepsMut, Env, MessageInfo, Response, StdResult};
+use cosmwasm_std::{
+	to_json_binary, Binary, Deps, DepsMut, Env, MessageInfo, Response, StdError, StdResult, Uint64,
+};
 
 use crate::{context, context::log, ibc, msg, state};
 
-type Result<T, E = crate::error::Error> = core::result::Result<T, E>;
+type Result<T = (), E = crate::error::Error> = core::result::Result<T, E>;
 
 #[cfg_attr(not(feature = "library"), cosmwasm_std::entry_point)]
 pub fn instantiate(
@@ -42,100 +44,25 @@ pub fn instantiate(
 pub fn sudo(deps: DepsMut, env: Env, msg: msg::SudoMsg) -> Result<Response> {
 	let ctx = context::new(deps, env);
 	log!(ctx, "sudo({msg:?})");
-	Ok(Response::default().set_data(process_sudo_msg(ctx, msg)?))
+	process_sudo_msg(ctx, msg)?;
+	Ok(Response::default())
 }
 
-fn process_sudo_msg(mut ctx: context::ContextMut, msg: msg::SudoMsg) -> Result<Binary> {
+fn process_sudo_msg(mut ctx: context::ContextMut, msg: msg::SudoMsg) -> Result {
 	log!(ctx, "process_sudo_msg: {msg:?}");
 	match msg {
 		msg::SudoMsg::UpdateStateOnMisbehaviour(_msg) => {
-			let state = ctx.client_state()?.frozen();
-			ctx.client_states_mut().set(state);
+			let client_state = ctx.client_state()?.frozen();
+			ctx.client_states_mut().set(client_state);
 		},
 		msg::SudoMsg::UpdateState(msg) => process_update_state_msg(ctx, msg)?,
-		// 	SudoMsg::MigrateClientStore(_msg) =>
-		// 		check_substitute_and_update_state::<HostFunctions>(ctx)
-		// 			.map_err(|e| ContractError::Tendermint(e.to_string()))
-		// 			.and_then(|(cs, cu)| {
-		// 				let height = cs.latest_height();
-		// 				ctx.store_consensus_state_prefixed(height, cu, SUBJECT_PREFIX);
-		// 				ctx.store_client_state_prefixed(cs, SUBJECT_PREFIX, client_id)
-		// 					.map_err(|e| ContractError::Tendermint(e.to_string()))?;
-		// 				Ok(to_binary(&ContractResult::success()))
-		// 			}),
-		// 	SudoMsg::VerifyMembership(msg) => {
-		// 		let client_state = ctx
-		// 			.client_state(&client_id)
-		// 			.map_err(|e| ContractError::Tendermint(e.to_string()))?;
-		// 		let msg = VerifyMembershipMsg::try_from(msg)?;
-		// 		verify_delay_passed(&ctx, msg.height, msg.delay_time_period, msg.delay_block_period)
-		// 			.map_err(|e| ContractError::Tendermint(e.to_string()))?;
-		// 		let consensus_state = ctx
-		// 			.consensus_state(&client_id, msg.height)
-		// 			.map_err(|e| ContractError::Tendermint(e.to_string()))?;
-		// 		verify_membership::<HostFunctions, _>(
-		// 			&client_state,
-		// 			&msg.prefix,
-		// 			&msg.proof,
-		// 			&consensus_state.root,
-		// 			msg.path,
-		// 			msg.value,
-		// 		)
-		// 		.map_err(|e| ContractError::Tendermint(e.to_string()))
-		// 		.map(|_| to_binary(&ContractResult::success()))
-		// 	},
-		// 	SudoMsg::VerifyNonMembership(msg) => {
-		// 		let client_state = ctx
-		// 			.client_state(&client_id)
-		// 			.map_err(|e| ContractError::Tendermint(e.to_string()))?;
-		// 		let msg = VerifyNonMembershipMsg::try_from(msg)?;
-		// 		verify_delay_passed(&ctx, msg.height, msg.delay_time_period, msg.delay_block_period)
-		// 			.map_err(|e| ContractError::Tendermint(e.to_string()))?;
-		// 		let consensus_state = ctx
-		// 			.consensus_state(&client_id, msg.height)
-		// 			.map_err(|e| ContractError::Tendermint(e.to_string()))?;
-
-		// 		verify_non_membership::<HostFunctions, _>(
-		// 			&client_state,
-		// 			&msg.prefix,
-		// 			&msg.proof,
-		// 			&consensus_state.root,
-		// 			msg.path,
-		// 		)
-		// 		.map_err(|e| ContractError::Tendermint(e.to_string()))
-		// 		.map(|_| to_binary(&ContractResult::success()))
-		// 	},
-		// 	SudoMsg::VerifyUpgradeAndUpdateState(msg) => {
-		// 		let old_client_state = ctx
-		// 			.client_state(&client_id)
-		// 			.map_err(|e| ContractError::Tendermint(e.to_string()))?;
-		// 		let msg: VerifyUpgradeAndUpdateStateMsg<HostFunctions> =
-		// 			VerifyUpgradeAndUpdateStateMsg::try_from(msg)?;
-		// 		verify_upgrade_and_update_state::<HostFunctions>(
-		// 			ctx,
-		// 			client_id.clone(),
-		// 			old_client_state,
-		// 			msg.upgrade_client_state,
-		// 			msg.upgrade_consensus_state,
-		// 			msg.proof_upgrade_client,
-		// 			msg.proof_upgrade_consensus_state,
-		// 		)
-		// 		.map_err(|e| ContractError::Tendermint(e.to_string()))
-		// 		.and_then(|(cs, cu)| {
-		// 			let height = cs.latest_height();
-		// 			ctx.store_consensus_state(client_id.clone(), height, cu)
-		// 				.map_err(|e| ContractError::Tendermint(e.to_string()))?;
-		// 			ctx.store_client_state(client_id, cs)
-		// 				.map_err(|e| ContractError::Tendermint(e.to_string()))?;
-		// 			Ok(to_binary(&ContractResult::success()))
-		// 		})
-		// 	},
-		_ => todo!(),
+		// msg::SudoMsg::MigrateClientStore(_msg) => todo!(),
+		// msg::SudoMsg::VerifyUpgradeAndUpdateState(msg) => todo!(),
 	}
-	Ok(Vec::new().into())
+	Ok(())
 }
 
-fn process_update_state_msg(mut ctx: context::ContextMut, msg: msg::UpdateStateMsg) -> Result<()> {
+fn process_update_state_msg(mut ctx: context::ContextMut, msg: msg::UpdateStateMsg) -> Result {
 	let client_state = ctx.client_state()?;
 	let now_ns = ctx.host_timestamp_ns;
 
@@ -154,61 +81,92 @@ fn process_update_state_msg(mut ctx: context::ContextMut, msg: msg::UpdateStateM
 #[cfg_attr(not(feature = "library"), cosmwasm_std::entry_point)]
 pub fn query(deps: Deps, env: Env, msg: msg::QueryMsg) -> StdResult<Binary> {
 	let ctx = context::new_ro(deps, env);
-	let ret = match msg {
-		// msg::QueryMsg::CheckForMisbehaviour(msg) => {
-		// 	let client_state = ctx.client_state(&client_id)?;
-		// 	client
-		// 		.check_for_misbehaviour(&ctx, client_id, client_state, msg.client_message)
-		// 		.map_err(|e| ContractError::Tendermint(e.to_string()))
-		// 		.map(|result| to_binary(&QueryResponse::success().misbehaviour(result)))?
-		// },
-		// msg::QueryMsg::ExportMetadata(ExportMetadataMsg {}) => {
-		// 	let ro_proceeded_state = ReadonlyProcessedStates::new(deps.storage);
-		// 	to_binary(&QueryResponse::success().genesis_metadata(ro_proceeded_state.get_metadata()))
-		// },
-		// msg::QueryMsg::Status(StatusMsg {}) => {
-		// 	let client_state = match get_client_state::<HostFunctions>(deps, &client_id) {
-		// 		Ok(client_state) => client_state,
-		// 		Err(_) => return to_binary(&QueryResponse::success().status("Unknown".to_string())),
-		// 	};
+	match msg {
+		msg::QueryMsg::VerifyClientMessage(msg) => {
+			query_verify_client_msg(ctx, msg)?;
+			Ok(Binary::default())
+		},
+		msg::QueryMsg::CheckForMisbehaviour(msg) => {
+			let res = query_check_for_misbehaviour_msg(ctx, msg)?;
+			Ok(if res { "true" } else { "false" }.as_bytes().into())
+		},
+		msg::QueryMsg::VerifyStateProof(msg) => query_verify_state_proof(ctx, msg),
 
-		// 	if client_state.frozen_height().is_some() {
-		// 		to_binary(&QueryResponse::success().status("Frozen".to_string()))
-		// 	} else {
-		// 		let height = client_state.latest_height();
-		// 		match get_consensus_state(deps, &client_id, height) {
-		// 			Ok(consensus_state) => {
-		// 				let last_update = consensus_state.timestamp.unix_timestamp().unsigned_abs();
-		// 				let tp = client_state.trusting_period.as_secs();
-		// 				let now = env.block.time.seconds();
-		// 				if (last_update + tp) < now {
-		// 					return to_binary(
-		// 						&QueryResponse::success().status("Expired".to_string()),
-		// 					)
-		// 				}
-		// 				to_binary(&QueryResponse::success().status("Active".to_string()))
-		// 			},
-		// 			Err(_) => to_binary(&QueryResponse::success().status("Expired".to_string())),
-		// 		}
-		// 	}
-		// },
+		msg::QueryMsg::Status(msg::StatusMsg {}) => to_json_binary(&query_status(ctx)?),
+
+		msg::QueryMsg::GetLatestHeights(msg::GetLatestHeightsMsg {}) => todo!(),
+
 		msg::QueryMsg::TimestampAtHeight(msg) => {
 			let state = ctx.consensus_state(msg.height)?;
-			state.timestamp_ns.get().to_be_bytes().to_vec()
+			let ts = Uint64::from(state.timestamp_ns.get());
+			to_json_binary(&ts)
 		},
-		// msg::QueryMsg::VerifyClientMessage(msg) => {
-		// 	let ctx = Context::<HostFunctions>::new_ro(deps, env);
-		// 	let client = TendermintClient::<HostFunctions>::default();
-		// 	let client_state = ctx
-		// 		.client_state(&client_id)
-		// 		.map_err(|e| ContractError::Tendermint(e.to_string()))?;
-		// 	let msg = VerifyClientMessage::try_from(msg)?;
-		// 	client
-		// 		.verify_client_message(&ctx, client_id, client_state, msg.client_message)
-		// 		.map_err(|e| ContractError::Tendermint(format!("{e:?}")))
-		// 		.map(|_| to_binary(&QueryResponse::success()))?
-		// },
-		_ => todo!(),
-	};
-	Ok(ret.into())
+
+		msg::QueryMsg::ExportMetadata(msg::ExportMetadataMsg {}) => {
+			let meta = ctx.consensus_states().get_all_metadata()?;
+			to_json_binary(&meta)
+		},
+	}
+}
+
+fn query_verify_state_proof(
+	ctx: context::Context,
+	msg: msg::VerifyStateProofMsg,
+) -> StdResult<Binary> {
+	let client_state = ctx.client_state()?;
+	let consensus_state = ctx.consensus_state(msg.height)?;
+	cf_guest::proof::verify(
+		&ibc::CommitmentPrefix::default(),
+		&msg.proof,
+		&consensus_state.block_hash,
+		msg.path,
+		msg.value.as_deref(),
+	)
+	.map_err(|err| StdError::GenericErr { msg: err.to_string() })?;
+	Ok(Binary::default())
+}
+
+fn query_verify_client_msg(ctx: context::Context, msg: msg::VerifyClientMessageMsg) -> Result {
+	let client_state = ctx.client_state()?;
+	let verifier = crate::pubkey::NullVerifier;
+	match msg.client_message {
+		state::ClientMessage::Header(header) =>
+			client_state.verify_header(&verifier, &ctx.client_id, header),
+		state::ClientMessage::Misbehaviour(misbehaviour) =>
+			client_state.verify_misbehaviour(&verifier, &ctx.client_id, misbehaviour),
+	}
+	.map_err(crate::Error::from)
+}
+
+fn query_check_for_misbehaviour_msg(
+	ctx: context::Context,
+	msg: msg::CheckForMisbehaviourMsg,
+) -> Result<bool> {
+	let client_state = ctx.client_state()?;
+	let verifier = crate::pubkey::NullVerifier;
+	match msg.client_message {
+		state::ClientMessage::Header(header) =>
+			client_state.check_for_misbehaviour_header(&verifier, &ctx.client_id, header),
+		state::ClientMessage::Misbehaviour(misbehaviour) =>
+			client_state.check_for_misbehaviour_misbehavior(&verifier, &ctx.client_id, misbehaviour),
+	}
+	.map_err(crate::Error::from)
+}
+
+fn query_status(ctx: context::Context) -> StdResult<msg::StatusResponse> {
+	let client_state = ctx.client_state()?;
+	if client_state.is_frozen {
+		return Ok(msg::StatusResponse::Frozen);
+	}
+
+	let height = client_state.latest_height;
+	let height = ibc::Height::new(0, height.into()).unwrap();
+	let consensus_state = ctx.consensus_state(height)?;
+
+	let age = ctx.host_timestamp_ns.saturating_sub(consensus_state.timestamp_ns.get());
+	Ok(if age >= client_state.trusting_period_ns {
+		msg::StatusResponse::Expired
+	} else {
+		msg::StatusResponse::Active
+	})
 }

@@ -18,10 +18,10 @@ use cosmwasm_std::StdError;
 #[derive(Debug, derive_more::From, derive_more::Display)]
 pub enum Error {
 	Std(StdError),
-	Decode(prost::DecodeError),
 	Client(crate::ibc::ClientError),
 	Wasm(crate::ibc::wasm::Error),
-	BadUtf8(alloc::string::FromUtf8Error),
+
+	BadProto(prost::DecodeError),
 
 	#[display(fmt = "Unauthorized")]
 	#[from(ignore)]
@@ -37,13 +37,16 @@ pub enum Error {
 	#[from(ignore)]
 	#[display(fmt = "BadType")]
 	BadType,
-
-	#[from(ignore)]
-	Other(String),
 }
 
 #[cfg(feature = "std")]
 impl std::error::Error for Error {}
+
+impl From<alloc::string::FromUtf8Error> for Error {
+	fn from(err: alloc::string::FromUtf8Error) -> Self {
+		Self::Std(StdError::InvalidUtf8 { msg: err.to_string() })
+	}
+}
 
 impl From<cf_guest::DecodeError> for Error {
 	fn from(err: cf_guest::DecodeError) -> Self {

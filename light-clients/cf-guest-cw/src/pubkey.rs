@@ -49,3 +49,11 @@ impl guestchain::Signature for Signature {
 		bytes.try_into().map(Self).map_err(|_| guestchain::BadFormat)
 	}
 }
+
+pub(crate) struct NullVerifier;
+
+impl guestchain::Verifier<PubKey> for NullVerifier {
+	fn verify(&self, message: &[u8], pubkey: &PubKey, signature: &Signature) -> bool {
+		todo!()
+	}
+}

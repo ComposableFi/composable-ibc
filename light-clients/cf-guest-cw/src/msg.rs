@@ -13,12 +13,14 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-use alloc::borrow::Cow;
-
 use cosmwasm_schema::cw_serde;
-use prost::Message;
+use cosmwasm_std::Uint64;
 
-use crate::{ibc, state};
+use crate::{
+	ibc,
+	serialisation::{AsStr, Base64, MaybeBase64},
+	state,
+};
 
 #[cw_serde]
 pub struct InstantiateMessage {
@@ -41,115 +43,15 @@ pub struct GenesisMetadata {
 }
 
 #[cw_serde]
-pub struct QueryResponse {
-	pub is_valid: bool,
-	#[serde(skip_serializing_if = "Option::is_none")]
-	pub status: Option<String>,
-	#[serde(skip_serializing_if = "Option::is_none")]
-	pub genesis_metadata: Option<Vec<GenesisMetadata>>,
-	#[serde(skip_serializing_if = "Option::is_none")]
-	pub found_misbehaviour: Option<bool>,
-	#[serde(skip_serializing_if = "Option::is_none")]
-	pub timestamp: Option<u64>,
-}
-
-impl QueryResponse {
-	pub fn success() -> Self {
-		Self {
-			is_valid: true,
-			status: None,
-			genesis_metadata: None,
-			found_misbehaviour: None,
-			timestamp: None,
-		}
-	}
-
-	pub fn status(mut self, status: String) -> Self {
-		self.status = Some(status);
-		self
-	}
-
-	pub fn genesis_metadata(mut self, genesis_metadata: Option<Vec<GenesisMetadata>>) -> Self {
-		self.genesis_metadata = genesis_metadata;
-		self
-	}
-
-	pub fn misbehaviour(mut self, found_misbehavior: bool) -> Self {
-		self.found_misbehaviour = Some(found_misbehavior);
-		self
-	}
-
-	pub fn timestamp(mut self, timestamp: u64) -> Self {
-		self.timestamp = Some(timestamp);
-		self
-	}
-}
-
-#[cw_serde]
-pub struct ContractResult {
-	#[serde(skip_serializing_if = "Option::is_none")]
-	pub heights: Option<Vec<ibc::Height>>,
-}
-
-impl ContractResult {
-	pub fn success() -> Self {
-		Self { heights: None }
-	}
-
-	pub fn heights(mut self, heights: Vec<ibc::Height>) -> Self {
-		self.heights = Some(heights);
-		self
-	}
-}
-
-#[cw_serde]
 pub enum SudoMsg {
-	MigrateClientStore(MigrateClientStoreMsg),
-	UpdateStateOnMisbehaviour(UpdateStateOnMisbehaviourMsg),
+	//MigrateClientStore(MigrateClientStoreMsg),
 	UpdateState(UpdateStateMsg),
-	VerifyMembership(VerifyMembershipMsg),
-	VerifyNonMembership(VerifyNonMembershipMsg),
-	VerifyUpgradeAndUpdateState(VerifyUpgradeAndUpdateStateMsg),
+	UpdateStateOnMisbehaviour(UpdateStateOnMisbehaviourMsg),
+	// VerifyUpgradeAndUpdateState(VerifyUpgradeAndUpdateStateMsg),
 }
 
-#[cw_serde]
-pub enum QueryMsg {
-	CheckForMisbehaviour(CheckForMisbehaviourMsg),
-	GetLatestHeightsMsg(GetLatestHeightsMsg),
-	ExportMetadata(ExportMetadataMsg),
-	Status(StatusMsg),
-	TimestampAtHeight(TimestampAtHeightMsg),
-	VerifyClientMessage(VerifyClientMessage),
-}
-
-#[cw_serde]
-pub struct TimestampAtHeightMsg {
-	#[serde(flatten)]
-	pub height: ibc::Height,
-}
-
-#[cw_serde]
-pub struct GetLatestHeightsMsg {}
-
-#[cw_serde]
-pub struct StatusMsg {}
-
-#[cw_serde]
-pub struct ExportMetadataMsg {}
-
-#[cw_serde]
-pub struct VerifyClientMessage {
-	#[serde(with = "Base64")]
-	#[schemars(with = "String")]
-	pub client_message: state::ClientMessage,
-}
-
-#[cw_serde]
-pub struct CheckForMisbehaviourMsg {
-	#[serde(with = "Base64")]
-	#[schemars(with = "String")]
-	pub client_message: state::Misbehaviour,
-}
+// #[cw_serde]
+// pub struct MigrateClientStoreMsg {}
 
 #[cw_serde]
 pub struct UpdateStateMsg {
@@ -165,118 +67,123 @@ pub struct UpdateStateOnMisbehaviourMsg {
 	pub misbehaviour_message: state::Misbehaviour,
 }
 
-#[cw_serde]
-pub struct MigrateClientStoreMsg {}
+// #[cw_serde]
+// pub struct VerifyUpgradeAndUpdateStateMsg {
+// 	#[serde(with = "Base64")]
+// 	#[schemars(with = "String")]
+// 	pub upgrade_client_state: state::ClientState,
+// 	#[serde(with = "Base64")]
+// 	#[schemars(with = "String")]
+// 	pub upgrade_consensus_state: state::ConsensusState,
+// 	#[serde(with = "Base64")]
+// 	#[schemars(with = "String")]
+// 	pub proof_upgrade_client: ibc::CommitmentProofBytes,
+// 	#[serde(with = "Base64")]
+// 	#[schemars(with = "String")]
+// 	pub proof_upgrade_consensus_state: ibc::CommitmentProofBytes,
+// }
 
 #[cw_serde]
-pub struct VerifyMembershipMsg {
-	#[serde(with = "Base64")]
-	#[schemars(with = "String")]
-	pub proof: Vec<u8>,
-	#[serde(with = "Base64")]
-	#[schemars(with = "String")]
-	pub path: Vec<u8>,
-	#[serde(with = "Base64")]
-	#[schemars(with = "String")]
-	pub value: Vec<u8>,
-	#[serde(flatten)]
-	pub height: ibc::Height,
+pub enum QueryMsg {
+	/// Verifies client message.
+	///
+	/// Response is empty or error if proof is invalid.
+	VerifyClientMessage(VerifyClientMessageMsg),
+
+	/// Checks client message for misbehaviour.
+	///
+	/// Response is JSON-serialised boolean (i.e. `true` or `false`) or
+	/// error.
+	CheckForMisbehaviour(CheckForMisbehaviourMsg),
+
+	/// Checks whether provided membership or non-membership proof is valid.
+	///
+	/// The proof is a membership proof is `self.0.value` field is `Some`.
+	/// Otherwise, if `self.0.value` is `None`, the proof is non-membership
+	/// proof.
+	///
+	/// Response is empty or error if proof is invalid.
+	VerifyStateProof(VerifyStateProofMsg),
+
+	/// Checks status of the client.
+	///
+	/// Response is JSON-serialised [`StatusResponse`] object.
+	Status(StatusMsg),
+
+	GetLatestHeights(GetLatestHeightsMsg),
+
+	/// Returns metadata for consensus at given height.
+	///
+	/// Response is JSON-serialised `Uint64` object representing Unix
+	/// timestamp in nanoseconds.
+	TimestampAtHeight(TimestampAtHeightMsg),
+
+	/// Gets metadata of all consensus states.
+	///
+	/// Response is JSON-serialised array of [`ConsensusStateMetadata`]
+	/// objects.
+	ExportMetadata(ExportMetadataMsg),
 }
 
 #[cw_serde]
-pub struct VerifyNonMembershipMsg {
+pub struct VerifyClientMessageMsg {
+	#[serde(with = "Base64")]
+	#[schemars(with = "String")]
+	pub client_message: state::ClientMessage,
+}
+
+#[cw_serde]
+pub struct CheckForMisbehaviourMsg {
+	#[serde(with = "Base64")]
+	#[schemars(with = "String")]
+	pub client_message: state::ClientMessage,
+}
+
+#[cw_serde]
+pub struct VerifyStateProofMsg {
 	#[serde(with = "Base64")]
 	#[schemars(with = "String")]
 	pub proof: ibc::CommitmentProofBytes,
-	#[serde(with = "Base64")]
+	#[serde(with = "AsStr")]
 	#[schemars(with = "String")]
-	pub path: Vec<u8>,
+	pub path: ibc::path::Path,
+	#[serde(with = "MaybeBase64", default, skip_serializing_if = "Option::is_none")]
+	#[schemars(with = "String")]
+	pub value: Option<Vec<u8>>,
 	#[serde(flatten)]
 	pub height: ibc::Height,
 }
 
 #[cw_serde]
-pub struct VerifyUpgradeAndUpdateStateMsg {
-	#[serde(with = "Base64")]
-	#[schemars(with = "String")]
-	pub upgrade_client_state: state::ClientState,
-	#[serde(with = "Base64")]
-	#[schemars(with = "String")]
-	pub upgrade_consensus_state: state::ConsensusState,
-	#[serde(with = "Base64")]
-	#[schemars(with = "String")]
-	pub proof_upgrade_client: ibc::CommitmentProofBytes,
-	#[serde(with = "Base64")]
-	#[schemars(with = "String")]
-	pub proof_upgrade_consensus_state: ibc::CommitmentProofBytes,
+pub struct StatusMsg {}
+
+#[cw_serde]
+pub enum StatusResponse {
+	Active,
+	Expired,
+	Frozen,
 }
 
-struct Base64;
+#[cw_serde]
+pub struct GetLatestHeightsMsg {}
 
-impl Base64 {
-	pub fn serialize<T: BytesConv, S: serde::ser::Serializer>(
-		obj: &T,
-		ser: S,
-	) -> Result<S::Ok, S::Error> {
-		use base64::engine::Engine;
-
-		let bytes = obj.to_bytes()?;
-		let bytes = bytes.as_ref();
-		// Unfortunately because there’s no `<&Binary>::From<&Vec>` we
-		// need to open-code base64 encoding.  TODO(mina86): Change it
-		// once https://github.com/CosmWasm/cosmwasm/pull/2036 lands.
-		ser.serialize_str(&base64::engine::general_purpose::STANDARD.encode(bytes))
-	}
-
-	pub fn deserialize<'de, T: BytesConv, D: serde::Deserializer<'de>>(
-		de: D,
-	) -> Result<T, D::Error> {
-		serde::Deserialize::deserialize(de).and_then(T::from_bytes)
-	}
+#[cw_serde]
+pub struct TimestampAtHeightMsg {
+	#[serde(flatten)]
+	pub height: ibc::Height,
 }
 
-trait BytesConv: Sized {
-	fn to_bytes<'a, E: serde::ser::Error>(&'a self) -> Result<Cow<'a, [u8]>, E>;
-	fn from_bytes<E: serde::de::Error>(bytes: Vec<u8>) -> Result<Self, E>;
+#[cw_serde]
+pub struct ExportMetadataMsg {}
+
+#[cw_serde]
+pub struct ConsensusStateMetadata {
+	pub revision_number: Uint64,
+	pub revision_height: Uint64,
+	pub host_timestamp_ns: Uint64,
+	pub host_height: Uint64,
 }
 
-impl BytesConv for Vec<u8> {
-	fn to_bytes<'a, E: serde::ser::Error>(&'a self) -> Result<Cow<'a, [u8]>, E> {
-		Ok(Cow::Borrowed(self.as_slice()))
-	}
-
-	fn from_bytes<E: serde::de::Error>(bytes: Vec<u8>) -> Result<Self, E> {
-		Ok(bytes)
-	}
+fn is_false(val: &bool) -> bool {
+	!*val
 }
-
-impl BytesConv for ibc::CommitmentProofBytes {
-	fn to_bytes<'a, E: serde::ser::Error>(&'a self) -> Result<Cow<'a, [u8]>, E> {
-		Ok(Cow::Borrowed(self.as_ref()))
-	}
-
-	fn from_bytes<E: serde::de::Error>(bytes: Vec<u8>) -> Result<Self, E> {
-		Self::try_from(bytes).map_err(E::custom)
-	}
-}
-
-macro_rules! conv_via_any {
-	($msg:ty) => {
-		impl BytesConv for $msg {
-			fn to_bytes<'a, E: serde::ser::Error>(&'a self) -> Result<Cow<'a, [u8]>, E> {
-				Ok(Cow::Owned(ibc::proto::Any::from(self).encode_to_vec()))
-			}
-
-			fn from_bytes<E: serde::de::Error>(bytes: Vec<u8>) -> Result<Self, E> {
-				let any = ibc::proto::Any::decode(bytes.as_slice()).map_err(E::custom)?;
-				<$msg>::try_from(any).map_err(E::custom)
-			}
-		}
-	};
-}
-
-conv_via_any!(state::ClientMessage);
-conv_via_any!(state::ClientState);
-conv_via_any!(state::ConsensusState);
-conv_via_any!(state::Header);
-conv_via_any!(state::Misbehaviour);

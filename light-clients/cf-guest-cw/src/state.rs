@@ -153,30 +153,52 @@ impl ConsensusStates {
 		self.set_impl(Self::key(prefix, height), state, metadata)
 	}
 
-	pub(crate) fn prune_oldest_consensus_state(
+	fn all<'a>(
+		&'a self,
+	) -> impl Iterator<Item = Result<(Vec<u8>, Any, Metadata), prost::DecodeError>> + 'a {
+		self.0
+			.range(
+				Some(Self::key_impl(b"", 0, 0).as_slice()),
+				Some(Self::key_impl(b"", u64::MAX, u64::MAX).as_slice()),
+				cosmwasm_std::Order::Ascending,
+			)
+			.map(|(key, value)| {
+				let (any, metadata) = ConsensusWithMetadata::decode(value.as_slice())?.into_parts();
+				Ok((key, any, metadata))
+			})
+	}
+
+	pub fn prune_oldest_consensus_state(
 		&mut self,
 		client_state: &ClientState,
 		now_ns: u64,
 	) -> Result<()> {
-		let start = Self::key_impl(b"", 0, 0);
-		let end = Self::key_impl(b"", u64::MAX, u64::MAX);
-		let record = self
-			.0
-			.range(Some(start.as_slice()), Some(end.as_slice()), cosmwasm_std::Order::Ascending)
-			.next();
-		let (key, value) = match record {
+		let (key, any) = match self.all().next() {
 			None => return Ok(()),
-			Some(pair) => pair,
+			Some(Err(err)) => return Err(err.into()),
+			Some(Ok((key, any, _metadata))) => (key, any),
 		};
-		let state: ConsensusState = match Self::decode(&value) {
-			Ok((state, _metadata)) => state,
-			Err(err) => return Err(err),
-		};
+		let state = ConsensusState::try_from(any)?;
 		let elapsed = now_ns.saturating_sub(state.timestamp_ns.get());
 		if elapsed >= client_state.trusting_period_ns {
 			self.0.remove(key.as_slice());
 		}
 		Ok(())
+	}
+
+	pub fn get_all_metadata(&self) -> Result<Vec<crate::msg::ConsensusStateMetadata>> {
+		let mut records = Vec::new();
+		for record in self.all() {
+			let (key, state, metadata) = record?;
+			let key = &key[key.len() - 16..];
+			records.push(crate::msg::ConsensusStateMetadata {
+				revision_number: u64::from_be_bytes(key[..8].try_into().unwrap()).into(),
+				revision_height: u64::from_be_bytes(key[8..].try_into().unwrap()).into(),
+				host_timestamp_ns: metadata.host_timestamp_ns.into(),
+				host_height: metadata.host_height.into(),
+			})
+		}
+		Ok(records)
 	}
 
 	pub fn del(&mut self, height: ibc::Height) {
@@ -202,16 +224,12 @@ impl ConsensusStates {
 		T: TryFrom<Any>,
 		E: From<T::Error> + From<prost::DecodeError>,
 	{
-		self.0.get(&key).map(|value| Self::decode(value.as_slice())).transpose()
-	}
-
-	fn decode<T, E>(value: &[u8]) -> Result<(T, Metadata), E>
-	where
-		T: TryFrom<Any>,
-		E: From<T::Error> + From<prost::DecodeError>,
-	{
-		let (any, metadata) = ConsensusWithMetadata::decode(value)?.into_parts();
-		Ok((T::try_from(any)?, metadata))
+		let value = match self.0.get(&key) {
+			None => return Ok(None),
+			Some(value) => value,
+		};
+		let (any, metadata) = ConsensusWithMetadata::decode(value.as_slice())?.into_parts();
+		Ok(Some((T::try_from(any)?, metadata)))
 	}
 
 	fn set_impl(&mut self, key: Vec<u8>, state: impl Into<Any>, metadata: Metadata) {

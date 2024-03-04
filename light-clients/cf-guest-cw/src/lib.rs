@@ -22,6 +22,7 @@ mod error;
 mod ibc;
 pub mod msg;
 mod pubkey;
+mod serialisation;
 pub mod state;
 
 use crate::{error::Error, pubkey::PubKey};
