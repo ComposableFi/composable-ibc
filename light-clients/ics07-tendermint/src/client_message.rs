@@ -36,10 +36,7 @@ use alloc::collections::BTreeSet;
 use prost::Message;
 use serde::{Deserialize, Serialize};
 use tendermint::{
-	block::{signed_header::SignedHeader, Commit, CommitSig},
-	validator::Set as ValidatorSet,
-	vote::{SignedVote, ValidatorIndex},
-	Vote,
+	block::{signed_header::SignedHeader, Commit, CommitSig}, validator::Set as ValidatorSet, vote::{SignedVote, ValidatorIndex}, PublicKey, Vote
 };
 use tendermint_proto::Protobuf;
 
@@ -245,11 +242,21 @@ impl Header {
 				.is_err()
 			{}
 
-			let zk_input = ZKInput {
-				pub_key: vote.validator_address.into(),
+			let mut zk_input = ZKInput {
+				// pub_key: vote.validator_address.into(),
+				pub_key: vec![],
 				signature: signature.as_bytes().to_vec(),
 				message: sign_bytes,
 				voting_power: validator.power(),
+			};
+
+			let pub_key = &self.validator_set.validators().iter().find(|x| x.address == vote.validator_address).unwrap().pub_key;
+			let p = pub_key;
+			match p {
+				PublicKey::Ed25519(e) => {
+					zk_input.pub_key = e.as_bytes().to_vec();
+				},
+				_ => {}
 			};
 			pre_input.push(zk_input);
 		}
@@ -278,8 +285,7 @@ impl Header {
 
 		// signed votes haven't
 		if voting_power_amount_validator_size * 2 <= total_voting_power * 3 {
-			//TODO uncomment. commented for the local testing with a 1 validator on cosmos chain
-			// return Err(Error::validation("voting power is not > 2/3 + 1".to_string()))
+			return Err(Error::validation("voting power is not > 2/3 + 1".to_string()))
 		}
 
 		let ret: Vec::<(Vec<u8>, Vec<u8>, Vec<u8>)> = pre_input
@@ -287,8 +293,6 @@ impl Header {
 			.take(size)
 			.map(|ZKInput { pub_key, signature, message, .. }| (pub_key, signature, message))
 			.collect();
-
-		let validators = vec![0; size];
 
 		let validators: Vec<u64> = not_sorted_pre_input
 			.iter()
@@ -307,11 +311,6 @@ impl Header {
 				bitmask |= 1 << index;
 			}
 		}
-
-
-		//extra return parameter for eth to verify zk proof after we got response from remote prover
-		//bitmask preserving order of validators that is initial order not sorted by voting power
-		//todo create some input for zk prover as bitmask
 
 		Ok((ret, bitmask))
 	}

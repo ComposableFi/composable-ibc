@@ -15,6 +15,7 @@ anyhow = "1.0.66"
 async-trait = "0.1.58"
 futures = "0.3.24"
 json = { version = "1.0.85", package = "serde_json" }
+serde = { version = "1.0.137", features = ["derive"] }
 codec = { package = "parity-scale-codec", version = "3.0.0", features = ["derive"] }
 subxt = { git = "https://github.com/paritytech/subxt", rev = "2a4da618a033bb82f768e4ef67b093b371f8b492", features = ["substrate-compat"] }
 ethers = { version = "2.0.2", features = ["ws"] }

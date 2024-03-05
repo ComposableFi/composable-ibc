@@ -15,15 +15,11 @@
 use crate::utils::ETH_NODE_PORT_WS;
 use core::time::Duration;
 use ethers::{
-	abi::{ethabi, Bytes, ParamType, StateMutability, Token},
-	middleware::SignerMiddleware,
-	prelude::{
+	abi::{ethabi, Bytes, ParamType, StateMutability, Token}, core::k256::elliptic_curve::consts::U265, middleware::SignerMiddleware, prelude::{
 		coins_bip39::{English, Mnemonic},
 		transaction::eip2718::TypedTransaction,
 		ContractInstance, Http, LocalWallet, Middleware, MnemonicBuilder, Provider, Signer,
-	},
-	types::{Address, BlockNumber, TransactionRequest, U256},
-	utils::{keccak256, AnvilInstance},
+	}, types::{Address, BlockNumber, TransactionRequest, U256}, utils::{keccak256, AnvilInstance}
 };
 use ethers_solc::ProjectCompileOutput;
 use hyperspace_core::{
@@ -394,7 +390,7 @@ async fn setup_clients() -> (AnyChain, AnyChain, JoinHandle<()>) {
 		rpc_url: args.chain_b.clone().parse().unwrap(),
 		grpc_url: args.cosmos_grpc.clone().parse().unwrap(),
 		websocket_url: args.cosmos_ws.clone().parse().unwrap(),
-		chain_id: "centauri-testnet-1".to_string(),
+		chain_id: "centauri-1".to_string(),
 		client_id: None,
 		connection_id: None,
 		account_prefix: "centauri".to_string(),
@@ -413,6 +409,9 @@ async fn setup_clients() -> (AnyChain, AnyChain, JoinHandle<()>) {
 			max_packets_to_process: 200,
 			client_update_interval_sec: 10,
 		},
+		zk_prover_remote_uri: "http://127.0.0.1:8000".to_string(),
+		zk_prover_allowed_delay_secs: 160,
+		zk_val_len: 1usize,
 	};
 	let chain_b = CosmosClient::<()>::new(config_b.clone()).await.unwrap();
 
@@ -511,37 +510,112 @@ async fn zk_prover_bitmask() {
 
 #[tokio::test(flavor = "multi_thread", worker_threads = 10)]
 #[ignore]
+async fn test_u256_conversion() {
+	let pi_a_0 = "3539986140604516990123374722280552878594159762766456475343280045247856955765";
+	let x = U256::from_dec_str(pi_a_0).unwrap();
+}
+
+
+
+#[tokio::test(flavor = "multi_thread", worker_threads = 10)]
+#[ignore]
 async fn zk_prover_integration_test() {
-	//branch rustninja/compatibility
-	let zk_prover = ZKProver::new("http://127.0.0.1:8000".to_string(), Duration::from_secs(60).as_secs());
+
+	let h = 0;
+
+	let zk_prover = ZKProver::new("http://127.0.0.1:8000".to_string(), Duration::from_secs(60).as_secs(), 1);
 	let proof_input = CreateProofInput {
-		signatures: vec![],
-		msgs: vec![],
-		public_keys: vec![]
+		signatures: vec![vec![101, 168, 183, 134, 143, 54, 1, 63, 148, 125, 195, 152, 170, 120, 195, 218, 68, 126, 139, 93, 180, 148, 179, 82, 108, 189, 188, 127, 111, 147, 233, 36, 70, 169, 214, 104, 165, 109, 216, 165, 7, 246, 111, 41, 104, 152, 168, 234, 251, 37, 43, 20, 57, 185, 154, 38, 159, 204, 186, 76, 153, 87, 85, 14]],
+		msgs: vec![vec![111, 8, 2, 17, 36, 0, 0, 0, 0, 0, 0, 0, 34, 72, 10, 32, 66, 15, 32, 152, 208, 7, 69, 219, 166, 26, 244, 231, 127, 247, 196, 94, 155, 127, 207, 55, 136, 84, 147, 228, 153, 98, 60, 132, 217, 5, 138, 158, 18, 36, 8, 1, 18, 32, 11, 240, 43, 121, 197, 33, 157, 232, 109, 180, 116, 4, 121, 90, 247, 22, 40, 58, 232, 238, 206, 228, 227, 85, 28, 80, 93, 168, 110, 223, 49, 183, 42, 12, 8, 176, 194, 170, 174, 6, 16, 144, 206, 240, 168, 2, 50, 10, 99, 101, 110, 116, 97, 117, 114, 105, 45, 49]],
+		public_keys: vec![vec![16, 147, 45, 80, 193, 165, 204, 196, 89, 59, 167, 137, 249, 34, 61, 211, 57, 184, 100, 157, 6, 199, 160, 237, 149, 254, 14, 202, 131, 61, 183, 163]],
+		height: h,
 	};
 	let status = zk_prover.status().unwrap();
 	println!("status: {:?}", status);
-	let resp = zk_prover.create_proof(proof_input).unwrap();
-	println!("resp: {:?}", resp);
 
-	let proof = zk_prover.poll_proof(&resp.proof_id).unwrap();
+	let resp = zk_prover.create_proof(proof_input.clone()).unwrap();
+	println!("resp should be immidiatly: {:?}", resp.clone());
+
+	let mut new_reqeust = proof_input;
+	new_reqeust.height = h + 1;
+	let resp_when_server_was_busy_with_oter_proof = zk_prover.create_proof(new_reqeust.clone()).unwrap();
+	assert!(resp_when_server_was_busy_with_oter_proof.proof_id.is_none()); //none because server was busy with previous request
+
+
+
+	let proof = zk_prover.poll_proof(&resp.proof_id.clone().unwrap(), h).unwrap();
 	assert!(proof.is_none());
-	std::thread::sleep(Duration::from_secs(63));
-	let proof = zk_prover.poll_proof(&resp.proof_id).unwrap();
+	std::thread::sleep(Duration::from_secs(170));
+	// println!("&resp.proof_id: {:?}", &resp.proof_id);
+	let proof = zk_prover.poll_proof(&resp.proof_id.clone().unwrap(), h).unwrap();
+	println!("proof: {:?}", proof);
 	assert!(proof.is_some());
-	println!("proof: {:?}", proof.unwrap());
+	println!("proof: {:?}", proof.clone().unwrap());
+
+	let json_data: json::Value = json::from_str(proof.unwrap().as_str()).unwrap();
+	//take a first element of the array as a array of strings
+	let s1 = json_data[0].as_array().unwrap().iter().map(|x| x.as_str().unwrap().to_string()).collect::<Vec<_>>();
+	//take second element of the array as a array of arrays of strings
+	let s2 = json_data[1].as_array().unwrap().iter().map(|x| x.as_array().unwrap().iter().map(|x| x.as_str().unwrap().to_string()).collect::<Vec<_>>()).collect::<Vec<_>>();
+	//take third element of the array as a array of strings
+	let s3 = json_data[2].as_array().unwrap().iter().map(|x| x.as_str().unwrap().to_string()).collect::<Vec<_>>();
+
+	let proof = zk_prover.poll_proof(&new_reqeust.height.to_string(), new_reqeust.height).unwrap();
+	assert!(proof.is_none());
 	return;
+}
+
+#[derive(Debug, Deserialize)]
+struct DataStructure(Vec<Vec<DataItem>>);
+use serde::Deserialize;
+#[derive(Debug, Deserialize)]
+enum DataItem {
+	Inner(Vec<String>),
+	Outer(String),
 }
 
 #[tokio::test(flavor = "multi_thread", worker_threads = 10)]
 #[ignore]
+async fn test_de(){
+	let data = r#"[
+        ["0x139855728d26774998f6a74260935dbf2b41a2e1e12ff0ef546605ac921d94e5", "0x0c6f6e5ab5df25ea175f8831649bd2f0154ca8544043c61b450b12118d4d6b1f"],
+        [["0x2ac4e68c7d097f2ba324b71166e313585b77e13e1d6faae52ffea257d951d88e", "0x00514c55fcab6a307d412bac507efd1bdb2e032763210c8179a9141a81d84c5b"],
+        ["0x0668d08425135c162009904e97c22e8588b17c6241b4ab9da812902f253d09a5", "0x2fd2174a9298f2ccc505ca4a3aac4c8ea67de8ba8ed0fa0ac22c26f693d6d551"]],
+        ["0x0d779a0cfb66e2a20e9e87f82dce62932ee6b168c31a46073f9e77c24bc10c16", "0x2c2e380c15566e22acfd22aba8eec47e0d9575dabec24e7f75d4d5a05c25e551"],
+        ["0x0000000000000000000000000000000000000000000000000000000000000000","0x0000000000000000000000000000000013b7cff91a80a211b9ce7146aea27e4b","0x00000000000000000000000000000000c2d1b2e882294a7aa8f726e774bb008c"]
+    ]"#;
+
+    let json_data: json::Value = json::from_str(data).unwrap();
+	//take a first element of the array as a array of strings
+	let s1 = json_data[0].as_array().unwrap().iter().map(|x| x.as_str().unwrap().to_string()).collect::<Vec<_>>();
+	//take second element of the array as a array of arrays of strings
+	let s2 = json_data[1].as_array().unwrap().iter().map(|x| x.as_array().unwrap().iter().map(|x| x.as_str().unwrap().to_string()).collect::<Vec<_>>()).collect::<Vec<_>>();
+	//take third element of the array as a array of strings
+	let s3 = json_data[2].as_array().unwrap().iter().map(|x| x.as_str().unwrap().to_string()).collect::<Vec<_>>();
+    println!("{:?}", json_data);
+	println!();
+    println!("{:?}", s1);
+	println!();
+    println!("{:?}", s2);
+	println!();
+	println!("{:?}", s3);
+	let s = "0x139855728d26774998f6a74260935dbf2b41a2e1e12ff0ef546605ac921d94e5";
+	let s = s.trim_start_matches("0x");
+	let x = U256::from(s);
+	println!("s: {:?}", s);
+	println!("x: {:?}", x);
+	assert_eq!(x.to_string(), "8863094613666630156452150948347003576288661784136564298813652772034157843685");
+
+}
+
+
+#[tokio::test(flavor = "multi_thread", worker_threads = 10)]
+#[ignore]
 async fn decode_yui_error(){
-	let error = "08c379a0000000000000000000000000000000000000000000000000000000000000002000000000000000000000000000000000000000000000000000000000000000186661696c65642068657265206a75737420746f20746573740000000000000000";
+	let error = "0x08c379a00000000000000000000000000000000000000000000000000000000000000020000000000000000000000000000000000000000000000000000000000000001570726f6f665f726573756c742069732066616c73650000000";
 	let error = hex::decode(error).unwrap();
 	let s = String::from_utf8_lossy(&error);
 	println!("s: {:?}", s);
-	// let error = ethabi::decode(&[ParamType::String], &error).unwrap();
-	// println!("error: {:?}", error);
 }
 
 #[tokio::test(flavor = "multi_thread", worker_threads = 10)]

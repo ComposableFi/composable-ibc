@@ -182,7 +182,7 @@ pub struct CosmosClient<H> {
 
 	pub zk_prover_api: ZKProver,
 	//hashmap of height -> proof_id
-	//means: did we already request proof for this height
+	//Did we already request proof for this height?
 	//if yes then need to ask about the actual proof
 	pub zk_proof_requests: Arc<Mutex<HashMap<Height, ZkProofRequest>>>,
 }
@@ -311,6 +311,10 @@ pub struct CosmosClientConfig {
 	/// Common client config
 	#[serde(flatten)]
 	pub common: CommonClientConfig,
+
+	pub zk_prover_remote_uri: String,
+	pub zk_prover_allowed_delay_secs: u64,
+	pub zk_val_len: usize,
 }
 
 impl<H> CosmosClient<H>
@@ -381,8 +385,7 @@ where
 			join_handles: Arc::new(TokioMutex::new(vec![ws_driver_jh])),
 			mock_zk_prover: Arc::new(Mutex::new(MockZkProover::new())),
 			zk_proof_requests: Arc::new(Mutex::new(HashMap::new())),
-			//todo need to read from config
-			zk_prover_api: ZKProver::new("http://127.0.0.1:8000".to_string(), Duration::from_secs(30).as_secs()),
+			zk_prover_api: ZKProver::new(config.zk_prover_remote_uri, Duration::from_secs(config.zk_prover_allowed_delay_secs).as_secs(), config.zk_val_len),
 		})
 	}
 

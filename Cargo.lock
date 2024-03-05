@@ -5884,6 +5884,7 @@ dependencies = [
  "parity-scale-codec",
  "polkadot-core-primitives",
  "rand 0.8.5",
+ "serde",
  "serde_json",
  "sp-core 7.0.0",
  "sp-finality-grandpa",

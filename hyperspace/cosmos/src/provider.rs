@@ -202,8 +202,6 @@ where
 			.map(|ev| ev.height().increment())
 			.max()
 			.unwrap_or_else(|| Height::zero());
-		log::error!(target: "hyperspace", "++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++");
-		log::error!(target: "hyperspace_cosmos", "max_event_height blocks {}..{}. h :{}", from, to2, max_event_height);
 
 		let mut updates = Vec::new();
 		let mut continew = false;
@@ -229,21 +227,10 @@ where
 					let mut zk_proover = self.mock_zk_prover.lock().unwrap();
 					zk_proover.request(height);
 					is_request_ready = zk_proover.poll(height);
-					log::error!(target: "hyperspace", "!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!");
-					log::error!(target: "hyperspace_cosmos", "requested proof: {:?}, {:?}, {}", update_type, height, is_request_ready);
-					println!("requested proof: {:?}", height);
+					log::debug!(target: "hyperspace_cosmos", "requested proof: {:?}, {:?}, {}", update_type, height, is_request_ready);
 
 					if true {
-						zk_proof = vec![1, 2, 3, 4, 5, 6, 7, 8, 9, 10]; //mock proof
-												/*
-												let expected_validators = vec![1]; all validators included in the proof
-												let mut zk_bitmask: u64 = 0;
-												for (index, &validator) in expected_validators.iter().enumerate() {
-													if validator == 1 {
-														zk_bitmask |= 1 << index;
-													}
-												}
-												 */
+						zk_proof = vec![1, 2, 3, 4, 5, 6, 7, 8, 9, 10];
 						zk_bitmask = 1; //it is real bitmask for local tests with 1 validator [1]
 						is_request_ready = true;
 						exist_at_least_one_proof = true;
@@ -259,13 +246,11 @@ where
 					if let Some(proof_request) = proof_id {
 						let proof_request = proof_request.clone();
 						drop(zk_height_proof_id_map);
-						let proof = zk_prover.poll_proof(&proof_request.proof_id);
+						let proof = zk_prover.poll_proof(&proof_request.proof_id, height.revision_height);
 						match proof {
 							Ok(proof) => {
-								if let Some(proof) = proof {
-									//todo put the proof into the protobuf object to be catched by
-									// eth side
-									zk_proof = proof;
+								if let Some(proof) = proof{
+									zk_proof = proof.as_bytes().to_vec();
 									zk_bitmask = proof_request.bitmask;
 									is_request_ready = true;
 									exist_at_least_one_proof = true;
@@ -273,6 +258,8 @@ where
 									log::info!(target: "hyperspace", "proof not ready Yet. proof is None. proof_id: {:?}, height: {:?}", proof_request, height);
 									if proof_request.is_waiting_for_proof_too_long(delay_secs) {
 										log::error!(target: "hyperspace", "Proof not ready too long. proof_id: {:?}, height: {:?}, requested proof at : {:?}", proof_request, height, proof_request.request_time);
+										let mut zk_height_proof_id_map = self.zk_proof_requests.lock().unwrap();
+										zk_height_proof_id_map.remove(&height);
 									}
 								}
 							},
@@ -281,21 +268,28 @@ where
 							},
 						}
 					} else {
-						// //todo size should be 32 for mainnets. 1 is only for local testing.
-						let size = 1;
+						let size = self.zk_prover_api.zk_val_len;
+						/* pub_key, signature, message  */
 						let zk_input = update_header.get_zk_input::<HostFunctionsManager>(size);
-
 						match zk_input {
-							Ok((_input, bitmask)) => {
+							Ok((input, bitmask)) => {
+
+								let pub_keys_list  = input.iter().map(|(pub_keys, _, _)| pub_keys.clone()).collect::<Vec<_>>();
+								let signatures_list  = input.iter().map(|(_, signatures, _)| signatures.clone()).collect::<Vec<_>>();
+								let msg = input.iter().map(|(_, _, msg)| msg.clone()).collect::<Vec<_>>();
+
 								let result = zk_prover.create_proof(CreateProofInput::new(
-									vec![],
-									vec![],
-									vec![], //pass the input
+									signatures_list, msg, pub_keys_list, height.revision_height
 								));
 								match result {
 									Ok(resp) => {
-										let proof_id = ZkProofRequest::new(resp.proof_id, bitmask);
-										zk_height_proof_id_map.insert(height, proof_id);
+										if let Some(proof_id) = resp.proof_id{
+											let proof_id = ZkProofRequest::new(proof_id, bitmask);
+											zk_height_proof_id_map.insert(height, proof_id);
+										}
+										else{
+											log::info!(target: "hyperspace", "proof_id is None. It means that zk server busy generating other proof. height: {:?}", height);
+										}
 									},
 									Err(e) => {
 										log::error!(target: "hyperspace", "failed to create_proof. height: {:?}. error: {:?}", height, e);
@@ -303,14 +297,12 @@ where
 								}
 							},
 							Err(e) => {
-								log::error!(target: "hyperspace", "=========================================================================");
 								log::error!(target: "hyperspace", "failed to get zk input for heigth : {:?}, size: {}, error: {:?}", update_header.height(), size, e);
 							},
 						}
 					}
 
-					log::error!(target: "hyperspace", "!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!");
-					log::error!(target: "hyperspace", "real zk proover was requested proof: {:?}, {:?}, {}", update_type, height, is_request_ready);
+					log::debug!(target: "hyperspace", "real zk proover was requested proof: {:?}, {:?}, {}", update_type, height, is_request_ready);
 					if !is_request_ready {
 						continew = true;
 					}
@@ -318,9 +310,9 @@ where
 			};
 
 			if continew ||
-				(update_type.is_optional() && height > max_event_height/* && !height.is_zero() */)
+				(update_type.is_optional() && height > max_event_height)
 			{
-				log::error!(target: "hyperspace_cosmos", "skiped: {:?}", height);
+				log::debug!(target: "hyperspace_cosmos", "skiped: {:?}", height);
 				continue;
 			}
 
@@ -348,10 +340,6 @@ where
 				})?;
 				Any { value, type_url: msg.type_url() }
 			};
-			//if proof does not exist then do not add into the updates
-			for i in events.iter() {
-				log::error!(target: "hyperspace_cosmos", "i: {:?}", i);
-			}
 			updates.push((update_client_header, height, events, update_type));
 		}
 
