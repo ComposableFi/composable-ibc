@@ -22,7 +22,7 @@ use futures::SinkExt;
 use ibc::core::ics24_host::identifier::ClientId;
 use primitives::CommonClientConfig;
 
-pub const USE_GETH: bool = true;
+pub const USE_GETH: bool = false;
 
 pub const ETH_NODE_PORT: u16 = 8545;
 pub const ETH_NODE_PORT_WS: u16 = 8546;
@@ -45,11 +45,11 @@ pub fn yui_ibc_solidity_path() -> PathBuf {
 #[track_caller]
 pub async fn spawn_anvil() -> (AnvilInstance, Arc<SignerMiddleware<Provider<Http>, LocalWallet>>) {
 	#[cfg(not(feature = "no_beacon"))]
-	let anvil = Anvil::new().spawn();
-	// let anvil = Anvil::new().port(8545u16).spawn();
+	// let anvil = Anvil::new().spawn();
+	let anvil = Anvil::new().port(8545u16).spawn();
 	#[cfg(feature = "no_beacon")]
-	// let anvil = Anvil::new().port(8545u16).spawn();
-	let anvil = Anvil::new().spawn();
+	let anvil = Anvil::new().port(8545u16).spawn();
+	// let anvil = Anvil::new().spawn();
 
 	log::info!("Anvil started at {}, {}", anvil.endpoint(), anvil.ws_endpoint());
 	println!("{:?}", std::env::current_dir().unwrap());

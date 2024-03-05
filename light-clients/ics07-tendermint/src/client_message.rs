@@ -18,6 +18,7 @@ use crate::error::Error;
 use alloc::{string::ToString, vec::Vec};
 use bytes::Buf;
 use core::cmp::Ordering;
+use tendermint::crypto::signature::Verifier;
 use ibc::{
 	core::{
 		ics02_client,
@@ -31,9 +32,9 @@ use ibc_proto::{
 	google::protobuf::Any,
 	ibc::lightclients::tendermint::v1::{Header as RawHeader, Misbehaviour as RawMisbehaviour},
 };
+use alloc::collections::BTreeSet;
 use prost::Message;
 use serde::{Deserialize, Serialize};
-use std::collections::HashSet;
 use tendermint::{
 	block::{signed_header::SignedHeader, Commit, CommitSig},
 	validator::Set as ValidatorSet,
@@ -181,7 +182,7 @@ impl Header {
 		headers_compatible(&self.signed_header, &other_header.signed_header)
 	}
 
-	pub fn get_zk_input(&self, size: usize) -> Result<(Vec<(Vec<u8>, Vec<u8>, Vec<u8>)>, u64), Error> {
+	pub fn get_zk_input<V: Verifier>(&self, size: usize) -> Result<(Vec<(Vec<u8>, Vec<u8>, Vec<u8>)>, u64), Error> {
 		#[derive(Clone)]
 		struct ZKInput {
 			pub_key: Vec<u8>,
@@ -204,7 +205,7 @@ impl Header {
 				.map(|vote| (signature, vote))
 			});
 
-		let mut seen_validators = HashSet::new();
+		let mut seen_validators = BTreeSet::new();
 		let total_voting_power = self.validator_set.total_voting_power().value();
 
 		for (signature, vote) in non_absent_votes {
@@ -237,7 +238,7 @@ impl Header {
 
 			let signature = signed_vote.signature();
 			if validator
-				.verify_signature::<tendermint::crypto::default::signature::Verifier>(
+				.verify_signature::<V>(
 					&sign_bytes,
 					signed_vote.signature(),
 				)
@@ -281,16 +282,13 @@ impl Header {
 			// return Err(Error::validation("voting power is not > 2/3 + 1".to_string()))
 		}
 
-		
-
-
 		let ret: Vec::<(Vec<u8>, Vec<u8>, Vec<u8>)> = pre_input
 			.into_iter()
 			.take(size)
 			.map(|ZKInput { pub_key, signature, message, .. }| (pub_key, signature, message))
 			.collect();
 
-		let mut validators = vec![0; size];
+		let validators = vec![0; size];
 
 		let validators: Vec<u64> = not_sorted_pre_input
 			.iter()
