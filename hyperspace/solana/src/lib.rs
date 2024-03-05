@@ -7,10 +7,9 @@ use client::FinalityEvent;
 use client_state::convert_new_client_state_to_old;
 use consensus_state::convert_new_consensus_state_to_old;
 use core::{pin::Pin, str::FromStr, time::Duration};
-use ibc_new::core::{
-	channel::types::msgs::PacketMsg, client::types::msgs::ClientMsg,
-	handler::types::msgs::MsgEnvelope,
-};
+use ibc_core_channel_types::msgs::PacketMsg;
+use ibc_core_client_types::msgs::ClientMsg;
+use ibc_core_handler_types::msgs::MsgEnvelope;
 use ics07_tendermint::{
 	client_message::ClientMessage, client_state::ClientState as TmClientState,
 	consensus_state::ConsensusState as TmConsensusState,
@@ -282,11 +281,10 @@ impl IbcProvider for SolanaClient {
 		let revision_height = consensus_height.revision_height;
 		let revision_number = consensus_height.revision_number;
 		let new_client_id =
-			ibc_new::core::host::types::identifiers::ClientId::from_str(client_id.as_str())
-				.unwrap();
+			ibc_core_host_types::identifiers::ClientId::from_str(client_id.as_str()).unwrap();
 		let consensus_state_trie_key = TrieKey::for_consensus_state(
 			ClientIdx::try_from(new_client_id).unwrap(),
-			ibc_new::core::client::types::Height::new(
+			ibc_core_client_types::Height::new(
 				consensus_height.revision_number,
 				consensus_height.revision_height,
 			)
@@ -305,10 +303,7 @@ impl IbcProvider for SolanaClient {
 			)?;
 		let serialized_consensus_state = client_store
 			.consensus_states
-			.get(
-				&ibc_new::core::client::types::Height::new(revision_number, revision_height)
-					.unwrap(),
-			)
+			.get(&ibc_core_client_types::Height::new(revision_number, revision_height).unwrap())
 			.ok_or(Error::Custom("No value at given key".to_owned()))?;
 		let consensus_state = serialized_consensus_state
 			.state()
@@ -337,8 +332,7 @@ deserialize consensus state"
 		let trie = self.get_trie().await;
 		let storage = self.get_ibc_storage().await;
 		let new_client_id =
-			ibc_new::core::host::types::identifiers::ClientId::from_str(client_id.as_str())
-				.unwrap();
+			ibc_core_host_types::identifiers::ClientId::from_str(client_id.as_str()).unwrap();
 		let client_state_trie_key =
 			TrieKey::for_client_state(ClientIdx::try_from(new_client_id).unwrap());
 		let (_, client_state_proof) = trie
@@ -378,7 +372,7 @@ deserialize client state"
 		let trie = self.get_trie().await;
 		let storage = self.get_ibc_storage().await;
 		let connection_idx = ConnectionIdx::try_from(
-			ibc_new::core::host::types::identifiers::ConnectionId::from_str(connection_id.as_str())
+			ibc_core_host_types::identifiers::ConnectionId::from_str(connection_id.as_str())
 				.unwrap(),
 		)
 		.unwrap();
@@ -449,9 +443,9 @@ deserialize client state"
 		let trie = self.get_trie().await;
 		let storage = self.get_ibc_storage().await;
 		let new_port_id =
-			ibc_new::core::host::types::identifiers::PortId::from_str(port_id.as_str()).unwrap();
+			ibc_core_host_types::identifiers::PortId::from_str(port_id.as_str()).unwrap();
 		let new_channel_id =
-			ibc_new::core::host::types::identifiers::ChannelId::new(channel_id.sequence());
+			ibc_core_host_types::identifiers::ChannelId::new(channel_id.sequence());
 		let channel_end_path =
 			PortChannelPK::try_from(new_port_id.clone(), new_channel_id.clone()).unwrap();
 		let channel_end_trie_key = TrieKey::for_channel_end(&channel_end_path);
@@ -468,16 +462,16 @@ deserialize client state"
 			.ok_or(Error::Custom("Channel end not found".to_owned()))?;
 		let inner_counterparty = inner_channel_end.counterparty();
 		let state = match inner_channel_end.state {
-			ibc_new::core::channel::types::channel::State::Uninitialized => 0,
-			ibc_new::core::channel::types::channel::State::Init => 1,
-			ibc_new::core::channel::types::channel::State::TryOpen => 2,
-			ibc_new::core::channel::types::channel::State::Open => 3,
-			ibc_new::core::channel::types::channel::State::Closed => 4,
+			ibc_core_channel_types::channel::State::Uninitialized => 0,
+			ibc_core_channel_types::channel::State::Init => 1,
+			ibc_core_channel_types::channel::State::TryOpen => 2,
+			ibc_core_channel_types::channel::State::Open => 3,
+			ibc_core_channel_types::channel::State::Closed => 4,
 		};
 		let ordering = match inner_channel_end.ordering {
-			ibc_new::core::channel::types::channel::Order::None => 0,
-			ibc_new::core::channel::types::channel::Order::Unordered => 1,
-			ibc_new::core::channel::types::channel::Order::Ordered => 2,
+			ibc_core_channel_types::channel::Order::None => 0,
+			ibc_core_channel_types::channel::Order::Unordered => 1,
+			ibc_core_channel_types::channel::Order::Ordered => 2,
 		};
 		let channel_end = Channel {
 			state,
@@ -521,11 +515,11 @@ deserialize client state"
 	) -> Result<QueryPacketCommitmentResponse, Self::Error> {
 		let trie = self.get_trie().await;
 		let new_port_id =
-			ibc_new::core::host::types::identifiers::PortId::from_str(port_id.as_str()).unwrap();
+			ibc_core_host_types::identifiers::PortId::from_str(port_id.as_str()).unwrap();
 		let new_channel_id =
-			ibc_new::core::host::types::identifiers::ChannelId::new(channel_id.sequence());
-		let new_seq = ibc_new::core::host::types::identifiers::Sequence::from(seq);
-		let packet_commitment_path = ibc_new::core::host::types::path::CommitmentPath {
+			ibc_core_host_types::identifiers::ChannelId::new(channel_id.sequence());
+		let new_seq = ibc_core_host_types::identifiers::Sequence::from(seq);
+		let packet_commitment_path = ibc_core_host_types::path::CommitmentPath {
 			port_id: new_port_id,
 			channel_id: new_channel_id,
 			sequence: new_seq,
@@ -552,11 +546,11 @@ deserialize client state"
 	) -> Result<QueryPacketAcknowledgementResponse, Self::Error> {
 		let trie = self.get_trie().await;
 		let new_port_id =
-			ibc_new::core::host::types::identifiers::PortId::from_str(port_id.as_str()).unwrap();
+			ibc_core_host_types::identifiers::PortId::from_str(port_id.as_str()).unwrap();
 		let new_channel_id =
-			ibc_new::core::host::types::identifiers::ChannelId::new(channel_id.sequence());
-		let new_seq = ibc_new::core::host::types::identifiers::Sequence::from(seq);
-		let packet_ack_path = ibc_new::core::host::types::path::AckPath {
+			ibc_core_host_types::identifiers::ChannelId::new(channel_id.sequence());
+		let new_seq = ibc_core_host_types::identifiers::Sequence::from(seq);
+		let packet_ack_path = ibc_core_host_types::path::AckPath {
 			port_id: new_port_id,
 			channel_id: new_channel_id,
 			sequence: new_seq,
@@ -582,9 +576,9 @@ deserialize client state"
 		let trie = self.get_trie().await;
 		let storage = self.get_ibc_storage().await;
 		let new_port_id =
-			ibc_new::core::host::types::identifiers::PortId::from_str(port_id.as_str()).unwrap();
+			ibc_core_host_types::identifiers::PortId::from_str(port_id.as_str()).unwrap();
 		let new_channel_id =
-			ibc_new::core::host::types::identifiers::ChannelId::new(channel_id.sequence());
+			ibc_core_host_types::identifiers::ChannelId::new(channel_id.sequence());
 		let next_sequence_recv_path = PortChannelPK::try_from(new_port_id, new_channel_id).unwrap();
 		let next_sequence_recv_trie_key = TrieKey::for_next_sequence(&next_sequence_recv_path);
 		let (_, next_sequence_recv_proof) = trie
@@ -615,11 +609,11 @@ deserialize client state"
 	) -> Result<QueryPacketReceiptResponse, Self::Error> {
 		let trie = self.get_trie().await;
 		let new_port_id =
-			ibc_new::core::host::types::identifiers::PortId::from_str(port_id.as_str()).unwrap();
+			ibc_core_host_types::identifiers::PortId::from_str(port_id.as_str()).unwrap();
 		let new_channel_id =
-			ibc_new::core::host::types::identifiers::ChannelId::new(channel_id.sequence());
-		let new_seq = ibc_new::core::host::types::identifiers::Sequence::from(seq);
-		let packet_recv_path = ibc_new::core::host::types::path::ReceiptPath {
+			ibc_core_host_types::identifiers::ChannelId::new(channel_id.sequence());
+		let new_seq = ibc_core_host_types::identifiers::Sequence::from(seq);
+		let packet_recv_path = ibc_core_host_types::path::ReceiptPath {
 			port_id: new_port_id,
 			channel_id: new_channel_id,
 			sequence: new_seq,
@@ -665,9 +659,9 @@ deserialize client state"
 	) -> Result<Vec<u64>, Self::Error> {
 		let trie = self.get_trie().await;
 		let new_port_id =
-			ibc_new::core::host::types::identifiers::PortId::from_str(port_id.as_str()).unwrap();
+			ibc_core_host_types::identifiers::PortId::from_str(port_id.as_str()).unwrap();
 		let new_channel_id =
-			ibc_new::core::host::types::identifiers::ChannelId::new(channel_id.sequence());
+			ibc_core_host_types::identifiers::ChannelId::new(channel_id.sequence());
 		let trie_comp = PortChannelPK::try_from(new_port_id, new_channel_id).unwrap();
 		let key = TrieKey::new(Tag::Commitment, trie_comp);
 		let sequences: Vec<u64> = trie
@@ -691,9 +685,9 @@ deserialize client state"
 	) -> Result<Vec<u64>, Self::Error> {
 		let trie = self.get_trie().await;
 		let new_port_id =
-			ibc_new::core::host::types::identifiers::PortId::from_str(port_id.as_str()).unwrap();
+			ibc_core_host_types::identifiers::PortId::from_str(port_id.as_str()).unwrap();
 		let new_channel_id =
-			ibc_new::core::host::types::identifiers::ChannelId::new(channel_id.sequence());
+			ibc_core_host_types::identifiers::ChannelId::new(channel_id.sequence());
 		let trie_comp = PortChannelPK::try_from(new_port_id, new_channel_id).unwrap();
 		let key = TrieKey::new(Tag::Ack, trie_comp);
 		let sequences: Vec<u64> = trie
@@ -718,9 +712,9 @@ deserialize client state"
 	) -> Result<Vec<u64>, Self::Error> {
 		let trie = self.get_trie().await;
 		let new_port_id =
-			ibc_new::core::host::types::identifiers::PortId::from_str(port_id.as_str()).unwrap();
+			ibc_core_host_types::identifiers::PortId::from_str(port_id.as_str()).unwrap();
 		let new_channel_id =
-			ibc_new::core::host::types::identifiers::ChannelId::new(channel_id.sequence());
+			ibc_core_host_types::identifiers::ChannelId::new(channel_id.sequence());
 		let trie_comp = PortChannelPK::try_from(new_port_id, new_channel_id).unwrap();
 		let key = TrieKey::new(Tag::Receipt, trie_comp);
 		let packet_receipt_sequences: Vec<u64> = trie
@@ -753,9 +747,9 @@ deserialize client state"
 	) -> Result<Vec<u64>, Self::Error> {
 		let trie = self.get_trie().await;
 		let new_port_id =
-			ibc_new::core::host::types::identifiers::PortId::from_str(port_id.as_str()).unwrap();
+			ibc_core_host_types::identifiers::PortId::from_str(port_id.as_str()).unwrap();
 		let new_channel_id =
-			ibc_new::core::host::types::identifiers::ChannelId::new(channel_id.sequence());
+			ibc_core_host_types::identifiers::ChannelId::new(channel_id.sequence());
 		let trie_comp = PortChannelPK::try_from(new_port_id, new_channel_id).unwrap();
 		let key = TrieKey::new(Tag::Ack, trie_comp);
 		let packet_receipt_sequences: Vec<u64> = trie
@@ -803,16 +797,16 @@ deserialize client state"
 			.map(|(key, value)| {
 				let channel = value.channel_end().unwrap().unwrap();
 				let state = match channel.state {
-					ibc_new::core::channel::types::channel::State::Uninitialized => 0,
-					ibc_new::core::channel::types::channel::State::Init => 1,
-					ibc_new::core::channel::types::channel::State::TryOpen => 2,
-					ibc_new::core::channel::types::channel::State::Open => 3,
-					ibc_new::core::channel::types::channel::State::Closed => 4,
+					ibc_core_channel_types::channel::State::Uninitialized => 0,
+					ibc_core_channel_types::channel::State::Init => 1,
+					ibc_core_channel_types::channel::State::TryOpen => 2,
+					ibc_core_channel_types::channel::State::Open => 3,
+					ibc_core_channel_types::channel::State::Closed => 4,
 				};
 				let ordering = match channel.ordering {
-					ibc_new::core::channel::types::channel::Order::None => 0,
-					ibc_new::core::channel::types::channel::Order::Unordered => 1,
-					ibc_new::core::channel::types::channel::Order::Ordered => 2,
+					ibc_core_channel_types::channel::Order::None => 0,
+					ibc_core_channel_types::channel::Order::Unordered => 1,
+					ibc_core_channel_types::channel::Order::Ordered => 2,
 				};
 				IdentifiedChannel {
 					state,
@@ -886,11 +880,11 @@ deserialize client state"
 				};
 				let events = events::get_events_from_logs(logs);
 				let send_packet_event = events.iter().find(|event| {
-					matches!(event, ibc_new::core::handler::types::events::IbcEvent::SendPacket(_))
+					matches!(event, ibc_core_handler_types::events::IbcEvent::SendPacket(_))
 				});
 				match send_packet_event {
 					Some(e) => match e {
-						ibc_new::core::handler::types::events::IbcEvent::SendPacket(packet) =>
+						ibc_core_handler_types::events::IbcEvent::SendPacket(packet) =>
 							if packet.chan_id_on_a().as_str() == &channel_id.to_string() &&
 								packet.port_id_on_a().as_str() == port_id.as_str() &&
 								seqs.iter()
@@ -968,24 +962,24 @@ deserialize client state"
 				.unwrap();
 			transactions.push(tx)
 		}
-		let recv_packet_events: Vec<_> =
-			transactions
-				.iter()
-				.filter_map(|tx| {
-					let logs = match tx.transaction.meta.clone().unwrap().log_messages {
-						solana_transaction_status::option_serializer::OptionSerializer::Some(e) =>
-							e,
-						_ => Vec::new(),
-					};
-					let events = events::get_events_from_logs(logs);
-					let send_packet_event =
-						events.iter().find(|event| {
-							matches!(event, ibc_new::core::handler::types::events::IbcEvent::ReceivePacket(_)) ||
-					matches!(event, ibc_new::core::handler::types::events::IbcEvent::WriteAcknowledgement(_))
-						});
-					match send_packet_event {
+		let recv_packet_events: Vec<_> = transactions
+			.iter()
+			.filter_map(|tx| {
+				let logs = match tx.transaction.meta.clone().unwrap().log_messages {
+					solana_transaction_status::option_serializer::OptionSerializer::Some(e) => e,
+					_ => Vec::new(),
+				};
+				let events = events::get_events_from_logs(logs);
+				let send_packet_event = events.iter().find(|event| {
+					matches!(event, ibc_core_handler_types::events::IbcEvent::ReceivePacket(_)) ||
+						matches!(
+							event,
+							ibc_core_handler_types::events::IbcEvent::WriteAcknowledgement(_)
+						)
+				});
+				match send_packet_event {
 					Some(e) => match e {
-						ibc_new::core::handler::types::events::IbcEvent::ReceivePacket(packet) =>
+						ibc_core_handler_types::events::IbcEvent::ReceivePacket(packet) =>
 							if packet.chan_id_on_a().as_str() == &channel_id.to_string() &&
 								packet.port_id_on_a().as_str() == port_id.as_str() &&
 								seqs.iter()
@@ -996,7 +990,7 @@ deserialize client state"
 							} else {
 								None
 							},
-						ibc_new::core::handler::types::events::IbcEvent::WriteAcknowledgement(packet) =>
+						ibc_core_handler_types::events::IbcEvent::WriteAcknowledgement(packet) =>
 							if packet.chan_id_on_a().as_str() == &channel_id.to_string() &&
 								packet.port_id_on_a().as_str() == port_id.as_str() &&
 								seqs.iter()
@@ -1011,12 +1005,12 @@ deserialize client state"
 					},
 					None => None,
 				}
-				})
-				.collect();
+			})
+			.collect();
 		let packets: Vec<_> = recv_packet_events
 			.iter()
 			.map(|recv_packet| match recv_packet {
-				ibc_new::core::handler::types::events::IbcEvent::ReceivePacket(packet) =>
+				ibc_core_handler_types::events::IbcEvent::ReceivePacket(packet) =>
 					ibc_rpc::PacketInfo {
 						height: None,
 						sequence: packet.seq_on_b().value(),
@@ -1038,7 +1032,7 @@ deserialize client state"
 						timeout_timestamp: packet.timeout_timestamp_on_b().nanoseconds(),
 						ack: None,
 					},
-				ibc_new::core::handler::types::events::IbcEvent::WriteAcknowledgement(packet) =>
+				ibc_core_handler_types::events::IbcEvent::WriteAcknowledgement(packet) =>
 					ibc_rpc::PacketInfo {
 						height: None,
 						sequence: packet.seq_on_a().value(),
@@ -1083,7 +1077,7 @@ deserialize client state"
 			.iter()
 			.find(|&client| client.client_id.as_str() == client_id.as_str())
 			.ok_or("Client not found with the given client id while querying client update time and height".to_owned())?;
-		let inner_client_height = ibc_new::core::client::types::Height::new(
+		let inner_client_height = ibc_core_client_types::Height::new(
 			client_height.revision_number,
 			client_height.revision_height,
 		)
@@ -1120,16 +1114,12 @@ deserialize client state"
 		let height = client_state.latest_height();
 		let client_id = self.client_id();
 		let new_client_id =
-			ibc_new::core::host::types::identifiers::ClientId::from_str(client_id.as_str())
-				.unwrap();
+			ibc_core_host_types::identifiers::ClientId::from_str(client_id.as_str()).unwrap();
 		let client_idx = ClientIdx::try_from(new_client_id).unwrap();
 		let consensus_state_trie_key = TrieKey::for_consensus_state(
 			client_idx,
-			ibc_new::core::client::types::Height::new(
-				height.revision_number,
-				height.revision_height,
-			)
-			.unwrap(),
+			ibc_core_client_types::Height::new(height.revision_number, height.revision_height)
+				.unwrap(),
 		);
 		let (_, host_consensus_state_proof) = trie
 			.prove(&consensus_state_trie_key)
@@ -1254,7 +1244,7 @@ deserialize client state"
 	) -> Result<Vec<IdentifiedConnection>, Self::Error> {
 		let storage = self.get_ibc_storage().await;
 		let client_id_key =
-			ibc_new::core::host::types::identifiers::ClientId::from_str(&client_id).unwrap();
+			ibc_core_host_types::identifiers::ClientId::from_str(&client_id).unwrap();
 		let mut index = -1;
 		let connections: Vec<IdentifiedConnection> = storage
 			.connections
@@ -1372,10 +1362,10 @@ deserialize client state"
 				return Err(Error::Custom(String::from("Logs were skipped, so not available"))),
 		};
 		let events = events::get_events_from_logs(logs);
-		let result: Vec<&ibc_new::core::client::types::events::CreateClient> = events
+		let result: Vec<&ibc_core_client_types::events::CreateClient> = events
 			.iter()
 			.filter_map(|event| match event {
-				ibc_new::core::handler::types::events::IbcEvent::CreateClient(e) => Some(e),
+				ibc_core_handler_types::events::IbcEvent::CreateClient(e) => Some(e),
 				_ => None,
 			})
 			.collect();
@@ -1408,10 +1398,10 @@ deserialize client state"
 				return Err(Error::Custom(String::from("Logs were skipped, so not available"))),
 		};
 		let events = events::get_events_from_logs(logs);
-		let result: Vec<&ibc_new::core::connection::types::events::OpenInit> = events
+		let result: Vec<&ibc_core_connection_types::events::OpenInit> = events
 			.iter()
 			.filter_map(|event| match event {
-				ibc_new::core::handler::types::events::IbcEvent::OpenInitConnection(e) => Some(e),
+				ibc_core_handler_types::events::IbcEvent::OpenInitConnection(e) => Some(e),
 				_ => None,
 			})
 			.collect();
@@ -1447,10 +1437,10 @@ deserialize client state"
 				return Err(Error::Custom(String::from("Logs were skipped, so not available"))),
 		};
 		let events = events::get_events_from_logs(logs);
-		let result: Vec<&ibc_new::core::channel::types::events::OpenInit> = events
+		let result: Vec<&ibc_core_channel_types::events::OpenInit> = events
 			.iter()
 			.filter_map(|event| match event {
-				ibc_new::core::handler::types::events::IbcEvent::OpenInitChannel(e) => Some(e),
+				ibc_core_handler_types::events::IbcEvent::OpenInitChannel(e) => Some(e),
 				_ => None,
 			})
 			.collect();
@@ -1635,7 +1625,7 @@ impl Chain for SolanaClient {
 					)
 					.await?;
 			} else if let MsgEnvelope::Packet(PacketMsg::Recv(e)) = message {
-				let packet_data: ibc_new::apps::transfer::types::packet::PacketData =
+				let packet_data: ibc_app_transfer_types::packet::PacketData =
 					serde_json::from_slice(&e.packet.data).unwrap();
 				signature = self
 					.send_deliver(

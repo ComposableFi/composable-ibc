@@ -21,12 +21,10 @@ use ibc::{
 		ics24_host::identifier::{ChannelId, ClientId, ConnectionId, PortId},
 	},
 };
-use ibc_new::{
-	apps::transfer::types::{
-		is_receiver_chain_source, is_sender_chain_source, Coin, PrefixedDenom, TracePrefix,
-	},
-	core::host::types::identifiers::ClientId as ClientIdNew,
+use ibc_app_transfer_types::{
+	is_receiver_chain_source, is_sender_chain_source, Coin, PrefixedDenom, TracePrefix,
 };
+use ibc_core_host_types::identifiers::ClientId as ClientIdNew;
 use lib::hash::CryptoHash;
 use primitives::{CommonClientConfig, CommonClientState, IbcProvider};
 use serde::{Deserialize, Serialize};
@@ -55,8 +53,8 @@ pub enum DeliverIxType {
 	},
 	PacketTransfer {
 		token: Coin<PrefixedDenom>,
-		port_id: ibc_new::core::host::types::identifiers::PortId,
-		channel_id: ibc_new::core::host::types::identifiers::ChannelId,
+		port_id: ibc_core_host_types::identifiers::PortId,
+		channel_id: ibc_core_host_types::identifiers::ChannelId,
 	},
 	Normal,
 }
@@ -285,10 +283,9 @@ impl SolanaClient {
 			let mut status = true;
 			let sig = match instruction_type {
 				DeliverIxType::UpdateClient { ref client_message, ref client_id } => {
-					let header = ibc_new::clients::tendermint::types::Header::try_from(
-						client_message.clone(),
-					)
-					.unwrap();
+					let header =
+						ibc_client_tendermint_types::Header::try_from(client_message.clone())
+							.unwrap();
 					let trusted_state = {
 						let storage = self.get_ibc_storage().await;
 						log::info!("This is client ID {:?}", client_id);
@@ -302,7 +299,7 @@ impl SolanaClient {
 							.consensus_states
 							.deref()
 							.get(
-								&ibc_new::core::client::types::Height::new(
+								&ibc_core_client_types::Height::new(
 									header.trusted_height.revision_number(),
 									header.trusted_height.revision_height(),
 								)
@@ -644,20 +641,19 @@ deserialize consensus state"
 		let mint_authority = self.get_mint_auth_key();
 
 		let channel_id =
-			ibc_new::core::host::types::identifiers::ChannelId::new(msg.source_channel.sequence());
+			ibc_core_host_types::identifiers::ChannelId::new(msg.source_channel.sequence());
 		let port_id =
-			ibc_new::core::host::types::identifiers::PortId::from_str(msg.source_port.as_str())
-				.unwrap();
-		let prefixed_denom = ibc_new::apps::transfer::types::PrefixedDenom {
-			trace_path: ibc_new::apps::transfer::types::TracePath::default(),
-			base_denom: ibc_new::apps::transfer::types::BaseDenom::from_str(
+			ibc_core_host_types::identifiers::PortId::from_str(msg.source_port.as_str()).unwrap();
+		let prefixed_denom = ibc_app_transfer_types::PrefixedDenom {
+			trace_path: ibc_app_transfer_types::TracePath::default(),
+			base_denom: ibc_app_transfer_types::BaseDenom::from_str(
 				msg.token.denom.base_denom.as_str(),
 			)
 			.unwrap(),
 		};
-		let token = ibc_new::apps::transfer::types::PrefixedCoin {
+		let token = ibc_app_transfer_types::PrefixedCoin {
 			denom: prefixed_denom,
-			amount: ibc_new::apps::transfer::types::Amount::from(msg.token.amount.as_u256().0),
+			amount: ibc_app_transfer_types::Amount::from(msg.token.amount.as_u256().0),
 		};
 		let hashed_denom = CryptoHash::digest(&token.denom.base_denom.as_str().as_bytes());
 		let (escrow_account, token_mint) =
@@ -682,25 +678,25 @@ deserialize consensus state"
 			&Pubkey::from_str(msg.sender.as_ref()).unwrap(),
 			&token_mint,
 		);
-		let packet_data = ibc_new::apps::transfer::types::packet::PacketData {
+		let packet_data = ibc_app_transfer_types::packet::PacketData {
 			token,
-			sender: ibc_new::primitives::Signer::from(sender_token_address.to_string()),
-			receiver: ibc_new::primitives::Signer::from(msg.receiver.as_ref().to_string()),
-			memo: ibc_new::apps::transfer::types::Memo::from(msg.memo),
+			sender: ibc_new_primitives::Signer::from(sender_token_address.to_string()),
+			receiver: ibc_new_primitives::Signer::from(msg.receiver.as_ref().to_string()),
+			memo: ibc_app_transfer_types::Memo::from(msg.memo),
 		};
 
-		let new_msg_transfer = ibc_new::apps::transfer::types::msgs::transfer::MsgTransfer {
+		let new_msg_transfer = ibc_app_transfer_types::msgs::transfer::MsgTransfer {
 			port_id_on_a: port_id.clone(),
 			chan_id_on_a: channel_id.clone(),
 			packet_data,
-			timeout_height_on_b: ibc_new::core::channel::types::timeout::TimeoutHeight::At(
-				ibc_new::core::client::types::Height::new(
+			timeout_height_on_b: ibc_core_channel_types::timeout::TimeoutHeight::At(
+				ibc_core_client_types::Height::new(
 					msg.timeout_height.revision_number,
 					msg.timeout_height.revision_height,
 				)
 				.unwrap(),
 			),
-			timeout_timestamp_on_b: ibc_new::primitives::Timestamp::from_nanoseconds(
+			timeout_timestamp_on_b: ibc_new_primitives::Timestamp::from_nanoseconds(
 				msg.timeout_timestamp.nanoseconds(),
 			)
 			.unwrap(),

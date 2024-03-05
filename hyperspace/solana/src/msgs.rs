@@ -1,32 +1,30 @@
 use ibc::core::ics26_routing::msgs::Ics26Envelope;
-use ibc_new::core::{
-	channel::types::{
-		channel::Order,
-		msgs::{
-			ChannelMsg, MsgAcknowledgement, MsgChannelCloseConfirm, MsgChannelCloseInit,
-			MsgChannelOpenAck, MsgChannelOpenConfirm, MsgChannelOpenInit, MsgChannelOpenTry,
-			MsgRecvPacket, MsgTimeout, MsgTimeoutOnClose, PacketMsg,
-		},
-		packet::Packet,
-		timeout::TimeoutHeight,
-		Version as ChanVersion,
+use ibc_core_channel_types::{
+	channel::Order,
+	msgs::{
+		ChannelMsg, MsgAcknowledgement, MsgChannelCloseConfirm, MsgChannelCloseInit,
+		MsgChannelOpenAck, MsgChannelOpenConfirm, MsgChannelOpenInit, MsgChannelOpenTry,
+		MsgRecvPacket, MsgTimeout, MsgTimeoutOnClose, PacketMsg,
 	},
-	client::types::{
-		msgs::{ClientMsg, MsgCreateClient, MsgUpdateClient, MsgUpgradeClient},
-		Height,
-	},
-	commitment_types::commitment::{CommitmentPrefix, CommitmentProofBytes},
-	connection::types::{
-		msgs::{
-			ConnectionMsg, MsgConnectionOpenAck, MsgConnectionOpenConfirm, MsgConnectionOpenInit,
-			MsgConnectionOpenTry,
-		},
-		Counterparty,
-	},
-	handler::types::msgs::MsgEnvelope,
-	host::types::identifiers::{ChannelId, ClientId, ConnectionId, PortId, Sequence},
-	primitives::{Signer, Timestamp},
+	packet::Packet,
+	timeout::TimeoutHeight,
+	Version as ChanVersion,
 };
+use ibc_core_client_types::{
+	msgs::{ClientMsg, MsgCreateClient, MsgUpdateClient, MsgUpgradeClient},
+	Height,
+};
+use ibc_core_commitment_types::commitment::{CommitmentPrefix, CommitmentProofBytes};
+use ibc_core_connection_types::{
+	msgs::{
+		ConnectionMsg, MsgConnectionOpenAck, MsgConnectionOpenConfirm, MsgConnectionOpenInit,
+		MsgConnectionOpenTry,
+	},
+	Counterparty,
+};
+use ibc_core_handler_types::msgs::MsgEnvelope;
+use ibc_core_host_types::identifiers::{ChannelId, ClientId, ConnectionId, PortId, Sequence};
+use ibc_new_primitives::{Signer, Timestamp};
 use ibc_proto_new::{google::protobuf::Any, ibc::core::connection::v1::Version};
 use primitives::mock::LocalClientTypes;
 use std::str::FromStr;

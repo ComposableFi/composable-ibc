@@ -85,7 +85,7 @@ pub fn convert_old_client_state_to_new(
 					revision_number: cs.latest_height.revision_number,
 					revision_height: cs.latest_height.revision_height,
 				}),
-				proof_specs: ibc_new::core::commitment_types::specs::ProofSpecs::cosmos().into(),
+				proof_specs: ibc_core_commitment_types::specs::ProofSpecs::cosmos().into(),
 				upgrade_path: cs.upgrade_path,
 				allow_update_after_expiry: false,
 				allow_update_after_misbehaviour: false,
@@ -96,19 +96,19 @@ pub fn convert_old_client_state_to_new(
 		AnyClientState::Mock(cs) =>
 			solana_ibc::client_state::AnyClientState::Mock(MockClientState {
 				header: ibc_testkit::testapp::ibc::clients::mock::header::MockHeader {
-					height: ibc_new::core::client::types::Height::new(
+					height: ibc_core_client_types::Height::new(
 						cs.header.height().revision_number,
 						cs.header.height().revision_height,
 					)
 					.unwrap(),
-					timestamp: ibc_new::primitives::Timestamp::from_nanoseconds(
+					timestamp: ibc_new_primitives::Timestamp::from_nanoseconds(
 						cs.header.timestamp.nanoseconds(),
 					)
 					.unwrap(),
 				},
 				frozen_height: cs.frozen_height.and_then(|height| {
 					Some(
-						ibc_new::core::client::types::Height::new(
+						ibc_core_client_types::Height::new(
 							height.revision_number,
 							height.revision_height,
 						)
@@ -144,8 +144,7 @@ pub fn convert_old_client_state_to_new(
 						revision_number: cs.latest_height.revision_number,
 						revision_height: cs.latest_height.revision_height,
 					}),
-					proof_specs: ibc_new::core::commitment_types::specs::ProofSpecs::cosmos()
-						.into(),
+					proof_specs: ibc_core_commitment_types::specs::ProofSpecs::cosmos().into(),
 					upgrade_path: cs.upgrade_path,
 					allow_update_after_expiry: false,
 					allow_update_after_misbehaviour: false,
