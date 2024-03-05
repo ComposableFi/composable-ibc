@@ -140,7 +140,7 @@ fn query_check_for_misbehaviour_msg(
 fn query_status(ctx: context::Context) -> StdResult<msg::StatusResponse> {
 	let client_state = ctx.client_state()?;
 	if client_state.is_frozen {
-		return Ok(msg::StatusResponse::Frozen);
+		return Ok(msg::StatusResponse::Frozen)
 	}
 
 	let height = client_state.latest_height;
