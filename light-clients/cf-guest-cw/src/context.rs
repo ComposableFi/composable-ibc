@@ -100,7 +100,7 @@ macro_rules! log {
 pub(crate) use log;
 
 impl<'a> Context<'a> {
-	/// Reads from storage this light client’s client state.
+	/// Reads this light client’s client state from storage.
 	pub fn client_state(&self) -> Result<state::ClientState> {
 		req_client_state(&self.client_id, self.client_states().get())
 	}
@@ -111,8 +111,8 @@ impl<'a> Context<'a> {
 		state::ClientStates::new_ro(self.storage)
 	}
 
-	/// Reads from storage this light client’s consensus state at given
-	/// height.
+	/// Reads this light client’s consensus state at given height from
+	/// storage.
 	pub fn consensus_state(&self, height: ibc::Height) -> Result<state::ConsensusState> {
 		req_consensus_state(&self.client_id, height, self.consensus_states().get(height))
 	}
@@ -125,7 +125,7 @@ impl<'a> Context<'a> {
 }
 
 impl<'a> ContextMut<'a> {
-	/// Reads from storage this light client’s client state.
+	/// Reads this light client’s client state from storage.
 	pub fn client_state(&self) -> Result<state::ClientState> {
 		req_client_state(&self.client_id, self.client_states().get())
 	}
@@ -142,8 +142,8 @@ impl<'a> ContextMut<'a> {
 		state::ClientStates::new(self.storage)
 	}
 
-	/// Reads from storage this light client’s consensus state at given
-	/// height.
+	/// Reads this light client’s consensus state at given height from
+	/// storage.
 	pub fn consensus_state(&self, height: ibc::Height) -> Result<state::ConsensusState> {
 		req_consensus_state(&self.client_id, height, self.consensus_states().get(height))
 	}
