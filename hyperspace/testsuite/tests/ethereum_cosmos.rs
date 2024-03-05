@@ -69,7 +69,7 @@ use tendermint_proto::Protobuf;
 use tokio::{task::JoinHandle, time::sleep};
 
 const USE_CONFIG: bool = false;
-const SAVE_TO_CONFIG: bool = false;
+const SAVE_TO_CONFIG: bool = true;
 
 pub const FEE_PERCENTAGE: u32 = 1_00; // 1%
 pub const FEE_COLLECTOR: Address = H160([1; 20]);
@@ -441,7 +441,7 @@ async fn setup_clients() -> (AnyChain, AnyChain, JoinHandle<()>) {
 	if !clients_on_a.is_empty() && !clients_on_b.is_empty() {
 		let client_a = clients_on_b.pop().unwrap();
 		let client_b = clients_on_a.pop().unwrap();
-		info!(target: "hyperspace", "Reusing clients A: {client_a:?} B: {client_b:?}");
+		// info!(target: "hyperspace", "Reusing clients A: {client_a:?} B: {client_b:?}");
 		// client_id_a = Some(client_a);
 		// client_id_b = Some(client_b);
 	}
@@ -1538,12 +1538,6 @@ mod indexer {
 	use log::info;
 
 	pub async fn run_indexer(db_url: String, redis_url: String, contract_address: Option<Address>) {
-
-		for i in 0..20{
-			std::thread::sleep(std::time::Duration::from_millis(5));
-			println!("Waiting for block production from parachain: {}", i);
-			info!(target: "hyperspace", "Waiting for block production from parachain");
-		}
 		let config = EVMIndexerConfig {
 			start_block: None,
 			db_url,
@@ -1558,25 +1552,10 @@ mod indexer {
 			block_confirmation_length: 14,
 		};
 
-		for i in 0..20{
-			std::thread::sleep(std::time::Duration::from_millis(5));
-			println!("Waiting for block production from parachain: {}", i);
-			info!(target: "hyperspace", "Waiting for block production from parachain");
-		}
-
-		for i in 0..20{
-			std::thread::sleep(std::time::Duration::from_millis(5));
-			info!(target: "hyperspace", "Starting EVM Indexer.");
-			info!(target: "hyperspace", "Syncing chain {}.", config.chain.name);
-		}
+		let rpc = Rpc::new(&config).await.expect("Unable to start RPC client.");
 
 		info!(target: "hyperspace", "Starting EVM Indexer.");
 		info!(target: "hyperspace", "Syncing chain {}.", config.chain.name);
-
-		let rpc = Rpc::new(&config).await.expect("Unable to start RPC client.");
-
-		info!(target: "hyperspace", "Connected EVM Indexer.");
-		info!(target: "hyperspace", "Connected Syncing chain {}.", config.chain.name);
 
 		let db =
 			Database::new(config.db_url.clone(), config.redis_url.clone(), config.chain.clone())
