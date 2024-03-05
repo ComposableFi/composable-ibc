@@ -13,7 +13,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-use cosmwasm_schema::cw_serde;
+use cosmwasm_schema::{cw_serde, QueryResponses};
 use cosmwasm_std::Uint64;
 
 use crate::{
@@ -23,23 +23,13 @@ use crate::{
 };
 
 #[cw_serde]
-pub struct InstantiateMessage {
+pub struct InstantiateMsg {
 	#[serde(with = "Base64")]
 	#[schemars(with = "String")]
 	pub client_state: state::ClientState,
 	#[serde(with = "Base64")]
 	#[schemars(with = "String")]
 	pub consensus_state: state::ConsensusState,
-}
-
-#[cw_serde]
-pub struct GenesisMetadata {
-	#[serde(with = "Base64")]
-	#[schemars(with = "String")]
-	pub hash: Vec<u8>,
-	#[serde(with = "Base64")]
-	#[schemars(with = "String")]
-	pub value: Vec<u8>,
 }
 
 #[cw_serde]
@@ -84,16 +74,14 @@ pub struct UpdateStateOnMisbehaviourMsg {
 // }
 
 #[cw_serde]
+#[derive(QueryResponses)]
 pub enum QueryMsg {
 	/// Verifies client message.
-	///
-	/// Response is empty or error if proof is invalid.
+	#[returns(())]
 	VerifyClientMessage(VerifyClientMessageMsg),
 
 	/// Checks client message for misbehaviour.
-	///
-	/// Response is JSON-serialised boolean (i.e. `true` or `false`) or
-	/// error.
+	#[returns(bool)]
 	CheckForMisbehaviour(CheckForMisbehaviourMsg),
 
 	/// Checks whether provided membership or non-membership proof is valid.
@@ -101,27 +89,21 @@ pub enum QueryMsg {
 	/// The proof is a membership proof is `self.0.value` field is `Some`.
 	/// Otherwise, if `self.0.value` is `None`, the proof is non-membership
 	/// proof.
-	///
-	/// Response is empty or error if proof is invalid.
+	#[returns(())]
 	VerifyStateProof(VerifyStateProofMsg),
 
 	/// Checks status of the client.
-	///
-	/// Response is JSON-serialised [`StatusResponse`] object.
+	#[returns(StatusResponse)]
 	Status(StatusMsg),
 
-	GetLatestHeights(GetLatestHeightsMsg),
-
-	/// Returns metadata for consensus at given height.
+	/// Returns timestamp for consensus at given height.
 	///
-	/// Response is JSON-serialised `Uint64` object representing Unix
-	/// timestamp in nanoseconds.
+	/// The timestamp is represented as nanoseconds since Unix epoch.
+	#[returns(Uint64)]
 	TimestampAtHeight(TimestampAtHeightMsg),
 
 	/// Gets metadata of all consensus states.
-	///
-	/// Response is JSON-serialised array of [`ConsensusStateMetadata`]
-	/// objects.
+	#[returns(Vec<ConsensusStateMetadata>)]
 	ExportMetadata(ExportMetadataMsg),
 }
 
@@ -178,12 +160,11 @@ pub struct ExportMetadataMsg {}
 
 #[cw_serde]
 pub struct ConsensusStateMetadata {
+	#[serde(default, skip_serializing_if = "is_zero")]
 	pub revision_number: Uint64,
 	pub revision_height: Uint64,
 	pub host_timestamp_ns: Uint64,
 	pub host_height: Uint64,
 }
 
-fn is_false(val: &bool) -> bool {
-	!*val
-}
+fn is_zero(num: &Uint64) -> bool { u64::from(*num) == 0 }

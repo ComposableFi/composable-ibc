@@ -1226,30 +1226,18 @@ version = "0.0.0"
 dependencies = [
  "base64 0.22.0",
  "borsh",
- "byteorder",
  "cf-guest",
  "cosmwasm-schema",
  "cosmwasm-std",
- "cw-multi-test",
  "derive_more",
- "digest 0.10.7",
- "ed25519 1.5.3",
+ "ed25519 2.2.3",
  "ed25519-consensus",
- "ed25519-zebra",
  "guestchain",
- "hex",
- "hyperspace-primitives",
  "ibc 0.50.0",
- "ics23 0.10.0",
- "pallet-ibc",
  "prost 0.12.3",
  "schemars",
  "serde",
- "serde-json-wasm 0.5.2",
- "serde_json",
  "sha2 0.10.8",
- "sha3",
- "thiserror",
 ]
 
 [[package]]
@@ -3091,9 +3079,9 @@ dependencies = [
 
 [[package]]
 name = "ed25519"
-version = "2.2.2"
+version = "2.2.3"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "60f6d271ca33075c88028be6f04d502853d63a5ece419d269c15315d4fc1cf1d"
+checksum = "115531babc129696a58c64a4fef0a8bf9e9698629fb97e9e40767d235cfbcd53"
 dependencies = [
  "pkcs8 0.10.2",
  "signature 2.1.0",
@@ -3132,7 +3120,7 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "7277392b266383ef8396db7fdeb1e77b6c52fed775f5df15bb24f35b72156980"
 dependencies = [
  "curve25519-dalek 4.1.1",
- "ed25519 2.2.2",
+ "ed25519 2.2.3",
  "rand_core 0.6.4",
  "serde",
  "sha2 0.10.8",
@@ -15626,7 +15614,7 @@ checksum = "bc2294fa667c8b548ee27a9ba59115472d0a09c2ba255771092a7f1dcf03a789"
 dependencies = [
  "bytes",
  "digest 0.10.7",
- "ed25519 2.2.2",
+ "ed25519 2.2.3",
  "ed25519-consensus",
  "flex-error",
  "futures",

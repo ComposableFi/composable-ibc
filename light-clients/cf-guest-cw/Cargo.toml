@@ -21,39 +21,22 @@ optimize = """docker run --rm -v "$(pwd)":/code \
 """
 
 [dependencies]
-base64 = "0.22"
-borsh = { version = "0.10.3", default-features = false }
 cf-guest = { path = "../../../emulated-light-client/common/cf-guest", default-features = false }
 guestchain = { path = "../../../emulated-light-client/common/guestchain", default-features = false }
 
+base64 = "0.22"
+borsh = { version = "0.10.3", default-features = false }
 cosmwasm-schema = "1.5.3"
 cosmwasm-std = "1.5.3"
+derive_more = "0.99.17"
+ed25519 = { version = "2.2.3", default-features = false }
+ed25519-consensus = { version = "2.1", optional = true, default-features = false }
+#ed25519-zebra = { version = "3.1.0", default-features = false }
+ibc = { version = "0.50", default-features = false, features = ["serde", "schema"] }
+prost = { version = "0.12.3", default-features = false }
 schemars = "0.8.10"
 serde = { version = "1.0.145", default-features = false, features = ["derive"] }
-thiserror = { version = "1.0.31" }
 sha2 = "0.10"
-sha3 = "0.10"
-derive_more = "0.99.17"
-
-ed25519 = { version = "1.5", default-features = false }
-ed25519-consensus = { version = "2", optional = true, default-features = false }
-ibc = { version = "0.50", default-features = false, features = ["serde", "schema"] }
-#ibc-derive = { version = "0.50", default-features = false }
-#ibc-proto = { version = "0.41", default-features = false }
-ics23 = { git = "https://github.com/cosmos/ics23", rev = "74ce807b7be39a7e0afb4e2efb8e28a57965f57b", default-features = false }
-prost = { version = "0.12.3", default-features = false }
-ed25519-zebra = { version = "3.1.0", default-features = false }
-byteorder = { version = "1.3.2", default-features = false }
-digest = { version = "0.10.3", default-features = false }
-hex = "0.4.3"
-
-[dev-dependencies]
-cw-multi-test = "0.15.1"
-hex = "0.4.3"
-hyperspace-primitives = { path = "../../hyperspace/primitives", features = ["testing"] }
-pallet-ibc = { path = "../../contracts/pallet-ibc" }
-serde-json-wasm = { version = "0.5.0", default-features = false }
-serde_json = { version = "1.0.93", default-features = false }
 
 [features]
 # for more explicit tests, cargo test --features=backtraces
@@ -63,21 +46,11 @@ library = []
 default = ["rust-crypto"]
 rust-crypto = ["ed25519-consensus"]
 std = [
-	"byteorder/std",
-	"digest/std",
 	"ed25519/std",
 	"ed25519-consensus?/std",
-	"ed25519-zebra/std",
-	"hex/std",
+#	"ed25519-zebra/std",
 	"ibc/std",
-	"ics23/std",
-	"pallet-ibc/std",
 	"prost/std",
 	"serde/std",
-	"serde_json/std",
 	"sha2/std",
-	"sha3/std",
-]
-test = [
-  "std"
 ]

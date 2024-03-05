@@ -26,7 +26,7 @@ pub fn instantiate(
 	deps: DepsMut,
 	env: Env,
 	_info: MessageInfo,
-	msg: msg::InstantiateMessage,
+	msg: msg::InstantiateMsg,
 ) -> Result<Response> {
 	let mut ctx = context::new(deps, env);
 	log!(ctx, "instantiate: {msg:?}");
@@ -84,24 +84,21 @@ pub fn query(deps: Deps, env: Env, msg: msg::QueryMsg) -> StdResult<Binary> {
 	match msg {
 		msg::QueryMsg::VerifyClientMessage(msg) => {
 			query_verify_client_msg(ctx, msg)?;
-			Ok(Binary::default())
+			to_json_binary(&())
 		},
 		msg::QueryMsg::CheckForMisbehaviour(msg) => {
 			let res = query_check_for_misbehaviour_msg(ctx, msg)?;
-			Ok(if res { "true" } else { "false" }.as_bytes().into())
+			to_json_binary(&res)
 		},
-		msg::QueryMsg::VerifyStateProof(msg) => query_verify_state_proof(ctx, msg),
-
+		msg::QueryMsg::VerifyStateProof(msg) => {
+			query_verify_state_proof(ctx, msg)?;
+			to_json_binary(&())
+		},
 		msg::QueryMsg::Status(msg::StatusMsg {}) => to_json_binary(&query_status(ctx)?),
-
-		msg::QueryMsg::GetLatestHeights(msg::GetLatestHeightsMsg {}) => todo!(),
-
 		msg::QueryMsg::TimestampAtHeight(msg) => {
 			let state = ctx.consensus_state(msg.height)?;
-			let ts = Uint64::from(state.timestamp_ns.get());
-			to_json_binary(&ts)
+			to_json_binary(&Uint64::from(state.timestamp_ns.get()))
 		},
-
 		msg::QueryMsg::ExportMetadata(msg::ExportMetadataMsg {}) => {
 			let meta = ctx.consensus_states().get_all_metadata()?;
 			to_json_binary(&meta)
@@ -109,11 +106,7 @@ pub fn query(deps: Deps, env: Env, msg: msg::QueryMsg) -> StdResult<Binary> {
 	}
 }
 
-fn query_verify_state_proof(
-	ctx: context::Context,
-	msg: msg::VerifyStateProofMsg,
-) -> StdResult<Binary> {
-	let client_state = ctx.client_state()?;
+fn query_verify_state_proof(ctx: context::Context, msg: msg::VerifyStateProofMsg) -> StdResult<()> {
 	let consensus_state = ctx.consensus_state(msg.height)?;
 	cf_guest::proof::verify(
 		&ibc::CommitmentPrefix::default(),
@@ -122,8 +115,7 @@ fn query_verify_state_proof(
 		msg.path,
 		msg.value.as_deref(),
 	)
-	.map_err(|err| StdError::GenericErr { msg: err.to_string() })?;
-	Ok(Binary::default())
+	.map_err(|err| StdError::GenericErr { msg: err.to_string() })
 }
 
 fn query_verify_client_msg(ctx: context::Context, msg: msg::VerifyClientMessageMsg) -> Result {

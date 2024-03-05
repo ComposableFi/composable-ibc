@@ -13,13 +13,13 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-// use cosmwasm_schema::write_api;
-// use ics07_tendermint_cw::msg::{ExecuteMsg, InstantiateMsg, QueryMsg};
+use cosmwasm_schema::write_api;
+use cf_guest_cw::msg;
 
 fn main() {
-	// write_api! {
-	// 	instantiate: InstantiateMsg,
-	// 	execute: ExecuteMsg,
-	// 	query: QueryMsg,
-	// }
+	write_api! {
+		instantiate: msg::InstantiateMsg,
+		sudo: msg::SudoMsg,
+		query: msg::QueryMsg,
+	}
 }

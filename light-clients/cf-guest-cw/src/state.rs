@@ -57,28 +57,8 @@ impl ClientStates {
 		self.get_impl(Self::KEY)
 	}
 
-	pub fn get_prefixed<T, E>(&self, prefix: &[u8]) -> Result<Option<T>, E>
-	where
-		T: TryFrom<Any>,
-		E: From<T::Error> + From<prost::DecodeError>,
-	{
-		self.get_impl(&[prefix, Self::KEY].concat())
-	}
-
 	pub fn set(&mut self, state: impl Into<Any>) {
 		self.set_impl(Self::KEY, state)
-	}
-
-	pub fn set_prefixed(&mut self, prefix: &[u8], state: impl Into<Any>) {
-		self.set_impl(&[prefix, Self::KEY].concat(), state)
-	}
-
-	pub fn rem(&mut self) {
-		self.0.remove(Self::KEY)
-	}
-
-	pub fn rem_prefixed(&mut self, prefix: &[u8]) {
-		self.0.remove(&[prefix, Self::KEY].concat())
 	}
 
 	const KEY: &'static [u8] = b"clientState/";
@@ -124,33 +104,11 @@ impl ConsensusStates {
 		T: TryFrom<Any>,
 		E: From<T::Error> + From<prost::DecodeError>,
 	{
-		self.get_impl(&Self::key(b"", height))
-	}
-
-	pub fn get_prefixed<T, E>(
-		&self,
-		prefix: &[u8],
-		height: ibc::Height,
-	) -> Result<Option<(T, Metadata)>, E>
-	where
-		T: TryFrom<Any>,
-		E: From<T::Error> + From<prost::DecodeError>,
-	{
-		self.get_impl(&Self::key(prefix, height))
+		self.get_impl(&Self::key(height))
 	}
 
 	pub fn set(&mut self, height: ibc::Height, state: impl Into<Any>, metadata: Metadata) {
-		self.set_impl(Self::key(b"", height), state, metadata)
-	}
-
-	pub fn set_prefixed(
-		&mut self,
-		prefix: &[u8],
-		height: ibc::Height,
-		state: impl Into<Any>,
-		metadata: Metadata,
-	) {
-		self.set_impl(Self::key(prefix, height), state, metadata)
+		self.set_impl(Self::key(height), state, metadata)
 	}
 
 	fn all<'a>(
@@ -158,8 +116,8 @@ impl ConsensusStates {
 	) -> impl Iterator<Item = Result<(Vec<u8>, Any, Metadata), prost::DecodeError>> + 'a {
 		self.0
 			.range(
-				Some(Self::key_impl(b"", 0, 0).as_slice()),
-				Some(Self::key_impl(b"", u64::MAX, u64::MAX).as_slice()),
+				Some(Self::key_impl(0, 0).as_slice()),
+				Some(Self::key_impl(u64::MAX, u64::MAX).as_slice()),
 				cosmwasm_std::Order::Ascending,
 			)
 			.map(|(key, value)| {
@@ -189,7 +147,7 @@ impl ConsensusStates {
 	pub fn get_all_metadata(&self) -> Result<Vec<crate::msg::ConsensusStateMetadata>> {
 		let mut records = Vec::new();
 		for record in self.all() {
-			let (key, state, metadata) = record?;
+			let (key, _state, metadata) = record?;
 			let key = &key[key.len() - 16..];
 			records.push(crate::msg::ConsensusStateMetadata {
 				revision_number: u64::from_be_bytes(key[..8].try_into().unwrap()).into(),
@@ -202,21 +160,17 @@ impl ConsensusStates {
 	}
 
 	pub fn del(&mut self, height: ibc::Height) {
-		self.0.remove(&Self::key(b"", height))
+		self.0.remove(&Self::key(height))
 	}
 
-	pub fn del_prefixed(&mut self, prefix: &[u8], height: ibc::Height) {
-		self.0.remove(&Self::key(prefix, height))
+	fn key(height: ibc::Height) -> Vec<u8> {
+		Self::key_impl(height.revision_number(), height.revision_height())
 	}
 
-	fn key(prefix: &[u8], height: ibc::Height) -> Vec<u8> {
-		Self::key_impl(prefix, height.revision_number(), height.revision_height())
-	}
-
-	pub fn key_impl(prefix: &[u8], rev_number: u64, rev_height: u64) -> Vec<u8> {
+	fn key_impl(rev_number: u64, rev_height: u64) -> Vec<u8> {
 		let rev_number = rev_number.to_be_bytes();
 		let rev_height = rev_height.to_be_bytes();
-		[prefix, b"consensusState/", &rev_number[..], &rev_height[..]].concat()
+		[b"consensusState/", &rev_number[..], &rev_height[..]].concat()
 	}
 
 	fn get_impl<T, E>(&self, key: &[u8]) -> Result<Option<(T, Metadata)>, E>
