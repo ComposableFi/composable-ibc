@@ -13,16 +13,18 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
+#![allow(dead_code)]
+
 extern crate alloc;
 extern crate core;
 
 mod context;
-pub mod contract;
+mod contract;
+mod crypto;
 mod error;
 mod ibc;
 pub mod msg;
-mod pubkey;
 mod serialisation;
 pub mod state;
 
-use crate::{error::Error, pubkey::PubKey};
+use crate::{crypto::PubKey, error::Error};

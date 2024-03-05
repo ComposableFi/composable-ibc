@@ -13,8 +13,8 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-use cosmwasm_schema::write_api;
 use cf_guest_cw::msg;
+use cosmwasm_schema::write_api;
 
 fn main() {
 	write_api! {

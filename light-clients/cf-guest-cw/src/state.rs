@@ -27,7 +27,7 @@ pub type Header = cf_guest::Header<crate::PubKey>;
 pub type Misbehaviour = cf_guest::Misbehaviour<crate::PubKey>;
 
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
-pub struct Metadata {
+pub(crate) struct Metadata {
 	pub host_timestamp_ns: u64,
 	pub host_height: u64,
 }
@@ -84,7 +84,7 @@ impl ClientStates {
 
 /// Wrapper for accessing consensus state saved in the storage.
 #[repr(transparent)]
-pub struct ConsensusStates(dyn Storage);
+pub(crate) struct ConsensusStates(dyn Storage);
 
 impl ConsensusStates {
 	pub fn new<'a>(storage: &'a mut dyn Storage) -> &'a mut Self {

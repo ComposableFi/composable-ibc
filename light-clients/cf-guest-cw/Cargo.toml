@@ -29,9 +29,7 @@ borsh = { version = "0.10.3", default-features = false }
 cosmwasm-schema = "1.5.3"
 cosmwasm-std = "1.5.3"
 derive_more = "0.99.17"
-ed25519 = { version = "2.2.3", default-features = false }
-ed25519-consensus = { version = "2.1", optional = true, default-features = false }
-#ed25519-zebra = { version = "3.1.0", default-features = false }
+ed25519-dalek = { version = "2.1.1", default-features = false, features = ["pkcs8"] }
 ibc = { version = "0.50", default-features = false, features = ["serde", "schema"] }
 prost = { version = "0.12.3", default-features = false }
 schemars = "0.8.10"
@@ -43,12 +41,9 @@ sha2 = "0.10"
 backtraces = ["cosmwasm-std/backtraces"]
 # use library feature to disable all instantiate/execute/query exports
 library = []
-default = ["rust-crypto"]
-rust-crypto = ["ed25519-consensus"]
+default = ["std"]
 std = [
-	"ed25519/std",
-	"ed25519-consensus?/std",
-#	"ed25519-zebra/std",
+	"ed25519-dalek/std",
 	"ibc/std",
 	"prost/std",
 	"serde/std",

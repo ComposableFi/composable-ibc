@@ -20,22 +20,10 @@ pub enum Error {
 	Std(StdError),
 	Client(crate::ibc::ClientError),
 	Wasm(crate::ibc::wasm::Error),
-
 	BadProto(prost::DecodeError),
-
-	#[display(fmt = "Unauthorized")]
 	#[from(ignore)]
-	Unauthorized,
-
-	#[display(fmt = "StorageError")]
-	#[from(ignore)]
-	Storage,
-
-	#[from(ignore)]
-	#[display(fmt = "BadMessage")]
 	BadMessage,
 	#[from(ignore)]
-	#[display(fmt = "BadType")]
 	BadType,
 }
 

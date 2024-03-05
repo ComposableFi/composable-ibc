@@ -56,8 +56,6 @@ fn process_sudo_msg(mut ctx: context::ContextMut, msg: msg::SudoMsg) -> Result {
 			ctx.client_states_mut().set(client_state);
 		},
 		msg::SudoMsg::UpdateState(msg) => process_update_state_msg(ctx, msg)?,
-		// msg::SudoMsg::MigrateClientStore(_msg) => todo!(),
-		// msg::SudoMsg::VerifyUpgradeAndUpdateState(msg) => todo!(),
 	}
 	Ok(())
 }
@@ -120,7 +118,7 @@ fn query_verify_state_proof(ctx: context::Context, msg: msg::VerifyStateProofMsg
 
 fn query_verify_client_msg(ctx: context::Context, msg: msg::VerifyClientMessageMsg) -> Result {
 	let client_state = ctx.client_state()?;
-	let verifier = crate::pubkey::NullVerifier;
+	let verifier = crate::crypto::Verifier;
 	match msg.client_message {
 		state::ClientMessage::Header(header) =>
 			client_state.verify_header(&verifier, &ctx.client_id, header),
@@ -135,7 +133,7 @@ fn query_check_for_misbehaviour_msg(
 	msg: msg::CheckForMisbehaviourMsg,
 ) -> Result<bool> {
 	let client_state = ctx.client_state()?;
-	let verifier = crate::pubkey::NullVerifier;
+	let verifier = crate::crypto::Verifier;
 	match msg.client_message {
 		state::ClientMessage::Header(header) =>
 			client_state.check_for_misbehaviour_header(&verifier, &ctx.client_id, header),

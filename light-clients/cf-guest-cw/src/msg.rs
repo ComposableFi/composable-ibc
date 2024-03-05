@@ -167,4 +167,6 @@ pub struct ConsensusStateMetadata {
 	pub host_height: Uint64,
 }
 
-fn is_zero(num: &Uint64) -> bool { u64::from(*num) == 0 }
+fn is_zero(num: &Uint64) -> bool {
+	u64::from(*num) == 0
+}

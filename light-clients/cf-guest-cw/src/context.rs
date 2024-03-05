@@ -131,7 +131,7 @@ fn req_client_state(
 	}
 }
 
-pub fn req_consensus_state(
+fn req_consensus_state(
 	client_id: &ibc::ClientId,
 	height: ibc::Height,
 	state: Result<Option<(state::ConsensusState, state::Metadata)>>,
