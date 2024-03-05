@@ -61,6 +61,7 @@ digest = { version = "0.10.3", default-features = false }
 hex = "0.4.3"
 tendermint-proto = { git = "https://github.com/informalsystems/tendermint-rs", rev = "e81f7bf23d63ffbcd242381d1ce5e35da3515ff1", default-features = false }
 sp-std = { git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.39", default-features = false }
+sp-runtime-interface = { git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.39", default-features = false, features = ["disable_target_static_assertions"] }
 sp-io = { git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.39", default-features = false, features = ["disable_panic_handler", "disable_oom", "disable_allocator"] }
 
 sync-committee-verifier = { git = "https://github.com/polytope-labs/hyperbridge", rev = "c3e940c60b718eaf5ac02a96c4801814a555dcf7", default-features = false }
@@ -82,10 +83,12 @@ backtraces = ["cosmwasm-std/backtraces"]
 library = []
 default = ["testnet"]
 std = [
+    "sp-runtime-interface/std",
     "sp-std/std",
+    "sp-io/std",
 ]
 test = [
-    #  "icsxx-ethereum/std",
+    "icsxx-ethereum/std",
     "std"
 ]
 mainnet = [
