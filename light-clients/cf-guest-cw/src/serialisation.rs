@@ -54,13 +54,6 @@ impl MaybeBase64 {
 }
 
 /// Wrapper which serialised bytes slice using base64 encoding.
-///
-/// Unfortunately because there’s no `<&cosmwasm_std::Binary>::From<&Vec>`
-/// implementation we cannot defer the implementation to `Binary` without making
-/// a copy of the bytes.  Because of that we’re using our own implementation for
-/// serialisation.
-// TODO(mina86): Get rid of it once
-// https://github.com/CosmWasm/cosmwasm/pull/2036 lands.
 struct Base64Bytes<'a>(&'a [u8]);
 
 impl Serialize for Base64Bytes<'_> {

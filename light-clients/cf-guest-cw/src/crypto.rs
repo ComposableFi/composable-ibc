@@ -1,12 +1,7 @@
 use borsh::maybestd::io;
 
-#[derive(
-	Clone,
-	Debug,
-	Eq,
-	Hash,
-	PartialEq,
-)]
+/// Ed25519 public key (a.k.a. verifying key).
+#[derive(Clone, Debug, Eq, Hash, PartialEq)]
 #[repr(transparent)]
 pub struct PubKey(ed25519_dalek::VerifyingKey);
 
@@ -49,13 +44,8 @@ impl Ord for PubKey {
 	}
 }
 
-
-#[derive(
-	Clone,
-	PartialEq,
-	Eq,
-	Debug,
-)]
+/// Ed25519 signature.
+#[derive(Clone, PartialEq, Eq, Debug)]
 #[repr(transparent)]
 pub struct Signature(ed25519_dalek::Signature);
 
@@ -65,7 +55,8 @@ impl guestchain::Signature for Signature {
 	}
 	fn from_bytes(bytes: &[u8]) -> Result<Self, guestchain::BadFormat> {
 		ed25519_dalek::Signature::from_slice(bytes)
-			.map(Self).map_err(|_| guestchain::BadFormat)
+			.map(Self)
+			.map_err(|_| guestchain::BadFormat)
 	}
 }
 
@@ -106,7 +97,7 @@ impl Ord for Signature {
 	}
 }
 
-
+/// Verifier for Ed25519 signatures using ed25519-dalek implementation.
 pub(crate) struct Verifier;
 
 impl guestchain::Verifier<PubKey> for Verifier {

@@ -22,7 +22,7 @@ use crate::{context, context::log, ibc, msg, state};
 type Result<T = (), E = crate::error::Error> = core::result::Result<T, E>;
 
 #[cfg_attr(not(feature = "library"), cosmwasm_std::entry_point)]
-pub fn instantiate(
+fn instantiate(
 	deps: DepsMut,
 	env: Env,
 	_info: MessageInfo,
@@ -41,15 +41,9 @@ pub fn instantiate(
 }
 
 #[cfg_attr(not(feature = "library"), cosmwasm_std::entry_point)]
-pub fn sudo(deps: DepsMut, env: Env, msg: msg::SudoMsg) -> Result<Response> {
-	let ctx = context::new(deps, env);
+fn sudo(deps: DepsMut, env: Env, msg: msg::SudoMsg) -> Result<Response> {
+	let mut ctx = context::new(deps, env);
 	log!(ctx, "sudo({msg:?})");
-	process_sudo_msg(ctx, msg)?;
-	Ok(Response::default())
-}
-
-fn process_sudo_msg(mut ctx: context::ContextMut, msg: msg::SudoMsg) -> Result {
-	log!(ctx, "process_sudo_msg: {msg:?}");
 	match msg {
 		msg::SudoMsg::UpdateStateOnMisbehaviour(_msg) => {
 			let client_state = ctx.client_state()?.frozen();
@@ -57,7 +51,7 @@ fn process_sudo_msg(mut ctx: context::ContextMut, msg: msg::SudoMsg) -> Result {
 		},
 		msg::SudoMsg::UpdateState(msg) => process_update_state_msg(ctx, msg)?,
 	}
-	Ok(())
+	Ok(Response::default())
 }
 
 fn process_update_state_msg(mut ctx: context::ContextMut, msg: msg::UpdateStateMsg) -> Result {
@@ -77,7 +71,7 @@ fn process_update_state_msg(mut ctx: context::ContextMut, msg: msg::UpdateStateM
 }
 
 #[cfg_attr(not(feature = "library"), cosmwasm_std::entry_point)]
-pub fn query(deps: Deps, env: Env, msg: msg::QueryMsg) -> StdResult<Binary> {
+fn query(deps: Deps, env: Env, msg: msg::QueryMsg) -> StdResult<Binary> {
 	let ctx = context::new_ro(deps, env);
 	match msg {
 		msg::QueryMsg::VerifyClientMessage(msg) => {

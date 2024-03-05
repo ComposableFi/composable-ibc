@@ -1202,6 +1202,7 @@ dependencies = [
 [[package]]
 name = "cf-guest"
 version = "0.0.0"
+source = "git+https://github.com/ComposableFi/emulated-light-client/#f972b4873c3294a4cfdc9740699000117cf00032"
 dependencies = [
  "borsh",
  "bytemuck",
@@ -4280,6 +4281,7 @@ dependencies = [
 [[package]]
 name = "guestchain"
 version = "0.0.0"
+source = "git+https://github.com/ComposableFi/emulated-light-client/#f972b4873c3294a4cfdc9740699000117cf00032"
 dependencies = [
  "borsh",
  "bytemuck",
@@ -6527,6 +6529,7 @@ checksum = "830d08ce1d1d941e6b30645f1a0eb5643013d835ce3779a5fc208261dbe10f55"
 [[package]]
 name = "lib"
 version = "0.0.0"
+source = "git+https://github.com/ComposableFi/emulated-light-client/#f972b4873c3294a4cfdc9740699000117cf00032"
 dependencies = [
  "base64 0.21.7",
  "borsh",
@@ -7355,6 +7358,7 @@ dependencies = [
 [[package]]
 name = "memory"
 version = "0.0.0"
+source = "git+https://github.com/ComposableFi/emulated-light-client/#f972b4873c3294a4cfdc9740699000117cf00032"
 dependencies = [
  "derive_more",
 ]
@@ -13481,6 +13485,7 @@ dependencies = [
 [[package]]
 name = "sealable-trie"
 version = "0.0.0"
+source = "git+https://github.com/ComposableFi/emulated-light-client/#f972b4873c3294a4cfdc9740699000117cf00032"
 dependencies = [
  "ascii",
  "base64 0.21.7",
@@ -15168,6 +15173,7 @@ dependencies = [
 [[package]]
 name = "stdx"
 version = "0.0.0"
+source = "git+https://github.com/ComposableFi/emulated-light-client/#f972b4873c3294a4cfdc9740699000117cf00032"
 
 [[package]]
 name = "strsim"
@@ -16387,6 +16393,7 @@ dependencies = [
 [[package]]
 name = "trie-ids"
 version = "0.0.0"
+source = "git+https://github.com/ComposableFi/emulated-light-client/#f972b4873c3294a4cfdc9740699000117cf00032"
 dependencies = [
  "ascii",
  "base64 0.21.7",

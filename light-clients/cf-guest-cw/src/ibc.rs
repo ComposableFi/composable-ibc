@@ -1,3 +1,5 @@
+//! A helper module which collects IBC types we’re using in a flatter namespace.
+
 pub mod wasm {
 	pub use ibc::clients::wasm_types::{
 		client_state::ClientState, consensus_state::ConsensusState, error::Error,

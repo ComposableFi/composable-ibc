@@ -5,7 +5,9 @@ authors = ["Michal Nazarewicz <mina86@mina86.com>"]
 edition = "2021"
 
 exclude = [
-  # Those files are rust-optimizer artifacts. You might want to commit them for convenience but they should not be part of the source code publication.
+  # Those files are rust-optimizer artifacts.  You might want to
+  # commit them for convenience but they should not be part of the
+  # source code publication.
   "contract.wasm",
   "hash.txt",
 ]
@@ -21,10 +23,10 @@ optimize = """docker run --rm -v "$(pwd)":/code \
 """
 
 [dependencies]
-cf-guest = { path = "../../../emulated-light-client/common/cf-guest", default-features = false }
-guestchain = { path = "../../../emulated-light-client/common/guestchain", default-features = false }
+cf-guest = { git = "https://github.com/ComposableFi/emulated-light-client/", default-features = false }
+guestchain = { git = "https://github.com/ComposableFi/emulated-light-client/", default-features = false }
 
-base64 = "0.22"
+base64 = { version = "0.22", default-features = false, features = ["alloc"] }
 borsh = { version = "0.10.3", default-features = false }
 cosmwasm-schema = "1.5.3"
 cosmwasm-std = "1.5.3"
@@ -41,8 +43,9 @@ sha2 = "0.10"
 backtraces = ["cosmwasm-std/backtraces"]
 # use library feature to disable all instantiate/execute/query exports
 library = []
-default = ["std"]
+default = []
 std = [
+	"base64/std",
 	"ed25519-dalek/std",
 	"ibc/std",
 	"prost/std",
