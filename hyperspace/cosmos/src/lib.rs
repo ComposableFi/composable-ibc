@@ -14,6 +14,7 @@
 
 use ibc::core::ics02_client::height::Height;
 
+
 pub mod chain;
 pub mod client;
 pub mod encode;
@@ -22,6 +23,7 @@ pub mod events;
 pub mod key_provider;
 pub mod light_client;
 pub mod provider;
+pub mod eth_zk_utils;
 #[cfg(any(test, feature = "testing"))]
 pub mod test_provider;
 pub mod tx;

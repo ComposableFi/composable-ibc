@@ -31,13 +31,10 @@ use hyperspace_core::{
 	logging,
 	packets::utils::construct_recv_message,
 };
-use hyperspace_cosmos::client::{CosmosClient, CosmosClientConfig};
+use hyperspace_cosmos::{client::{CosmosClient, CosmosClientConfig}, eth_zk_utils::CreateProofInput};
+use hyperspace_cosmos::eth_zk_utils::ZKProver;
 use hyperspace_ethereum::{
-	client::{ClientError, EthereumClient},
-	config::{ContractName, ContractName::ICS20Bank},
-	ibc_provider,
-	ibc_provider::PublicKeyData,
-	mock::{
+	client::{ClientError, EthereumClient}, config::{ContractName, ContractName::ICS20Bank}, ibc_provider, ibc_provider::PublicKeyData, mock::{
 		utils,
 		utils::{hyperspace_ethereum_client_fixture, ETH_NODE_PORT, USE_GETH},
 	},
@@ -64,6 +61,7 @@ use itertools::Itertools;
 use log::{info, warn};
 use pallet_ibc::light_clients::AnyClientState;
 use sp_core::{hashing::sha2_256, H160};
+use sp_runtime::print;
 use std::{
 	collections::{HashMap, HashSet},
 	path::PathBuf,
@@ -387,6 +385,7 @@ async fn setup_clients() -> (AnyChain, AnyChain, JoinHandle<()>) {
 	let db_url = config_a.indexer_pg_url.clone();
 	let redis_url = config_a.indexer_redis_url.clone();
 	let indexer_handle = tokio::spawn(async move {
+
 		indexer::run_indexer(db_url, redis_url, config_a.ibc_core_diamond_address).await;
 	});
 
@@ -444,8 +443,8 @@ async fn setup_clients() -> (AnyChain, AnyChain, JoinHandle<()>) {
 		let client_a = clients_on_b.pop().unwrap();
 		let client_b = clients_on_a.pop().unwrap();
 		info!(target: "hyperspace", "Reusing clients A: {client_a:?} B: {client_b:?}");
-		client_id_a = Some(client_a);
-		client_id_b = Some(client_b);
+		// client_id_a = Some(client_a);
+		// client_id_b = Some(client_b);
 	}
 
 	if client_id_a.is_none() || client_id_b.is_none() {
@@ -477,8 +476,83 @@ async fn query_fee_collector_balance<C: Chain>(chain: &C, asset_id: &C::AssetId)
 
 #[tokio::test(flavor = "multi_thread", worker_threads = 10)]
 #[ignore]
+async fn zk_prover_bitmask() {
+	//bitmask indicates which validators were included into voting power calculation
+
+	//0 was not included into voting power calculation
+	//1 was included into voting power calculation
+	let expected_validators = vec![0, 1, 1, 0, 1, 1, 0]; //all validators
+	let size = expected_validators.len();
+    let mut bitmask: u64 = 0;
+
+    for (index, &validator) in expected_validators.iter().enumerate() {
+        if validator == 1 {
+            bitmask |= 1 << index;
+        }
+    }
+
+    println!("Bitmask: {}", bitmask);
+    println!("Bitmask: {:064b}", bitmask);
+	//bitmask will be sent to eth side together with zk proof
+
+
+	// let bitmask: u64 = 0b00000000000001100110;
+    let mut actual_validators = vec![0; size]; // Assuming 7-bit bitmask
+
+    for i in 0..size {
+        if (bitmask >> i) & 1 == 1 {
+            actual_validators[i] = 1;
+        }
+    }
+
+    println!("Validators: {:?}", actual_validators);
+	assert_eq!(actual_validators, expected_validators);
+}
+
+#[tokio::test(flavor = "multi_thread", worker_threads = 10)]
+#[ignore]
+async fn zk_prover_integration_test() {
+	//branch rustninja/compatibility
+	let zk_prover = ZKProver::new("http://127.0.0.1:8000".to_string(), Duration::from_secs(60).as_secs());
+	let proof_input = CreateProofInput {
+		signatures: vec![],
+		msgs: vec![],
+		public_keys: vec![]
+	};
+	let status = zk_prover.status().unwrap();
+	println!("status: {:?}", status);
+	let resp = zk_prover.create_proof(proof_input).unwrap();
+	println!("resp: {:?}", resp);
+
+	let proof = zk_prover.poll_proof(&resp.proof_id).unwrap();
+	assert!(proof.is_none());
+	std::thread::sleep(Duration::from_secs(63));
+	let proof = zk_prover.poll_proof(&resp.proof_id).unwrap();
+	assert!(proof.is_some());
+	println!("proof: {:?}", proof.unwrap());
+	return;
+}
+
+#[tokio::test(flavor = "multi_thread", worker_threads = 10)]
+#[ignore]
+async fn decode_yui_error(){
+	let error = "08c379a0000000000000000000000000000000000000000000000000000000000000002000000000000000000000000000000000000000000000000000000000000000186661696c65642068657265206a75737420746f20746573740000000000000000";
+	let error = hex::decode(error).unwrap();
+	let s = String::from_utf8_lossy(&error);
+	println!("s: {:?}", s);
+	// let error = ethabi::decode(&[ParamType::String], &error).unwrap();
+	// println!("error: {:?}", error);
+}
+
+#[tokio::test(flavor = "multi_thread", worker_threads = 10)]
+#[ignore]
 async fn ethereum_to_cosmos_ibc_messaging_full_integration_test() {
+	std::env::set_var("KEY_PASS", "mybullishpassword ^_^");
+	// std::env::set_var("RUST_LOG", "hyperspace_cosmos=error,hyperspace_ethereum=error,hyperspace=error,prover=error");
+	std::env::set_var("RUST_LOG", "hyperspace_cosmos=debug,hyperspace_ethereum=debug,hyperspace=trace,prover=debug");
+	// std::env::set_var("RUST_LOG", "hyperspace_cosmos=trace,hyperspace_ethereum=trace,hyperspace=trace,prover=debug,info");
 	logging::setup_logging();
+
 
 	let asset_str = "pica".to_string();
 	let asset_native_str = "ETH".to_string();
@@ -1411,6 +1485,12 @@ mod indexer {
 	use log::info;
 
 	pub async fn run_indexer(db_url: String, redis_url: String, contract_address: Option<Address>) {
+
+		for i in 0..20{
+			std::thread::sleep(std::time::Duration::from_millis(5));
+			println!("Waiting for block production from parachain: {}", i);
+			info!(target: "hyperspace", "Waiting for block production from parachain");
+		}
 		let config = EVMIndexerConfig {
 			start_block: None,
 			db_url,
@@ -1419,16 +1499,31 @@ mod indexer {
 			chain: ETHEREUM_DEVNET,
 			batch_size: 200,
 			reset: false,
-			rpcs: vec!["http://localhost:8545".to_string()],
+			rpcs: vec!["http://127.0.0.1:8545".to_string()],
 			recalc_blocks_indexer: false,
 			contract_addresses: contract_address.into_iter().collect(),
 			block_confirmation_length: 14,
 		};
 
-		info!("Starting EVM Indexer.");
-		info!("Syncing chain {}.", config.chain.name);
+		for i in 0..20{
+			std::thread::sleep(std::time::Duration::from_millis(5));
+			println!("Waiting for block production from parachain: {}", i);
+			info!(target: "hyperspace", "Waiting for block production from parachain");
+		}
+
+		for i in 0..20{
+			std::thread::sleep(std::time::Duration::from_millis(5));
+			info!(target: "hyperspace", "Starting EVM Indexer.");
+			info!(target: "hyperspace", "Syncing chain {}.", config.chain.name);
+		}
+
+		info!(target: "hyperspace", "Starting EVM Indexer.");
+		info!(target: "hyperspace", "Syncing chain {}.", config.chain.name);
 
 		let rpc = Rpc::new(&config).await.expect("Unable to start RPC client.");
+
+		info!(target: "hyperspace", "Connected EVM Indexer.");
+		info!(target: "hyperspace", "Connected Syncing chain {}.", config.chain.name);
 
 		let db =
 			Database::new(config.db_url.clone(), config.redis_url.clone(), config.chain.clone())
@@ -1456,219 +1551,219 @@ mod xx {
 		client::EthereumClient, config::EthereumClientConfig, ibc_provider::Ics20BankAbi,
 	};
 
-	#[tokio::test(flavor = "multi_thread", worker_threads = 2)]
-	async fn devnet() -> anyhow::Result<()> {
-		logging::setup_logging();
+	// #[tokio::test(flavor = "multi_thread", worker_threads = 2)]
+	// async fn devnet() -> anyhow::Result<()> {
+	// 	logging::setup_logging();
 
-		let config_a = toml::from_str::<EthereumClientConfig>(include_str!(
-			"../../../config/ethereum-goerli.toml"
-		))
-		.unwrap();
-		let config_b = toml::from_str::<CosmosClientConfig>(include_str!(
-			"../../../config/centauri-goerli.toml"
-		))
-		.unwrap();
+	// 	let config_a = toml::from_str::<EthereumClientConfig>(include_str!(
+	// 		"../../../config/ethereum-goerli.toml"
+	// 	))
+	// 	.unwrap();
+	// 	let config_b = toml::from_str::<CosmosClientConfig>(include_str!(
+	// 		"../../../config/centauri-goerli.toml"
+	// 	))
+	// 	.unwrap();
 
-		let (client_a, client_b) = (
-			EthereumClient::new(config_a).await.unwrap(),
-			CosmosClient::<()>::new(config_b).await.unwrap(),
-		);
-		// let id = client_a.client_id();
-		// client_a.set_client_id(client_b.client_id());
-		// client_b.set_client_id(id);
-		let _client = client_a.client();
-		let asset_str = "ppica".to_string();
-		let _asset_id_a = AnyAssetId::Ethereum(asset_str.clone());
-		let _asset_id_b_atom = AnyAssetId::Cosmos("uatom".to_string());
-		let asset_id_b_pica = AnyAssetId::Cosmos("ppica".to_string());
-		// let channel_id = ChannelId::new(0);
-		let _port_id = PortId::transfer();
+	// 	let (client_a, client_b) = (
+	// 		EthereumClient::new(config_a).await.unwrap(),
+	// 		CosmosClient::<()>::new(config_b).await.unwrap(),
+	// 	);
+	// 	// let id = client_a.client_id();
+	// 	// client_a.set_client_id(client_b.client_id());
+	// 	// client_b.set_client_id(id);
+	// 	let _client = client_a.client();
+	// 	let asset_str = "ppica".to_string();
+	// 	let _asset_id_a = AnyAssetId::Ethereum(asset_str.clone());
+	// 	let _asset_id_b_atom = AnyAssetId::Cosmos("uatom".to_string());
+	// 	let asset_id_b_pica = AnyAssetId::Cosmos("ppica".to_string());
+	// 	// let channel_id = ChannelId::new(0);
+	// 	let _port_id = PortId::transfer();
 
-		let users = [
-			"0xF66605eDE7BfCCc460097CAFD34B4924f1C6969D",
-			"0x7C12ff36c44c1B10c13cC76ea8A3aEba0FFf6403",
-			"0xD36554eF26E9B2ad72f2b53986469A8180522E5F",
-		];
-		let pica_amt = 10000000000000000000000u128;
-		let _atom_amt = 10000000000000000u128;
-		// let pica_amt = 100_000000000000u128;
-		// let atom_amt = 10000000000u128;
-		// let a = &mut AnyChain::Cosmos(client_b);
-		// let b = &mut AnyChain::Ethereum(client_a);
-		relay(AnyChain::Ethereum(client_a), AnyChain::Cosmos(client_b), None, None, None)
-			.await
-			.unwrap();
-		// let abi = Ics20BankAbi::new(
-		// 	Address::from_str("0x136484d4a64b3a53a82b13b0fb1ea7c79517be9f").unwrap(),
-		// 	client,
-		// );
-		// dbg!(
-		// 	get_balance(
-		// 		&abi,
-		// 		Address::from_str("0xF66605eDE7BfCCc460097CAFD34B4924f1C6969D").unwrap()
-		// 	)
-		// 	.await
-		// );
+	// 	let users = [
+	// 		"0xF66605eDE7BfCCc460097CAFD34B4924f1C6969D",
+	// 		"0x7C12ff36c44c1B10c13cC76ea8A3aEba0FFf6403",
+	// 		"0xD36554eF26E9B2ad72f2b53986469A8180522E5F",
+	// 	];
+	// 	let pica_amt = 10000000000000000000000u128;
+	// 	let _atom_amt = 10000000000000000u128;
+	// 	// let pica_amt = 100_000000000000u128;
+	// 	// let atom_amt = 10000000000u128;
+	// 	// let a = &mut AnyChain::Cosmos(client_b);
+	// 	// let b = &mut AnyChain::Ethereum(client_a);
+	// 	relay(AnyChain::Ethereum(client_a), AnyChain::Cosmos(client_b), None, None, None)
+	// 		.await
+	// 		.unwrap();
+	// 	// let abi = Ics20BankAbi::new(
+	// 	// 	Address::from_str("0x136484d4a64b3a53a82b13b0fb1ea7c79517be9f").unwrap(),
+	// 	// 	client,
+	// 	// );
+	// 	// dbg!(
+	// 	// 	get_balance(
+	// 	// 		&abi,
+	// 	// 		Address::from_str("0xF66605eDE7BfCCc460097CAFD34B4924f1C6969D").unwrap()
+	// 	// 	)
+	// 	// 	.await
+	// 	// );
 
-		// while send_transfer_to(
-		// 	b,
-		// 	a,
-		// 	AnyAssetId::Ethereum("transfer/channel-0/ppica".to_owned()),
-		// 	b.channel_whitelist().iter().next().unwrap().0,
-		// 	None,
-		// 	Signer::from_str("centauri10556m38z4x6pqalr9rl5ytf3cff8q46nk85k9m").unwrap(),
-		// 	pica_amt / 100000000,
-		// )
-		// .await
-		// .is_err()
-		// {
-		// 	tokio::time::sleep(Duration::from_secs(2)).await;
-		// }
+	// 	// while send_transfer_to(
+	// 	// 	b,
+	// 	// 	a,
+	// 	// 	AnyAssetId::Ethereum("transfer/channel-0/ppica".to_owned()),
+	// 	// 	b.channel_whitelist().iter().next().unwrap().0,
+	// 	// 	None,
+	// 	// 	Signer::from_str("centauri10556m38z4x6pqalr9rl5ytf3cff8q46nk85k9m").unwrap(),
+	// 	// 	pica_amt / 100000000,
+	// 	// )
+	// 	// .await
+	// 	// .is_err()
+	// 	// {
+	// 	// 	tokio::time::sleep(Duration::from_secs(2)).await;
+	// 	// }
 
-		// while send_transfer_to(
-		// 	a,
-		// 	b,
-		// 	AnyAssetId::Cosmos("ppica".to_owned()).clone(),
-		// 	a.channel_whitelist().iter().next().unwrap().0,
-		// 	None,
-		// 	Signer::from_str("0xF66605eDE7BfCCc460097CAFD34B4924f1C6969D").unwrap(),
-		// 	pica_amt / 1000000,
-		// )
-		// .await
-		// .map_err(|e| {
-		// 	error!("{e}");
-		// })
-		// .is_err()
-		// {
-		// 	tokio::time::sleep(Duration::from_secs(2)).await;
-		// }
+	// 	// while send_transfer_to(
+	// 	// 	a,
+	// 	// 	b,
+	// 	// 	AnyAssetId::Cosmos("ppica".to_owned()).clone(),
+	// 	// 	a.channel_whitelist().iter().next().unwrap().0,
+	// 	// 	None,
+	// 	// 	Signer::from_str("0xF66605eDE7BfCCc460097CAFD34B4924f1C6969D").unwrap(),
+	// 	// 	pica_amt / 1000000,
+	// 	// )
+	// 	// .await
+	// 	// .map_err(|e| {
+	// 	// 	error!("{e}");
+	// 	// })
+	// 	// .is_err()
+	// 	// {
+	// 	// 	tokio::time::sleep(Duration::from_secs(2)).await;
+	// 	// }
 
-		// dbg!(
-		// 	get_balance(
-		// 		&abi,
-		// 		Address::from_str("0x7C12ff36c44c1B10c13cC76ea8A3aEba0FFf6403").unwrap()
-		// 	)
-		// 	.await
-		// );
+	// 	// dbg!(
+	// 	// 	get_balance(
+	// 	// 		&abi,
+	// 	// 		Address::from_str("0x7C12ff36c44c1B10c13cC76ea8A3aEba0FFf6403").unwrap()
+	// 	// 	)
+	// 	// 	.await
+	// 	// );
 
-		// 70000000000000000ppica
-		for _user in users {
-			let _x = [
-				(pica_amt, asset_id_b_pica.clone()),
-				// (atom_amt, asset_id_b_atom.clone())
-			];
-			// for (amt, denom) in x {
-			// 	// dbg!(user, get_balance(&abi, Address::from_str(user).unwrap()).await);
-			// 	while send_transfer_to(
-			// 		a,
-			// 		b,
-			// 		denom.clone(),
-			// 		a.channel_whitelist().iter().next().unwrap().0,
-			// 		None,
-			// 		Signer::from_str(&user.clone()).unwrap(),
-			// 		amt,
-			// 	)
-			// 	.await
-			// 	.map_err(|e| {
-			// 		error!("{e}");
-			// 	})
-			// 	.is_err()
-			// 	{
-			// 		tokio::time::sleep(Duration::from_secs(2)).await;
-			// 	}
-			// 	dbg!(user, get_balance(&abi, Address::from_str(user).unwrap()).await);
-			// }
-		}
+	// 	// 70000000000000000ppica
+	// 	for _user in users {
+	// 		let _x = [
+	// 			(pica_amt, asset_id_b_pica.clone()),
+	// 			// (atom_amt, asset_id_b_atom.clone())
+	// 		];
+	// 		// for (amt, denom) in x {
+	// 		// 	// dbg!(user, get_balance(&abi, Address::from_str(user).unwrap()).await);
+	// 		// 	while send_transfer_to(
+	// 		// 		a,
+	// 		// 		b,
+	// 		// 		denom.clone(),
+	// 		// 		a.channel_whitelist().iter().next().unwrap().0,
+	// 		// 		None,
+	// 		// 		Signer::from_str(&user.clone()).unwrap(),
+	// 		// 		amt,
+	// 		// 	)
+	// 		// 	.await
+	// 		// 	.map_err(|e| {
+	// 		// 		error!("{e}");
+	// 		// 	})
+	// 		// 	.is_err()
+	// 		// 	{
+	// 		// 		tokio::time::sleep(Duration::from_secs(2)).await;
+	// 		// 	}
+	// 		// 	dbg!(user, get_balance(&abi, Address::from_str(user).unwrap()).await);
+	// 		// }
+	// 	}
 
-		// async fn get_balance<M>(abi: &Ics20BankAbi<M>, acc: H160) -> U256
-		// where
-		// 	M: Middleware + Debug + Send + Sync,
-		// {
-		// 	abi.method("balanceOf", (acc, "transfer/channel-0/ppica".to_string()))
-		// 		.unwrap()
-		// 		.call()
-		// 		.await
-		// 		.unwrap()
-		// };
-		// dbg!(
-		// 	get_balance(&abi,
-		// Address::from_str("0xF66605eDE7BfCCc460097CAFD34B4924f1C6969D").unwrap()) 		.await
-		// );
+	// 	// async fn get_balance<M>(abi: &Ics20BankAbi<M>, acc: H160) -> U256
+	// 	// where
+	// 	// 	M: Middleware + Debug + Send + Sync,
+	// 	// {
+	// 	// 	abi.method("balanceOf", (acc, "transfer/channel-0/ppica".to_string()))
+	// 	// 		.unwrap()
+	// 	// 		.call()
+	// 	// 		.await
+	// 	// 		.unwrap()
+	// 	// };
+	// 	// dbg!(
+	// 	// 	get_balance(&abi,
+	// 	// Address::from_str("0xF66605eDE7BfCCc460097CAFD34B4924f1C6969D").unwrap()) 		.await
+	// 	// );
 
-		// let tx = client_a
-		// 	.client()
-		// 	.get_transaction_receipt(
-		// 		H256::from_str("0x0ca7e6f45de3bffeaf93995748a181b4d469b2d7936218bdcc4927fde78ce831")
-		// 			.unwrap(),
-		// 	)
-		// 	.await
-		// 	.unwrap()
-		// 	.unwrap();
-		// // let ev = client_a.yui.event_for_name("TransferInitiated").unwrap();
-		// // ev.filter.signature()
-		// dbg!(SendPacketFilter::signature());
-		// dbg!(TransferInitiatedFilter::signature());
-		// tx.logs.iter().for_each(|x| {
-		// 	// SendPacketFilter::
-		// 	// TransferInitiatedFilter::new
-		// 	println!("{:?}", x);
-		// });
+	// 	// let tx = client_a
+	// 	// 	.client()
+	// 	// 	.get_transaction_receipt(
+	// 	// 		H256::from_str("0x0ca7e6f45de3bffeaf93995748a181b4d469b2d7936218bdcc4927fde78ce831")
+	// 	// 			.unwrap(),
+	// 	// 	)
+	// 	// 	.await
+	// 	// 	.unwrap()
+	// 	// 	.unwrap();
+	// 	// // let ev = client_a.yui.event_for_name("TransferInitiated").unwrap();
+	// 	// // ev.filter.signature()
+	// 	// dbg!(SendPacketFilter::signature());
+	// 	// dbg!(TransferInitiatedFilter::signature());
+	// 	// tx.logs.iter().for_each(|x| {
+	// 	// 	// SendPacketFilter::
+	// 	// 	// TransferInitiatedFilter::new
+	// 	// 	println!("{:?}", x);
+	// 	// });
 
-		// client_a.send_transfer()
+	// 	// client_a.send_transfer()
 
-		// let block = client_a
-		// 	.client()
-		// 	.get_block(H256::from_str(
-		// 		"0xe44b85448b031c68a2e3b7377b895750bed23ea21bff086360443caeb82d8e62",
-		// 	)?)
-		// 	.await?
-		// 	.unwrap();
-		// dbg!(block.transactions.len());
-		//
-		// let tx = client_a
-		// 	.client()
-		// 	.get_transaction_receipt(H256::from_str(
-		// 		"0x9af4ef7c3c1c1f27d426480ee1348740023131d3eb06988a7fc62d92f173b5fc",
-		// 	)?)
-		// 	.await?
-		// 	.unwrap();
-		// tx.logs.iter().for_each(|x| {
-		// 	println!("{:?}", x);
-		// });
-		//
-		// let (height, _) = client_a.latest_height_and_timestamp().await.unwrap();
-		//
-		// let seqs = client_a.query_packet_commitments(height, channel_id, port_id.clone()).await?;
-		// seqs.iter().for_each(|x| {
-		// 	println!("{:?}", x);
-		// });
-		//
-		// let ps = client_a
-		// 	.query_send_packets(height, channel_id, port_id, vec![0, 1, 2, 3])
-		// 	.await
-		// 	.unwrap();
-		// dbg!(ps);
+	// 	// let block = client_a
+	// 	// 	.client()
+	// 	// 	.get_block(H256::from_str(
+	// 	// 		"0xe44b85448b031c68a2e3b7377b895750bed23ea21bff086360443caeb82d8e62",
+	// 	// 	)?)
+	// 	// 	.await?
+	// 	// 	.unwrap();
+	// 	// dbg!(block.transactions.len());
+	// 	//
+	// 	// let tx = client_a
+	// 	// 	.client()
+	// 	// 	.get_transaction_receipt(H256::from_str(
+	// 	// 		"0x9af4ef7c3c1c1f27d426480ee1348740023131d3eb06988a7fc62d92f173b5fc",
+	// 	// 	)?)
+	// 	// 	.await?
+	// 	// 	.unwrap();
+	// 	// tx.logs.iter().for_each(|x| {
+	// 	// 	println!("{:?}", x);
+	// 	// });
+	// 	//
+	// 	// let (height, _) = client_a.latest_height_and_timestamp().await.unwrap();
+	// 	//
+	// 	// let seqs = client_a.query_packet_commitments(height, channel_id, port_id.clone()).await?;
+	// 	// seqs.iter().for_each(|x| {
+	// 	// 	println!("{:?}", x);
+	// 	// });
+	// 	//
+	// 	// let ps = client_a
+	// 	// 	.query_send_packets(height, channel_id, port_id, vec![0, 1, 2, 3])
+	// 	// 	.await
+	// 	// 	.unwrap();
+	// 	// dbg!(ps);
 
-		/*
-		Sender account: 0x73db010c3275eb7a92e5c38770316248f4c644ee
-		Diamond init address: 0x4d9654e1da9826361519be28c6db135e560f20a0
-		Deployed IBCClient on 0xb7198a3674e37433579be45aa9dd09f5ab4b314a
-		Deployed IBCConnection on 0xb26397cfa7e111e844086bdd3da5080f9de65cb7
-		Deployed IBCChannelHandshake on 0xfbf766071d0fdee42b78ab029b97194543b6d7a5
-		Deployed IBCPacket on 0x844d2447e6c00cf6a5fbe9ad5eebebe31e40368e
-		Deployed IBCQuerier on 0x992966599e81b9d4a3ef92172b9fa162d2e50d5b
-		Deployed DiamondCutFacet on 0x3bf46cf159422e1791d20d45683b21f34ecae4be
-		Deployed DiamondLoupeFacet on 0xb16af4cfc553ae0a8f43e812e22dc6caabdf5e63
-		Deployed OwnershipFacet on 0x4f6e145fbaf72be9ea283f5793e70a1c594d5ceb
-		Deployed update client delegate contract address: 0xe566a7e344f2aef783319a76233e54e7f8b47823
-		Deployed light client address: 0x56378f9b88f341b1913a2fc6ac2bcbaa1b9a9f9f
-		Deployed Bank module address: 0x0486ee42d89d569c4d8143e47a82c4b14545ae43
-		Deployed ICS-20 Transfer module address: 0x4976bb932815783f092dd0e3cca567d5502be46e
-		 */
+	// 	/*
+	// 	Sender account: 0x73db010c3275eb7a92e5c38770316248f4c644ee
+	// 	Diamond init address: 0x4d9654e1da9826361519be28c6db135e560f20a0
+	// 	Deployed IBCClient on 0xb7198a3674e37433579be45aa9dd09f5ab4b314a
+	// 	Deployed IBCConnection on 0xb26397cfa7e111e844086bdd3da5080f9de65cb7
+	// 	Deployed IBCChannelHandshake on 0xfbf766071d0fdee42b78ab029b97194543b6d7a5
+	// 	Deployed IBCPacket on 0x844d2447e6c00cf6a5fbe9ad5eebebe31e40368e
+	// 	Deployed IBCQuerier on 0x992966599e81b9d4a3ef92172b9fa162d2e50d5b
+	// 	Deployed DiamondCutFacet on 0x3bf46cf159422e1791d20d45683b21f34ecae4be
+	// 	Deployed DiamondLoupeFacet on 0xb16af4cfc553ae0a8f43e812e22dc6caabdf5e63
+	// 	Deployed OwnershipFacet on 0x4f6e145fbaf72be9ea283f5793e70a1c594d5ceb
+	// 	Deployed update client delegate contract address: 0xe566a7e344f2aef783319a76233e54e7f8b47823
+	// 	Deployed light client address: 0x56378f9b88f341b1913a2fc6ac2bcbaa1b9a9f9f
+	// 	Deployed Bank module address: 0x0486ee42d89d569c4d8143e47a82c4b14545ae43
+	// 	Deployed ICS-20 Transfer module address: 0x4976bb932815783f092dd0e3cca567d5502be46e
+	// 	 */
 
-		// relay(client_a, client_b, None, None, None).await.unwrap();
-		Ok(())
-	}
+	// 	// relay(client_a, client_b, None, None, None).await.unwrap();
+	// 	Ok(())
+	// }
 
 	#[tokio::test]
 	async fn send_tokens() {

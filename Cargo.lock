@@ -5665,6 +5665,7 @@ dependencies = [
  "ibc-proto",
  "ibc-rpc",
  "ics07-tendermint",
+ "ics07-tendermint-zk",
  "ics08-wasm",
  "itertools 0.10.5",
  "k256 0.11.6",
@@ -5690,6 +5691,7 @@ dependencies = [
  "tokio-stream",
  "tonic",
  "tracing",
+ "ureq",
 ]
 
 [[package]]
@@ -5720,6 +5722,7 @@ dependencies = [
  "ibc-proto",
  "ibc-rpc",
  "ics07-tendermint",
+ "ics07-tendermint-zk",
  "ics23 0.10.0",
  "icsxx-ethereum",
  "itertools 0.11.0",
@@ -5746,6 +5749,7 @@ dependencies = [
  "toml 0.7.6",
  "tracing",
  "tracing-subscriber 0.3.17",
+ "ureq",
 ]
 
 [[package]]
@@ -6069,6 +6073,20 @@ dependencies = [
  "time",
  "tracing",
  "tracing-subscriber 0.3.17",
+]
+
+[[package]]
+name = "ics07-tendermint-zk"
+version = "0.1.0"
+dependencies = [
+ "bytes",
+ "ibc",
+ "ibc-proto",
+ "ics07-tendermint",
+ "prost 0.11.6",
+ "serde",
+ "tendermint",
+ "tendermint-proto",
 ]
 
 [[package]]
@@ -9002,6 +9020,7 @@ dependencies = [
  "ibc-primitives",
  "ibc-proto",
  "ics07-tendermint",
+ "ics07-tendermint-zk",
  "ics08-wasm",
  "ics10-grandpa",
  "ics11-beefy",
@@ -17704,18 +17723,20 @@ checksum = "a156c684c91ea7d62626509bce3cb4e1d9ed5c4d978f7b4352658f96a4c26b4a"
 
 [[package]]
 name = "ureq"
-version = "2.6.2"
+version = "2.9.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "338b31dd1314f68f3aabf3ed57ab922df95ffcd902476ca7ba3c4ce7b908c46d"
+checksum = "f8cdd25c339e200129fe4de81451814e5228c9b771d57378817d6117cc2b3f97"
 dependencies = [
- "base64 0.13.1",
+ "base64 0.21.0",
  "flate2",
  "log",
  "once_cell",
- "rustls 0.20.8",
+ "rustls 0.21.6",
+ "rustls-webpki 0.101.3",
+ "serde",
+ "serde_json",
  "url",
- "webpki 0.22.0",
- "webpki-roots 0.22.6",
+ "webpki-roots 0.25.2",
 ]
 
 [[package]]

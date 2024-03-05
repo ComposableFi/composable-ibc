@@ -33,7 +33,13 @@ use ibc_proto::{
 };
 use prost::Message;
 use serde::{Deserialize, Serialize};
-use tendermint::{block::signed_header::SignedHeader, validator::Set as ValidatorSet};
+use std::collections::HashSet;
+use tendermint::{
+	block::{signed_header::SignedHeader, Commit, CommitSig},
+	validator::Set as ValidatorSet,
+	vote::{SignedVote, ValidatorIndex},
+	Vote,
+};
 use tendermint_proto::Protobuf;
 
 pub const TENDERMINT_HEADER_TYPE_URL: &str = "/ibc.lightclients.tendermint.v1.Header";
@@ -174,6 +180,143 @@ impl Header {
 	pub fn compatible_with(&self, other_header: &Header) -> bool {
 		headers_compatible(&self.signed_header, &other_header.signed_header)
 	}
+
+	pub fn get_zk_input(&self, size: usize) -> Result<(Vec<(Vec<u8>, Vec<u8>, Vec<u8>)>, u64), Error> {
+		#[derive(Clone)]
+		struct ZKInput {
+			pub_key: Vec<u8>,
+			signature: Vec<u8>,
+			message: Vec<u8>,
+			voting_power: u64,
+		}
+
+		let mut pre_input: Vec<ZKInput> = vec![];
+
+		let validator_set = &self.validator_set;
+		let signed_header = &self.signed_header;
+		let non_absent_votes =
+			signed_header.commit.signatures.iter().enumerate().flat_map(|(idx, signature)| {
+				non_absent_vote(
+					signature,
+					ValidatorIndex::try_from(idx).unwrap(),
+					&signed_header.commit,
+				)
+				.map(|vote| (signature, vote))
+			});
+
+		let mut seen_validators = HashSet::new();
+		let total_voting_power = self.validator_set.total_voting_power().value();
+
+		for (signature, vote) in non_absent_votes {
+			// Ensure we only count a validator's power once
+			if seen_validators.contains(&vote.validator_address) {
+				return Err(Error::validation("validator seen twice".to_string()));
+			} else {
+				seen_validators.insert(vote.validator_address);
+			}
+
+			let validator = match validator_set.validator(vote.validator_address) {
+				Some(validator) => validator,
+				None => continue, // Cannot find matching validator, so we skip the vote
+			};
+
+			let signed_vote =
+				match SignedVote::from_vote(vote.clone(), signed_header.header.chain_id.clone()) {
+					Some(signed_vote) => signed_vote,
+					None =>
+						return Err(Error::validation("signed vote cannot be converted".to_string())),
+				};
+
+			// If the vote is neither absent nor nil, tally its power
+			if !signature.is_commit() {
+				continue
+			}
+
+			// Check vote is valid
+			let sign_bytes = signed_vote.sign_bytes();
+
+			let signature = signed_vote.signature();
+			if validator
+				.verify_signature::<tendermint::crypto::default::signature::Verifier>(
+					&sign_bytes,
+					signed_vote.signature(),
+				)
+				.is_err()
+			{}
+
+			let zk_input = ZKInput {
+				pub_key: vote.validator_address.into(),
+				signature: signature.as_bytes().to_vec(),
+				message: sign_bytes,
+				voting_power: validator.power(),
+			};
+			pre_input.push(zk_input);
+		}
+
+		if pre_input.len() < size {
+			// TODO: return error as there aren't enough votes
+			return Err(Error::validation(
+				"not enough validators have successfully signed".to_string(),
+			))
+		}
+
+		let not_sorted_pre_input = pre_input.clone();
+
+		// sort by voting power increased
+		pre_input.sort_by(
+			|ZKInput { voting_power: voting_power_1, .. },
+			 ZKInput { voting_power: voting_power_2, .. }| { voting_power_2.cmp(voting_power_1) },
+		);
+
+		// count voting power
+		let voting_power_amount_validator_size =
+			pre_input.iter().take(size).fold(0_u64, |mut acc, x| {
+				acc += x.voting_power;
+				acc
+			});
+
+		// signed votes haven't
+		if voting_power_amount_validator_size * 2 <= total_voting_power * 3 {
+			//TODO uncomment. commented for the local testing with a 1 validator on cosmos chain
+			// return Err(Error::validation("voting power is not > 2/3 + 1".to_string()))
+		}
+
+		
+
+
+		let ret: Vec::<(Vec<u8>, Vec<u8>, Vec<u8>)> = pre_input
+			.into_iter()
+			.take(size)
+			.map(|ZKInput { pub_key, signature, message, .. }| (pub_key, signature, message))
+			.collect();
+
+		let mut validators = vec![0; size];
+
+		let validators: Vec<u64> = not_sorted_pre_input
+			.iter()
+			.map(|element| {
+				if ret.iter().any(|x| x.0 == element.pub_key) {
+					1
+				} else {
+					0
+				}
+			})
+			.collect();
+
+		let mut bitmask: u64 = 0;
+		for (index, &validator) in validators.iter().enumerate() {
+			if validator == 1 {
+				bitmask |= 1 << index;
+			}
+		}
+
+
+		//extra return parameter for eth to verify zk proof after we got response from remote prover
+		//bitmask preserving order of validators that is initial order not sorted by voting power
+		//todo create some input for zk prover as bitmask
+
+		Ok((ret, bitmask))
+	}
 }
 
 pub fn headers_compatible(header: &SignedHeader, other: &SignedHeader) -> bool {
@@ -241,6 +384,32 @@ impl From<Header> for RawHeader {
 		}
 	}
 }
+
+fn non_absent_vote(
+	commit_sig: &CommitSig,
+	validator_index: ValidatorIndex,
+	commit: &Commit,
+) -> Option<Vote> {
+	let (validator_address, timestamp, signature, block_id) = match commit_sig {
+		CommitSig::BlockIdFlagAbsent { .. } => return None,
+		CommitSig::BlockIdFlagCommit { validator_address, timestamp, signature } =>
+			(*validator_address, *timestamp, signature, Some(commit.block_id)),
+		CommitSig::BlockIdFlagNil { validator_address, timestamp, signature } =>
+			(*validator_address, *timestamp, signature, None),
+	};
+
+	Some(Vote {
+		vote_type: tendermint::vote::Type::Precommit,
+		height: commit.height,
+		round: commit.round,
+		block_id,
+		timestamp: Some(timestamp),
+		validator_address,
+		validator_index,
+		signature: signature.clone(),
+	})
+}
+
 
 #[cfg(test)]
 pub mod test_util {

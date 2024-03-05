@@ -4,10 +4,10 @@ use super::{
 	light_client::LightClient,
 	tx::{broadcast_tx, confirm_tx, sign_tx, simulate_tx},
 };
-use crate::error::Error;
+use crate::{error::Error, eth_zk_utils::ZKProver};
 use bech32::ToBase32;
 use bip32::{DerivationPath, ExtendedPrivateKey, XPrv, XPub as ExtendedPublicKey};
-use core::convert::{From, Into, TryFrom};
+use core::{convert::{From, Into, TryFrom}, time};
 use digest::Digest;
 use ibc::core::{
 	ics02_client::height::Height,
@@ -35,7 +35,7 @@ use rand::Rng;
 use ripemd::Ripemd160;
 use serde::{Deserialize, Serialize};
 use std::{
-	collections::HashSet,
+	collections::{HashMap, HashSet},
 	str::FromStr,
 	sync::{Arc, Mutex},
 	time::Duration,
@@ -177,6 +177,76 @@ pub struct CosmosClient<H> {
 	pub common_state: CommonClientState,
 	/// Join handles for spawned tasks
 	pub join_handles: Arc<TokioMutex<Vec<JoinHandle<Result<(), tendermint_rpc::Error>>>>>,
+	// heigth -> proof (HashMap)
+	pub mock_zk_prover: Arc<Mutex<MockZkProover>>,
+
+	pub zk_prover_api: ZKProver,
+	//hashmap of height -> proof_id
+	//means: did we already request proof for this height
+	//if yes then need to ask about the actual proof
+	pub zk_proof_requests: Arc<Mutex<HashMap<Height, ZkProofRequest>>>,
+}
+
+#[derive(Clone, Debug)]
+pub struct ZkProofRequest{
+	pub proof_id: String,
+	pub request_time: std::time::SystemTime,
+	pub bitmask: u64,
+}
+
+impl ZkProofRequest{
+	pub fn new(proof_id: String, bitmask: u64) -> Self {
+		Self {
+			proof_id,
+			request_time: std::time::SystemTime::now(),
+			bitmask,
+		}
+	}
+	pub fn is_waiting_for_proof_too_long(&self, possible_delay_secs: u64 ) -> bool {
+		let t = std::time::SystemTime::now();
+		let diff = t.duration_since(self.request_time.clone()).unwrap();
+		if diff.as_secs() > possible_delay_secs {
+			return true;
+		}
+		return false;
+	}
+}
+
+
+#[derive(Clone, Default)]
+pub struct MockZkProover {
+	pub map_height_time : HashMap<Height, std::time::SystemTime>,
+}
+
+impl MockZkProover{
+	fn new() -> Self {
+		Self {
+			map_height_time : HashMap::new(),
+		}
+	}
+
+	pub fn request(&mut self, height: Height) {
+		if self.map_height_time.contains_key(&height){
+			return;
+		}
+
+		let t = std::time::SystemTime::now();
+		self.map_height_time.insert(height, t);
+	}
+	pub fn poll(&mut self, height: Height) -> bool {
+		let d = self.map_height_time.get(&height);
+		if d.is_none() {
+			return false;
+		}
+
+		let t = std::time::SystemTime::now();
+		let diff = t.duration_since(d.unwrap().clone()).unwrap();
+		if diff.as_secs() > 30 {
+			return true;
+		}
+		return false;
+	}
+
 }
 
 /// config options for [`ParachainClient`]
@@ -309,6 +379,10 @@ where
 				..common_state
 			},
 			join_handles: Arc::new(TokioMutex::new(vec![ws_driver_jh])),
+			mock_zk_prover: Arc::new(Mutex::new(MockZkProover::new())),
+			zk_proof_requests: Arc::new(Mutex::new(HashMap::new())),
+			//todo need to read from config
+			zk_prover_api: ZKProver::new("http://127.0.0.1:8000".to_string(), Duration::from_secs(30).as_secs()),
 		})
 	}
 

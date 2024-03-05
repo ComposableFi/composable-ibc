@@ -217,7 +217,7 @@ impl EthereumClient {
 					.await
 					.map_err(|err| ClientError::Other(format!("failed to get logs 4: {}", err)))?
 					.pop() // get only the last event
-					.ok_or_else(|| ClientError::Other("no events found 2".to_string()))?;
+					.ok_or_else(|| ClientError::Other("no events found test4".to_string()))?;
 
 				let tx_hash = log
 					.transaction_hash
@@ -581,7 +581,7 @@ impl IbcProvider for EthereumClient {
 			.await
 			.unwrap()
 			.pop() // get only the last event
-			.ok_or_else(|| ClientError::Other("no events found".to_string()))?;
+			.ok_or_else(|| ClientError::Other("no events found test5".to_string()))?;
 
 		let tx_hash = log.transaction_hash.expect("tx hash should exist");
 		let func = self.yui.function("createClient")?;
@@ -732,7 +732,7 @@ impl IbcProvider for EthereumClient {
 					.await
 					.map_err(|err| ClientError::Other(format!("failed to get logs 4: {}", err)))?
 					.pop() // get only the last event
-					.ok_or_else(|| ClientError::Other("no events found".to_string()))?;
+					.ok_or_else(|| ClientError::Other("no events found test6".to_string()))?;
 
 				let tx_hash = log
 					.transaction_hash

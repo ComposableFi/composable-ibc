@@ -372,7 +372,7 @@ impl EthereumClient {
 					)
 					.await?
 					.pop()
-					.ok_or_else(|| ClientError::Other("no events found".to_string()))?;
+					.ok_or_else(|| ClientError::Other("no events found test1".to_string()))?;
 
 				let tx_hash = log
 					.transaction_hash
@@ -724,7 +724,7 @@ impl IbcProvider for EthereumClient {
 			)
 			.await?
 			.pop()
-			.ok_or_else(|| ClientError::Other("no events found".to_string()))?;
+			.ok_or_else(|| ClientError::Other("no events found test2".to_string()))?;
 
 		let tx_hash = log.transaction_hash.expect("tx hash should exist");
 		let func = self.yui.function("createClient")?;
@@ -861,7 +861,7 @@ impl IbcProvider for EthereumClient {
 					)
 					.await?
 					.pop()
-					.ok_or_else(|| ClientError::Other("no events found".to_string()))?;
+					.ok_or_else(|| ClientError::Other("no events found test3".to_string()))?;
 
 				let tx_hash = log
 					.transaction_hash

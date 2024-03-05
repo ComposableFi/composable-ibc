@@ -15,6 +15,7 @@ ibc-primitives = { path = "../../contracts/pallet-ibc/primitives" }
 ibc-proto = { path = "../../ibc/proto" }
 ibc-rpc = { path = "../../contracts/pallet-ibc/rpc" }
 ics07-tendermint = { path = "../../light-clients/ics07-tendermint" }
+ics07-tendermint-zk = { path = "../../light-clients/ics07-tendermint-zk" }
 icsxx-ethereum = { path = "../../light-clients/icsxx-ethereum" }
 pallet-ibc = { path = "../../contracts/pallet-ibc" }
 hyperspace-cosmos = { path = "../cosmos" }
@@ -62,6 +63,7 @@ sqlx = { version = "0.6", features = ["runtime-tokio-native-tls", "postgres"] }
 ics23 = { git = "https://github.com/cosmos/ics23", rev = "74ce807b7be39a7e0afb4e2efb8e28a57965f57b", default-features = false }
 reqwest-eventsource = "0.4.0"
 derivative = "2.2.0"
+ureq = {version = "2.9.1", features = ["json"] }
 
 [dev-dependencies]
 toml = "0.7.3"

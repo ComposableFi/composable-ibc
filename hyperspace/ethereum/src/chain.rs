@@ -78,7 +78,7 @@ use std::{
 };
 use tendermint::{
 	account, block,
-	block::{header::Version, signed_header::SignedHeader, Height as TmHeight},
+	block::{header::Version, signed_header::SignedHeader, CommitSig, Height as TmHeight},
 	trust_threshold::TrustThresholdFraction,
 	AppHash, Hash, PublicKey, Time,
 };
@@ -418,7 +418,7 @@ pub(crate) fn consensus_state_from_abi_token(token: Token) -> Result<ConsensusSt
 	})
 }
 
-fn tm_header_abi_token(header: &Header) -> Result<Token, ClientError> {
+fn tm_header_abi_token(header: &ics07_tendermint_zk::client_message::ZkHeader) -> Result<Token, ClientError> {
 	use ethers::abi::{encode as ethers_encode, Token as EthersToken};
 	let block_header = header.signed_header.header.clone();
 	let last_commit = header.signed_header.commit.clone();
@@ -508,6 +508,33 @@ fn tm_header_abi_token(header: &Header) -> Result<Token, ClientError> {
 		.to_vec(),
 	);
 
+	let mut list_of_commit_sig = vec![];
+	
+	//enum BlockIDFlag from yui solidity
+	const BLOCK_ID_FLAG_UNKNOWN: u32 = 0;
+	const BLOCK_ID_FLAG_ABSENT: u32 = 1;
+	const BLOCK_ID_FLAG_COMMIT: u32 = 2;
+	const BLOCK_ID_FLAG_NIL: u32 = 3;
+	
+	for i in header.signed_header.commit.signatures.iter() {
+		match i{
+			CommitSig::BlockIdFlagAbsent => {
+				let tuple = EthersToken::Tuple(vec![EthersToken::Int(BLOCK_ID_FLAG_ABSENT.into()), EthersToken::Bytes([0;32].into())]);
+				list_of_commit_sig.push(tuple);
+			}
+			CommitSig::BlockIdFlagCommit{validator_address, timestamp, signature} => {
+				let validator_address = EthersToken::Bytes(validator_address.as_bytes().into());
+				let tuple = EthersToken::Tuple(vec![EthersToken::Int(BLOCK_ID_FLAG_COMMIT.into()), validator_address]);
+				list_of_commit_sig.push(tuple);
+			}
+			CommitSig::BlockIdFlagNil{validator_address, timestamp, signature} => {
+				let validator_address = EthersToken::Bytes(validator_address.as_bytes().into());
+				let tuple = EthersToken::Tuple(vec![EthersToken::Int(BLOCK_ID_FLAG_NIL.into()), validator_address]);
+				list_of_commit_sig.push(tuple);
+			}
+		};
+	}
+
 	let signed_header_commit = EthersToken::Tuple(
 		[
 			//height
@@ -531,15 +558,46 @@ fn tm_header_abi_token(header: &Header) -> Result<Token, ClientError> {
 				]
 				.to_vec(),
 			),
+			//signatures
+			EthersToken::Array(list_of_commit_sig),
 		]
 		.to_vec(),
 	);
 
-	let trusted_validators = header
+	// let validator_set = hea
+
+	// for i in header.validator_set.validators().iter(){
+
+	// }
+
+	let validators = header
 		.validator_set
 		.validators()
 		.iter()
 		.map(|validator| {
+			validator_info_token(validator)
+		})
+		.collect::<Result<Vec<_>, _>>()?;
+
+	let validators_proposer = header.validator_set.proposer().clone().unwrap();
+	let validators_proposer = validator_info_token(&validators_proposer)?;
+
+	let validator_set = EthersToken::Tuple(vec![
+			EthersToken::Array(validators),
+			validators_proposer,
+			EthersToken::Int(header.validator_set.total_voting_power().value().into()),
+		]
+	);
+
+
+	
+
+	let trusted_validators = header
+		.trusted_validator_set
+		.validators()
+		.iter()
+		.map(|validator| {
+			let address = EthersToken::Bytes(validator.address.as_bytes().into());
 			let voting_power = validator.power.value();
 			let pub_key = validator.pub_key.clone();
 			let pub_key = match pub_key {
@@ -558,19 +616,46 @@ fn tm_header_abi_token(header: &Header) -> Result<Token, ClientError> {
 						"unsupported public key type, only ed25519 is supported".to_string(),
 					)),
 			};
-			Ok(EthersToken::Tuple(vec![pub_key, EthersToken::Int(voting_power.into())]))
+			Ok(EthersToken::Tuple(vec![address, pub_key, EthersToken::Int(voting_power.into())]))
 		})
 		.collect::<Result<Vec<_>, _>>()?;
 
 	let ret = EthersToken::Tuple(
 		[
 			EthersToken::Tuple([signed_header_header, signed_header_commit].to_vec()),
+			validator_set,
 			EthersToken::Int(header.trusted_height.revision_height.into()),
 			EthersToken::Array(trusted_validators),
 		]
 		.to_vec(),
 	);
 	Ok(ret)
+}
+
+fn validator_info_token(validator: &tendermint::validator::Info) -> Result<Token, ClientError> {
+	use ethers::abi::{encode as ethers_encode, Token as EthersToken};
+    let address = EthersToken::Bytes(validator.address.as_bytes().into());
+    let pub_key = validator.pub_key.clone();
+    let voting_power = EthersToken::Int(validator.power.value().into());
+    let proposer_priority = EthersToken::Int(validator.proposer_priority.value().into());
+    let pub_key = match pub_key {
+				    PublicKey::Ed25519(pub_key) => EthersToken::Tuple(vec![
+					    EthersToken::Bytes(pub_key.as_bytes().to_vec()),
+					    EthersToken::Bytes(vec![]),
+					    EthersToken::Bytes(vec![]),
+				    ]),
+				    PublicKey::Secp256k1(pub_key) => EthersToken::Tuple(vec![
+					    EthersToken::Bytes(vec![]),
+					    EthersToken::Bytes(pub_key.to_bytes().to_vec()),
+					    EthersToken::Bytes(vec![]),
+				    ]),
+				    _ =>
+					    return Err(ClientError::Other(
+						    "unsupported public key type, only ed25519 is supported".to_string(),
+					    )),
+			    };
+    // Ok(EthersToken::Tuple(vec![pub_key, EthersToken::Int(voting_power.into())]))
+    Ok(EthersToken::Tuple(vec![address, pub_key,voting_power, proposer_priority ]))
 }
 
 pub(crate) fn tm_header_from_abi_token(token: Token) -> Result<Header, ClientError> {
@@ -1345,6 +1430,9 @@ impl EthereumClient {
 		sleep(self.expected_block_time() * INDEXER_DELAY_BLOCKS as u32).await;
 
 		info!(target: "hyperspace_ethereum", "Submitting messages: {:?}", messages.iter().map(|x| x.type_url.clone()).collect::<Vec<_>>().join(", "));
+		error!(target: "hyperspace_ethereum", "all messages ____________________________________________");
+		error!(target: "hyperspace_ethereum", "Submitting messages to ethereum: {:?}", messages.iter().map(|x| x.type_url.clone()).collect::<Vec<_>>().join(", "));
+		
 
 		let mut temp_client_state: Option<ClientState<()>> = None;
 
@@ -1390,12 +1478,12 @@ impl EthereumClient {
 					|_| ClientError::Other("update_client: failed to decode_vec".into()),
 				)?;
 
-				let AnyClientMessage::Tendermint(client_state) =
+				let AnyClientMessage::TendermintZk(client_state) =
 					msg.client_message.unpack_recursive()
 				else {
 					return Err(ClientError::Other(format!("update_client: unsupported client_state. Should be AnyClientMessage::Tendermint")))
 				};
-				let ClientMessage::Header(header) = client_state else {
+				let ics07_tendermint_zk::client_message::ZkClientMessage::Header(header) = client_state else {
 					return Err(ClientError::Other("update_client: unsupported Client Message. Should be ClientMessage::Header".into()))
 				};
 
@@ -1407,21 +1495,34 @@ impl EthereumClient {
 				}
 
 				let latest_client_state = if let Some(cs) = &temp_client_state {
+					info!(target: "hyperspace_ethereum", "Submitting temp_client_state 1 to ethereum: {:?}", cs);
 					Token::Bytes(ethabi::encode(&[client_state_abi_token(cs)]))
 				} else {
 					let (state, _) =
 						self.get_latest_client_state_exact_token(client_id.clone()).await?;
-					temp_client_state = Some(client_state_from_abi_token::<()>(state.clone())?);
-					state
+					let x = client_state_from_abi_token::<()>(state.clone())?;
+					temp_client_state = Some(x.clone());
+					info!(target: "hyperspace_ethereum", "Submitting temp_client_state 2 to ethereum: {:?}", temp_client_state);
+					info!(target: "hyperspace_ethereum", "Submitting temp_client_state chain id to ethereum: {:?}", x.chain_id);
+					Token::Bytes(ethabi::encode(&[client_state_abi_token(&x)]))
+					// state
 				};
 
 				if let Some(cs) = &mut temp_client_state {
 					cs.latest_height.revision_height = header.signed_header.header.height.value();
 				}
 
+				assert!(header.zk_proof.len() > 0, "zk_proof is missing");
+				assert!(header.zk_bitmask > 0, "zk_proof is missing");
+
 				//get abi token to update client
 				let tm_header_abi_token = tm_header_abi_token(header)?;
 				let tm_header_bytes = ethers_encode(&[tm_header_abi_token]);
+
+				info!(target: "hyperspace_ethereum", "Submitting header.signed_header.header to ethereum: {:?}", header.signed_header.header);
+
+				error!(target: "hyperspace_ethereum", "client update msg ____________________________________________");
+				error!(target: "hyperspace_ethereum", "Submitting client_update to ethereum: {:?}", header.height());
 
 				let token = EthersToken::Tuple(vec![
 					//should be the same that we use to create client
@@ -1431,6 +1532,10 @@ impl EthereumClient {
 					EthersToken::Bytes(tm_header_bytes),
 					// previous client state
 					latest_client_state, // EthersToken::Bytes(latest_client_state),
+					//zk proof
+					EthersToken::Bytes(header.zk_proof.clone()),
+					//zk bitmask
+					EthersToken::Uint(header.zk_bitmask.into()),
 				]);
 
 				calls.push(self.yui.update_client_calldata(token).await);
