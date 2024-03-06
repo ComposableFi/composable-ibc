@@ -22,17 +22,16 @@ use futures::SinkExt;
 use ibc::core::ics24_host::identifier::ClientId;
 use primitives::CommonClientConfig;
 
-pub const USE_GETH: bool = false;
+pub const USE_GETH: bool = true;
 
 pub const ETH_NODE_PORT: u16 = 8545;
 pub const ETH_NODE_PORT_WS: u16 = 8546;
 pub const BEACON_NODE_PORT: u16 = 3500;
-pub const PRIVATE_KEY: &str = "/Users/mykyta/development/rustninja/composable-ibc-private-zk-prover/hyperspace/ethereum/keys/0x73db010c3275eb7a92e5c38770316248f4c644ee";
+pub const PRIVATE_KEY: &str = "/Users/vmark/work/centauri-private/hyperspace/ethereum/keys/0x73db010c3275eb7a92e5c38770316248f4c644ee";
 
 #[track_caller]
 pub fn yui_ibc_solidity_path() -> PathBuf {
 	let base = env!("CARGO_MANIFEST_DIR");
-	return PathBuf::from("/Users/mykyta/development/composable/yui-ibc-solidity-private-eth");
 	let default = PathBuf::from(base).join("yui-ibc-solidity");
 
 	if let Ok(path) = std::env::var("YUI_IBC_SOLIDITY_PATH") {
@@ -45,11 +44,11 @@ pub fn yui_ibc_solidity_path() -> PathBuf {
 #[track_caller]
 pub async fn spawn_anvil() -> (AnvilInstance, Arc<SignerMiddleware<Provider<Http>, LocalWallet>>) {
 	#[cfg(not(feature = "no_beacon"))]
-	// let anvil = Anvil::new().spawn();
-	let anvil = Anvil::new().port(8545u16).spawn();
+	let anvil = Anvil::new().spawn();
+	// let anvil = Anvil::new().port(8545u16).spawn();
 	#[cfg(feature = "no_beacon")]
-	let anvil = Anvil::new().port(8545u16).spawn();
-	// let anvil = Anvil::new().spawn();
+	// let anvil = Anvil::new().port(8545u16).spawn();
+	let anvil = Anvil::new().spawn();
 
 	log::info!("Anvil started at {}, {}", anvil.endpoint(), anvil.ws_endpoint());
 	println!("{:?}", std::env::current_dir().unwrap());
