@@ -32,7 +32,10 @@ cosmwasm-schema = "1.5.3"
 cosmwasm-std = "1.5.3"
 derive_more = "0.99.17"
 ed25519-dalek = { version = "2.1.1", default-features = false, features = ["pkcs8"] }
-ibc = { version = "0.50", default-features = false, features = ["serde", "schema"] }
+
+# Same version emulated-light-client uses
+ibc = { git = "https://github.com/cosmos/ibc-rs", rev = "6dd3c6465e594d4c177f21724dd896a15e8f3634", default-features = false, features = ["borsh", "serde", "schema"] }
+
 prost = { version = "0.12.3", default-features = false }
 schemars = "0.8.10"
 serde = { version = "1.0.145", default-features = false, features = ["derive"] }

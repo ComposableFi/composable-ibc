@@ -105,7 +105,6 @@ macro_rules! conv_via_any {
 	};
 }
 
-conv_via_any!(state::ClientMessage);
 conv_via_any!(state::ClientState);
 conv_via_any!(state::ConsensusState);
 conv_via_any!(state::Header);

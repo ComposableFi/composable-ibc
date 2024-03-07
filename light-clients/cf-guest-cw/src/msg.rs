@@ -111,14 +111,14 @@ pub enum QueryMsg {
 pub struct VerifyClientMessageMsg {
 	#[serde(with = "Base64")]
 	#[schemars(with = "String")]
-	pub client_message: state::ClientMessage,
+	pub client_message: Vec<u8>,
 }
 
 #[cw_serde]
 pub struct CheckForMisbehaviourMsg {
 	#[serde(with = "Base64")]
 	#[schemars(with = "String")]
-	pub client_message: state::ClientMessage,
+	pub client_message: Vec<u8>,
 }
 
 #[cw_serde]

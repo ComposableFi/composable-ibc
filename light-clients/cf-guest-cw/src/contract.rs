@@ -16,8 +16,9 @@
 use cosmwasm_std::{
 	to_json_binary, Binary, Deps, DepsMut, Env, MessageInfo, Response, StdError, StdResult, Uint64,
 };
+use prost::Message;
 
-use crate::{context, context::log, ibc, msg, state};
+use crate::{context, context::log, crypto::Verifier, ibc, msg, state};
 
 type Result<T = (), E = crate::error::Error> = core::result::Result<T, E>;
 
@@ -111,30 +112,22 @@ fn query_verify_state_proof(ctx: context::Context, msg: msg::VerifyStateProofMsg
 }
 
 fn query_verify_client_msg(ctx: context::Context, msg: msg::VerifyClientMessageMsg) -> Result {
-	let client_state = ctx.client_state()?;
-	let verifier = crate::crypto::Verifier;
-	match msg.client_message {
-		state::ClientMessage::Header(header) =>
-			client_state.verify_header(&verifier, &ctx.client_id, header),
-		state::ClientMessage::Misbehaviour(misbehaviour) =>
-			client_state.verify_misbehaviour(&verifier, &ctx.client_id, misbehaviour),
-	}
-	.map_err(crate::Error::from)
+	let client_message =
+		ibc::proto::Any::decode(msg.client_message.as_slice()).map_err(crate::Error::from)?;
+	ctx.client_state()?
+		.verify_client_message(&Verifier, &ctx.client_id, client_message)
+		.map_err(crate::Error::from)
 }
 
 fn query_check_for_misbehaviour_msg(
 	ctx: context::Context,
 	msg: msg::CheckForMisbehaviourMsg,
 ) -> Result<bool> {
-	let client_state = ctx.client_state()?;
-	let verifier = crate::crypto::Verifier;
-	match msg.client_message {
-		state::ClientMessage::Header(header) =>
-			client_state.check_for_misbehaviour_header(&verifier, &ctx.client_id, header),
-		state::ClientMessage::Misbehaviour(misbehaviour) =>
-			client_state.check_for_misbehaviour_misbehavior(&verifier, &ctx.client_id, misbehaviour),
-	}
-	.map_err(crate::Error::from)
+	let client_message =
+		ibc::proto::Any::decode(msg.client_message.as_slice()).map_err(crate::Error::from)?;
+	ctx.client_state()?
+		.check_for_misbehaviour(&Verifier, &ctx.client_id, client_message)
+		.map_err(crate::Error::from)
 }
 
 fn query_status(ctx: context::Context) -> StdResult<msg::StatusResponse> {
