@@ -190,16 +190,6 @@ async fn setup_clients() -> (AnyChain, AnyChain) {
 	// 	return (chain_a_wrapped, chain_b_wrapped)
 	// }
 
-	// let update_client = MsgUpdateAnyClient::<LocalClientTypes> {
-	// 	client_id: client_on_b[0],
-	//   client_message: None,
-	//   signer: chain_a.account_id(),
-	// };
-
-	// let msg = Any { type_url: update_client.type_url(), value: msg.encode_vec()? };
-
-	// chain_b.submit_call(vec![msg]).await.unwrap();
-
 	let (client_a, client_b) =
 		create_clients(&mut chain_a_wrapped, &mut chain_b_wrapped).await.unwrap();
 	chain_a_wrapped.set_client_id(client_a);

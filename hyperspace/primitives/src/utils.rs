@@ -70,8 +70,6 @@ pub async fn create_clients(
 	chain_b: &mut impl Chain,
 ) -> Result<(ClientId, ClientId), anyhow::Error> {
 	println!("In clients");
-
-	println!("In clients");
 	let (client_state_b, cs_state_b) = chain_b.initialize_client_state().await?;
 
 	let msg = MsgCreateAnyClient::<LocalClientTypes> {
