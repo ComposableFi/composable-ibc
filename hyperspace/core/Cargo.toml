@@ -22,6 +22,7 @@ normal = ["scale-encode"]
 primitives = { path = "../primitives", package = "hyperspace-primitives" }
 parachain = { path = "../parachain", package = "hyperspace-parachain" }
 cosmos = { path = "../cosmos", package = "hyperspace-cosmos", optional = true }
+solana = { path = "../solana", package = "hyperspace-solana", optional = true }
 #near = { path = "near", package = "hyperspace-near", optional = true }
 metrics = { path = "../metrics", package = "hyperspace-metrics" }
 
@@ -79,6 +80,8 @@ parachain = { path = "../parachain", package = "hyperspace-parachain", features 
 cosmos = { path = "../cosmos", package = "hyperspace-cosmos", features = [
     "testing",
 ] }
+solana = { path = "../solana", package = "hyperspace-solana" }
+
 
 # substrate
 subxt = { git = "https://github.com/paritytech/subxt", tag = "v0.29.0", features = [
@@ -93,6 +96,7 @@ sp-keyring = { git = "https://github.com/paritytech/substrate", branch = "polkad
 build-metadata-from-ws = []
 #near = ["dep:near"]
 cosmos = ["dep:cosmos"]
-testing = ["primitives/testing", "parachain/testing", "cosmos/testing"]
+solana = ["dep:solana"]
+testing = ["primitives/testing", "parachain/testing", "cosmos/testing", "solana"]
 default = ["cosmos"]
 composable-beefy = []

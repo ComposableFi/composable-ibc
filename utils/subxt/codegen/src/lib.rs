@@ -26,16 +26,20 @@ use subxt_codegen::{CratePath, DerivesRegistry, TypeSubstitutes};
 use subxt_metadata::Metadata;
 
 pub async fn fetch_metadata_ws(url: &str) -> anyhow::Result<Vec<u8>> {
+	println!("Here 11");
 	let (sender, receiver) = WsTransportClientBuilder::default()
 		.build(url.parse::<Uri>().unwrap())
 		.await
 		.map_err(|e| Error::Transport(e.into()))?;
 
+	println!("Here 12");
 	let client = ClientBuilder::default()
 		.max_notifs_per_subscription(4096)
 		.build_with_tokio(sender, receiver);
 
+	println!("Here 13");
 	let metadata: String = client.request("state_getMetadata", rpc_params![]).await?;
+	println!("Here later");
 	Ok(hex::decode(metadata.trim_start_matches("0x"))?)
 }
 

@@ -194,7 +194,7 @@ pub async fn query_ready_and_timed_out_packets(
 		.take(max_packets_to_process)
 		.collect::<Vec<_>>();
 
-		log::debug!(target: "hyperspace", "Found {} undelivered packets for {:?}/{:?} for {seqs:?}", seqs.len(), channel_id, port_id.clone());
+		log::info!(target: "hyperspace", "Found {} undelivered packets for {:?}/{:?} for {seqs:?}", seqs.len(), channel_id, port_id.clone());
 
 		let mut send_packets = source.query_send_packets(channel_id, port_id.clone(), seqs).await?;
 		log::trace!(target: "hyperspace", "SendPackets count before deduplication: {}", send_packets.len());
@@ -224,9 +224,12 @@ pub async fn query_ready_and_timed_out_packets(
 					let sink = &sink;
 					let packet = packet_info_to_packet(&send_packet);
 					// Check if packet has timed out
-					let packet_height = send_packet.height.ok_or_else(|| {
-						Error::Custom(format!("Packet height not found for packet {packet:?}"))
-					})?;
+					// let packet_height = send_packet.height.ok_or_else(|| {
+					// 	Error::Custom(format!("Packet height not found for packet {packet:?}"))
+					// })?;
+					let packet_height = latest_source_height_on_sink.revision_height - 1;
+					println!("I am here in packets with {:?} {:?}", sink_timestamp, sink_height);
+					println!("height: {:?} {:?} timestamp: {:?} {:?}", packet.timeout_height, sink_height, packet.timeout_timestamp, sink_timestamp);
 
 					if packet.timed_out(&sink_timestamp, sink_height) {
 						timeout_packets_count.fetch_add(1, Ordering::SeqCst);
@@ -248,7 +251,7 @@ pub async fn query_ready_and_timed_out_packets(
 						{
 							proof_height
 						} else {
-							log::trace!(target: "hyperspace", "Skipping packet as no timeout proof height could be found: {:?}", packet);
+							log::info!(target: "hyperspace", "Skipping packet as no timeout proof height could be found: {:?}", packet);
 							return Ok(None)
 						};
 
@@ -266,7 +269,7 @@ pub async fn query_ready_and_timed_out_packets(
 						)
 							.await?
 						{
-							log::trace!(target: "hyperspace", "Skipping packet as connection delay has not passed {:?}", packet);
+							log::info!(target: "hyperspace", "Skipping packet as connection delay has not passed {:?}", packet);
 							return Ok(None)
 						}
 
@@ -282,20 +285,21 @@ pub async fn query_ready_and_timed_out_packets(
 							.await?;
 						return Ok(Some(Left(msg)))
 					} else {
-						log::trace!(target: "hyperspace", "The packet has not timed out yet: {:?}", packet);
+						log::info!(target: "hyperspace", "The packet has not timed out yet: {:?}", packet);
 					}
 
 					// If packet has not timed out but channel is closed on sink we skip
 					// Since we have no reference point for when this channel was closed so we can't
 					// calculate connection delays yet
 					if sink_channel_end.state == State::Closed {
-						log::debug!(target: "hyperspace", "Skipping packet as channel is closed on sink: {:?}", packet);
+						log::info!(target: "hyperspace", "Skipping packet as channel is closed on sink: {:?}", packet);
 						return Ok(None)
 					}
 
 					#[cfg(feature = "testing")]
 					// If packet relay status is paused skip
 					if !packet_relay_status() {
+						log::info!("skipping due to Packet relay status");
 						return Ok(None)
 					}
 
@@ -305,7 +309,7 @@ pub async fn query_ready_and_timed_out_packets(
 					// creation height on source chain
 					if packet_height > latest_source_height_on_sink.revision_height {
 						// Sink does not have client update required to prove recv packet message
-						log::debug!(target: "hyperspace", "Skipping packet {:?} as sink does not have client update required to prove recv packet message", packet);
+						log::info!(target: "hyperspace", "Skipping packet {:?} as sink does not have client update required to prove recv packet message", packet);
 						recv_packets_count.fetch_add(1, Ordering::SeqCst);
 						return Ok(None)
 					}
@@ -323,7 +327,7 @@ pub async fn query_ready_and_timed_out_packets(
 					{
 						proof_height
 					} else {
-						log::trace!(target: "hyperspace", "Skipping packet {:?} as no proof height could be found", packet);
+						log::info!(target: "hyperspace", "Skipping packet {:?} as no proof height could be found", packet);
 						return Ok(None)
 					};
 
@@ -340,12 +344,12 @@ pub async fn query_ready_and_timed_out_packets(
 					)
 						.await?
 					{
-						log::trace!(target: "hyperspace", "Skipping packet as connection delay has not passed {:?}", packet);
+						log::info!(target: "hyperspace", "Skipping packet as connection delay has not passed {:?}", packet);
 						return Ok(None)
 					}
 
 					if packet.timeout_height.is_zero() && packet.timeout_timestamp.nanoseconds() == 0 {
-						log::warn!(target: "hyperspace", "Skipping packet as packet timeout is zero: {}", packet.sequence);
+						log::info!(target: "hyperspace", "Skipping packet as packet timeout is zero: {}", packet.sequence);
 						return Ok(None)
 					}
 

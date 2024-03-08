@@ -69,6 +69,8 @@ use primitives::{
 	MisbehaviourHandler, UpdateType,
 };
 use serde::{Deserialize, Serialize};
+#[cfg(feature = "solana")]
+use solana::{SolanaClient, SolanaClientConfig};
 use std::{pin::Pin, time::Duration};
 use tendermint_proto::Protobuf;
 use thiserror::Error;
@@ -99,6 +101,8 @@ chains! {
 	PicassoKusama(ParachainClientConfig, ParachainClient<PicassoKusamaConfig>),
 	#[cfg(feature = "cosmos")]
 	Cosmos(CosmosClientConfig, CosmosClient<DefaultConfig>),
+	#[cfg(feature = "solana")]
+	Solana(SolanaClientConfig, SolanaClient),
 }
 
 fn wrap_any_msg_into_wasm(msg: Any, checksum: Bytes) -> Result<Any, anyhow::Error> {

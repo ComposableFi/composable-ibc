@@ -86,7 +86,7 @@ async fn setup_clients() -> (AnyChain, AnyChain) {
 		finality_protocol: FinalityProtocol::Grandpa,
 		private_key: "//Alice".to_string(),
 		key_type: "sr25519".to_string(),
-		wasm_checksum: None,
+		wasm_code_id: None,
 	};
 
 	let mut config_b = CosmosClientConfig {

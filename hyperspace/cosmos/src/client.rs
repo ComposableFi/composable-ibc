@@ -51,7 +51,7 @@ use tokio::{
 };
 
 const DEFAULT_FEE_DENOM: &str = "stake";
-const DEFAULT_FEE_AMOUNT: &str = "4000";
+const DEFAULT_FEE_AMOUNT: &str = "400000000000000000";
 const DEFAULT_GAS_LIMIT: u64 = (i64::MAX - 1) as u64;
 
 fn default_gas_limit() -> u64 {
@@ -365,17 +365,21 @@ where
 			self.get_fee(),
 		)?;
 
+		log::info!("i came here 1");
+
 		// Simulate transaction
 		let res = simulate_tx(self.grpc_url.clone(), tx, tx_bytes.clone()).await?;
 		res.result
-			.map(|r| log::debug!(target: "hyperspace_cosmos", "Simulated transaction: events: {:?}\nlogs: {}", r.events, r.log));
+			.map(|r| log::info!(target: "hyperspace_cosmos", "Simulated transaction: events: {:?}\nlogs: {}", r.events, r.log));
 
+		log::info!("i came here 2");
 		// Broadcast transaction
 		let hash = broadcast_tx(&self.rpc_client, tx_bytes).await?;
-		log::debug!(target: "hyperspace_cosmos", "🤝 Transaction sent with hash: {:?}", hash);
+		log::info!(target: "hyperspace_cosmos", "🤝 Transaction sent with hash: {:?}", hash);
 
 		// wait for confirmation
 		confirm_tx(&self.rpc_client, hash).await
+		// Ok(hash)
 	}
 
 	pub async fn fetch_light_block_with_cache(
