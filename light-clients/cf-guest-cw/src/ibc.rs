@@ -12,5 +12,5 @@ pub use ibc::{
 		commitment_types::commitment::{CommitmentPrefix, CommitmentProofBytes},
 		host::types::{identifiers::ClientId, path},
 	},
-	primitives::{proto, Timestamp}
+	primitives::{proto, Timestamp},
 };

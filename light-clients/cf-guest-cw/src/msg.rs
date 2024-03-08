@@ -180,7 +180,6 @@ fn is_zero(num: &Uint64) -> bool {
 	Clone,
 	PartialEq,
 	Eq,
-	Hash,
 	derive_more::Display,
 	serde::Serialize,
 	serde::Deserialize,
@@ -190,41 +189,29 @@ fn is_zero(num: &Uint64) -> bool {
 pub struct Height {
 	/// Previously known as "epoch"
 	#[serde(default, skip_serializing_if = "is_zero")]
-	pub revision_number: u64,
+	pub revision_number: Uint64,
 
 	/// The height of a block
-	pub revision_height: u64,
+	pub revision_height: Uint64,
 }
 
-impl From<Height> for ::ibc::core::client::context::types::proto::v1::Height {
-	fn from(height: Height) -> Self {
-		Self {
-			revision_number: height.revision_number,
-			revision_height: height.revision_height,
-		}
-	}
-}
-
-impl From<::ibc::core::client::context::types::proto::v1::Height> for Height {
-	fn from(height: ::ibc::core::client::context::types::proto::v1::Height) -> Self {
-		Self {
-			revision_number: height.revision_number,
-			revision_height: height.revision_height,
-		}
-	}
-}
-
-impl From<Height> for ibc::Height {
-	fn from(height: Height) -> Self {
-		ProtoHeight::from(height).into()
+impl TryFrom<Height> for ibc::Height {
+	type Error = cosmwasm_std::StdError;
+	fn try_from(height: Height) -> Result<Self, Self::Error> {
+		ibc::Height::new(height.revision_number.into(), height.revision_height.into()).map_err(
+			|_| cosmwasm_std::StdError::ParseErr {
+				target_type: "Height".into(),
+				msg: "unexpected zero height".into(),
+			},
+		)
 	}
 }
 
 impl From<ibc::Height> for Height {
 	fn from(height: ibc::Height) -> Self {
 		Self {
-			revision_number: height.revision_number(),
-			revision_height: height.revision_height(),
+			revision_number: height.revision_number().into(),
+			revision_height: height.revision_height().into(),
 		}
 	}
 }
