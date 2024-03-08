@@ -132,7 +132,6 @@ pub struct VerifyStateProofMsg {
 	#[serde(with = "MaybeBase64", default, skip_serializing_if = "Option::is_none")]
 	#[schemars(with = "String")]
 	pub value: Option<Vec<u8>>,
-	#[serde(flatten)]
 	pub height: Height,
 }
 
@@ -151,7 +150,6 @@ pub struct GetLatestHeightsMsg {}
 
 #[cw_serde]
 pub struct TimestampAtHeightMsg {
-	#[serde(flatten)]
 	pub height: Height,
 }
 
@@ -160,7 +158,6 @@ pub struct ExportMetadataMsg {}
 
 #[cw_serde]
 pub struct ConsensusStateMetadata {
-	#[serde(flatten)]
 	pub height: Height,
 	pub host_timestamp_ns: Uint64,
 	pub host_height: Uint64,
