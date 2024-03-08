@@ -19,9 +19,11 @@ use thiserror::Error;
 /// Error definition for the relayer
 pub enum Error {
 	/// subxt error
+	#[cfg(feature = "subxt")]
 	#[error("Subxt basic error")]
 	Subxt(#[from] subxt::Error),
 	/// subxt rpc error
+	#[cfg(feature = "subxt")]
 	#[error("Subxt rpc error")]
 	SubxtRRpc(#[from] subxt::error::RpcError),
 	/// Custom error
