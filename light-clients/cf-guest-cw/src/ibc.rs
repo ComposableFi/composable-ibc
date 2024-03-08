@@ -11,7 +11,6 @@ pub use ibc::{
 		client::{context::types::error::ClientError, types::Height},
 		commitment_types::commitment::{CommitmentPrefix, CommitmentProofBytes},
 		host::types::{identifiers::ClientId, path},
-		primitives::Timestamp,
 	},
-	primitives::proto,
+	primitives::{proto, Timestamp},
 };

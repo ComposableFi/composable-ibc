@@ -5687,7 +5687,6 @@ dependencies = [
  "ibc-core",
  "ibc-proto 0.41.0",
  "primitive-types",
- "schemars",
  "serde",
  "uint",
 ]
