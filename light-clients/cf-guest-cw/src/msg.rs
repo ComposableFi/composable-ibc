@@ -133,7 +133,7 @@ pub struct VerifyStateProofMsg {
 	#[schemars(with = "String")]
 	pub value: Option<Vec<u8>>,
 	#[serde(flatten)]
-	pub height: ibc::Height,
+	pub height: Height,
 }
 
 #[cw_serde]
@@ -152,7 +152,7 @@ pub struct GetLatestHeightsMsg {}
 #[cw_serde]
 pub struct TimestampAtHeightMsg {
 	#[serde(flatten)]
-	pub height: ibc::Height,
+	pub height: Height,
 }
 
 #[cw_serde]
@@ -160,13 +160,77 @@ pub struct ExportMetadataMsg {}
 
 #[cw_serde]
 pub struct ConsensusStateMetadata {
-	#[serde(default, skip_serializing_if = "is_zero")]
-	pub revision_number: Uint64,
-	pub revision_height: Uint64,
+	#[serde(flatten)]
+	pub height: Height,
 	pub host_timestamp_ns: Uint64,
 	pub host_height: Uint64,
 }
 
 fn is_zero(num: &Uint64) -> bool {
 	u64::from(*num) == 0
+}
+
+/// IBC height.
+///
+/// This is essentially a copy of [`ibc::Height`] which we have so that we can
+/// implement `JsonSchema` on it without having to enable `schema` feature on
+/// `ibc` which pulls in `std` which we don’t want.
+#[derive(
+	Copy,
+	Clone,
+	PartialEq,
+	Eq,
+	Hash,
+	derive_more::Display,
+	serde::Serialize,
+	serde::Deserialize,
+	schemars::JsonSchema,
+)]
+#[display(fmt = "{}-{}", revision_number, revision_height)]
+pub struct Height {
+	/// Previously known as "epoch"
+	#[serde(default, skip_serializing_if = "is_zero")]
+	pub revision_number: u64,
+
+	/// The height of a block
+	pub revision_height: u64,
+}
+
+impl From<Height> for ::ibc::core::client::context::types::proto::v1::Height {
+	fn from(height: Height) -> Self {
+		Self {
+			revision_number: height.revision_number,
+			revision_height: height.revision_height,
+		}
+	}
+}
+
+impl From<::ibc::core::client::context::types::proto::v1::Height> for Height {
+	fn from(height: ::ibc::core::client::context::types::proto::v1::Height) -> Self {
+		Self {
+			revision_number: height.revision_number,
+			revision_height: height.revision_height,
+		}
+	}
+}
+
+impl From<Height> for ibc::Height {
+	fn from(height: Height) -> Self {
+		ProtoHeight::from(height).into()
+	}
+}
+
+impl From<ibc::Height> for Height {
+	fn from(height: ibc::Height) -> Self {
+		Self {
+			revision_number: height.revision_number(),
+			revision_height: height.revision_height(),
+		}
+	}
+}
+
+impl core::fmt::Debug for Height {
+	fn fmt(&self, fmtr: &mut core::fmt::Formatter) -> core::fmt::Result {
+		core::fmt::Display::fmt(self, fmtr)
+	}
 }
