@@ -73,7 +73,7 @@ async fn setup_clients() -> (ParachainClient<DefaultConfig>, ParachainClient<Def
 		finality_protocol: FinalityProtocol::Grandpa,
 		private_key: "//Alice".to_string(),
 		key_type: "sr25519".to_string(),
-		wasm_code_id: None,
+    wasm_code_id: None,
 	};
 	let config_b = ParachainClientConfig {
 		name: "9188".to_string(),
@@ -88,7 +88,7 @@ async fn setup_clients() -> (ParachainClient<DefaultConfig>, ParachainClient<Def
 		channel_whitelist: vec![],
 		finality_protocol: FinalityProtocol::Grandpa,
 		key_type: "sr25519".to_string(),
-		wasm_code_id: None,
+    wasm_code_id: None,
 	};
 
 	let mut chain_a = ParachainClient::<DefaultConfig>::new(config_a).await.unwrap();

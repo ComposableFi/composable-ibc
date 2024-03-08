@@ -277,7 +277,10 @@ impl BorshDeserialize for PublicKey {
 fn read_key_type<R: io::Read>(rd: &mut R) -> io::Result<()> {
 	match u8::deserialize_reader(rd)? {
 		8 => Ok(()),
-		key_type => Err(io::ErrorKind::InvalidData.into()),
+		key_type => Err(io::Error::new(
+			io::ErrorKind::InvalidData,
+			format!("Unrecognised key type: {key_type}"),
+		)),
 	}
 }
 

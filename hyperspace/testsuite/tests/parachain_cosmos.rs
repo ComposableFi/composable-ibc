@@ -106,20 +106,20 @@ async fn setup_clients() -> (AnyChain, AnyChain) {
 		mnemonic:
 			"oxygen fall sure lava energy veteran enroll frown question detail include maximum"
 				.to_string(),
-		wasm_code_id: None,
+		wasm_checksum: None,
 		channel_whitelist: vec![],
 		common: CommonClientConfig {
 			skip_optional_client_updates: true,
 			max_packets_to_process: 200,
 		},
-		skip_tokens_list: Some(vec!["uosmo".to_string()]),
+		skip_tokens_list: None,
 	};
 
 	let chain_b = CosmosClient::<DefaultConfig>::new(config_b.clone()).await.unwrap();
 
 	let wasm_data = tokio::fs::read(&args.wasm_path).await.expect("Failed to read wasm file");
-	let code_id = match chain_b.upload_wasm(wasm_data.clone()).await {
-		Ok(code_id) => code_id,
+	let checksum = match chain_b.upload_wasm(wasm_data.clone()).await {
+		Ok(checksum) => checksum,
 		Err(e) => {
 			let e_str = format!("{e:?}");
 			if !e_str.contains("wasm code already exists") {
@@ -128,8 +128,8 @@ async fn setup_clients() -> (AnyChain, AnyChain) {
 			sha2_256(&wasm_data).to_vec()
 		},
 	};
-	let code_id_str = hex::encode(code_id);
-	config_b.wasm_code_id = Some(code_id_str);
+	let checksum_str = hex::encode(checksum);
+	config_b.wasm_checksum = Some(checksum_str);
 
 	let mut chain_a_wrapped = AnyConfig::Parachain(config_a).into_client().await.unwrap();
 	let mut chain_b_wrapped = AnyConfig::Cosmos(config_b).into_client().await.unwrap();

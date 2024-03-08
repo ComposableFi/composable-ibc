@@ -80,12 +80,12 @@ use solana_ibc::storage::{SequenceKind, Serialised};
 
 use trie_ids::{ClientIdx, ConnectionIdx, PortChannelPK, Tag, TrieKey};
 
-use crate::{
-	client::{DeliverIxType, SolanaClient},
+pub use crate::{
+	client::{DeliverIxType, SolanaClient, SolanaClientConfig},
 	events::convert_new_event_to_old,
 };
 
-mod client;
+pub mod client;
 mod client_state;
 mod consensus_state;
 mod error;

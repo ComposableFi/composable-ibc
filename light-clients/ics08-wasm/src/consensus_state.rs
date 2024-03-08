@@ -29,7 +29,9 @@ use core::{
 use cosmwasm_schema::cw_serde;
 use ibc::{
 	core::{
-		ics02_client::client_consensus::ConsensusState as IbcConsensusState,
+		ics02_client::client_consensus::{
+			ConsensusState as IcsConsensusState, ConsensusState as IbcConsensusState,
+		},
 		ics23_commitment::commitment::CommitmentRoot,
 	},
 	protobuf::Protobuf,
@@ -49,7 +51,6 @@ pub struct ConsensusState<AnyConsensusState> {
 	#[cfg_attr(feature = "cosmwasm", schemars(with = "String"))]
 	#[cfg_attr(feature = "cosmwasm", serde(with = "Base64", default))]
 	pub data: Bytes,
-	pub timestamp: u64,
 	#[cfg_attr(feature = "cosmwasm", serde(skip))]
 	#[cfg_attr(feature = "cosmwasm", schemars(skip))]
 	pub inner: Box<AnyConsensusState>,
@@ -68,7 +69,7 @@ where
 	}
 
 	fn timestamp(&self) -> Timestamp {
-		Timestamp::from_nanoseconds(self.timestamp).expect("timestamp is valid")
+		self.inner.timestamp()
 	}
 
 	fn encode_to_vec(&self) -> Result<Vec<u8>, tendermint_proto::Error> {
@@ -105,20 +106,27 @@ where
 		let inner = AnyConsensusState::try_from(any).map_err(|e| {
 			format!("failed to decode ConsensusState::data into ConsensusState: {e}")
 		})?;
-		Ok(Self { data: raw.data, timestamp: raw.timestamp, inner: Box::new(inner) })
+		Ok(Self { data: raw.data, inner: Box::new(inner) })
 	}
 }
 
-impl<AnyConsensusState> From<ConsensusState<AnyConsensusState>> for RawConsensusState {
+impl<AnyConsensusState: IbcConsensusState> From<ConsensusState<AnyConsensusState>>
+	for RawConsensusState
+{
 	fn from(value: ConsensusState<AnyConsensusState>) -> Self {
-		Self { data: value.data, timestamp: value.timestamp }
+		Self { data: value.data }
 	}
 }
 
 impl<AnyConsensusState> Protobuf<RawConsensusState> for ConsensusState<AnyConsensusState>
 where
-	AnyConsensusState: Clone,
-	AnyConsensusState: TryFrom<Any>,
+	AnyConsensusState: Clone + IbcConsensusState + TryFrom<Any>,
 	<AnyConsensusState as TryFrom<Any>>::Error: Display,
 {
+}
+
+impl<AnyConsensusState: Default> Default for ConsensusState<AnyConsensusState> {
+	fn default() -> Self {
+		ConsensusState { data: vec![], inner: Box::new(AnyConsensusState::default()) }
+	}
 }

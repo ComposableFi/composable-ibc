@@ -3,22 +3,29 @@ name: Cargo Check
 on:
   pull_request:
     branches:
-      - '*'
+      - 'master'
+      - 'develop'
+      - 'release*'
   push:
     branches:
-      - master
-
+      - 'master'
+      - 'develop'
+      - 'release*'
 
 jobs:
   checker:
+
     concurrency:
       group: lint-${{ github.ref }}
       cancel-in-progress: true
+
     container:
       image: paritytech/ci-unified:bullseye-1.71.0-v20230727
+
     runs-on:
       - self-hosted
-      - x64-monster
+      - x64-tiny
+
     steps:
     - uses: actions/checkout@v2
 

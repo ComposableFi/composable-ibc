@@ -16,7 +16,6 @@
 
 use std::{
 	collections::{BTreeMap, HashSet},
-	f32::consts::E,
 	path::PathBuf,
 	str::FromStr,
 	sync::{Arc, Mutex},
@@ -75,7 +74,7 @@ use sp_runtime::{
 use ss58_registry::Ss58AddressFormat;
 use subxt::{
 	config::{Header as HeaderT, Header},
-	tx::{Signer, TxPayload},
+	tx::TxPayload,
 };
 use tokio::sync::Mutex as AsyncMutex;
 
@@ -187,7 +186,7 @@ pub struct ParachainClientConfig {
 	pub key_type: String,
 	/// All the client states and headers will be wrapped in WASM ones using the WASM code ID.
 	#[serde(default)]
-	pub wasm_code_id: Option<String>,
+	pub wasm_checksum: Option<String>,
 }
 
 impl<T> ParachainClient<T>

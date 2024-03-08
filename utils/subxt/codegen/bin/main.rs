@@ -43,7 +43,7 @@ fn format_uri(uri: Uri) -> anyhow::Result<Uri> {
 		_ => None,
 	};
 
-	let scheme = uri.scheme_str().unwrap_or(&"wss");
+	let scheme = uri.scheme_str().unwrap_or("wss");
 	let authority = uri.authority().ok_or_else(|| anyhow!("No authority in {uri}"))?;
 	let port = match authority.port_u16() {
 		None => default_port(scheme)

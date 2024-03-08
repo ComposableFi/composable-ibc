@@ -84,7 +84,7 @@ async fn setup_clients() -> (AnyChain, AnyChain) {
 		client_id: None,
 		connection_id: None,
 		commitment_prefix: args.connection_prefix_a.as_bytes().to_vec(),
-		wasm_code_id: None,
+		wasm_checksum: None,
 		rpc_url: args.chain_a.clone().parse().unwrap(),
 		ws_url: args.solana_ws.clone().parse().unwrap(),
 		chain_id: "solana-1".to_string(),
@@ -126,7 +126,7 @@ async fn setup_clients() -> (AnyChain, AnyChain) {
 		// centauri1g5r2vmnp6lta9cpst4lzc4syy3kcj2ljte3tlh
 			"decorate bright ozone fork gallery riot bus exhaust worth way bone indoor calm squirrel merry zero scheme cotton until shop any excess stage laundry"
 				.to_string(),
-		wasm_code_id: None,
+		wasm_checksum: None,
 		channel_whitelist: vec![],
 		common: CommonClientConfig {
 			skip_optional_client_updates: true,
@@ -158,7 +158,7 @@ async fn setup_clients() -> (AnyChain, AnyChain) {
 		},
 	};
 	let code_id_str = hex::encode(code_id);
-	config_b.wasm_code_id = Some(code_id_str);
+	config_b.wasm_checksum = Some(code_id_str);
 
 	let mut chain_a_wrapped = AnyConfig::Solana(config_a).into_client().await.unwrap();
 	let mut chain_b_wrapped = AnyConfig::Cosmos(config_b).into_client().await.unwrap();

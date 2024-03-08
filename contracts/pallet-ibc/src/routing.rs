@@ -20,7 +20,7 @@ pub(crate) struct Context<T: Config> {
 
 impl<T: Config + Send + Sync> Default for Context<T> {
 	fn default() -> Self {
-		Self { _pd: PhantomData::default(), router: IbcRouter::default() }
+		Self { _pd: PhantomData, router: IbcRouter::default() }
 	}
 }
 

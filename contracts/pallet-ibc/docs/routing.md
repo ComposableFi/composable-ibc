@@ -44,7 +44,7 @@ pub struct IbcModule<T: Config>(PhantomData<T>);
 
 impl<T: Config> Default for IbcModule<T> {
      fn default() -> Self {
-         Self(PhantomData::default())
+         Self(PhantomData)
      }
 }
 
@@ -214,7 +214,7 @@ impl<T: Config + Send + Sync> Module for IbcModule<T> {
 pub struct WeightHandler<T: Config>(PhantomData<T>);
 impl<T: Config> Default for WeightHandler<T> {
     fn default() -> Self {
-        Self(PhantomData::default())
+        Self(PhantomData)
     }
 }
 

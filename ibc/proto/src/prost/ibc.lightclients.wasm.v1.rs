@@ -12,7 +12,7 @@ pub struct MsgPushNewWasmCode {
 #[derive(Clone, PartialEq, ::prost::Message)]
 pub struct MsgPushNewWasmCodeResponse {
 	#[prost(bytes = "vec", tag = "1")]
-	pub code_id: ::prost::alloc::vec::Vec<u8>,
+	pub checksum: ::prost::alloc::vec::Vec<u8>,
 }
 /// Generated client implementations.
 #[cfg(feature = "client")]
@@ -238,7 +238,7 @@ pub mod msg_server {
 #[derive(Clone, PartialEq, ::prost::Message)]
 pub struct WasmCodeQuery {
 	#[prost(string, tag = "1")]
-	pub code_id: ::prost::alloc::string::String,
+	pub checksum: ::prost::alloc::string::String,
 }
 /// WasmCode response
 #[allow(clippy::derive_partial_eq_without_eq)]
@@ -475,7 +475,7 @@ pub struct ClientState {
 	#[prost(bytes = "vec", tag = "1")]
 	pub data: ::prost::alloc::vec::Vec<u8>,
 	#[prost(bytes = "vec", tag = "2")]
-	pub code_id: ::prost::alloc::vec::Vec<u8>,
+	pub checksum: ::prost::alloc::vec::Vec<u8>,
 	#[prost(message, optional, tag = "3")]
 	pub latest_height: ::core::option::Option<super::super::super::core::client::v1::Height>,
 }
@@ -485,24 +485,11 @@ pub struct ClientState {
 pub struct ConsensusState {
 	#[prost(bytes = "vec", tag = "1")]
 	pub data: ::prost::alloc::vec::Vec<u8>,
-	/// timestamp that corresponds to the block height in which the ConsensusState
-	/// was stored.
-	#[prost(uint64, tag = "2")]
-	pub timestamp: u64,
 }
-/// Wasm light client Header
+/// Wasm light client Client Message
 #[allow(clippy::derive_partial_eq_without_eq)]
 #[derive(Clone, PartialEq, ::prost::Message)]
-pub struct Header {
-	#[prost(bytes = "vec", tag = "1")]
-	pub data: ::prost::alloc::vec::Vec<u8>,
-	#[prost(message, optional, tag = "2")]
-	pub height: ::core::option::Option<super::super::super::core::client::v1::Height>,
-}
-/// Wasm light client Misbehaviour
-#[allow(clippy::derive_partial_eq_without_eq)]
-#[derive(Clone, PartialEq, ::prost::Message)]
-pub struct Misbehaviour {
+pub struct ClientMessage {
 	#[prost(bytes = "vec", tag = "1")]
 	pub data: ::prost::alloc::vec::Vec<u8>,
 }

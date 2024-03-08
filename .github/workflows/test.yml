@@ -1,12 +1,10 @@
 name: Test
 
 on:
-  pull_request:
-    branches:
-      - '*'
   push:
     branches:
-      - master
+      - 'master'
+      - 'release*'
 
 env:
   DEBIAN_FRONTEND: noninteractive

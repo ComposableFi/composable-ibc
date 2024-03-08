@@ -212,7 +212,7 @@ pub struct CosmosClientConfig {
 	pub max_tx_size: usize,
 	/// All the client states and headers will be wrapped in WASM ones using the WASM code ID.
 	#[serde(default)]
-	pub wasm_code_id: Option<String>,
+	pub wasm_checksum: Option<String>,
 	/*
 	Here is a list of dropped configuration parameters from Hermes Config.toml
 	that could be set to default values or removed for the MVP phase:
@@ -240,7 +240,7 @@ pub struct CosmosClientConfig {
 	/// Common client config
 	#[serde(flatten)]
 	pub common: CommonClientConfig,
-	/// List of tokens to skip uosmo etc
+	/// Skip transfer packets with the following tokens base denoms
 	pub skip_tokens_list: Option<Vec<String>>,
 }
 
@@ -253,15 +253,15 @@ where
 	pub async fn new(config: CosmosClientConfig) -> Result<Self, Error> {
 		let (rpc_client, rpc_driver) = WebSocketClient::new(config.websocket_url.clone())
 			.await
-			.map_err(|e| Error::RpcError(format!("websocket{:?}", e)))?;
+			.map_err(|e| Error::RpcError(format!("failed to connect to Websocket {:?}", e)))?;
 		let rpc_http_client = HttpClient::new(config.rpc_url.clone())
-			.map_err(|e| Error::RpcError(format!("only rpc{:?}", e)))?;
+			.map_err(|e| Error::RpcError(format!("failed to connect to RPC {:?}", e)))?;
 		let ws_driver_jh = tokio::spawn(rpc_driver.run());
 		let grpc_client = tonic::transport::Endpoint::new(config.grpc_url.to_string())
-			.map_err(|e| Error::RpcError(format!("grpc {:?}", e)))?
+			.map_err(|e| Error::RpcError(format!("failed to create a GRPC endpoint {:?}", e)))?
 			.connect()
 			.await
-			.map_err(|e| Error::RpcError(format!("grpc again{:?}", e)))?;
+			.map_err(|e| Error::RpcError(format!("failed to connect to GRPC {:?}", e)))?;
 
 		let chain_id = ChainId::from(config.chain_id);
 		let light_client =
@@ -306,9 +306,7 @@ where
 				initial_rpc_call_delay: rpc_call_delay,
 				misbehaviour_client_msg_queue: Arc::new(AsyncMutex::new(vec![])),
 				max_packets_to_process: config.common.max_packets_to_process as usize,
-				skip_tokens_list: config
-					.skip_tokens_list
-					.unwrap_or_else(|| vec!["uosmo".to_string()]),
+				skip_tokens_list: config.skip_tokens_list.unwrap_or_default(),
 			},
 			join_handles: Arc::new(TokioMutex::new(vec![ws_driver_jh])),
 		})
@@ -407,15 +405,17 @@ where
 		to: TmHeight,
 		trusted_height: Height,
 	) -> Result<Vec<(Header, UpdateType)>, Error> {
+		let from = from.increment();
 		let mut xs = Vec::new();
 		let heightss = (from.value()..=to.value()).collect::<Vec<_>>();
 		let client = Arc::new(self.clone());
-		let to = self.rpc_call_delay().as_millis();
+		let delay_to = self.rpc_call_delay().as_millis();
 		for heights in heightss.chunks(5) {
 			let mut join_set = JoinSet::<Result<Result<_, Error>, Elapsed>>::new();
 			for height in heights.to_owned() {
 				let client = client.clone();
-				let duration = Duration::from_millis(rand::thread_rng().gen_range(0..to) as u64);
+				let duration =
+					Duration::from_millis(rand::thread_rng().gen_range(0..delay_to) as u64);
 				let fut = async move {
 					log::trace!(target: "hyperspace_cosmos", "Fetching header at height {:?}", height);
 					let latest_light_block =

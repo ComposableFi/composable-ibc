@@ -57,6 +57,7 @@ pub fn convert_new_client_state_to_old(
 					Some(Height::new(height.revision_number(), height.revision_height()))
 				}),
 			}),
+			solana_ibc::client_state::AnyClientState::Guest(_) => unimplemented!(),
 	}
 }
 

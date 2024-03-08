@@ -44,16 +44,16 @@ borsh = { version = "0.10.3", default-features = false }
 bytemuck = { version = "1.14", default-features = false }
 
 # New IBC
-ibc-new-primitives = { version = "0.50.0", default-features = false, features = ["borsh", "serde"] , package="ibc-primitives" }
-ibc-core-host-types = { version = "0.50.0", default-features = false, features = ["borsh", "serde"]}
-ibc-core-handler-types = { version = "0.50.0", default-features = false }
-ibc-core-client-types = { version = "0.50.0", default-features = false }
-ibc-core-connection-types = { version = "0.50.0", default-features = false }
-ibc-core-channel-types = { version = "0.50.0", default-features = false }
-ibc-app-transfer-types = { version = "0.50.0", default-features = false }
-ibc-core-commitment-types = { version = "0.50.0", default-features = false }
-ibc-client-tendermint-types = { version = "0.50.0", default-features = false }
-ibc-testkit = { version = "0.50.0", default-features = false }
+ibc-new-primitives = { git = "https://github.com/cosmos/ibc-rs", rev = "6dd3c6465e594d4c177f21724dd896a15e8f3634", default-features = false, features = ["borsh", "serde"] , package="ibc-primitives" }
+ibc-core-host-types = { git = "https://github.com/cosmos/ibc-rs", rev = "6dd3c6465e594d4c177f21724dd896a15e8f3634", default-features = false, features = ["borsh", "serde"]}
+ibc-core-handler-types = { git = "https://github.com/cosmos/ibc-rs", rev = "6dd3c6465e594d4c177f21724dd896a15e8f3634", default-features = false }
+ibc-core-client-types = { git = "https://github.com/cosmos/ibc-rs", rev = "6dd3c6465e594d4c177f21724dd896a15e8f3634", default-features = false }
+ibc-core-connection-types = { git = "https://github.com/cosmos/ibc-rs", rev = "6dd3c6465e594d4c177f21724dd896a15e8f3634", default-features = false }
+ibc-core-channel-types = { git = "https://github.com/cosmos/ibc-rs", rev = "6dd3c6465e594d4c177f21724dd896a15e8f3634", default-features = false }
+ibc-app-transfer-types = { git = "https://github.com/cosmos/ibc-rs", rev = "6dd3c6465e594d4c177f21724dd896a15e8f3634", default-features = false }
+ibc-core-commitment-types = { git = "https://github.com/cosmos/ibc-rs", rev = "6dd3c6465e594d4c177f21724dd896a15e8f3634", default-features = false }
+ibc-client-tendermint-types = { git = "https://github.com/cosmos/ibc-rs", rev = "6dd3c6465e594d4c177f21724dd896a15e8f3634", default-features = false }
+ibc-testkit = { git = "https://github.com/cosmos/ibc-rs", rev = "6dd3c6465e594d4c177f21724dd896a15e8f3634", default-features = false }
 ibc-proto-new = { version = "0.41.0", default-features = false, package="ibc-proto" }
 
 # Old IBC
@@ -66,21 +66,17 @@ ibc-rpc = { path = "../../contracts/pallet-ibc/rpc" }
 pallet-ibc = { path = "../../contracts/pallet-ibc", features = ["testing"]}
 
 # Trie
-# lib = { git = "https://github.com/ComposableFi/emulated-light-client.git" }
-lib = { path = "../../../emulated-light-client/common/lib" }
+lib = { git = "https://github.com/ComposableFi/emulated-light-client.git" }
 memory = { git = "https://github.com/ComposableFi/emulated-light-client.git" }
 sealable-trie = { git = "https://github.com/ComposableFi/emulated-light-client.git", features = ["borsh"] }
 stdx = { git = "https://github.com/ComposableFi/emulated-light-client.git" }
 solana-trie = { git = "https://github.com/ComposableFi/emulated-light-client.git" }
-# trie-ids = { git = "https://github.com/ComposableFi/emulated-light-client.git", features = ["borsh"] }
-trie-ids = { path = "../../../emulated-light-client/common/trie-ids", features = ["borsh"] }
+trie-ids = { git = "https://github.com/ComposableFi/emulated-light-client.git", features = ["borsh"] }
 
 #Contract
-# solana-ibc = { git = "https://github.com/ComposableFi/emulated-light-client.git", features = ["mocks", "no-entrypoint"]}
-# solana-write-account = { git = "https://github.com/ComposableFi/emulated-light-client.git", features = ["no-entrypoint"] }
-solana-ibc = { path = "../../../emulated-light-client/solana/solana-ibc/programs/solana-ibc", features = ["mocks", "no-entrypoint"] }
-solana-write-account = { path = "../../../emulated-light-client/solana/write-account", features = ["no-entrypoint"] }
-solana-ed25519 = { path = "../../../emulated-light-client/solana/ed25519" }
+solana-ibc = { git = "https://github.com/ComposableFi/emulated-light-client.git", features = ["mocks", "no-entrypoint"]}
+solana-write-account = { git = "https://github.com/ComposableFi/emulated-light-client.git", features = ["library"] }
+solana-signature-verifier = { git = "https://github.com/ComposableFi/emulated-light-client.git" }
 
 tracing = "0.1.36"
 
@@ -88,7 +84,7 @@ tracing = "0.1.36"
 tendermint = { git = "https://github.com/informalsystems/tendermint-rs", rev = "e81f7bf23d63ffbcd242381d1ce5e35da3515ff1", default-features = false, features = [
     "secp256k1",
 ] }
-tendermint_new = { version = "0.34.1", default-features = false, package = "tendermint" }
+tendermint_new = { git = "https://github.com/informalsystems/tendermint-rs", rev = "37822e540e272d2ca9e763769ad20c581203ff9a", default-features = false, package = "tendermint" }
 tendermint-proto = { git = "https://github.com/informalsystems/tendermint-rs", rev = "e81f7bf23d63ffbcd242381d1ce5e35da3515ff1", default-features = false }
 tendermint-rpc = { git = "https://github.com/informalsystems/tendermint-rs", rev = "e81f7bf23d63ffbcd242381d1ce5e35da3515ff1", default-features = false, features = [
     "http-client",
@@ -101,7 +97,7 @@ tendermint-light-client = { git = "https://github.com/informalsystems/tendermint
 #    "testing"
 ] }
 tendermint-light-client-verifier = { git = "https://github.com/informalsystems/tendermint-rs", rev = "e81f7bf23d63ffbcd242381d1ce5e35da3515ff1", default-features = false }
-tendermint-light-client-verifier_new = { version = "0.34.1", default-features = false, package = "tendermint-light-client-verifier" }
+tendermint-light-client-verifier_new = {git = "https://github.com/informalsystems/tendermint-rs", rev = "37822e540e272d2ca9e763769ad20c581203ff9a", default-features = false, package = "tendermint-light-client-verifier" }
 
 [features]
 testing = [

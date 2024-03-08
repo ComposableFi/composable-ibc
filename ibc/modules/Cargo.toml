@@ -29,7 +29,6 @@ std = [
 	"log/std",
 	"hex/std",
 	"num-traits/std",
-	# "primitive-types/std",
 	"prost/std",
 	"serde/std",
 	"serde_json/std",
@@ -53,6 +52,7 @@ mocks = ["clock", "std", "sha2"]
 [dependencies]
 # Proto definitions for all IBC-related interfaces, e.g., connections or channels.
 ibc-proto = { version = "0.18.0", path = "../proto", default-features = false }
+ibc-core-host-types-new = { version = "0.48.1", package = "ibc-core-host-types", default-features = false }
 derive = { path = "../derive", package = "ibc-derive", default-features = false }
 ics23 = { git = "https://github.com/cosmos/ics23", rev = "74ce807b7be39a7e0afb4e2efb8e28a57965f57b", default-features = false }
 time = { version = "0.3", default-features = false }

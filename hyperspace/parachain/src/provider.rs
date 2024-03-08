@@ -46,7 +46,7 @@ use ibc_proto::{
 };
 use ibc_rpc::{IbcApiClient, PacketInfo};
 use ics11_beefy::client_state::ClientState as BeefyClientState;
-use light_client_common::config::{AsInnerEvent, Config, IbcEventsT, RuntimeStorage};
+use light_client_common::config::{AsInnerEvent, IbcEventsT, RuntimeStorage};
 use pallet_ibc::{
 	light_clients::{AnyClientState, AnyConsensusState, HostFunctionsManager},
 	HostConsensusProof,
@@ -561,8 +561,8 @@ where
 			fetch_timestamp_extrinsic_with_proof(&self.para_client, Some(header.hash()))
 				.await
 				.map_err(Error::BeefyProver)?;
-		let code_id = if let AnyClientState::Wasm(client_state) = &client_state {
-			Some(client_state.code_id.clone())
+		let checksum = if let AnyClientState::Wasm(client_state) = &client_state {
+			Some(client_state.checksum.clone())
 		} else {
 			None
 		};
@@ -570,7 +570,7 @@ where
 			header: header.encode(),
 			extrinsic: extrinsic_with_proof.ext,
 			extrinsic_proof: extrinsic_with_proof.proof,
-			code_id,
+			checksum,
 		};
 		Ok(Some(host_consensus_proof.encode()))
 	}
@@ -709,7 +709,7 @@ where
 		// this update is required
 		let base =
 			if cfg!(test) { (session_length / 2) as u64 } else { (session_length / 12) as u64 };
-		let diff = latest_height - latest_client_height_on_counterparty;
+		let diff = latest_height.saturating_sub(latest_client_height_on_counterparty);
 		let pruning_len = 256;
 		Ok(diff >= base.min(pruning_len as u64))
 	}

@@ -6,6 +6,7 @@ use tendermint_new::{
 	block::CommitSig,
 	vote::{ValidatorIndex, Vote},
 };
+use sigverify::ed25519_program::SignatureOffsets;
 
 pub fn non_absent_vote(
 	commit_sig: &CommitSig,
@@ -64,7 +65,7 @@ pub fn new_ed25519_instruction_with_signature(
 		let signature_offset = public_key_offset.saturating_add(PUBKEY_SERIALIZED_SIZE);
 		let message_data_offset = signature_offset.saturating_add(SIGNATURE_SERIALIZED_SIZE);
 
-		let offsets = solana_ed25519::SignatureOffsets {
+		let offsets = SignatureOffsets {
 			signature_offset: signature_offset as u16,
 			signature_instruction_index: u16::MAX,
 			public_key_offset: public_key_offset as u16,

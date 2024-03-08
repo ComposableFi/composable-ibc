@@ -23,12 +23,13 @@ use ibc::{
 			identifier::{ChainId, ChannelId, ClientId, ConnectionId, PortId},
 			path::{
 				AcksPath, ChannelEndsPath, ClientConsensusStatePath, ClientStatePath,
-				CommitmentsPath, ConnectionsPath, Path, ReceiptsPath, SeqRecvsPath,
+				CommitmentsPath, ConnectionsPath, Path, ReceiptsPath, SeqRecvsPath, SeqSendsPath,
 			},
 		},
 	},
 	events::IbcEvent,
 	protobuf::Protobuf,
+	signer::Signer,
 	timestamp::Timestamp,
 	tx_msg::Msg,
 	Height,
@@ -82,7 +83,9 @@ use tendermint_rpc::{
 };
 use tokio::{task::JoinSet, time::sleep};
 
-pub const NUMBER_OF_BLOCKS_TO_PROCESS_PER_ITER: u64 = 250;
+// At least one *mandatory* update should happen during that period
+// TODO: make it configurable
+pub const NUMBER_OF_BLOCKS_TO_PROCESS_PER_ITER: u64 = 500;
 
 #[derive(Clone, Debug)]
 pub enum FinalityEvent {
@@ -149,7 +152,6 @@ where
 			self.msg_update_client_header(from, to, client_state.latest_height()).await?;
 		// log::info!(target: "hyperspace_cosmos", "These are update headers {:?}", update_headers);
 		let mut block_events = Vec::new();
-		block_events.push((0, Vec::new()));
 		let mut join_set: JoinSet<Result<_, anyhow::Error>> = JoinSet::new();
 		let range = (from.value()..to.value()).collect::<Vec<_>>();
 		let to = self.rpc_call_delay().as_millis();
@@ -185,9 +187,15 @@ where
 		block_events.sort_by_key(|(height, _)| *height);
 
 		let mut updates = Vec::new();
-		for (events, (update_header, update_type)) in
-			block_events.into_iter().map(|(_, events)| events).zip(update_headers)
+		for (i, (events, (update_header, mut update_type))) in block_events
+			.into_iter()
+			.map(|(_, events)| events)
+			.zip(update_headers)
+			.enumerate()
 		{
+			if i == NUMBER_OF_BLOCKS_TO_PROCESS_PER_ITER as usize - 1 {
+				update_type = UpdateType::Mandatory;
+			}
 			let height = update_header.height();
 			let update_client_header = {
 				let msg = MsgUpdateAnyClient::<LocalClientTypes> {
@@ -241,17 +249,17 @@ where
 				let Event { data, events: _, query } = event.unwrap();
 				match data {
 					EventData::NewBlock { block, .. }
-						if query == Query::from(EventType::NewBlock).to_string() =>
-					{
-						let height = Height::new(
-							ChainId::chain_version(chain_id.to_string().as_str()),
-							u64::from(block.as_ref().ok_or("tx.height").unwrap().header.height),
-						);
-						events_with_height.push(IbcEventWithHeight::new(
-							ClientEvents::NewBlock::new(height).into(),
-							height,
-						));
-					},
+					if query == Query::from(EventType::NewBlock).to_string() =>
+						{
+							let height = Height::new(
+								ChainId::chain_version(chain_id.to_string().as_str()),
+								u64::from(block.as_ref().ok_or("tx.height").unwrap().header.height),
+							);
+							events_with_height.push(IbcEventWithHeight::new(
+								ClientEvents::NewBlock::new(height).into(),
+								height,
+							));
+						},
 					EventData::Tx { tx_result } => {
 						let height = Height::new(
 							ChainId::chain_version(chain_id.to_string().as_str()),
@@ -275,10 +283,10 @@ where
 									events_with_height
 										.push(IbcEventWithHeight::new(ibc_event, height));
 								} else {
-									log::debug!(target: "hyperspace_cosmos", "The event is unknown");
+									log::debug!(target: "hyperspace_cosmos", "the event is unknown");
 								}
 							} else {
-								log::debug!(target: "hyperspace_cosmos", "Failed to parse event {:?}", abci_event);
+								log::debug!(target: "hyperspace_cosmos", "Event wasn't parsed {:?}", abci_event);
 							}
 						}
 					},
@@ -323,6 +331,9 @@ where
 			Path::ClientState(ClientStatePath(client_id.clone())).to_string().into_bytes();
 		let (q, proof) = self.query_path(path_bytes.clone(), at, true).await?;
 		let client_state = Any::decode(&*q.value)?;
+		if client_state.type_url.is_empty() || client_state.value.is_empty() {
+			return Err(Error::Custom(format!("empty client state for height {at}")))
+		}
 		Ok(QueryClientStateResponse {
 			client_state: Some(client_state),
 			proof,
@@ -523,7 +534,6 @@ where
 
 		let commitment_sequences: Vec<u64> =
 			response.commitments.into_iter().map(|v| v.sequence).collect();
-
 		Ok(commitment_sequences)
 	}
 
@@ -817,7 +827,7 @@ where
 
 	fn expected_block_time(&self) -> Duration {
 		// cosmos chain block time is roughly 6-7 seconds
-		Duration::from_secs(7)
+		Duration::from_secs(5)
 	}
 
 	async fn query_client_update_time_and_height(
@@ -831,38 +841,48 @@ where
 			client_id,
 			client_height
 		);
-		let query_str = Query::eq("update_client.client_id", client_id.to_string())
+		let query_update = Query::eq("update_client.client_id", client_id.to_string())
 			.and_eq("update_client.consensus_height", client_height.to_string());
+		let query_create = Query::eq("create_client.client_id", client_id.to_string())
+			.and_eq("create_client.consensus_height", client_height.to_string());
+		for query_str in [query_update, query_create] {
+			let response = self
+				.rpc_http_client
+				.tx_search(
+					query_str,
+					true,
+					1,
+					1, // get only the first Tx matching the query
+					Order::Ascending,
+				)
+				.await
+				.map_err(|e| Error::RpcError(format!("{e:?}")))?;
 
-		let response = self
-			.rpc_http_client
-			.tx_search(
-				query_str,
-				true,
-				1,
-				1, // get only the first Tx matching the query
-				Order::Ascending,
-			)
-			.await
-			.map_err(|e| Error::RpcError(format!("{e:?}")))?;
-
-		for tx in response.txs {
-			for ev in &tx.tx_result.events {
-				let height = tx.height.value();
-				let ev =
-					ibc_event_try_from_abci_event(ev, Height::new(self.id().version(), height));
-				let timestamp = self.query_timestamp_at(height).await?;
-				match ev {
-					Ok(IbcEvent::UpdateClient(e)) if e.client_id() == &client_id =>
-						return Ok((
-							Height::new(self.chain_id.version(), height),
-							Timestamp::from_nanoseconds(timestamp)?,
-						)),
-					_ => (),
+			for tx in response.txs {
+				for ev in &tx.tx_result.events {
+					let height = tx.height.value();
+					let ev =
+						ibc_event_try_from_abci_event(ev, Height::new(self.id().version(), height));
+					let timestamp = self
+						.query_timestamp_at(height)
+						.await
+						.map_err(|e| Error::RpcError(format!("{e:?}")))?;
+					match ev {
+						Ok(IbcEvent::UpdateClient(e)) if e.client_id() == &client_id =>
+							return Ok((
+								Height::new(self.chain_id.version(), height),
+								Timestamp::from_nanoseconds(timestamp)?,
+							)),
+						Ok(IbcEvent::CreateClient(e)) if e.client_id() == &client_id =>
+							return Ok((
+								Height::new(self.chain_id.version(), height),
+								Timestamp::from_nanoseconds(timestamp)?,
+							)),
+						_ => (),
+					}
 				}
 			}
 		}
-
 		Err(Error::from("not found".to_string()))
 	}
 
@@ -1301,7 +1321,7 @@ where
 			.flat_map(|e| ibc_event_try_from_abci_event(e, height).ok().into_iter())
 			.filter(|e| matches!(e, IbcEvent::PushWasmCode(_)))
 			.collect::<Vec<_>>();
-		let code_id = if result.len() != 1 {
+		let checksum = if result.len() != 1 {
 			return Err(Error::from(format!(
 				"Expected exactly one PushWasmCode event, found {}",
 				result.len()
@@ -1324,7 +1344,7 @@ where
 		// 	Error::from(format!("Failed to upload wasm code to grpc endpoint: {:?}", e))
 		// })?;
 
-		Ok(code_id)
+		Ok(checksum)
 	}
 }
 

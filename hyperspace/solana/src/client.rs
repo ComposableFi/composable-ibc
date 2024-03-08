@@ -120,7 +120,7 @@ pub struct SolanaClientConfig {
 	/// Maximun transaction size
 	pub max_tx_size: usize,
 	/// All the client states and headers will be wrapped in WASM ones using the WASM code ID.
-	pub wasm_code_id: Option<String>,
+	pub wasm_checksum: Option<String>,
 	pub common_state_config: CommonClientConfig,
 	/// Reference to commitment
 	pub commitment_prefix: Vec<u8>,
@@ -235,7 +235,7 @@ impl SolanaClient {
 	}
 
 	#[allow(dead_code)]
-	pub fn new(config: SolanaClientConfig) -> Result<Self, Error> {
+	pub async fn new(config: SolanaClientConfig) -> Result<Self, Error> {
 		Ok(Self {
 			name: config.name,
 			rpc_url: config.rpc_url.to_string(),
