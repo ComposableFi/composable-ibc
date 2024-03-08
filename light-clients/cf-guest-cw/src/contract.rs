@@ -89,8 +89,7 @@ fn query(deps: Deps, env: Env, msg: msg::QueryMsg) -> StdResult<Binary> {
 		},
 		msg::QueryMsg::Status(msg::StatusMsg {}) => to_json_binary(&query_status(ctx)?),
 		msg::QueryMsg::TimestampAtHeight(msg) => {
-			let height = msg.height.try_into()?;
-			let state = ctx.consensus_state(height)?;
+			let state = ctx.consensus_state(msg.height)?;
 			to_json_binary(&Uint64::from(state.timestamp_ns.get()))
 		},
 		msg::QueryMsg::ExportMetadata(msg::ExportMetadataMsg {}) => {
@@ -101,8 +100,7 @@ fn query(deps: Deps, env: Env, msg: msg::QueryMsg) -> StdResult<Binary> {
 }
 
 fn query_verify_state_proof(ctx: context::Context, msg: msg::VerifyStateProofMsg) -> StdResult<()> {
-	let height = msg.height.try_into()?;
-	let consensus_state = ctx.consensus_state(height)?;
+	let consensus_state = ctx.consensus_state(msg.height)?;
 	cf_guest::proof::verify(
 		&ibc::CommitmentPrefix::default(),
 		&msg.proof,

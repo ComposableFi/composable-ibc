@@ -18,15 +18,15 @@ use cosmwasm_std::Uint64;
 
 use crate::{
 	ibc,
-	serialisation::{AsStr, Base64, OptBase64},
+	serialisation,
 	state,
 };
 
 #[cw_serde]
 pub struct InstantiateMsg {
-	#[serde(with = "Base64")]
+	#[serde(with = "serialisation::Base64")]
 	pub client_state: state::ClientState,
-	#[serde(with = "Base64")]
+	#[serde(with = "serialisation::Base64")]
 	pub consensus_state: state::ConsensusState,
 }
 
@@ -43,25 +43,25 @@ pub enum SudoMsg {
 
 #[cw_serde]
 pub struct UpdateStateMsg {
-	#[serde(with = "Base64")]
+	#[serde(with = "serialisation::Base64")]
 	pub header: state::Header,
 }
 
 #[cw_serde]
 pub struct UpdateStateOnMisbehaviourMsg {
-	#[serde(with = "Base64")]
+	#[serde(with = "serialisation::Base64")]
 	pub misbehaviour_message: state::Misbehaviour,
 }
 
 // #[cw_serde]
 // pub struct VerifyUpgradeAndUpdateStateMsg {
-// 	#[serde(with = "Base64")]
+// 	#[serde(with = "serialisation::Base64")]
 // 	pub upgrade_client_state: state::ClientState,
-// 	#[serde(with = "Base64")]
+// 	#[serde(with = "serialisation::Base64")]
 // 	pub upgrade_consensus_state: state::ConsensusState,
-// 	#[serde(with = "Base64")]
+// 	#[serde(with = "serialisation::Base64")]
 // 	pub proof_upgrade_client: ibc::CommitmentProofBytes,
-// 	#[serde(with = "Base64")]
+// 	#[serde(with = "serialisation::Base64")]
 // 	pub proof_upgrade_consensus_state: ibc::CommitmentProofBytes,
 // }
 
@@ -101,25 +101,26 @@ pub enum QueryMsg {
 
 #[cw_serde]
 pub struct VerifyClientMessageMsg {
-	#[serde(with = "Base64")]
+	#[serde(with = "serialisation::Base64")]
 	pub client_message: Vec<u8>,
 }
 
 #[cw_serde]
 pub struct CheckForMisbehaviourMsg {
-	#[serde(with = "Base64")]
+	#[serde(with = "serialisation::Base64")]
 	pub client_message: Vec<u8>,
 }
 
 #[cw_serde]
 pub struct VerifyStateProofMsg {
-	#[serde(with = "Base64")]
+	#[serde(with = "serialisation::Base64")]
 	pub proof: ibc::CommitmentProofBytes,
-	#[serde(with = "AsStr")]
+	#[serde(with = "serialisation::AsStr")]
 	pub path: ibc::path::Path,
-	#[serde(with = "OptBase64", default, skip_serializing_if = "Option::is_none")]
+	#[serde(with = "serialisation::OptBase64", default, skip_serializing_if = "Option::is_none")]
 	pub value: Option<Vec<u8>>,
-	pub height: Height,
+	#[serde(with = "serialisation::Height")]
+	pub height: ibc::Height,
 }
 
 #[cw_serde]
@@ -137,7 +138,8 @@ pub struct GetLatestHeightsMsg {}
 
 #[cw_serde]
 pub struct TimestampAtHeightMsg {
-	pub height: Height,
+	#[serde(with = "serialisation::Height")]
+	pub height: ibc::Height,
 }
 
 #[cw_serde]
@@ -145,63 +147,8 @@ pub struct ExportMetadataMsg {}
 
 #[cw_serde]
 pub struct ConsensusStateMetadata {
-	pub height: Height,
+	#[serde(with = "serialisation::Height")]
+	pub height: ibc::Height,
 	pub host_timestamp_ns: Uint64,
 	pub host_height: Uint64,
-}
-
-fn is_zero(num: &Uint64) -> bool {
-	u64::from(*num) == 0
-}
-
-/// IBC height.
-///
-/// This is essentially a copy of [`ibc::Height`] which we have so that we can
-/// implement `JsonSchema` on it without having to enable `schema` feature on
-/// `ibc` which pulls in `std` which we don’t want.
-#[derive(
-	Copy,
-	Clone,
-	PartialEq,
-	Eq,
-	derive_more::Display,
-	serde::Serialize,
-	serde::Deserialize,
-	schemars::JsonSchema,
-)]
-#[display(fmt = "{}-{}", revision_number, revision_height)]
-pub struct Height {
-	/// Previously known as "epoch"
-	#[serde(default, skip_serializing_if = "is_zero")]
-	pub revision_number: Uint64,
-
-	/// The height of a block
-	pub revision_height: Uint64,
-}
-
-impl TryFrom<Height> for ibc::Height {
-	type Error = cosmwasm_std::StdError;
-	fn try_from(height: Height) -> Result<Self, Self::Error> {
-		ibc::Height::new(height.revision_number.into(), height.revision_height.into()).map_err(
-			|_| cosmwasm_std::StdError::ParseErr {
-				target_type: "Height".into(),
-				msg: "unexpected zero height".into(),
-			},
-		)
-	}
-}
-
-impl From<ibc::Height> for Height {
-	fn from(height: ibc::Height) -> Self {
-		Self {
-			revision_number: height.revision_number().into(),
-			revision_height: height.revision_height().into(),
-		}
-	}
-}
-
-impl core::fmt::Debug for Height {
-	fn fmt(&self, fmtr: &mut core::fmt::Formatter) -> core::fmt::Result {
-		core::fmt::Display::fmt(self, fmtr)
-	}
 }

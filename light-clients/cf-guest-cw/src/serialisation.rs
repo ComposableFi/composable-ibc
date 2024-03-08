@@ -19,6 +19,16 @@ pub struct OptBase64;
 /// `Display` and deserialises using `FromStr`.
 pub struct AsStr;
 
+/// A Serde serialisation implementation for [`ibc::Height`].
+///
+/// We need it because we the type to implement `JsonSchema`.  ibc-rs does
+/// support schema with a `schema` feature however that brings in `std` and we
+/// don’t want that.  So, we need to define our own serialisation for height
+/// IBC height.
+pub struct Height;
+
+// ==================== Base64 =================================================
+
 impl Base64 {
 	pub fn serialize<T: BytesConv, S: Serializer>(obj: &T, ser: S) -> Result<S::Ok, S::Error> {
 		let bytes = obj.to_bytes()?;
@@ -110,6 +120,32 @@ conv_via_any!(state::ConsensusState);
 conv_via_any!(state::Header);
 conv_via_any!(state::Misbehaviour);
 
+impl schemars::JsonSchema for Base64 {
+	fn schema_name() -> alloc::string::String {
+		"Base64".into()
+	}
+	fn schema_id() -> alloc::borrow::Cow<'static, str> {
+		alloc::borrow::Cow::Borrowed("cf_guest::Base64")
+	}
+	fn json_schema(gen: &mut schemars::gen::SchemaGenerator) -> schemars::schema::Schema {
+		String::json_schema(gen)
+	}
+}
+
+impl schemars::JsonSchema for OptBase64 {
+	fn schema_name() -> alloc::string::String {
+		"Nullable_Base64".into()
+	}
+	fn schema_id() -> alloc::borrow::Cow<'static, str> {
+		alloc::borrow::Cow::Borrowed("Option<cf_guest::Base64>")
+	}
+	fn json_schema(gen: &mut schemars::gen::SchemaGenerator) -> schemars::schema::Schema {
+		<Option<String>>::json_schema(gen)
+	}
+}
+
+// ==================== As String ==============================================
+
 impl AsStr {
 	pub fn serialize<T: fmt::Display, S: Serializer>(obj: &T, ser: S) -> Result<S::Ok, S::Error> {
 		ser.serialize_str(&obj.to_string())
@@ -149,30 +185,6 @@ where
 	}
 }
 
-impl schemars::JsonSchema for Base64 {
-	fn schema_name() -> alloc::string::String {
-		"Base64".into()
-	}
-	fn schema_id() -> alloc::borrow::Cow<'static, str> {
-		alloc::borrow::Cow::Borrowed("cf_guest::Base64")
-	}
-	fn json_schema(gen: &mut schemars::gen::SchemaGenerator) -> schemars::schema::Schema {
-		String::json_schema(gen)
-	}
-}
-
-impl schemars::JsonSchema for OptBase64 {
-	fn schema_name() -> alloc::string::String {
-		"Nullable_Base64".into()
-	}
-	fn schema_id() -> alloc::borrow::Cow<'static, str> {
-		alloc::borrow::Cow::Borrowed("Option<cf_guest::Base64>")
-	}
-	fn json_schema(gen: &mut schemars::gen::SchemaGenerator) -> schemars::schema::Schema {
-		<Option<String>>::json_schema(gen)
-	}
-}
-
 impl schemars::JsonSchema for AsStr {
 	fn schema_name() -> alloc::string::String {
 		String::schema_name()
@@ -183,4 +195,72 @@ impl schemars::JsonSchema for AsStr {
 	fn json_schema(gen: &mut schemars::gen::SchemaGenerator) -> schemars::schema::Schema {
 		String::json_schema(gen)
 	}
+}
+
+// ==================== IBC Height =============================================
+
+impl Height {
+	pub fn serialize<S: Serializer>(height: &ibc::Height, ser: S) -> Result<S::Ok, S::Error> {
+		RawHeight::from(*height).serialize(ser)
+	}
+
+	pub fn deserialize<'de, D: Deserializer<'de>>(de: D) -> Result<ibc::Height, D::Error> {
+		use serde::de::Error;
+		let height = <RawHeight as Deserialize>::deserialize(de)?;
+		ibc::Height::try_from(height).map_err(|_| {
+			D::Error::invalid_value(
+				serde::de::Unexpected::Unsigned(0),
+				&"height with non-zero revision_height",
+			)
+		})
+	}
+}
+
+/// The core IBC height type, which represents the height of a chain, which
+/// typically is the number of blocks since genesis (or more generally, since
+/// the last revision/hard upgrade).
+#[derive(
+	serde::Serialize,
+	serde::Deserialize,
+	schemars::JsonSchema,
+)]
+pub struct RawHeight {
+	/// Previously known as "epoch"
+	#[serde(default, skip_serializing_if = "is_zero")]
+	pub revision_number: cosmwasm_std::Uint64,
+
+	/// The height of a block
+	pub revision_height: cosmwasm_std::Uint64,
+}
+
+impl TryFrom<RawHeight> for ibc::Height {
+	type Error = ibc::ClientError;
+	fn try_from(height: RawHeight) -> Result<Self, Self::Error> {
+		Self::new(height.revision_number.into(), height.revision_height.into())
+	}
+}
+
+impl From<ibc::Height> for RawHeight {
+	fn from(height: ibc::Height) -> Self {
+		Self {
+			revision_number: height.revision_number().into(),
+			revision_height: height.revision_height().into(),
+		}
+	}
+}
+
+impl schemars::JsonSchema for Height {
+	fn schema_name() -> alloc::string::String {
+		"Height".into()
+	}
+	fn schema_id() -> alloc::borrow::Cow<'static, str> {
+		alloc::borrow::Cow::Borrowed("cf_guest::IbcHeight")
+	}
+	fn json_schema(gen: &mut schemars::gen::SchemaGenerator) -> schemars::schema::Schema {
+		<RawHeight>::json_schema(gen)
+	}
+}
+
+fn is_zero(num: &cosmwasm_std::Uint64) -> bool {
+	num.u64() == 0
 }

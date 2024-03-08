@@ -149,11 +149,10 @@ impl ConsensusStates {
 		for record in self.all() {
 			let (key, _state, metadata) = record?;
 			let key = &key[key.len() - 16..];
+			let revision_number = u64::from_be_bytes(key[..8].try_into().unwrap());
+			let revision_height = u64::from_be_bytes(key[8..].try_into().unwrap());
 			records.push(crate::msg::ConsensusStateMetadata {
-				height: crate::msg::Height {
-					revision_number: u64::from_be_bytes(key[..8].try_into().unwrap()).into(),
-					revision_height: u64::from_be_bytes(key[8..].try_into().unwrap()).into(),
-				},
+				height: ibc::Height::new(revision_number, revision_height).unwrap(),
 				host_timestamp_ns: metadata.host_timestamp_ns.into(),
 				host_height: metadata.host_height.into(),
 			})
