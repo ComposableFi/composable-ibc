@@ -13,7 +13,7 @@ pub struct Base64;
 
 /// A Serde serialisation implementation handling `Option<T>` values where `T`
 /// can be serialised using [`Base64`].
-pub struct MaybeBase64;
+pub struct OptBase64;
 
 /// A Serde serialisation implementation which encodes object using
 /// `Display` and deserialises using `FromStr`.
@@ -30,7 +30,7 @@ impl Base64 {
 	}
 }
 
-impl MaybeBase64 {
+impl OptBase64 {
 	pub fn serialize<T: BytesConv, S: Serializer>(
 		obj: &Option<T>,
 		ser: S,
@@ -64,7 +64,7 @@ impl Serialize for Base64Bytes<'_> {
 }
 
 /// Trait implementing conversion to and from bytes used by [`Base64`] and
-/// [`MaybeBase64`].
+/// [`OptBase64`].
 pub trait BytesConv: Sized {
 	fn to_bytes<'a, E: serde::ser::Error>(&'a self) -> Result<Cow<'a, [u8]>, E>;
 	fn from_bytes<E: serde::de::Error>(bytes: Vec<u8>) -> Result<Self, E>;
@@ -146,5 +146,41 @@ where
 
 	fn visit_str<E: serde::de::Error>(self, value: &str) -> Result<T, E> {
 		T::from_str(value).map_err(E::custom)
+	}
+}
+
+impl schemars::JsonSchema for Base64 {
+	fn schema_name() -> alloc::string::String {
+		"Base64".into()
+	}
+	fn schema_id() -> alloc::borrow::Cow<'static, str> {
+		alloc::borrow::Cow::Borrowed("cf_guest::Base64")
+	}
+	fn json_schema(gen: &mut schemars::gen::SchemaGenerator) -> schemars::schema::Schema {
+		String::json_schema(gen)
+	}
+}
+
+impl schemars::JsonSchema for OptBase64 {
+	fn schema_name() -> alloc::string::String {
+		"Nullable_Base64".into()
+	}
+	fn schema_id() -> alloc::borrow::Cow<'static, str> {
+		alloc::borrow::Cow::Borrowed("Option<cf_guest::Base64>")
+	}
+	fn json_schema(gen: &mut schemars::gen::SchemaGenerator) -> schemars::schema::Schema {
+		<Option<String>>::json_schema(gen)
+	}
+}
+
+impl schemars::JsonSchema for AsStr {
+	fn schema_name() -> alloc::string::String {
+		String::schema_name()
+	}
+	fn schema_id() -> alloc::borrow::Cow<'static, str> {
+		String::schema_id()
+	}
+	fn json_schema(gen: &mut schemars::gen::SchemaGenerator) -> schemars::schema::Schema {
+		String::json_schema(gen)
 	}
 }

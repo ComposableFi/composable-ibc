@@ -18,17 +18,15 @@ use cosmwasm_std::Uint64;
 
 use crate::{
 	ibc,
-	serialisation::{AsStr, Base64, MaybeBase64},
+	serialisation::{AsStr, Base64, OptBase64},
 	state,
 };
 
 #[cw_serde]
 pub struct InstantiateMsg {
 	#[serde(with = "Base64")]
-	#[schemars(with = "String")]
 	pub client_state: state::ClientState,
 	#[serde(with = "Base64")]
-	#[schemars(with = "String")]
 	pub consensus_state: state::ConsensusState,
 }
 
@@ -46,30 +44,24 @@ pub enum SudoMsg {
 #[cw_serde]
 pub struct UpdateStateMsg {
 	#[serde(with = "Base64")]
-	#[schemars(with = "String")]
 	pub header: state::Header,
 }
 
 #[cw_serde]
 pub struct UpdateStateOnMisbehaviourMsg {
 	#[serde(with = "Base64")]
-	#[schemars(with = "String")]
 	pub misbehaviour_message: state::Misbehaviour,
 }
 
 // #[cw_serde]
 // pub struct VerifyUpgradeAndUpdateStateMsg {
 // 	#[serde(with = "Base64")]
-// 	#[schemars(with = "String")]
 // 	pub upgrade_client_state: state::ClientState,
 // 	#[serde(with = "Base64")]
-// 	#[schemars(with = "String")]
 // 	pub upgrade_consensus_state: state::ConsensusState,
 // 	#[serde(with = "Base64")]
-// 	#[schemars(with = "String")]
 // 	pub proof_upgrade_client: ibc::CommitmentProofBytes,
 // 	#[serde(with = "Base64")]
-// 	#[schemars(with = "String")]
 // 	pub proof_upgrade_consensus_state: ibc::CommitmentProofBytes,
 // }
 
@@ -110,27 +102,22 @@ pub enum QueryMsg {
 #[cw_serde]
 pub struct VerifyClientMessageMsg {
 	#[serde(with = "Base64")]
-	#[schemars(with = "String")]
 	pub client_message: Vec<u8>,
 }
 
 #[cw_serde]
 pub struct CheckForMisbehaviourMsg {
 	#[serde(with = "Base64")]
-	#[schemars(with = "String")]
 	pub client_message: Vec<u8>,
 }
 
 #[cw_serde]
 pub struct VerifyStateProofMsg {
 	#[serde(with = "Base64")]
-	#[schemars(with = "String")]
 	pub proof: ibc::CommitmentProofBytes,
 	#[serde(with = "AsStr")]
-	#[schemars(with = "String")]
 	pub path: ibc::path::Path,
-	#[serde(with = "MaybeBase64", default, skip_serializing_if = "Option::is_none")]
-	#[schemars(with = "String")]
+	#[serde(with = "OptBase64", default, skip_serializing_if = "Option::is_none")]
 	pub value: Option<Vec<u8>>,
 	pub height: Height,
 }
