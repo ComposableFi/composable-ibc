@@ -246,10 +246,11 @@ where
 					if let Some(proof_request) = proof_id {
 						let proof_request = proof_request.clone();
 						drop(zk_height_proof_id_map);
-						let proof = zk_prover.poll_proof(&proof_request.proof_id, height.revision_height);
+						let proof =
+							zk_prover.poll_proof(&proof_request.proof_id, height.revision_height);
 						match proof {
-							Ok(proof) => {
-								if let Some(proof) = proof{
+							Ok(proof) =>
+								if let Some(proof) = proof {
 									zk_proof = proof.as_bytes().to_vec();
 									zk_bitmask = proof_request.bitmask;
 									is_request_ready = true;
@@ -258,39 +259,46 @@ where
 									log::info!(target: "hyperspace", "proof not ready Yet. proof is None. proof_id: {:?}, height: {:?}", proof_request, height);
 									if proof_request.is_waiting_for_proof_too_long(delay_secs) {
 										log::error!(target: "hyperspace", "Proof not ready too long. proof_id: {:?}, height: {:?}, requested proof at : {:?}", proof_request, height, proof_request.request_time);
-										let mut zk_height_proof_id_map = self.zk_proof_requests.lock().unwrap();
+										let mut zk_height_proof_id_map =
+											self.zk_proof_requests.lock().unwrap();
 										zk_height_proof_id_map.remove(&height);
 									}
-								}
-							},
+								},
 							Err(e) => {
 								log::error!(target: "hyperspace", "failed to poll proof_id: {:?}, height: {:?}. error: {:?}", proof_request, height, e);
 							},
 						}
 					} else {
 						let size = self.zk_prover_api.zk_val_len;
-						/* pub_key, signature, message  */
+						/* pub_key, signature, message */
 						let zk_input = update_header.get_zk_input::<HostFunctionsManager>(size);
 						match zk_input {
 							Ok((input, bitmask)) => {
-
-								let pub_keys_list  = input.iter().map(|(pub_keys, _, _)| pub_keys.clone()).collect::<Vec<_>>();
-								let signatures_list  = input.iter().map(|(_, signatures, _)| signatures.clone()).collect::<Vec<_>>();
-								let msg = input.iter().map(|(_, _, msg)| msg.clone()).collect::<Vec<_>>();
+								let pub_keys_list = input
+									.iter()
+									.map(|(pub_keys, _, _)| pub_keys.clone())
+									.collect::<Vec<_>>();
+								let signatures_list = input
+									.iter()
+									.map(|(_, signatures, _)| signatures.clone())
+									.collect::<Vec<_>>();
+								let msg =
+									input.iter().map(|(_, _, msg)| msg.clone()).collect::<Vec<_>>();
 
 								let result = zk_prover.create_proof(CreateProofInput::new(
-									signatures_list, msg, pub_keys_list, height.revision_height
+									signatures_list,
+									msg,
+									pub_keys_list,
+									height.revision_height,
 								));
 								match result {
-									Ok(resp) => {
-										if let Some(proof_id) = resp.proof_id{
+									Ok(resp) =>
+										if let Some(proof_id) = resp.proof_id {
 											let proof_id = ZkProofRequest::new(proof_id, bitmask);
 											zk_height_proof_id_map.insert(height, proof_id);
-										}
-										else{
+										} else {
 											log::info!(target: "hyperspace", "proof_id is None. It means that zk server busy generating other proof. height: {:?}", height);
-										}
-									},
+										},
 									Err(e) => {
 										log::error!(target: "hyperspace", "failed to create_proof. height: {:?}. error: {:?}", height, e);
 									},
@@ -309,9 +317,7 @@ where
 				}
 			};
 
-			if continew ||
-				(update_type.is_optional() && height > max_event_height)
-			{
+			if continew || (update_type.is_optional() && height > max_event_height) {
 				log::debug!(target: "hyperspace_cosmos", "skiped: {:?}", height);
 				continue;
 			}
@@ -1219,10 +1225,10 @@ where
 		let client_state = ClientState::new(
 			self.chain_id.clone(),
 			TrustThreshold::default(),
-			Duration::from_secs(64000),
-			Duration::from_secs(1814400),
 			// Duration::from_secs(64000),
 			// Duration::from_secs(1814400),
+			Duration::from_secs(280),
+			Duration::from_secs(5 * 60),
 			Duration::new(15, 0),
 			latest_height_timestamp.0,
 			ProofSpecs::default(),
