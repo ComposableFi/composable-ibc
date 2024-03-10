@@ -16,11 +16,7 @@
 use cosmwasm_schema::{cw_serde, QueryResponses};
 use cosmwasm_std::Uint64;
 
-use crate::{
-	ibc,
-	serialisation,
-	state,
-};
+use crate::{ibc, serialisation, state};
 
 #[cw_serde]
 pub struct InstantiateMsg {

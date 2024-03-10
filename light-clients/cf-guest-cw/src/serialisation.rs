@@ -1,4 +1,3 @@
-use alloc::borrow::Cow;
 use core::{fmt, marker::PhantomData, str::FromStr};
 
 use cosmwasm_std::Binary;
@@ -21,9 +20,9 @@ pub struct AsStr;
 
 /// A Serde serialisation implementation for [`ibc::Height`].
 ///
-/// We need it because we the type to implement `JsonSchema`.  ibc-rs does
+/// We need it because we need this to implement `JsonSchema`.  ibc-rs does
 /// support schema with a `schema` feature however that brings in `std` and we
-/// don’t want that.  So, we need to define our own serialisation for height
+/// don’t want that.  As a result, we need to define our own serialisation for
 /// IBC height.
 pub struct Height;
 
@@ -31,8 +30,7 @@ pub struct Height;
 
 impl Base64 {
 	pub fn serialize<T: BytesConv, S: Serializer>(obj: &T, ser: S) -> Result<S::Ok, S::Error> {
-		let bytes = obj.to_bytes()?;
-		Base64Bytes(bytes.as_ref()).serialize(ser)
+		Base64Bytes(obj.to_bytes()?.as_ref()).serialize(ser)
 	}
 
 	pub fn deserialize<'de, T: BytesConv, D: Deserializer<'de>>(de: D) -> Result<T, D::Error> {
@@ -76,13 +74,18 @@ impl Serialize for Base64Bytes<'_> {
 /// Trait implementing conversion to and from bytes used by [`Base64`] and
 /// [`OptBase64`].
 pub trait BytesConv: Sized {
-	fn to_bytes<'a, E: serde::ser::Error>(&'a self) -> Result<Cow<'a, [u8]>, E>;
+	type Bytes<'a>: AsRef<[u8]>
+	where
+		Self: 'a;
+
+	fn to_bytes<'a, E: serde::ser::Error>(&'a self) -> Result<Self::Bytes<'a>, E>;
 	fn from_bytes<E: serde::de::Error>(bytes: Vec<u8>) -> Result<Self, E>;
 }
 
 impl BytesConv for Vec<u8> {
-	fn to_bytes<'a, E: serde::ser::Error>(&'a self) -> Result<Cow<'a, [u8]>, E> {
-		Ok(Cow::Borrowed(self.as_slice()))
+	type Bytes<'a> = &'a [u8];
+	fn to_bytes<'a, E: serde::ser::Error>(&'a self) -> Result<&'a [u8], E> {
+		Ok(self.as_slice())
 	}
 
 	fn from_bytes<E: serde::de::Error>(bytes: Vec<u8>) -> Result<Self, E> {
@@ -91,8 +94,9 @@ impl BytesConv for Vec<u8> {
 }
 
 impl BytesConv for ibc::CommitmentProofBytes {
-	fn to_bytes<'a, E: serde::ser::Error>(&'a self) -> Result<Cow<'a, [u8]>, E> {
-		Ok(Cow::Borrowed(self.as_ref()))
+	type Bytes<'a> = &'a [u8];
+	fn to_bytes<'a, E: serde::ser::Error>(&'a self) -> Result<&'a [u8], E> {
+		Ok(self.as_ref())
 	}
 
 	fn from_bytes<E: serde::de::Error>(bytes: Vec<u8>) -> Result<Self, E> {
@@ -103,8 +107,10 @@ impl BytesConv for ibc::CommitmentProofBytes {
 macro_rules! conv_via_any {
 	($msg:ty) => {
 		impl BytesConv for $msg {
-			fn to_bytes<'a, E: serde::ser::Error>(&'a self) -> Result<Cow<'a, [u8]>, E> {
-				Ok(Cow::Owned(ibc::proto::Any::from(self).encode_to_vec()))
+			type Bytes<'a> = Vec<u8>;
+
+			fn to_bytes<'a, E: serde::ser::Error>(&'a self) -> Result<Vec<u8>, E> {
+				Ok(ibc::proto::Any::from(self).encode_to_vec())
 			}
 
 			fn from_bytes<E: serde::de::Error>(bytes: Vec<u8>) -> Result<Self, E> {
@@ -219,11 +225,7 @@ impl Height {
 /// The core IBC height type, which represents the height of a chain, which
 /// typically is the number of blocks since genesis (or more generally, since
 /// the last revision/hard upgrade).
-#[derive(
-	serde::Serialize,
-	serde::Deserialize,
-	schemars::JsonSchema,
-)]
+#[derive(serde::Serialize, serde::Deserialize, schemars::JsonSchema)]
 pub struct RawHeight {
 	/// Previously known as "epoch"
 	#[serde(default, skip_serializing_if = "is_zero")]
