@@ -1,0 +1,57 @@
+[package]
+name = "cf-guest-cw"
+version = "0.0.0"
+authors = ["Michal Nazarewicz <mina86@mina86.com>"]
+edition = "2021"
+
+exclude = [
+  # Those files are rust-optimizer artifacts.  You might want to
+  # commit them for convenience but they should not be part of the
+  # source code publication.
+  "contract.wasm",
+  "hash.txt",
+]
+
+[lib]
+crate-type = ["cdylib", "rlib"]
+
+[package.metadata.scripts]
+optimize = """docker run --rm -v "$(pwd)":/code \
+  --mount type=volume,source="$(basename "$(pwd)")_cache",target=/code/target \
+  --mount type=volume,source=registry_cache,target=/usr/local/cargo/registry \
+  cosmwasm/rust-optimizer:0.12.6
+"""
+
+[dependencies]
+cf-guest = { git = "https://github.com/ComposableFi/emulated-light-client/", default-features = false }
+guestchain = { git = "https://github.com/ComposableFi/emulated-light-client/", default-features = false }
+
+base64 = { version = "0.22", default-features = false, features = ["alloc"] }
+borsh = { version = "0.10.3", default-features = false }
+cosmwasm-schema = "1.5.3"
+cosmwasm-std = "1.5.3"
+derive_more = "0.99.17"
+ed25519-dalek = { version = "2.1.1", default-features = false, features = ["pkcs8"] }
+
+# Same version emulated-light-client uses
+ibc = { git = "https://github.com/cosmos/ibc-rs", rev = "6dd3c6465e594d4c177f21724dd896a15e8f3634", default-features = false, features = ["borsh", "serde"] }
+
+prost = { version = "0.12.3", default-features = false }
+schemars = "0.8.10"
+serde = { version = "1.0.145", default-features = false, features = ["derive"] }
+sha2 = "0.10"
+
+[features]
+# for more explicit tests, cargo test --features=backtraces
+backtraces = ["cosmwasm-std/backtraces"]
+# use library feature to disable all instantiate/execute/query exports
+library = []
+default = []
+std = [
+	"base64/std",
+	"ed25519-dalek/std",
+	"ibc/std",
+	"prost/std",
+	"serde/std",
+	"sha2/std",
+]
