@@ -48,7 +48,7 @@ impl<T: Config> Channels<T> {
 				{
 					return Some((
 						port_id.as_bytes().to_vec(),
-						channel_id.to_string().as_bytes().to_vec(),
+						channel_id.to_string().into_bytes(),
 						value,
 					))
 				}

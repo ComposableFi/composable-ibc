@@ -51,7 +51,7 @@ impl<'a> ConsensusStates<'a> {
 	}
 
 	pub fn consensus_state_client_key() -> Vec<u8> {
-		"consensusStates/".to_string().into_bytes()
+		b"consensusStates/".to_vec()
 	}
 
 	pub fn consensus_state_height_key(height: Height) -> Vec<u8> {

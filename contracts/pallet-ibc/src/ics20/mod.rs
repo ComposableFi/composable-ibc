@@ -127,7 +127,7 @@ where
 		_relayer: &Signer,
 	) -> Result<(), Ics04Error> {
 		let _ = ChannelIds::<T>::try_mutate::<_, (), _>(|channels| {
-			channels.push(channel_id.to_string().as_bytes().to_vec());
+			channels.push(channel_id.to_string().into_bytes());
 			Ok(())
 		});
 		let mut ctx = Context::<T>::default();
@@ -144,7 +144,7 @@ where
 		_relayer: &Signer,
 	) -> Result<(), Ics04Error> {
 		let _ = ChannelIds::<T>::try_mutate::<_, (), _>(|channels| {
-			channels.push(channel_id.to_string().as_bytes().to_vec());
+			channels.push(channel_id.to_string().into_bytes());
 			Ok(())
 		});
 		let mut ctx = Context::<T>::default();
@@ -161,11 +161,8 @@ where
 		_relayer: &Signer,
 	) -> Result<(), Ics04Error> {
 		let _ = ChannelIds::<T>::try_mutate::<_, (), _>(|channels| {
-			let rem = channels
-				.iter()
-				.filter(|chan| chan.as_slice() != channel_id.to_string().as_bytes())
-				.cloned()
-				.collect();
+			let channel_id = channel_id.to_string().into_bytes();
+			let rem = channels.iter().filter(|chan| **chan != channel_id).cloned().collect();
 			*channels = rem;
 			Ok(())
 		});
@@ -185,11 +182,8 @@ where
 		_relayer: &Signer,
 	) -> Result<(), Ics04Error> {
 		let _ = ChannelIds::<T>::try_mutate::<_, (), _>(|channels| {
-			let rem = channels
-				.iter()
-				.filter(|chan| chan.as_slice() != channel_id.to_string().as_bytes())
-				.cloned()
-				.collect();
+			let channel_id = channel_id.to_string().into_bytes();
+			let rem = channels.iter().filter(|chan| **chan != channel_id).cloned().collect();
 			*channels = rem;
 			Ok(())
 		});
@@ -270,8 +264,8 @@ where
 						packet.source_channel,
 						&prefixed_denom,
 					),
-					source_channel: packet.source_channel.to_string().as_bytes().to_vec(),
-					destination_channel: packet.destination_channel.to_string().as_bytes().to_vec(),
+					source_channel: packet.source_channel.to_string().into_bytes(),
+					destination_channel: packet.destination_channel.to_string().into_bytes(),
 				});
 				let packet = packet.clone();
 				Pallet::<T>::handle_message(HandlerMessage::WriteAck {
@@ -318,7 +312,7 @@ where
 				Pallet::<T>::deposit_event(Event::<T>::TokenTransferCompleted {
 					from: packet_data.sender,
 					to: packet_data.receiver,
-					ibc_denom: packet_data.token.denom.to_string().as_bytes().to_vec(),
+					ibc_denom: packet_data.token.denom.to_string().into_bytes(),
 					local_asset_id: T::IbcDenomToAssetIdConversion::from_denom_to_asset_id(
 						&packet_data.token.denom.to_string(),
 					)
@@ -329,8 +323,8 @@ where
 						packet.source_channel,
 						&packet_data.token.denom,
 					),
-					source_channel: packet.source_channel.to_string().as_bytes().to_vec(),
-					destination_channel: packet.destination_channel.to_string().as_bytes().to_vec(),
+					source_channel: packet.source_channel.to_string().into_bytes(),
+					destination_channel: packet.destination_channel.to_string().into_bytes(),
 				})
 			},
 			Err(e) => {
@@ -346,7 +340,7 @@ where
 				Pallet::<T>::deposit_event(Event::<T>::TokenTransferFailed {
 					from: packet_data.sender,
 					to: packet_data.receiver,
-					ibc_denom: packet_data.token.denom.to_string().as_bytes().to_vec(),
+					ibc_denom: packet_data.token.denom.to_string().into_bytes(),
 					local_asset_id: T::IbcDenomToAssetIdConversion::from_denom_to_asset_id(
 						&packet_data.token.denom.to_string(),
 					)
@@ -357,8 +351,8 @@ where
 						packet.source_channel,
 						&packet_data.token.denom,
 					),
-					source_channel: packet.source_channel.to_string().as_bytes().to_vec(),
-					destination_channel: packet.destination_channel.to_string().as_bytes().to_vec(),
+					source_channel: packet.source_channel.to_string().into_bytes(),
+					destination_channel: packet.destination_channel.to_string().into_bytes(),
 				})
 			},
 		}
@@ -385,7 +379,7 @@ where
 		Pallet::<T>::deposit_event(Event::<T>::TokenTransferTimeout {
 			from: packet_data.sender,
 			to: packet_data.receiver,
-			ibc_denom: packet_data.token.denom.to_string().as_bytes().to_vec(),
+			ibc_denom: packet_data.token.denom.to_string().into_bytes(),
 			local_asset_id: T::IbcDenomToAssetIdConversion::from_denom_to_asset_id(
 				&packet_data.token.denom.to_string(),
 			)
@@ -396,8 +390,8 @@ where
 				packet.source_channel,
 				&packet_data.token.denom,
 			),
-			source_channel: packet.source_channel.to_string().as_bytes().to_vec(),
-			destination_channel: packet.destination_channel.to_string().as_bytes().to_vec(),
+			source_channel: packet.source_channel.to_string().into_bytes(),
+			destination_channel: packet.destination_channel.to_string().into_bytes(),
 		});
 		Ok(())
 	}
