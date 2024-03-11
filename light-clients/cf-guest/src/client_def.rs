@@ -43,8 +43,8 @@ impl<PK: PubKey> Default for GuestClient<PK> {
 
 impl<PK> ClientDef for GuestClient<PK>
 where
-	// H: HostFunctionsProvider,
-	PK: PubKey,
+	PK: PubKey + Send + Sync,
+	PK::Signature: Send + Sync,
 {
 	type ClientMessage = ClientMessage<PK>;
 	type ClientState = ClientState<PK>;
@@ -353,4 +353,3 @@ impl<PK: PubKey> Verifier<PK> for GuestClient<PK> {
 		pubkey.verify(&sig, message).map_or(false, |_| true)
 	}
 }
-

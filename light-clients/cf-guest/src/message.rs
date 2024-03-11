@@ -14,7 +14,11 @@ pub enum ClientMessage<PK: PubKey> {
 	Misbehaviour(Misbehaviour<PK>),
 }
 
-impl<PK: PubKey> ibc::core::ics02_client::client_message::ClientMessage for ClientMessage<PK> {
+impl<PK> ibc::core::ics02_client::client_message::ClientMessage for ClientMessage<PK>
+where
+	PK: PubKey + Send + Sync,
+	PK::Signature: Send + Sync,
+{
 	fn encode_to_vec(&self) -> Result<ibc::prelude::Vec<u8>, tendermint_proto::Error> {
 		self.encode_vec()
 	}

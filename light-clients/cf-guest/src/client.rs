@@ -145,8 +145,10 @@ pub struct UpgradeOptions {
 	pub upgrade_path: Vec<String>,
 }
 
-impl<PK: guestchain::PubKey> ibc::core::ics02_client::client_state::ClientState
-	for ClientState<PK>
+impl<PK> ibc::core::ics02_client::client_state::ClientState for ClientState<PK>
+where
+	PK: guestchain::PubKey + Send + Sync,
+	PK::Signature: Send + Sync,
 {
 	type UpgradeOptions = UpgradeOptions;
 
