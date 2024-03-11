@@ -20,7 +20,7 @@ jobs:
       cancel-in-progress: true
 
     container:
-      image: paritytech/ci-unified:bullseye-1.71.0-v20230727
+      image: paritytech/ci-unified:bullseye-1.74.0-v20240109
 
     runs-on:
       - self-hosted
