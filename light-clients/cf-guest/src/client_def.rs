@@ -2,12 +2,15 @@ use core::marker::PhantomData;
 
 use guestchain::{PubKey, Verifier};
 use ibc::core::{
-	ics02_client::{client_def::ClientDef, error::Error},
+	ics02_client::{client_def::ClientDef, error::Error as Ics02ClientError},
 	ics23_commitment::commitment::CommitmentPrefix,
 	ics24_host::path::{self, AcksPath},
+	ics26_routing::context::ReaderContext,
 };
 
-use crate::{proof::verify, ClientMessage, ClientState, CommonContext, ConsensusState};
+use crate::{
+	error::Error, proof::verify, ClientMessage, ClientState, CommonContext, ConsensusState,
+};
 
 #[derive(Clone, Debug, PartialEq, Eq)]
 pub struct GuestClient<PK>(PhantomData<PK>);
@@ -27,15 +30,14 @@ where
 	type ClientState = ClientState<PK>;
 	type ConsensusState = ConsensusState;
 
-	fn verify_client_message<
-		Ctx: ibc::core::ics26_routing::context::ReaderContext>(
+	fn verify_client_message<Ctx: ibc::core::ics26_routing::context::ReaderContext>(
 		&self,
 		ctx: &Ctx,
 		client_id: ibc::core::ics24_host::identifier::ClientId,
 		client_state: Self::ClientState,
 		client_msg: Self::ClientMessage,
-	) -> Result<(), Error> {
-    todo!()
+	) -> Result<(), Ics02ClientError> {
+		todo!()
 	}
 
 	fn update_state<Ctx: ibc::core::ics26_routing::context::ReaderContext>(
@@ -46,16 +48,16 @@ where
 		client_msg: Self::ClientMessage,
 	) -> Result<
 		(Self::ClientState, ibc::core::ics02_client::client_def::ConsensusUpdateResult<Ctx>),
-		Error,
+		Ics02ClientError,
 	> {
-    todo!()
+		todo!()
 	}
 
 	fn update_state_on_misbehaviour(
 		&self,
 		client_state: Self::ClientState,
 		client_msg: Self::ClientMessage,
-	) -> Result<Self::ClientState, Error> {
+	) -> Result<Self::ClientState, Ics02ClientError> {
 		todo!()
 	}
 
@@ -65,7 +67,7 @@ where
 		client_id: ibc::core::ics24_host::identifier::ClientId,
 		client_state: Self::ClientState,
 		client_msg: Self::ClientMessage,
-	) -> Result<bool, Error> {
+	) -> Result<bool, Ics02ClientError> {
 		todo!()
 	}
 
@@ -80,7 +82,7 @@ where
 		proof_upgrade_consensus_state: ibc::prelude::Vec<u8>,
 	) -> Result<
 		(Self::ClientState, ibc::core::ics02_client::client_def::ConsensusUpdateResult<Ctx>),
-		Error,
+		Ics02ClientError,
 	> {
 		todo!()
 	}
@@ -94,7 +96,7 @@ where
 		substitute_client_state: Self::ClientState,
 	) -> Result<
 		(Self::ClientState, ibc::core::ics02_client::client_def::ConsensusUpdateResult<Ctx>),
-		Error,
+		Ics02ClientError,
 	> {
 		todo!()
 	}
@@ -110,7 +112,7 @@ where
 		client_id: &ibc::core::ics24_host::identifier::ClientId,
 		consensus_height: ibc::Height,
 		expected_consensus_state: &Ctx::AnyConsensusState,
-	) -> Result<(), Error> {
+	) -> Result<(), Ics02ClientError> {
 		todo!()
 	}
 
@@ -125,7 +127,7 @@ where
 		root: &ibc::core::ics23_commitment::commitment::CommitmentRoot,
 		connection_id: &ibc::core::ics24_host::identifier::ConnectionId,
 		expected_connection_end: &ibc::core::ics03_connection::connection::ConnectionEnd,
-	) -> Result<(), Error> {
+	) -> Result<(), Ics02ClientError> {
 		todo!()
 	}
 
@@ -141,7 +143,7 @@ where
 		port_id: &ibc::core::ics24_host::identifier::PortId,
 		channel_id: &ibc::core::ics24_host::identifier::ChannelId,
 		expected_channel_end: &ibc::core::ics04_channel::channel::ChannelEnd,
-	) -> Result<(), Error> {
+	) -> Result<(), Ics02ClientError> {
 		todo!()
 	}
 
@@ -155,7 +157,7 @@ where
 		root: &ibc::core::ics23_commitment::commitment::CommitmentRoot,
 		client_id: &ibc::core::ics24_host::identifier::ClientId,
 		expected_client_state: &Ctx::AnyClientState,
-	) -> Result<(), Error> {
+	) -> Result<(), Ics02ClientError> {
 		todo!()
 	}
 
@@ -172,7 +174,7 @@ where
 		channel_id: &ibc::core::ics24_host::identifier::ChannelId,
 		sequence: ibc::core::ics04_channel::packet::Sequence,
 		commitment: ibc::core::ics04_channel::commitment::PacketCommitment,
-	) -> Result<(), Error> {
+	) -> Result<(), Ics02ClientError> {
 		todo!()
 	}
 
@@ -189,10 +191,10 @@ where
 		channel_id: &ibc::core::ics24_host::identifier::ChannelId,
 		sequence: ibc::core::ics04_channel::packet::Sequence,
 		ack: ibc::core::ics04_channel::commitment::AcknowledgementCommitment,
-	) -> Result<(), Error> {
+	) -> Result<(), Ics02ClientError> {
 		// client state height = consensus state height
 		client_state.verify_height(client_id, height)?;
-		// verify_delay_passed(ctx, height, connection_end)?;
+		verify_delay_passed::<Ctx, PK>(ctx, height, connection_end)?;
 
 		let ack_path = AcksPath { port_id: port_id.clone(), channel_id: *channel_id, sequence };
 		let path = path::Path::Acks(ack_path);
@@ -212,7 +214,7 @@ where
 		port_id: &ibc::core::ics24_host::identifier::PortId,
 		channel_id: &ibc::core::ics24_host::identifier::ChannelId,
 		sequence: ibc::core::ics04_channel::packet::Sequence,
-	) -> Result<(), Error> {
+	) -> Result<(), Ics02ClientError> {
 		todo!()
 	}
 
@@ -228,7 +230,38 @@ where
 		port_id: &ibc::core::ics24_host::identifier::PortId,
 		channel_id: &ibc::core::ics24_host::identifier::ChannelId,
 		sequence: ibc::core::ics04_channel::packet::Sequence,
-	) -> Result<(), Error> {
+	) -> Result<(), Ics02ClientError> {
 		todo!()
 	}
+}
+
+fn verify_delay_passed<Ctx: ReaderContext, PK: PubKey>(
+	ctx: &Ctx,
+	height: ibc::Height,
+	connection_end: &ibc::core::ics03_connection::connection::ConnectionEnd,
+) -> Result<(), Ics02ClientError> {
+	let current_timestamp = ctx.host_timestamp();
+	let current_height = ctx.host_height();
+
+	let client_id = connection_end.client_id();
+	let processed_time = ctx
+		.client_update_time(client_id, height)
+		.map_err(|_| Error::ProcessedTimeNotFound { height })?;
+	let processed_height = ctx
+		.client_update_height(client_id, height)
+		.map_err(|_| Error::ProcessedHeightNotFound { height })?;
+
+	let delay_period_time = connection_end.delay_period();
+	let delay_period_height = ctx.block_delay(delay_period_time);
+	let delay_period_time_u64 = u64::try_from(delay_period_time.as_nanos()).unwrap();
+
+	ClientState::<PK>::verify_delay_passed(
+		current_timestamp,
+		current_height,
+		processed_time.nanoseconds(),
+		processed_height.revision_height,
+		delay_period_time_u64,
+		delay_period_height,
+	)
+	.map_err(|e| e.into())
 }

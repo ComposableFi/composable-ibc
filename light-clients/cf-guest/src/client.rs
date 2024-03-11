@@ -1,7 +1,11 @@
+use crate::error::Error;
 use alloc::string::{String, ToString};
-use ibc::core::{
-	ics02_client::{error::Error, height::Height},
-	ics24_host::identifier::ClientId,
+use ibc::{
+	core::{
+		ics02_client::{error::Error as Ics02ClientError, height::Height},
+		ics24_host::identifier::ClientId,
+	},
+	timestamp::Timestamp,
 };
 use lib::hash::CryptoHash;
 
@@ -90,13 +94,40 @@ impl<PK: guestchain::PubKey> ClientState<PK> {
 		Self { is_frozen: true, ..self.clone() }
 	}
 
+	/// Verify the time and height delays
+	pub fn verify_delay_passed(
+		current_time: Timestamp,
+		current_height: Height,
+		processed_time: u64,
+		processed_height: u64,
+		delay_period_time: u64,
+		delay_period_blocks: u64,
+	) -> Result<(), Error> {
+		let earliest_time = processed_time + delay_period_time;
+		// NOTE: delay time period is inclusive, so if current_time is earliest_time, then we
+		// return no error https://github.com/cosmos/ibc-go/blob/9ebc2f81049869bc40c443ffb72d9f3e47afb4fc/modules/light-clients/07-tendermint/client_state.go#L306
+		if current_time.nanoseconds() < earliest_time {
+			return Err(Error::NotEnoughTimeElapsed { current_time, earliest_time })
+		}
+
+		let earliest_height = processed_height + delay_period_blocks;
+		if current_height.revision_height < earliest_height {
+			return Err(Error::NotEnoughBlocksElapsed { current_height, earliest_height })
+		}
+
+		Ok(())
+	}
+
 	pub fn verify_height(&self, client_id: &ClientId, height: ibc::Height) -> Result<(), Error> {
 		if self.latest_height < height.revision_height.into() {
-			return Err(Error::low_header_height(height, Height::new(0, self.latest_height.into())))
+			return Err(Error::InsufficientHeight {
+				latest_height: Height::new(0, self.latest_height.into()),
+				target_height: height,
+			})
 		}
 
 		if self.is_frozen {
-			return Err(Error::client_frozen(client_id.clone()))
+			return Err(Error::ClientFrozen{ client_id: client_id.clone() })
 		}
 		Ok(())
 	}

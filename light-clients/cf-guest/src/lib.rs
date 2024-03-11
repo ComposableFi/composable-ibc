@@ -9,9 +9,10 @@ use alloc::string::ToString;
 use ibc_proto::google::protobuf::Any;
 
 mod client;
-mod client_impls;
 mod client_def;
+mod client_impls;
 mod consensus;
+pub mod error;
 mod header;
 mod message;
 mod misbehaviour;
@@ -34,15 +35,15 @@ pub const CLIENT_TYPE: &str = "cf-guest";
 pub use crate::proto::{BadMessage, DecodeError};
 
 impl From<DecodeError> for ClientError {
-    fn from(err: DecodeError) -> Self {
-        ClientError::implementation_specific(err.to_string())
-    }
+	fn from(err: DecodeError) -> Self {
+		ClientError::implementation_specific(err.to_string())
+	}
 }
 
 impl From<BadMessage> for ClientError {
-    fn from(_: BadMessage) -> Self {
-        ClientError::implementation_specific("BadMessage".to_string())
-    }
+	fn from(_: BadMessage) -> Self {
+		ClientError::implementation_specific("BadMessage".to_string())
+	}
 }
 
 /// Returns digest of the value with client id mixed in.
@@ -55,12 +56,11 @@ impl From<BadMessage> for ClientError {
 /// Specifically, this calculates `digest(client_id || b'0' || serialised)`.
 #[inline]
 pub fn digest_with_client_id(
-    client_id: &ibc::core::ics24_host::identifier::ClientId,
-    value: &[u8],
+	client_id: &ibc::core::ics24_host::identifier::ClientId,
+	value: &[u8],
 ) -> lib::hash::CryptoHash {
-    lib::hash::CryptoHash::digestv(&[client_id.as_bytes(), b"\0", value])
+	lib::hash::CryptoHash::digestv(&[client_id.as_bytes(), b"\0", value])
 }
-
 
 /// Defines conversion implementation between `$Type` and Any message as well as
 /// `encode_to_vec` and `decode` methods.
