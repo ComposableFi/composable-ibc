@@ -1,18 +1,26 @@
-use core::marker::PhantomData;
+use core::{convert::Infallible, marker::PhantomData};
+use guestchain::Signature;
 
+use crate::{alloc::string::ToString, proof::VerifyError};
 use alloc::vec::Vec;
 use guestchain::{PubKey, Verifier};
-use ibc::core::{
-	ics02_client::{
-		client_consensus::ConsensusState, client_def::ClientDef,
-		client_state::ClientState as OtherClientState, error::Error as Ics02ClientError,
+use ibc::{
+	core::{
+		ics02_client::{
+			client_consensus::ConsensusState, client_def::{ClientDef, ConsensusUpdateResult},
+			client_state::ClientState as OtherClientState, error::Error as Ics02ClientError,
+		},
+		ics23_commitment::commitment::CommitmentPrefix,
+		ics24_host::{
+			identifier::ClientId,
+			path::{
+				self, AcksPath, ChannelEndsPath, ClientConsensusStatePath, ClientStatePath,
+				CommitmentsPath, ConnectionsPath, ReceiptsPath, SeqRecvsPath,
+			},
+		},
+		ics26_routing::context::ReaderContext,
 	},
-	ics23_commitment::commitment::CommitmentPrefix,
-	ics24_host::path::{
-		self, AcksPath, ChannelEndsPath, ClientConsensusStatePath, ClientStatePath,
-		CommitmentsPath, ConnectionsPath, ReceiptsPath, SeqRecvsPath,
-	},
-	ics26_routing::context::ReaderContext,
+	timestamp::Timestamp,
 };
 use prost::Message;
 use tendermint_proto::Protobuf;
@@ -21,6 +29,8 @@ use crate::{
 	error::Error, proof::verify, ClientMessage, ClientState, CommonContext,
 	ConsensusState as ClientConsensusState,
 };
+
+type Result<T = (), E = ibc::core::ics02_client::error::Error> = ::core::result::Result<T, E>;
 
 #[derive(Clone, Debug, PartialEq, Eq)]
 pub struct GuestClient<PK>(PhantomData<PK>);
@@ -42,75 +52,83 @@ where
 
 	fn verify_client_message<Ctx: ibc::core::ics26_routing::context::ReaderContext>(
 		&self,
-		ctx: &Ctx,
+		_ctx: &Ctx,
 		client_id: ibc::core::ics24_host::identifier::ClientId,
 		client_state: Self::ClientState,
 		client_msg: Self::ClientMessage,
 	) -> Result<(), Ics02ClientError> {
-		todo!()
+		client_state.verify_client_message(self, &client_id, client_msg)
 	}
 
 	fn update_state<Ctx: ibc::core::ics26_routing::context::ReaderContext>(
 		&self,
-		ctx: &Ctx,
-		client_id: ibc::core::ics24_host::identifier::ClientId,
+		_ctx: &Ctx,
+		_client_id: ibc::core::ics24_host::identifier::ClientId,
 		client_state: Self::ClientState,
 		client_msg: Self::ClientMessage,
 	) -> Result<
 		(Self::ClientState, ibc::core::ics02_client::client_def::ConsensusUpdateResult<Ctx>),
 		Ics02ClientError,
 	> {
-		todo!()
+    let header = match client_msg {
+			ClientMessage::Header(header) => header,
+			_ => unreachable!("02-client will check for Header before calling update_state; qed"),
+		};
+		let header_consensus_state = ClientConsensusState::from(header.clone());
+		let cs = Ctx::AnyConsensusState::wrap(&header_consensus_state).ok_or_else(|| {
+			Error::UnknownConsensusStateType { description: "Ctx::AnyConsensusState".to_string() }
+		})?;
+		Ok((client_state.with_header(&header), ConsensusUpdateResult::Single(cs)))
 	}
 
 	fn update_state_on_misbehaviour(
 		&self,
-		client_state: Self::ClientState,
-		client_msg: Self::ClientMessage,
+		_client_state: Self::ClientState,
+		_client_msg: Self::ClientMessage,
 	) -> Result<Self::ClientState, Ics02ClientError> {
 		todo!()
 	}
 
 	fn check_for_misbehaviour<Ctx: ibc::core::ics26_routing::context::ReaderContext>(
 		&self,
-		ctx: &Ctx,
-		client_id: ibc::core::ics24_host::identifier::ClientId,
-		client_state: Self::ClientState,
-		client_msg: Self::ClientMessage,
+		_ctx: &Ctx,
+		_client_id: ibc::core::ics24_host::identifier::ClientId,
+		_client_state: Self::ClientState,
+		_client_msg: Self::ClientMessage,
 	) -> Result<bool, Ics02ClientError> {
 		todo!()
 	}
 
 	fn verify_upgrade_and_update_state<Ctx: ibc::core::ics26_routing::context::ReaderContext>(
 		&self,
-		ctx: &Ctx,
-		client_id: ibc::core::ics24_host::identifier::ClientId,
-		old_client_state: &Self::ClientState,
-		upgrade_client_state: &Self::ClientState,
-		upgrade_consensus_state: &Self::ConsensusState,
-		proof_upgrade_client: ibc::prelude::Vec<u8>,
-		proof_upgrade_consensus_state: ibc::prelude::Vec<u8>,
+		_ctx: &Ctx,
+		_client_id: ibc::core::ics24_host::identifier::ClientId,
+		_old_client_state: &Self::ClientState,
+		_upgrade_client_state: &Self::ClientState,
+		_upgrade_consensus_state: &Self::ConsensusState,
+		_proof_upgrade_client: ibc::prelude::Vec<u8>,
+		_proof_upgrade_consensus_state: ibc::prelude::Vec<u8>,
 	) -> Result<
 		(Self::ClientState, ibc::core::ics02_client::client_def::ConsensusUpdateResult<Ctx>),
 		Ics02ClientError,
 	> {
 		// TODO: tendermint verify_upgrade_and_update_state
-		Err(Ics02Error::implementation_specific("Not implemented".to_string()))
+		Err(Ics02ClientError::implementation_specific("Not implemented".to_string()))
 	}
 
 	fn check_substitute_and_update_state<Ctx: ibc::core::ics26_routing::context::ReaderContext>(
 		&self,
-		ctx: &Ctx,
-		subject_client_id: ibc::core::ics24_host::identifier::ClientId,
-		substitute_client_id: ibc::core::ics24_host::identifier::ClientId,
-		old_client_state: Self::ClientState,
-		substitute_client_state: Self::ClientState,
+		_ctx: &Ctx,
+		_subject_client_id: ibc::core::ics24_host::identifier::ClientId,
+		_substitute_client_id: ibc::core::ics24_host::identifier::ClientId,
+		_old_client_state: Self::ClientState,
+		_substitute_client_state: Self::ClientState,
 	) -> Result<
 		(Self::ClientState, ibc::core::ics02_client::client_def::ConsensusUpdateResult<Ctx>),
 		Ics02ClientError,
 	> {
 		// TODO: tendermint check_substitute_and_update_state
-		Err(Ics02Error::implementation_specific("Not implemented".to_string()))
+		Err(Ics02ClientError::implementation_specific("Not implemented".to_string()))
 	}
 
 	fn verify_client_consensus_state<Ctx: ibc::core::ics26_routing::context::ReaderContext>(
@@ -322,3 +340,17 @@ fn verify_delay_passed<Ctx: ReaderContext, PK: PubKey>(
 	)
 	.map_err(|e| e.into())
 }
+
+impl<PK: PubKey> Verifier<PK> for GuestClient<PK> {
+	fn verify(&self, message: &[u8], pubkey: &PK, signature: &PK::Signature) -> bool {
+		let pubkey_in_bytes = pubkey.to_vec();
+		let pubkey = ed25519_consensus::VerificationKey::try_from(&pubkey_in_bytes[..])
+			.map_err(|_| VerifyError::MalformedPublicKey)
+			.unwrap();
+		let sig = ed25519_consensus::Signature::try_from(&signature.to_vec()[..])
+			.map_err(|_| VerifyError::MalformedSignature)
+			.unwrap();
+		pubkey.verify(&sig, message).map_or(false, |_| true)
+	}
+}
+

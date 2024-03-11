@@ -1,13 +1,16 @@
+use core::time::Duration;
+
 use crate::error::Error;
-use alloc::string::{String, ToString};
+use alloc::{string::{String, ToString}, vec::Vec};
 use ibc::{
 	core::{
-		ics02_client::{error::Error as Ics02ClientError, height::Height},
-		ics24_host::identifier::ClientId,
+		ics02_client::{error::Error as Ics02ClientError, height::Height}, ics23_commitment::specs::ProofSpecs, ics24_host::identifier::ClientId
 	},
 	timestamp::Timestamp,
 };
 use lib::hash::CryptoHash;
+use serde::{Deserialize, Serialize};
+use tendermint_proto::Protobuf;
 
 use crate::{client_def::GuestClient, proto, CLIENT_TYPE};
 
@@ -37,6 +40,8 @@ pub struct ClientState<PK> {
 
 	_ph: core::marker::PhantomData<PK>,
 }
+
+// impl<PK: guestchain::PubKey> Protobuf<crate::proto::ClientState> for ClientState<PK> {}
 
 impl<PK: guestchain::PubKey> ClientState<PK> {
 	pub fn new(
@@ -133,10 +138,17 @@ impl<PK: guestchain::PubKey> ClientState<PK> {
 	}
 }
 
+#[derive(Clone, Debug, PartialEq, Eq, Serialize, Deserialize)]
+pub struct UpgradeOptions {
+	pub unbonding_period: Duration,
+	pub proof_specs: ProofSpecs,
+	pub upgrade_path: Vec<String>,
+}
+
 impl<PK: guestchain::PubKey> ibc::core::ics02_client::client_state::ClientState
 	for ClientState<PK>
 {
-	type UpgradeOptions = u64;
+	type UpgradeOptions = UpgradeOptions;
 
 	type ClientDef = GuestClient<PK>;
 

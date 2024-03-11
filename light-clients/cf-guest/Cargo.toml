@@ -14,6 +14,8 @@ derive_more = { version = "0.99", features = ["from"]  }
 # ibc-primitives.workspace = true
 # ibc-proto.workspace = true
 prost = { version = "0.11" ,features = ["prost-derive"] }
+ed25519-consensus = { version = "2", default-features = false }
+serde = { version = "1.0", default-features = false, features = ["derive"] }
 
 # New IBC
 ibc-core-client-types = { git = "https://github.com/cosmos/ibc-rs", rev = "6dd3c6465e594d4c177f21724dd896a15e8f3634", default-features = false }
@@ -24,6 +26,7 @@ ibc-core-host-types = { git = "https://github.com/cosmos/ibc-rs", rev = "6dd3c64
 ibc = { path = "../../ibc/modules", default-features = false }
 ibc-proto = { path = "../../ibc/proto", default-features = false }
 ibc-primitives = { path = "../../contracts/pallet-ibc/primitives" }
+ibc-derive = { path = "../../ibc/derive" }
 
 tendermint-proto = { git = "https://github.com/informalsystems/tendermint-rs", rev = "e81f7bf23d63ffbcd242381d1ce5e35da3515ff1", default-features = false }
 

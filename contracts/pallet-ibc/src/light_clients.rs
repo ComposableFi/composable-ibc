@@ -54,21 +54,68 @@ use tendermint::{
 		Sha256 as TendermintSha256,
 	},
 	merkle::{Hash, MerkleHash, NonIncremental, HASH_SIZE},
-	PublicKey, Signature,
+	PublicKey, Signature as TmSignature,
 };
 use tendermint_proto::Protobuf;
 
-pub const GUEST_CLIENT_STATE_TYPE_URL: &str = "composable.finance/lightclients.guest.v1.ClientState";
-pub const GUEST_CONSENSUS_STATE_TYPE_URL: &str = "composable.finance/lightclients.guest.v1.ConsensusState";
+pub const GUEST_CLIENT_STATE_TYPE_URL: &str =
+	"composable.finance/lightclients.guest.v1.ClientState";
+pub const GUEST_CONSENSUS_STATE_TYPE_URL: &str =
+	"composable.finance/lightclients.guest.v1.ConsensusState";
 pub const GUEST_HEADER_TYPE_URL: &str = "composable.finance/lightclients.guest.v1.Header";
 
 #[derive(Clone, Default, PartialEq, Debug, Eq)]
 pub struct HostFunctionsManager;
 
 /// Ed25519 public key (a.k.a. verifying key).
-#[derive(Clone, Debug, Eq, Hash, PartialEq)]
+#[derive(
+	Clone,
+	Debug,
+	Eq,
+	Hash,
+	PartialEq,
+	borsh::BorshSerialize,
+	borsh::BorshDeserialize,
+	Ord,
+	PartialOrd,
+)]
 #[repr(transparent)]
-pub struct PubKey(ed25519_dalek::VerifyingKey);
+pub struct PubKey([u8; 32]);
+
+impl PubKey {
+	pub const LENGTH: usize = 32;
+}
+
+/// A Ed25519 signature of a guest block.
+#[derive(
+	Clone, PartialEq, Eq, PartialOrd, Ord, Hash, borsh::BorshSerialize, borsh::BorshDeserialize, Debug
+)]
+#[repr(transparent)]
+pub struct Signature([u8; 64]);
+
+impl Signature {
+	pub const LENGTH: usize = 64;
+}
+
+impl guestchain::Signature for Signature {
+	fn to_vec(&self) -> alloc::vec::Vec<u8> {
+		self.0.to_vec()
+	}
+	fn from_bytes(bytes: &[u8]) -> Result<Self, guestchain::BadFormat> {
+		Ok(Self(bytes.try_into()?))
+	}
+}
+
+impl guestchain::PubKey for PubKey {
+	type Signature = Signature;
+
+	fn to_vec(&self) -> alloc::vec::Vec<u8> {
+		self.0.to_vec()
+	}
+	fn from_bytes(bytes: &[u8]) -> Result<Self, guestchain::BadFormat> {
+		Ok(Self(bytes.try_into()?))
+	}
+}
 
 impl ics23::HostFunctionsProvider for HostFunctionsManager {
 	fn sha2_256(message: &[u8]) -> [u8; 32] {
@@ -116,7 +163,7 @@ impl Verifier for HostFunctionsManager {
 	fn verify(
 		pubkey: PublicKey,
 		msg: &[u8],
-		signature: &Signature,
+		signature: &TmSignature,
 	) -> Result<(), TendermintCryptoError> {
 		let signature = sp_core::ed25519::Signature::from_slice(signature.as_bytes())
 			.ok_or(TendermintCryptoError::MalformedSignature)?;
@@ -228,6 +275,7 @@ pub enum AnyClient {
 	Beefy(ics11_beefy::client_def::BeefyClient<HostFunctionsManager>),
 	Tendermint(ics07_tendermint::client_def::TendermintClient<HostFunctionsManager>),
 	Wasm(ics08_wasm::client_def::WasmClient<AnyClient, AnyClientState, AnyConsensusState>),
+	Guest(cf_guest::client_def::GuestClient<PubKey>),
 	#[cfg(any(test, feature = "testing"))]
 	Mock(ibc::mock::client_def::MockClient),
 }
@@ -238,6 +286,7 @@ pub enum AnyUpgradeOptions {
 	Beefy(ics11_beefy::client_state::UpgradeOptions),
 	Tendermint(ics07_tendermint::client_state::UpgradeOptions),
 	Wasm(Box<Self>),
+	Guest(cf_guest::client::UpgradeOptions),
 	#[cfg(any(test, feature = "testing"))]
 	Mock(()),
 }
@@ -309,10 +358,8 @@ impl AnyClientState {
 			AnyClientState::Beefy(client_state) => client_state.latest_height(),
 			AnyClientState::Tendermint(client_state) => client_state.latest_height(),
 			AnyClientState::Wasm(client_state) => client_state.latest_height(),
-			AnyClientState::Guest(client_state) => ibc::Height::new(
-				0,
-				u64::from(client_state.latest_height),
-			),
+			AnyClientState::Guest(client_state) =>
+				ibc::Height::new(0, u64::from(client_state.latest_height)),
 			#[cfg(any(test, feature = "testing"))]
 			AnyClientState::Mock(client_state) => client_state.latest_height(),
 		}
@@ -357,8 +404,8 @@ pub enum AnyClientMessage {
 	Tendermint(ics07_tendermint::client_message::ClientMessage),
 	#[ibc(proto_url = "WASM_CLIENT_MESSAGE_TYPE_URL")]
 	Wasm(ics08_wasm::client_message::ClientMessage<Self>),
-	// #[ibc(proto_url = "GUEST_CLIENT_MESSAGE_TYPE_URL")]
-	// Guest(cf_guest::ClientMessage<PubKey>),
+	#[ibc(proto_url = "GUEST_CLIENT_MESSAGE_TYPE_URL")]
+	Guest(cf_guest::ClientMessage<PubKey>),
 	#[cfg(any(test, feature = "testing"))]
 	#[ibc(proto_url = "MOCK_CLIENT_MESSAGE_TYPE_URL")]
 	Mock(ibc::mock::header::MockClientMessage),
@@ -468,6 +515,7 @@ impl From<AnyClientMessage> for Any {
 				type_url: TENDERMINT_CLIENT_MESSAGE_TYPE_URL.to_string(),
 				value: msg.encode_vec().expect("encode_vec failed"),
 			},
+			AnyClientMessage::Guest(_) => todo!(),
 
 			#[cfg(any(test, feature = "testing"))]
 			AnyClientMessage::Mock(_msg) => panic!("MockHeader can't be serialized"),

@@ -8,8 +8,8 @@ use alloc::string::ToString;
 
 use ibc_proto::google::protobuf::Any;
 
-mod client;
-mod client_def;
+pub mod client;
+pub mod client_def;
 mod client_impls;
 mod consensus;
 pub mod error;

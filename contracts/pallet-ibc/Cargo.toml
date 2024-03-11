@@ -33,6 +33,7 @@ derive_more = { version = "0.99.17", default-features = false, features = [
 	"from",
 	"display",
 ] }
+borsh = { version = "0.10.3", default-features = false }
 # substrate
 frame-support = { git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.43", default-features = false }
 frame-system = { git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.43", default-features = false }
