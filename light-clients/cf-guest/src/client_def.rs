@@ -1,15 +1,25 @@
 use core::marker::PhantomData;
 
+use alloc::vec::Vec;
 use guestchain::{PubKey, Verifier};
 use ibc::core::{
-	ics02_client::{client_def::ClientDef, error::Error as Ics02ClientError},
+	ics02_client::{
+		client_consensus::ConsensusState, client_def::ClientDef,
+		client_state::ClientState as OtherClientState, error::Error as Ics02ClientError,
+	},
 	ics23_commitment::commitment::CommitmentPrefix,
-	ics24_host::path::{self, AcksPath},
+	ics24_host::path::{
+		self, AcksPath, ChannelEndsPath, ClientConsensusStatePath, ClientStatePath,
+		CommitmentsPath, ConnectionsPath, ReceiptsPath, SeqRecvsPath,
+	},
 	ics26_routing::context::ReaderContext,
 };
+use prost::Message;
+use tendermint_proto::Protobuf;
 
 use crate::{
-	error::Error, proof::verify, ClientMessage, ClientState, CommonContext, ConsensusState,
+	error::Error, proof::verify, ClientMessage, ClientState, CommonContext,
+	ConsensusState as ClientConsensusState,
 };
 
 #[derive(Clone, Debug, PartialEq, Eq)]
@@ -28,7 +38,7 @@ where
 {
 	type ClientMessage = ClientMessage<PK>;
 	type ClientState = ClientState<PK>;
-	type ConsensusState = ConsensusState;
+	type ConsensusState = ClientConsensusState;
 
 	fn verify_client_message<Ctx: ibc::core::ics26_routing::context::ReaderContext>(
 		&self,
@@ -84,7 +94,8 @@ where
 		(Self::ClientState, ibc::core::ics02_client::client_def::ConsensusUpdateResult<Ctx>),
 		Ics02ClientError,
 	> {
-		todo!()
+		// TODO: tendermint verify_upgrade_and_update_state
+		Err(Ics02Error::implementation_specific("Not implemented".to_string()))
 	}
 
 	fn check_substitute_and_update_state<Ctx: ibc::core::ics26_routing::context::ReaderContext>(
@@ -98,67 +109,92 @@ where
 		(Self::ClientState, ibc::core::ics02_client::client_def::ConsensusUpdateResult<Ctx>),
 		Ics02ClientError,
 	> {
-		todo!()
+		// TODO: tendermint check_substitute_and_update_state
+		Err(Ics02Error::implementation_specific("Not implemented".to_string()))
 	}
 
 	fn verify_client_consensus_state<Ctx: ibc::core::ics26_routing::context::ReaderContext>(
 		&self,
-		ctx: &Ctx,
+		_ctx: &Ctx,
 		client_state: &Self::ClientState,
 		height: ibc::Height,
-		prefix: &ibc::core::ics23_commitment::commitment::CommitmentPrefix,
+		_prefix: &ibc::core::ics23_commitment::commitment::CommitmentPrefix,
 		proof: &ibc::core::ics23_commitment::commitment::CommitmentProofBytes,
 		root: &ibc::core::ics23_commitment::commitment::CommitmentRoot,
 		client_id: &ibc::core::ics24_host::identifier::ClientId,
 		consensus_height: ibc::Height,
 		expected_consensus_state: &Ctx::AnyConsensusState,
 	) -> Result<(), Ics02ClientError> {
-		todo!()
+		client_state.verify_height(client_id, height)?;
+
+		let connection_path = ClientConsensusStatePath {
+			client_id: client_id.clone(),
+			epoch: consensus_height.revision_number,
+			height: consensus_height.revision_height,
+		};
+		let path = path::Path::ClientConsensusState(connection_path);
+		let value = expected_consensus_state.encode_to_vec().map_err(Ics02ClientError::encode)?;
+		verify(&CommitmentPrefix::default(), proof, root, path, Some(&value)).map_err(|e| e.into())
 	}
 
 	fn verify_connection_state<Ctx: ibc::core::ics26_routing::context::ReaderContext>(
 		&self,
-		ctx: &Ctx,
+		_ctx: &Ctx,
 		client_id: &ibc::core::ics24_host::identifier::ClientId,
 		client_state: &Self::ClientState,
 		height: ibc::Height,
-		prefix: &ibc::core::ics23_commitment::commitment::CommitmentPrefix,
+		_prefix: &ibc::core::ics23_commitment::commitment::CommitmentPrefix,
 		proof: &ibc::core::ics23_commitment::commitment::CommitmentProofBytes,
 		root: &ibc::core::ics23_commitment::commitment::CommitmentRoot,
 		connection_id: &ibc::core::ics24_host::identifier::ConnectionId,
 		expected_connection_end: &ibc::core::ics03_connection::connection::ConnectionEnd,
 	) -> Result<(), Ics02ClientError> {
-		todo!()
+		client_state.verify_height(client_id, height)?;
+
+		let connection_path = ConnectionsPath(connection_id.clone());
+		let path = path::Path::Connections(connection_path);
+		let value = expected_connection_end.encode_vec().map_err(Ics02ClientError::encode)?;
+		verify(&CommitmentPrefix::default(), proof, root, path, Some(&value)).map_err(|e| e.into())
 	}
 
 	fn verify_channel_state<Ctx: ibc::core::ics26_routing::context::ReaderContext>(
 		&self,
-		ctx: &Ctx,
+		_ctx: &Ctx,
 		client_id: &ibc::core::ics24_host::identifier::ClientId,
 		client_state: &Self::ClientState,
 		height: ibc::Height,
-		prefix: &ibc::core::ics23_commitment::commitment::CommitmentPrefix,
+		_prefix: &ibc::core::ics23_commitment::commitment::CommitmentPrefix,
 		proof: &ibc::core::ics23_commitment::commitment::CommitmentProofBytes,
 		root: &ibc::core::ics23_commitment::commitment::CommitmentRoot,
 		port_id: &ibc::core::ics24_host::identifier::PortId,
 		channel_id: &ibc::core::ics24_host::identifier::ChannelId,
 		expected_channel_end: &ibc::core::ics04_channel::channel::ChannelEnd,
 	) -> Result<(), Ics02ClientError> {
-		todo!()
+		client_state.verify_height(client_id, height)?;
+
+		let channel_end_path = ChannelEndsPath(port_id.clone(), *channel_id);
+		let path = path::Path::ChannelEnds(channel_end_path);
+		let value = expected_channel_end.encode_vec().map_err(Ics02ClientError::encode)?;
+		verify(&CommitmentPrefix::default(), proof, root, path, Some(&value)).map_err(|e| e.into())
 	}
 
 	fn verify_client_full_state<Ctx: ibc::core::ics26_routing::context::ReaderContext>(
 		&self,
-		ctx: &Ctx,
+		_ctx: &Ctx,
 		client_state: &Self::ClientState,
 		height: ibc::Height,
-		prefix: &ibc::core::ics23_commitment::commitment::CommitmentPrefix,
+		_prefix: &ibc::core::ics23_commitment::commitment::CommitmentPrefix,
 		proof: &ibc::core::ics23_commitment::commitment::CommitmentProofBytes,
 		root: &ibc::core::ics23_commitment::commitment::CommitmentRoot,
 		client_id: &ibc::core::ics24_host::identifier::ClientId,
 		expected_client_state: &Ctx::AnyClientState,
 	) -> Result<(), Ics02ClientError> {
-		todo!()
+		client_state.verify_height(client_id, height)?;
+
+		let client_state_path = ClientStatePath(client_id.clone());
+		let path = path::Path::ClientState(client_state_path);
+		let value = expected_client_state.encode_to_vec().map_err(Ics02ClientError::encode)?;
+		verify(&CommitmentPrefix::default(), proof, root, path, Some(&value)).map_err(|e| e.into())
 	}
 
 	fn verify_packet_data<Ctx: ibc::core::ics26_routing::context::ReaderContext>(
@@ -175,7 +211,14 @@ where
 		sequence: ibc::core::ics04_channel::packet::Sequence,
 		commitment: ibc::core::ics04_channel::commitment::PacketCommitment,
 	) -> Result<(), Ics02ClientError> {
-		todo!()
+		client_state.verify_height(client_id, height)?;
+		verify_delay_passed::<Ctx, PK>(ctx, height, connection_end)?;
+
+		let commitment_path =
+			CommitmentsPath { port_id: port_id.clone(), channel_id: *channel_id, sequence };
+		let path = path::Path::Commitments(commitment_path);
+		verify(&CommitmentPrefix::default(), proof, root, path, Some(&commitment.into_vec()))
+			.map_err(|e| e.into())
 	}
 
 	fn verify_packet_acknowledgement<Ctx: ibc::core::ics26_routing::context::ReaderContext>(
@@ -215,7 +258,15 @@ where
 		channel_id: &ibc::core::ics24_host::identifier::ChannelId,
 		sequence: ibc::core::ics04_channel::packet::Sequence,
 	) -> Result<(), Ics02ClientError> {
-		todo!()
+		client_state.verify_height(client_id, height)?;
+		verify_delay_passed::<Ctx, PK>(ctx, height, connection_end)?;
+
+		let mut seq_bytes = Vec::new();
+		u64::from(sequence).encode(&mut seq_bytes).expect("buffer size too small");
+		let seq_recv_path = SeqRecvsPath(port_id.clone(), channel_id.clone());
+		let path = path::Path::SeqRecvs(seq_recv_path);
+		verify(&CommitmentPrefix::default(), proof, root, path, Some(&seq_bytes))
+			.map_err(|e| e.into())
 	}
 
 	fn verify_packet_receipt_absence<Ctx: ibc::core::ics26_routing::context::ReaderContext>(
@@ -231,7 +282,13 @@ where
 		channel_id: &ibc::core::ics24_host::identifier::ChannelId,
 		sequence: ibc::core::ics04_channel::packet::Sequence,
 	) -> Result<(), Ics02ClientError> {
-		todo!()
+		client_state.verify_height(client_id, height)?;
+		verify_delay_passed::<Ctx, PK>(ctx, height, connection_end)?;
+
+		let receipt_path =
+			ReceiptsPath { port_id: port_id.clone(), channel_id: *channel_id, sequence };
+		let path = path::Path::Receipts(receipt_path);
+		verify(&CommitmentPrefix::default(), proof, root, path, None).map_err(|e| e.into())
 	}
 }
 
