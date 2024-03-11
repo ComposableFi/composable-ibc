@@ -284,7 +284,7 @@ impl Header {
 			});
 
 		// signed votes haven't
-		if voting_power_amount_validator_size * 2 <= total_voting_power * 3 {
+		if voting_power_amount_validator_size * 3 <= total_voting_power * 2 {
 			return Err(Error::validation("voting power is not > 2/3 + 1".to_string()))
 		}
 
