@@ -36,6 +36,7 @@ use ibc::{
 };
 use ibc_proto::google::protobuf::Any;
 use std::{future::Future, thread::sleep, time::Duration};
+use ibc::core::ics02_client::client_consensus::ConsensusState;
 
 pub async fn timeout_future<T: Future>(future: T, secs: u64, reason: String) -> T::Output {
 	let duration = Duration::from_secs(secs);
@@ -89,6 +90,7 @@ pub async fn create_clients(
 
 	let (client_state_a, cs_state_a) = chain_a.initialize_client_state().await?;
 
+	log::info!("This is timestamp of cs state {:?}", cs_state_a.timestamp());
 	let msg = MsgCreateAnyClient::<LocalClientTypes> {
 		client_state: client_state_a,
 		consensus_state: cs_state_a,

@@ -485,6 +485,10 @@ pub struct ClientState {
 pub struct ConsensusState {
 	#[prost(bytes = "vec", tag = "1")]
 	pub data: ::prost::alloc::vec::Vec<u8>,
+	/// timestamp that corresponds to the block height in which the ConsensusState
+	/// was stored.
+	#[prost(uint64, tag = "2")]
+	pub timestamp: u64,
 }
 /// Wasm light client Client Message
 #[allow(clippy::derive_partial_eq_without_eq)]

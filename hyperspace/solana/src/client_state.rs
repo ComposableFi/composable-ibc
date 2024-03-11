@@ -57,7 +57,7 @@ pub fn convert_new_client_state_to_old(
 					Some(Height::new(height.revision_number(), height.revision_height()))
 				}),
 			}),
-			solana_ibc::client_state::AnyClientState::Guest(_) => unimplemented!(),
+		solana_ibc::client_state::AnyClientState::Guest(_) => unimplemented!(),
 	}
 }
 
@@ -76,12 +76,18 @@ pub fn convert_old_client_state_to_new(
 				trusting_period: Some(cs.trusting_period.into()),
 				unbonding_period: Some(cs.unbonding_period.into()),
 				max_clock_drift: Some(cs.max_clock_drift.into()),
-				frozen_height: cs.frozen_height.and_then(|height| {
+				frozen_height: cs.frozen_height.map_or(
 					Some(ibc_proto_new::ibc::core::client::v1::Height {
-						revision_number: height.revision_number,
-						revision_height: height.revision_height,
-					})
-				}),
+						revision_height: 0,
+						revision_number: 0,
+					}),
+					|height| {
+						Some(ibc_proto_new::ibc::core::client::v1::Height {
+							revision_number: height.revision_number,
+							revision_height: height.revision_height,
+						})
+					},
+				),
 				latest_height: Some(ibc_proto_new::ibc::core::client::v1::Height {
 					revision_number: cs.latest_height.revision_number,
 					revision_height: cs.latest_height.revision_height,

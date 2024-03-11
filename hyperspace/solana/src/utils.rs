@@ -1,12 +1,12 @@
 use anchor_client::solana_sdk::{
 	ed25519_instruction::SIGNATURE_OFFSETS_SERIALIZED_SIZE, instruction::Instruction,
 };
+use sigverify::ed25519_program::SignatureOffsets;
 use tendermint_light_client_verifier_new::types::Commit;
 use tendermint_new::{
 	block::CommitSig,
 	vote::{ValidatorIndex, Vote},
 };
-use sigverify::ed25519_program::SignatureOffsets;
 
 pub fn non_absent_vote(
 	commit_sig: &CommitSig,

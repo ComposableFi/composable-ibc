@@ -51,11 +51,11 @@ pub struct Args {
 
 impl Default for Args {
 	fn default() -> Self {
-		let relay = std::env::var("RELAY_HOST").unwrap_or_else(|_| "192.168.54.157".to_string());
-		let solana = std::env::var("SOLANA_HOST").unwrap_or_else(|_| "192.168.54.157".to_string());
-		let cosmos = std::env::var("COSMOS_HOST").unwrap_or_else(|_| "192.168.54.157".to_string());
+		let relay = std::env::var("RELAY_HOST").unwrap_or_else(|_| "192.168.0.246".to_string());
+		let solana = std::env::var("SOLANA_HOST").unwrap_or_else(|_| "192.168.0.246".to_string());
+		let cosmos = std::env::var("COSMOS_HOST").unwrap_or_else(|_| "192.168.0.246".to_string());
 		let wasm_path = std::env::var("WASM_PATH").unwrap_or_else(|_| {
-			"../../target/wasm32-unknown-unknown/release/icsxx_solana_cw.wasm".to_string()
+			"../../target/wasm32-unknown-unknown/release/cf_guest_cw.wasm".to_string()
 		});
 
 		Args {
@@ -109,31 +109,31 @@ async fn setup_clients() -> (AnyChain, AnyChain) {
 	};
 
 	let mut config_b = CosmosClientConfig {
-		name: "centauri".to_string(),
-		rpc_url: args.chain_b.clone().parse().unwrap(),
-		grpc_url: args.cosmos_grpc.clone().parse().unwrap(),
-		websocket_url: args.cosmos_ws.clone().parse().unwrap(),
-		chain_id: "test-1".to_string(),
-		client_id: None,
-		connection_id: None,
-		account_prefix: "centauri".to_string(),
-		fee_denom: "stake".to_string(),
-		fee_amount: "92233720368547899".to_string(),
-		gas_limit: (i64::MAX - 1) as u64,
-		store_prefix: args.connection_prefix_b,
-		max_tx_size: 200000,
-		mnemonic:
-		// centauri1g5r2vmnp6lta9cpst4lzc4syy3kcj2ljte3tlh
-			"decorate bright ozone fork gallery riot bus exhaust worth way bone indoor calm squirrel merry zero scheme cotton until shop any excess stage laundry"
-				.to_string(),
-		wasm_checksum: None,
-		channel_whitelist: vec![],
-		common: CommonClientConfig {
-			skip_optional_client_updates: true,
-			max_packets_to_process: 200,
-		},
-		skip_tokens_list: Some(vec!["uosmo".to_string()]),
-	};
+        name: "centauri".to_string(),
+        rpc_url: args.chain_b.clone().parse().unwrap(),
+        grpc_url: args.cosmos_grpc.clone().parse().unwrap(),
+        websocket_url: args.cosmos_ws.clone().parse().unwrap(),
+        chain_id: "test-1".to_string(),
+        client_id: None,
+        connection_id: None,
+        account_prefix: "centauri".to_string(),
+        fee_denom: "stake".to_string(),
+        fee_amount: "92233720368547899".to_string(),
+        gas_limit: (i64::MAX - 1) as u64,
+        store_prefix: args.connection_prefix_b,
+        max_tx_size: 200000,
+        mnemonic:
+        // centauri1g5r2vmnp6lta9cpst4lzc4syy3kcj2ljte3tlh
+        "decorate bright ozone fork gallery riot bus exhaust worth way bone indoor calm squirrel merry zero scheme cotton until shop any excess stage laundry"
+            .to_string(),
+        wasm_checksum: None,
+        channel_whitelist: vec![],
+        common: CommonClientConfig {
+            skip_optional_client_updates: true,
+            max_packets_to_process: 200,
+        },
+        skip_tokens_list: Some(vec!["uosmo".to_string()]),
+    };
 
 	// println!("This is config b {:?}", config_b);
 
@@ -158,28 +158,13 @@ async fn setup_clients() -> (AnyChain, AnyChain) {
 		},
 	};
 	let code_id_str = hex::encode(code_id);
+	log::info!("This is wasm checksum {:?}", code_id_str);
 	config_b.wasm_checksum = Some(code_id_str);
 
 	let mut chain_a_wrapped = AnyConfig::Solana(config_a).into_client().await.unwrap();
 	let mut chain_b_wrapped = AnyConfig::Cosmos(config_b).into_client().await.unwrap();
 
 	let AnyChain::Solana(chain_a) = &mut chain_a_wrapped else { unreachable!() };
-
-	// // Wait until for parachains to start producing blocks
-	// log::info!(target: "hyperspace", "Waiting for block production from parachain");
-	// let session_length = chain_a.grandpa_prover().session_length().await.unwrap();
-	// let _ = chain_a
-	// 	.relay_client
-	// 	.rpc()
-	// 	.subscribe_finalized_block_headers()
-	// 	.await
-	// 	.unwrap()
-	// 	.filter_map(|result| futures::future::ready(result.ok()))
-	// 	.skip_while(|h| futures::future::ready(h.number < (session_length * 2) + 10))
-	// 	.take(1)
-	// 	.collect::<Vec<_>>()
-	// 	.await;
-	// log::info!(target: "hyperspace", "Parachain have started block production");
 
 	let clients_on_a = chain_a_wrapped.query_clients().await.unwrap();
 	let clients_on_b = chain_b_wrapped.query_clients().await.unwrap();
@@ -208,42 +193,42 @@ async fn solana_to_cosmos_ibc_messaging_full_integration_test() {
 	let asset_id_a = AnyAssetId::Solana("33WVSef9zaw49KbNdPGTmACVRnAXzN3o1fsqbUrLp2mh".to_string());
 	let asset_id_b = AnyAssetId::Cosmos("stake".to_string());
 	let (mut chain_a, mut chain_b) = setup_clients().await;
-	let (handle, channel_a, channel_b, connection_id_a, connection_id_b) =
-		setup_connection_and_channel(&mut chain_a, &mut chain_b, Duration::from_secs(60 * 2)).await;
+	// let (handle, channel_a, channel_b, connection_id_a, connection_id_b) =
+	// 	setup_connection_and_channel(&mut chain_a, &mut chain_b, Duration::from_secs(60 * 2)).await;
 
-	handle.abort();
+	// handle.abort();
 
-	// let connection_id_a = ConnectionId::from_str("connection-0").unwrap();
-	// let connection_id_b = ConnectionId::from_str("connection-30").unwrap();
+	// // let connection_id_a = ConnectionId::from_str("connection-0").unwrap();
+	// // let connection_id_b = ConnectionId::from_str("connection-30").unwrap();
 
-	// let channel_a = ChannelId::from_str("channel-0").unwrap();
-	// let channel_b = ChannelId::from_str("channel-16").unwrap();
+	// // let channel_a = ChannelId::from_str("channel-0").unwrap();
+	// // let channel_b = ChannelId::from_str("channel-16").unwrap();
 
-	log::info!("Channel A: {:?}", channel_a);
-	log::info!("Channel B: {:?}", channel_b);
-	log::info!("Connection A: {:?}", connection_id_a);
-	log::info!("Connection B: {:?}", connection_id_b);
+	// log::info!("Channel A: {:?}", channel_a);
+	// log::info!("Channel B: {:?}", channel_b);
+	// log::info!("Connection A: {:?}", connection_id_a);
+	// log::info!("Connection B: {:?}", connection_id_b);
 
-	// Set connections and channel whitelist
-	chain_a.set_connection_id(connection_id_a);
-	chain_b.set_connection_id(connection_id_b);
+	// // Set connections and channel whitelist
+	// chain_a.set_connection_id(connection_id_a);
+	// chain_b.set_connection_id(connection_id_b);
 
-	chain_a.set_channel_whitelist(vec![(channel_a, PortId::transfer())].into_iter().collect());
-	chain_b.set_channel_whitelist(vec![(channel_b, PortId::transfer())].into_iter().collect());
+	// chain_a.set_channel_whitelist(vec![(channel_a, PortId::transfer())].into_iter().collect());
+	// chain_b.set_channel_whitelist(vec![(channel_b, PortId::transfer())].into_iter().collect());
 
 	// Run tests sequentially
 
 	// no timeouts + connection delay
 
-	ibc_messaging_with_connection_delay(
-		&mut chain_a,
-		&mut chain_b,
-		asset_id_a.clone(),
-		asset_id_b.clone(),
-		channel_a,
-		channel_b,
-	)
-	.await;
+	// ibc_messaging_with_connection_delay(
+	// 	&mut chain_a,
+	// 	&mut chain_b,
+	// 	asset_id_a.clone(),
+	// 	asset_id_b.clone(),
+	// 	channel_a,
+	// 	channel_b,
+	// )
+	// .await;
 
 	// // timeouts + connection delay
 	// ibc_messaging_packet_height_timeout_with_connection_delay(

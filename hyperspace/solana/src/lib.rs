@@ -21,7 +21,6 @@ use tendermint::{Hash, Time};
 use tendermint_proto::Protobuf;
 use tokio::sync::mpsc::unbounded_channel;
 
-
 use anchor_client::{
 	solana_client::{
 		pubsub_client::PubsubClient,
@@ -74,6 +73,7 @@ use primitives::{
 	MisbehaviourHandler, UndeliveredType, UpdateType,
 };
 use std::{result::Result, sync::Arc};
+use lib::hash::CryptoHash;
 use tokio_stream::Stream;
 
 use solana_ibc::storage::{SequenceKind, Serialised};
@@ -635,7 +635,7 @@ deserialize client state"
 	) -> Result<(Height, ibc::timestamp::Timestamp), Self::Error> {
 		let rpc_client = self.rpc_client();
 		let chain = self.get_chain_storage().await;
-		let _height: u64 = chain.head().unwrap().block_height.into();
+		let height: u64 = chain.head().unwrap().block_height.into();
 		let slot = rpc_client.get_slot().await.map_err(|e| {
 			Error::RpcError(
 				serde_json::to_string(&e.kind.get_transaction_error().unwrap()).unwrap(),
@@ -646,8 +646,9 @@ deserialize client state"
 				serde_json::to_string(&e.kind.get_transaction_error().unwrap()).unwrap(),
 			)
 		})?;
+		log::info!("THis is the timestamp of solana {:?}", timestamp);
 		Ok((
-			Height::new(1, slot),
+			Height::new(0, height),
 			Timestamp::from_nanoseconds((timestamp * 10_i64.pow(9)).try_into().unwrap()).unwrap(),
 		))
 	}
@@ -1311,36 +1312,44 @@ deserialize client state"
 	> {
 		let latest_height_timestamp = self.latest_height_and_timestamp().await?;
 		println!("This is height on solana {:?}", latest_height_timestamp);
-		let client_state = TmClientState::new(
-			ChainId::from_string(&self.chain_id),
-			TrustThreshold::default(),
-			Duration::from_secs(64000),
-			Duration::from_secs(1814400),
-			Duration::new(15, 0),
-			latest_height_timestamp.0,
-			ProofSpecs::default(),
-			vec!["upgrade".to_string(), "upgradedIBCState".to_string()],
-		)
-		.map_err(|e| Error::from(format!("Invalid client state {e}")))?;
-		let timestamp_in_nano = latest_height_timestamp.1.nanoseconds();
-		let secs = timestamp_in_nano / 10_u64.pow(9);
-		let nano = timestamp_in_nano % 10_u64.pow(9);
-		let time =
-			Time::from_unix_timestamp(secs.try_into().unwrap(), nano.try_into().unwrap()).unwrap();
-		let client_state_in_bytes = borsh::to_vec(&timestamp_in_nano).unwrap();
-		let trie = self.get_trie().await;
-		let sub_trie = trie.get_subtrie(&borsh::to_vec(&1).unwrap()).unwrap();
-		println!("This is sub trie {:?}", sub_trie.len());
-		let consensus_state = TmConsensusState::new(client_state_in_bytes.into(), time, Hash::None);
-		// let mock_header = ibc::mock::header::MockHeader {
-		// 	height: ibc::Height::new(1, 1),
-		// 	timestamp: ibc::timestamp::Timestamp::from_nanoseconds(1).unwrap(),
-		// };
-		// let client_state = ibc::mock::client_state::MockClientState::new(mock_header.into());
-		// let consensus_state = ibc::mock::client_state::MockConsensusState::new(mock_header);
+		let chain = self.get_chain_storage().await;
+		let header = chain.head().unwrap().clone();
+		let blockhash = header.calc_hash();
+		let client_state = cf_guest::ClientState::new(
+			chain.genesis().unwrap(),
+			header.block_height,
+			64000 * 10_u64.pow(9),
+			header.epoch_id,
+			 false,
+		);
+		let consensus_state = cf_guest::ConsensusState {
+			block_hash,
+			timestamp_ns: header.timestamp_ns,
+		};
+		// let client_state = TmClientState::new(
+		// 	ChainId::from_string(&self.chain_id),
+		// 	TrustThreshold::default(),
+		// 	Duration::from_secs(64000),
+		// 	Duration::from_secs(1814400),
+		// 	Duration::new(15, 0),
+		// 	latest_height_timestamp.0,
+		// 	ProofSpecs::default(),
+		// 	vec!["upgrade".to_string(), "upgradedIBCState".to_string()],
+		// )
+		// .map_err(|e| Error::from(format!("Invalid client state {e}")))?;
+		// let timestamp_in_nano = latest_height_timestamp.1.nanoseconds();
+		// let secs = timestamp_in_nano / 10_u64.pow(9);
+		// let nano = timestamp_in_nano % 10_u64.pow(9);
+		// let time =
+		// 	Time::from_unix_timestamp(secs.try_into().unwrap(), nano.try_into().unwrap()).unwrap();
+		// let client_state_in_bytes = borsh::to_vec(&timestamp_in_nano).unwrap();
+		// let trie = self.get_trie().await;
+		// let sub_trie = trie.get_subtrie(&borsh::to_vec(&1).unwrap()).unwrap();
+		// println!("This is sub trie {:?} and time {:?}", sub_trie.len(), time);
+		// let consensus_state = TmConsensusState::new(client_state_in_bytes.into(), time, Hash::None);
 		Ok((
-			AnyClientState::Tendermint(client_state),
-			AnyConsensusState::Tendermint(consensus_state),
+			AnyClientState::Guest(client_state),
+			AnyConsensusState::Guest(consensus_state),
 		))
 	}
 

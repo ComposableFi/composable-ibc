@@ -1,4 +1,9 @@
 use alloc::{borrow::ToOwned, boxed::Box, format, string::ToString, vec::Vec};
+// use cf_guest::proto::{
+// 	ClientState::TYPE_URL as GUEST_CLIENT_STATE_TYPE_URL,
+// 	ConsensusState::TYPE_URL as GUEST_CONSENSUS_STATE_TYPE_URL,
+// 	Header::TYPE_URL as GUEST_HEADER_TYPE_URL,
+// };
 use frame_support::{
 	pallet_prelude::{StorageValue, ValueQuery},
 	traits::StorageInstance,
@@ -53,8 +58,17 @@ use tendermint::{
 };
 use tendermint_proto::Protobuf;
 
+pub const GUEST_CLIENT_STATE_TYPE_URL: &str = "composable.finance/lightclients.guest.v1.ClientState";
+pub const GUEST_CONSENSUS_STATE_TYPE_URL: &str = "composable.finance/lightclients.guest.v1.ConsensusState";
+pub const GUEST_HEADER_TYPE_URL: &str = "composable.finance/lightclients.guest.v1.Header";
+
 #[derive(Clone, Default, PartialEq, Debug, Eq)]
 pub struct HostFunctionsManager;
+
+/// Ed25519 public key (a.k.a. verifying key).
+#[derive(Clone, Debug, Eq, Hash, PartialEq)]
+#[repr(transparent)]
+pub struct PubKey(ed25519_dalek::VerifyingKey);
 
 impl ics23::HostFunctionsProvider for HostFunctionsManager {
 	fn sha2_256(message: &[u8]) -> [u8; 32] {
@@ -117,6 +131,7 @@ impl Verifier for HostFunctionsManager {
 impl ics07_tendermint::HostFunctionsProvider for HostFunctionsManager {}
 
 pub struct GrandpaHeaderHashesStorageInstance;
+
 impl StorageInstance for GrandpaHeaderHashesStorageInstance {
 	fn pallet_prefix() -> &'static str {
 		"ibc.lightclients.grandpa"
@@ -124,6 +139,7 @@ impl StorageInstance for GrandpaHeaderHashesStorageInstance {
 
 	const STORAGE_PREFIX: &'static str = "HeaderHashes";
 }
+
 pub type GrandpaHeaderHashesStorage = StorageValue<
 	GrandpaHeaderHashesStorageInstance,
 	BoundedVec<H256, ConstU32<GRANDPA_BLOCK_HASHES_CACHE_SIZE>>,
@@ -131,6 +147,7 @@ pub type GrandpaHeaderHashesStorage = StorageValue<
 >;
 
 pub struct GrandpaHeaderHashesSetStorageInstance;
+
 impl StorageInstance for GrandpaHeaderHashesSetStorageInstance {
 	fn pallet_prefix() -> &'static str {
 		"ibc.lightclients.grandpa"
@@ -138,6 +155,7 @@ impl StorageInstance for GrandpaHeaderHashesSetStorageInstance {
 
 	const STORAGE_PREFIX: &'static str = "HeaderHashesSet";
 }
+
 pub type GrandpaHeaderHashesSetStorage = StorageValue<
 	GrandpaHeaderHashesSetStorageInstance,
 	BoundedBTreeSet<H256, ConstU32<GRANDPA_BLOCK_HASHES_CACHE_SIZE>>,
@@ -234,6 +252,8 @@ pub enum AnyClientState {
 	Tendermint(ics07_tendermint::client_state::ClientState<HostFunctionsManager>),
 	#[ibc(proto_url = "WASM_CLIENT_STATE_TYPE_URL")]
 	Wasm(ics08_wasm::client_state::ClientState<AnyClient, Self, AnyConsensusState>),
+	#[ibc(proto_url = "GUEST_CLIENT_STATE_TYPE_URL")]
+	Guest(cf_guest::ClientState<PubKey>),
 	#[cfg(any(test, feature = "testing"))]
 	#[ibc(proto_url = "MOCK_CLIENT_STATE_TYPE_URL")]
 	Mock(ibc::mock::client_state::MockClientState),
@@ -289,6 +309,10 @@ impl AnyClientState {
 			AnyClientState::Beefy(client_state) => client_state.latest_height(),
 			AnyClientState::Tendermint(client_state) => client_state.latest_height(),
 			AnyClientState::Wasm(client_state) => client_state.latest_height(),
+			AnyClientState::Guest(client_state) => ibc::Height::new(
+				0,
+				u64::from(client_state.latest_height),
+			),
 			#[cfg(any(test, feature = "testing"))]
 			AnyClientState::Mock(client_state) => client_state.latest_height(),
 		}
@@ -305,6 +329,8 @@ pub enum AnyConsensusState {
 	Tendermint(ics07_tendermint::consensus_state::ConsensusState),
 	#[ibc(proto_url = "WASM_CONSENSUS_STATE_TYPE_URL")]
 	Wasm(ics08_wasm::consensus_state::ConsensusState<Self>),
+	#[ibc(proto_url = "GUEST_CONSENSUS_STATE_TYPE_URL")]
+	Guest(cf_guest::ConsensusState),
 	#[cfg(any(test, feature = "testing"))]
 	#[ibc(proto_url = "MOCK_CONSENSUS_STATE_TYPE_URL")]
 	Mock(ibc::mock::client_state::MockConsensusState),
@@ -314,6 +340,7 @@ impl AnyConsensusState {
 	pub fn wasm(inner: Self) -> Result<Self, tendermint_proto::Error> {
 		Ok(Self::Wasm(ics08_wasm::consensus_state::ConsensusState {
 			data: inner.encode_to_vec()?,
+			timestamp: inner.timestamp().nanoseconds(),
 			inner: Box::new(inner),
 		}))
 	}
@@ -330,6 +357,8 @@ pub enum AnyClientMessage {
 	Tendermint(ics07_tendermint::client_message::ClientMessage),
 	#[ibc(proto_url = "WASM_CLIENT_MESSAGE_TYPE_URL")]
 	Wasm(ics08_wasm::client_message::ClientMessage<Self>),
+	// #[ibc(proto_url = "GUEST_CLIENT_MESSAGE_TYPE_URL")]
+	// Guest(cf_guest::ClientMessage<PubKey>),
 	#[cfg(any(test, feature = "testing"))]
 	#[ibc(proto_url = "MOCK_CLIENT_MESSAGE_TYPE_URL")]
 	Mock(ibc::mock::header::MockClientMessage),
@@ -391,6 +420,20 @@ impl TryFrom<Any> for AnyClientMessage {
 					ics07_tendermint::client_message::Misbehaviour::decode_vec(&value.value)
 						.map_err(ics02_client::error::Error::decode_raw_header)?,
 				))),
+			// GUEST_CLIENT_MESSAGE_TYPE_URL => Ok(Self::Guest(
+			// 	cf_guest::ClientMessage::decode_vec(&value.value)
+			// 		.map_err(ics02_client::error::Error::decode_raw_header)?,
+			// )),
+			// GUEST_HEADER_TYPE_URL =>
+			// 	Ok(Self::Guest(cf_guest::ClientMessage::Header(
+			// 		ics07_tendermint::client_message::Header::decode_vec(&value.value)
+			// 			.map_err(ics02_client::error::Error::decode_raw_header)?,
+			// 	))),
+			// GUEST_MISBEHAVIOUR_TYPE_URL =>
+			// 	Ok(Self::Guest(cf_guest::ClientMessage::Misbehaviour(
+			// 		ics07_tendermint::client_message::Misbehaviour::decode_vec(&value.value)
+			// 			.map_err(ics02_client::error::Error::decode_raw_header)?,
+			// 	))),
 			WASM_CLIENT_MESSAGE_TYPE_URL => Ok(Self::Wasm(
 				ics08_wasm::client_message::ClientMessage::decode_vec(&value.value)
 					.map_err(ics02_client::error::Error::decode_raw_header)?,

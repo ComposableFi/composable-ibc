@@ -74,6 +74,7 @@ use solana::{SolanaClient, SolanaClientConfig};
 use std::{pin::Pin, time::Duration};
 use tendermint_proto::Protobuf;
 use thiserror::Error;
+use ibc::core::ics02_client::client_consensus::ConsensusState;
 
 #[derive(Serialize, Deserialize)]
 pub struct Config {
@@ -122,8 +123,10 @@ fn wrap_any_msg_into_wasm(msg: Any, checksum: Bytes) -> Result<Any, anyhow::Erro
 		CREATE_CLIENT_TYPE_URL => {
 			let mut msg_decoded =
 				MsgCreateAnyClient::<LocalClientTypes>::decode_vec(&msg.value).unwrap();
+			log::info!("THis is consensus state in wrap any message {:?}", msg_decoded.consensus_state.timestamp());
 			msg_decoded.consensus_state = AnyConsensusState::wasm(msg_decoded.consensus_state)?;
 			msg_decoded.client_state = AnyClientState::wasm(msg_decoded.client_state, checksum)?;
+			log::info!("THis is consensus state in wrap any message with wasm {:?}", msg_decoded.consensus_state.timestamp());
 			msg_decoded.to_any()
 		},
 		CONN_OPEN_TRY_TYPE_URL => {

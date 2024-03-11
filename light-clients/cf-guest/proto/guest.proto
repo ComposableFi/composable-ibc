@@ -1,0 +1,66 @@
+syntax = "proto3";
+
+package lightclients.guest.v1;
+
+// The consensus state of the guest blockchain.
+message ConsensusState {
+	// 32-byte block hash.
+	bytes block_hash = 1;
+	// Timestamp in nanoseconds.  Never zero.
+	uint64 timestamp_ns = 2;
+}
+
+// The client state of the light client for the guest blockchain.
+message ClientState {
+	// 32-byte hash of the genesis block.  This is used to identify instance
+	// of the blockchain.
+	bytes genesis_hash = 1;
+
+	// Height of the latest finalised block.
+	uint64 latest_height = 2;
+
+	// Duration of the period since the last timestamp during which the
+	// submitted headers are valid for upgrade.
+	uint64 trusting_period_ns = 3;
+
+	/// Commitment of the epoch used to verify future states.
+	bytes epoch_commitment = 4;
+
+	// Whether client is frozen.
+	bool is_frozen = 5;
+}
+
+message Header {
+	// 32-byte hash of the genesis block.
+	//
+	// This is used to identify instance of the blockchain.  It’s also part
+	// of the fingerprint that validators sign.
+	bytes genesis_hash = 1;
+
+	// Borsh-serialised block header.
+	bytes block_header = 2;
+
+	// Borsh-serialised epoch the block belongs to.
+	//
+	// The epoch specifies validators which sign the block.
+	bytes epoch = 3;
+
+	// List of signatures of the block.
+	repeated Signature signatures = 4;
+}
+
+message Signature {
+	// Index of the validator in the validators set defined in the epoch.
+	//
+	// The validators ore defined in the guestchain::Epoch object
+	// Borsh-serialised in the Header::epoch field.
+	uint32 index = 1;
+
+	// 64-byte signature of the block’s fingerprint.
+	bytes signature = 2;
+}
+
+message Misbehaviour {
+	Header header1 = 1;
+	Header header2 = 2;
+}
