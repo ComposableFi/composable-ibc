@@ -73,8 +73,8 @@ macro_rules! any_convert {
     ) => {
         impl $(<$T: $bond>)* $Type $(<$T>)* {
             /// Encodes the object into a vector as protocol buffer message.
-            pub fn encode_to_vec(&self) -> alloc::vec::Vec<u8> {
-                prost::Message::encode_to_vec(&$crate::proto::$Type::from(self))
+            pub fn encode_to_vec(&self) -> Result<alloc::vec::Vec<u8>, core::convert::Infallible> {
+                Ok(prost::Message::encode_to_vec(&$crate::proto::$Type::from(self)))
             }
 
             /// Decodes the object from a protocol buffer message.
