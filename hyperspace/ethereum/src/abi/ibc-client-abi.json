@@ -81,6 +81,31 @@
             "name": "prevClientState",
             "type": "bytes",
             "internalType": "bytes"
+          },
+          {
+            "name": "zkProof",
+            "type": "bytes",
+            "internalType": "bytes"
+          },
+          {
+            "name": "bitmask",
+            "type": "uint64",
+            "internalType": "uint64"
+          },
+          {
+            "name": "_pA",
+            "type": "uint256[2]",
+            "internalType": "uint256[2]"
+          },
+          {
+            "name": "_pB",
+            "type": "uint256[2][2]",
+            "internalType": "uint256[2][2]"
+          },
+          {
+            "name": "_pC",
+            "type": "uint256[2]",
+            "internalType": "uint256[2]"
           }
         ]
       }
