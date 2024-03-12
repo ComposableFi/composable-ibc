@@ -46,7 +46,7 @@ pub struct Header {
 	/// Contains a map of relay chain header hashes to parachain headers
 	/// finalzed at the relay chain height. We check for this parachain header finalization
 	/// via state proofs. Also contains extrinsic proof for timestamp.
-	pub parachain_headers: BTreeMap<H256, ParachainHeaderProofs>,
+	pub parachain_header: (H256, ParachainHeaderProofs),
 	/// Lazily initialized height
 	pub height: Height,
 }
@@ -66,6 +66,7 @@ pub struct Misbehaviour {
 	pub first_finality_proof: FinalityProof<RelayChainHeader>,
 	/// second proof of misbehaviour
 	pub second_finality_proof: FinalityProof<RelayChainHeader>,
+	pub para_height: u64,
 }
 
 /// [`ClientMessage`] for Ics10-GRANDPA
@@ -98,24 +99,20 @@ impl TryFrom<RawHeader> for Header {
 			Err(anyhow!("Invalid hash type with length: {}", finality_proof.block.len()))?
 		};
 
-		let parachain_headers = raw_header
-			.parachain_headers
-			.into_iter()
-			.map(|header| {
-				let block = if header.relay_hash.len() == 32 {
-					H256::from_slice(&*header.relay_hash)
-				} else {
-					Err(anyhow!("Invalid hash type with length: {}", header.relay_hash.len()))?
-				};
-				let proto::ParachainHeaderProofs { state_proof, extrinsic_proof, extrinsic } =
-					header
-						.parachain_header
-						.ok_or_else(|| anyhow!("Parachain header is required!"))?;
-				let parachain_header_proofs =
-					ParachainHeaderProofs { state_proof, extrinsic, extrinsic_proof };
-				Ok((block, parachain_header_proofs))
-			})
-			.collect::<Result<_, Error>>()?;
+		let ph = raw_header.parachain_header.ok_or_else(|| {
+			anyhow!("Invalid hash type with length: {}", finality_proof.block.len())
+		})?;
+		let block = if ph.relay_hash.len() == 32 {
+			H256::from_slice(&ph.relay_hash)
+		} else {
+			Err(anyhow!("Invalid hash type with length: {}", ph.relay_hash.len()))?
+		};
+		let proto::ParachainHeaderProofs { state_proof, extrinsic_proof, extrinsic } =
+			ph.parachain_header.ok_or_else(|| anyhow!("Parachain header is required!"))?;
+		let parachain_header_proofs =
+			ParachainHeaderProofs { state_proof, extrinsic, extrinsic_proof };
+
+		let parachain_header = (block, parachain_header_proofs);
 
 		let unknown_headers = finality_proof
 			.unknown_headers
@@ -132,7 +129,7 @@ impl TryFrom<RawHeader> for Header {
 				justification: finality_proof.justification,
 				unknown_headers,
 			},
-			parachain_headers,
+			parachain_header,
 			height: Height::new(raw_header.para_id as u64, raw_header.para_height as u64),
 		})
 	}
@@ -140,18 +137,15 @@ impl TryFrom<RawHeader> for Header {
 
 impl From<Header> for RawHeader {
 	fn from(header: Header) -> Self {
-		let parachain_headers = header
-			.parachain_headers
-			.into_iter()
-			.map(|(hash, parachain_header_proofs)| proto::ParachainHeaderWithRelayHash {
-				relay_hash: hash.as_bytes().to_vec(),
-				parachain_header: Some(proto::ParachainHeaderProofs {
-					state_proof: parachain_header_proofs.state_proof,
-					extrinsic: parachain_header_proofs.extrinsic,
-					extrinsic_proof: parachain_header_proofs.extrinsic_proof,
-				}),
-			})
-			.collect();
+		let (hash, parachain_header_proofs) = header.parachain_header;
+		let parachain_header = Some(proto::ParachainHeaderWithRelayHash {
+			relay_hash: hash.as_bytes().to_vec(),
+			parachain_header: Some(proto::ParachainHeaderProofs {
+				state_proof: parachain_header_proofs.state_proof,
+				extrinsic: parachain_header_proofs.extrinsic,
+				extrinsic_proof: parachain_header_proofs.extrinsic_proof,
+			}),
+		});
 		let finality_proof = proto::FinalityProof {
 			block: header.finality_proof.block.as_bytes().to_vec(),
 			justification: header.finality_proof.justification,
@@ -165,7 +159,7 @@ impl From<Header> for RawHeader {
 
 		RawHeader {
 			finality_proof: Some(finality_proof),
-			parachain_headers,
+			parachain_header,
 			para_id: header.height.revision_number as u32,
 			para_height: header.height.revision_height as u32,
 		}
@@ -181,6 +175,7 @@ impl TryFrom<RawMisbehaviour> for Misbehaviour {
 		Ok(Misbehaviour {
 			first_finality_proof: Decode::decode(&mut &*value.first_finality_proof)?,
 			second_finality_proof: Decode::decode(&mut &*value.second_finality_proof)?,
+			para_height: value.para_height,
 		})
 	}
 }
@@ -190,6 +185,7 @@ impl From<Misbehaviour> for RawMisbehaviour {
 		RawMisbehaviour {
 			first_finality_proof: value.first_finality_proof.encode(),
 			second_finality_proof: value.second_finality_proof.encode(),
+			para_height: value.para_height,
 		}
 	}
 }

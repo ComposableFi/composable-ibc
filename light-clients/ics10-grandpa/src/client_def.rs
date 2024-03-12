@@ -33,6 +33,7 @@ use ibc::{
 	core::{
 		ics02_client::{
 			client_def::{ClientDef, ConsensusUpdateResult},
+			context::ClientTypes,
 			error::Error as Ics02Error,
 		},
 		ics03_connection::connection::ConnectionEnd,
@@ -77,8 +78,8 @@ where
 
 	fn verify_client_message<Ctx: ReaderContext>(
 		&self,
-		_ctx: &Ctx,
-		_client_id: ClientId,
+		ctx: &Ctx,
+		client_id: ClientId,
 		client_state: Self::ClientState,
 		client_message: Self::ClientMessage,
 	) -> Result<(), Ics02Error> {
@@ -93,7 +94,7 @@ where
 				}
 				let headers_with_finality_proof = ParachainHeadersWithFinalityProof {
 					finality_proof: header.finality_proof,
-					parachain_headers: header.parachain_headers,
+					parachain_header: header.parachain_header,
 					latest_para_height: header.height.revision_height as u32,
 				};
 
@@ -163,7 +164,17 @@ where
 				}
 
 				// TODO: should we handle genesis block here somehow?
-				if !H::contains_relay_header_hash(first_parent) {
+
+				let cs =
+					ctx.consensus_state(&client_id, Height::new(client_state.para_id as u64, misbehavior.para_height))
+						.map_err(|_| {
+							Error::Custom(
+								"Could not find the known header for first finality proof".to_string(),
+							)
+						})?
+						.downcast::<Self::ConsensusState>()
+						.ok_or_else(|| Error::Custom(format!("Wrong consensus state type stored for Grandpa client with {client_id} at {}", misbehavior.para_height)))?;
+				if !cs.relaychain_hashes.contains(&first_parent) {
 					Err(Error::Custom(
 						"Could not find the known header for first finality proof".to_string(),
 					))?
@@ -220,42 +231,40 @@ where
 		};
 		let ancestry =
 			AncestryChain::<RelayChainHeader>::new(&header.finality_proof.unknown_headers);
-		let mut consensus_states = vec![];
 
 		let from = client_state.latest_relay_hash;
 
-		let finalized = ancestry
+		let relay_finalized = ancestry
 			.ancestry(from, header.finality_proof.block)
 			.map_err(|_| Error::Custom(format!("[update_state] Invalid ancestry!")))?;
-		let mut finalized_sorted = finalized.clone();
-		finalized_sorted.sort();
+		let mut relay_finalized_sorted = relay_finalized.clone();
+		relay_finalized_sorted.sort();
 
-		for (relay_hash, parachain_header_proof) in header.parachain_headers {
-			// we really shouldn't set consensus states for parachain headers not in the finalized
-			// chain.
-			if finalized_sorted.binary_search(&relay_hash).is_err() {
-				continue
-			}
-
-			let header = ancestry.header(&relay_hash).ok_or_else(|| {
-				Error::Custom(format!("No relay chain header found for hash: {relay_hash:?}"))
-			})?;
-
-			let (height, consensus_state) = ConsensusState::from_header::<H>(
-				parachain_header_proof,
-				client_state.para_id,
-				header.state_root.clone(),
-			)?;
-
-			// Skip duplicate consensus states
-			if ctx.consensus_state(&client_id, height).is_ok() {
-				continue
-			}
-
-			let wrapped = Ctx::AnyConsensusState::wrap(&consensus_state)
-				.expect("AnyConsenusState is type checked; qed");
-			consensus_states.push((height, wrapped));
+		let (relay_hash, parachain_header_proof) = header.parachain_header;
+		// we really shouldn't set consensus states for parachain headers not in the finalized
+		// chain.
+		if relay_finalized_sorted.clone().binary_search(&relay_hash).is_err() {
+			Err(Ics02Error::implementation_specific(format!("Finalized realyer haeder not found")))?
 		}
+
+		let relay_header = ancestry.header(&relay_hash).ok_or_else(|| {
+			Error::Custom(format!("No relay chain header found for hash: {relay_hash:?}"))
+		})?;
+
+		let (parachain_height, mut consensus_state) = ConsensusState::from_header::<H>(
+			parachain_header_proof,
+			client_state.para_id,
+			relay_header.state_root.clone(),
+			relay_finalized_sorted.clone(),
+		)?;
+
+		// Skip duplicate consensus states
+		if ctx.consensus_state(&client_id, parachain_height).is_ok() {
+			return Ok((client_state, ConsensusUpdateResult::Batch(vec![])))
+		}
+
+		let wrapped = Ctx::AnyConsensusState::wrap(&consensus_state)
+			.expect("AnyConsenusState is type checked; qed");
 
 		// updates
 		let target = ancestry
@@ -269,25 +278,12 @@ where
 			)))?
 		}
 
-		let mut heights = consensus_states
-			.iter()
-			.map(|(h, ..)| {
-				// this cast is safe, see [`ConsensusState::from_header`]
-				h.revision_height as u32
-			})
-			.collect::<Vec<_>>();
-
-		heights.sort();
-
-		if let Some((min_height, max_height)) = heights.first().zip(heights.last()) {
-			// can't try to rewind parachain.
-			if *min_height <= client_state.latest_para_height {
-				Err(Ics02Error::implementation_specific(format!(
-					"Light client can only be updated to new parachain height."
-				)))?
-			}
-			client_state.latest_para_height = *max_height
+		if parachain_height.revision_height as u32 <= client_state.latest_para_height {
+			Err(Ics02Error::implementation_specific(format!(
+				"Light client can only be updated to new parachain height."
+			)))?
 		}
+		client_state.latest_para_height = parachain_height.revision_height as u32;
 
 		client_state.latest_relay_hash = header.finality_proof.block;
 		client_state.latest_relay_height = target.number;
@@ -297,9 +293,13 @@ where
 			client_state.current_authorities = scheduled_change.next_authorities;
 		}
 
-		H::insert_relay_header_hashes(&finalized);
-
-		Ok((client_state, ConsensusUpdateResult::Batch(consensus_states)))
+		Ok((
+			client_state,
+			ConsensusUpdateResult::Single(
+				Ctx::AnyConsensusState::wrap(&consensus_state)
+					.expect("AnyConsenusState is type checked; qed"),
+			),
+		))
 	}
 
 	fn update_state_on_misbehaviour(
@@ -325,45 +325,50 @@ where
 
 		// we also check that this update doesn't include competing consensus states for heights we
 		// already processed.
-		let header = match client_message {
+		let update = match client_message {
 			ClientMessage::Header(header) => header,
 			_ => unreachable!("We've checked for misbehavior in line 180; qed"),
 		};
 		//forced authority set change is handled as a misbehaviour
 
 		let ancestry =
-			AncestryChain::<RelayChainHeader>::new(&header.finality_proof.unknown_headers);
+			AncestryChain::<RelayChainHeader>::new(&update.finality_proof.unknown_headers);
 
-		for (relay_hash, parachain_header_proof) in header.parachain_headers {
-			let header = ancestry.header(&relay_hash).ok_or_else(|| {
-				Error::Custom(format!("No relay chain header found for hash: {relay_hash:?}"))
-			})?;
+		let (relay_hash, parachain_header_proof) = update.parachain_header;
+		let header = ancestry.header(&relay_hash).ok_or_else(|| {
+			Error::Custom(format!("No relay chain header found for hash: {relay_hash:?}"))
+		})?;
 
-			if find_forced_change(header).is_some() {
-				return Ok(true)
-			}
-
-			let (height, consensus_state) = ConsensusState::from_header::<H>(
-				parachain_header_proof,
-				client_state.para_id,
-				header.state_root.clone(),
-			)?;
-
-			match ctx.maybe_consensus_state(&client_id, height)? {
-				Some(cs) => {
-					let cs: ConsensusState = cs
-						.downcast()
-						.ok_or(Ics02Error::client_args_type_mismatch(client_state.client_type()))?;
-
-					if cs != consensus_state {
-						// Houston we have a problem
-						return Ok(true)
-					}
-				},
-				None => {},
-			};
+		if find_forced_change(header).is_some() {
+			return Ok(true)
 		}
+		let from = client_state.latest_relay_hash;
+		let relay_finalized = ancestry
+			.ancestry(from, update.finality_proof.block)
+			.map_err(|_| Error::Custom(format!("[update_state] Invalid ancestry!")))?;
+		let mut relay_finalized_sorted = relay_finalized.clone();
+		relay_finalized_sorted.sort();
 
+		let (height, consensus_state) = ConsensusState::from_header::<H>(
+			parachain_header_proof,
+			client_state.para_id,
+			header.state_root.clone(),
+			relay_finalized_sorted,
+		)?;
+
+		match ctx.maybe_consensus_state(&client_id, height)? {
+			Some(cs) => {
+				let cs: ConsensusState = cs
+					.downcast()
+					.ok_or(Ics02Error::client_args_type_mismatch(client_state.client_type()))?;
+
+				if cs != consensus_state {
+					// Houston we have a problem
+					return Ok(true)
+				}
+			},
+			None => {},
+		};
 		Ok(false)
 	}
 

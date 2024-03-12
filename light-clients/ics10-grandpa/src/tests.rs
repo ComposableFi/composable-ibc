@@ -177,6 +177,7 @@ async fn test_continuous_update_of_grandpa_client() {
 			header_proof,
 			prover.para_id,
 			latest_relay_header.state_root,
+			vec![],
 		)
 		.unwrap();
 
@@ -254,7 +255,7 @@ async fn test_continuous_update_of_grandpa_client() {
 
 		let header = Header {
 			finality_proof: proof.finality_proof,
-			parachain_headers: proof.parachain_headers.clone(),
+			parachain_header: proof.parachain_header.clone(),
 			height: Height::new(prover.para_id as u64, finalized_para_header.number as u64),
 		};
 		let msg = MsgUpdateAnyClient {
