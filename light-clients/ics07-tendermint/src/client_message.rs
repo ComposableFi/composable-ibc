@@ -214,7 +214,7 @@ impl Header {
 			target: "hyperspace",
 			"total voting power: {}, non absent votes: missed {}/{},\n{:?}, ",
 			total_voting_power,
-			non_absent_votes.len(),
+			non_absent_votes.clone().count(),
 			validator_set.validators().len(),
 			self.validator_set.validators()
 		);
@@ -280,7 +280,9 @@ impl Header {
 		if pre_input.len() < size {
 			// TODO: return error as there aren't enough votes
 			return Err(Error::validation(format!(
-				"not enough validators have successfully signed: {}/{}, ",
+				"not enough validators have successfully signed: {}/{}",
+				pre_input.len(),
+				size
 			)))
 		}
 
