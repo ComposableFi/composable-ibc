@@ -166,7 +166,7 @@ fn req_client_state(
 	client_id: &ibc::ClientId,
 	state: Result<Option<state::ClientState>>,
 ) -> Result<state::ClientState> {
-	let make_err = || ibc::ClientError::ClientStateNotFound { client_id: client_id.clone() }.into();
+	let make_err = || ibc::ClientError::client_not_found(client_id.clone()).into();
 	state.and_then(|state| state.ok_or_else(make_err))
 }
 
@@ -177,6 +177,6 @@ fn req_consensus_state(
 	state: Result<Option<(state::ConsensusState, state::Metadata)>>,
 ) -> Result<state::ConsensusState> {
 	let make_err =
-		|| ibc::ClientError::ConsensusStateNotFound { client_id: client_id.clone(), height }.into();
+		|| ibc::ClientError::consensus_state_not_found (client_id.clone(), height ).into();
 	state.and_then(|state| state.map(|(state, _metadata)| state).ok_or_else(make_err))
 }

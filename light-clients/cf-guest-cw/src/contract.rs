@@ -27,16 +27,16 @@ fn instantiate(
 	deps: DepsMut,
 	env: Env,
 	_info: MessageInfo,
-	msg: msg::InstantiateMsg,
+	_msg: msg::InstantiateMsg,
 ) -> Result<Response> {
-	let mut ctx = context::new(deps, env);
-	log!(ctx, "instantiate: {msg:?}");
+	// let mut ctx = context::new(deps, env);
+	// log!(ctx, "instantiate: {msg:?}");
 
-	ctx.client_states_mut().set(&msg.client_state);
+	// ctx.client_states_mut().set(&msg.client_state);
 
-	let height = ibc::Height::new(0, msg.client_state.latest_height.into()).unwrap();
-	let metadata = ctx.metadata;
-	ctx.consensus_states_mut().set(height, &msg.consensus_state, metadata);
+	// let height = ibc::Height::new(0, msg.client_state.latest_height.into()).unwrap();
+	// let metadata = ctx.metadata;
+	// ctx.consensus_states_mut().set(height, &msg.consensus_state, metadata);
 
 	Ok(Response::default())
 }
@@ -65,7 +65,7 @@ fn process_update_state_msg(mut ctx: context::ContextMut, msg: msg::UpdateStateM
 	let new_client_state = client_state.with_header(&msg.header);
 
 	let metadata = ctx.metadata;
-	let height = ibc::Height::new(0, msg.header.block_header.block_height.into())?;
+	let height = ibc::Height::new(0, msg.header.block_header.block_height.into());
 	ctx.client_states_mut().set(&new_client_state);
 	ctx.consensus_states_mut().set(height, &new_consensus_state, metadata);
 	Ok(())
@@ -115,9 +115,9 @@ fn query_verify_state_proof(ctx: context::Context, msg: msg::VerifyStateProofMsg
 
 fn query_verify_client_msg(ctx: context::Context, msg: msg::VerifyClientMessageMsg) -> Result {
 	let client_message =
-		ibc::proto::Any::decode(msg.client_message.as_slice()).map_err(crate::Error::from)?;
+		ibc::proto::google::protobuf::Any::decode(msg.client_message.as_slice()).map_err(crate::Error::from)?;
 	ctx.client_state()?
-		.verify_client_message(&Verifier, &ctx.client_id, client_message)
+		.verify_client_message(&Verifier, &ctx.client_id, client_message.try_into().unwrap())
 		.map_err(crate::Error::from)
 }
 
@@ -126,7 +126,7 @@ fn query_check_for_misbehaviour_msg(
 	msg: msg::CheckForMisbehaviourMsg,
 ) -> Result<bool> {
 	let client_message =
-		ibc::proto::Any::decode(msg.client_message.as_slice()).map_err(crate::Error::from)?;
+	ibc::proto::google::protobuf::Any::decode(msg.client_message.as_slice()).map_err(crate::Error::from)?;
 	ctx.client_state()?
 		.check_for_misbehaviour(&Verifier, &ctx.client_id, client_message)
 		.map_err(crate::Error::from)
@@ -139,7 +139,7 @@ fn query_status(ctx: context::Context) -> StdResult<msg::StatusResponse> {
 	}
 
 	let height = client_state.latest_height;
-	let height = ibc::Height::new(0, height.into()).unwrap();
+	let height = ibc::Height::new(0, height.into());
 	let consensus_state = ctx.consensus_state(height)?;
 
 	let age = ctx.host_timestamp_ns.saturating_sub(consensus_state.timestamp_ns.get());

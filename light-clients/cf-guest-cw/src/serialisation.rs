@@ -4,6 +4,7 @@ use core::{fmt, marker::PhantomData, str::FromStr};
 use cosmwasm_std::Binary;
 use prost::Message;
 use serde::{Deserialize, Deserializer, Serialize, Serializer};
+// use trie_ids::ids::MaybeOwned;
 
 use crate::{ibc, state};
 
@@ -82,7 +83,7 @@ impl BytesConv for Vec<u8> {
 
 impl BytesConv for ibc::CommitmentProofBytes {
 	fn to_bytes<'a, E: serde::ser::Error>(&'a self) -> Result<Cow<'a, [u8]>, E> {
-		Ok(Cow::Borrowed(self.as_ref()))
+		Ok(Cow::Borrowed(self.as_bytes()))
 	}
 
 	fn from_bytes<E: serde::de::Error>(bytes: Vec<u8>) -> Result<Self, E> {
@@ -94,11 +95,11 @@ macro_rules! conv_via_any {
 	($msg:ty) => {
 		impl BytesConv for $msg {
 			fn to_bytes<'a, E: serde::ser::Error>(&'a self) -> Result<Cow<'a, [u8]>, E> {
-				Ok(Cow::Owned(ibc::proto::Any::from(self).encode_to_vec()))
+				Ok(Cow::Owned(ibc::proto::google::protobuf::Any::from(self).encode_to_vec()))
 			}
 
 			fn from_bytes<E: serde::de::Error>(bytes: Vec<u8>) -> Result<Self, E> {
-				let any = ibc::proto::Any::decode(bytes.as_slice()).map_err(E::custom)?;
+				let any = ibc::proto::google::protobuf::Any::decode(bytes.as_slice()).map_err(E::custom)?;
 				<$msg>::try_from(any).map_err(E::custom)
 			}
 		}

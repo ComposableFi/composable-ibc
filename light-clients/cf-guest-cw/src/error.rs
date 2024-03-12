@@ -19,7 +19,7 @@ use cosmwasm_std::StdError;
 pub enum Error {
 	Std(StdError),
 	Client(crate::ibc::ClientError),
-	Wasm(crate::ibc::wasm::Error),
+	// Wasm(crate::ibc::wasm::Error),
 	BadProto(prost::DecodeError),
 	#[from(ignore)]
 	BadMessage,

@@ -57,7 +57,7 @@ impl<PK: guestchain::PubKey> ClientState<PK> {
 			trusting_period_ns,
 			epoch_commitment,
 			is_frozen,
-			_ph: core::marker::PhantomData,
+			_ph: core::marker::PhantomData::<PK>,
 		}
 	}
 	pub fn with_header(&self, header: &super::Header<PK>) -> Self {

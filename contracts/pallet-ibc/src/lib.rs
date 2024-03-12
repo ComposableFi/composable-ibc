@@ -1112,6 +1112,10 @@ pub mod pallet {
 							.map_err(|_| Error::<T>::ClientFreezeFailed)?,
 					)
 				},
+				AnyClientState::Guest(guest) => {
+					let latest_height = guest.latest_height();
+					AnyClientState::wrap(&guest)
+				},
 				AnyClientState::Wasm(_) => return Err(Error::<T>::ClientFreezeFailed.into()),
 				#[cfg(any(test, feature = "testing"))]
 				AnyClientState::Mock(mut ms) => {

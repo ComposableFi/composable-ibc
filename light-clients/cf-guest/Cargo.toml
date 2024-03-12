@@ -6,14 +6,9 @@ edition = "2021"
 
 [dependencies]
 borsh = "0.10"
-bytemuck = { version = "1.14", default-features = false, features = ["must_cast"] }
-derive_more = { version = "0.99", features = ["from"]  }
-# ibc-core-client-context.workspace = true
-# ibc-core-commitment-types.workspace = true
-# ibc-core-host.workspace = true
-# ibc-primitives.workspace = true
-# ibc-proto.workspace = true
-prost = { version = "0.11" ,features = ["prost-derive"] }
+bytemuck = { version = "1.14", default-features = false, features = ["must_cast"]}
+derive_more = { version = "0.99", features = ["from"], default-features = false  }
+prost = { version = "0.11" ,features = ["prost-derive"], default-features = false }
 ed25519-consensus = { version = "2", default-features = false }
 serde = { version = "1.0", default-features = false, features = ["derive"] }
 
@@ -25,16 +20,15 @@ ibc-core-host-types = { git = "https://github.com/cosmos/ibc-rs", rev = "6dd3c64
 # Old IBC
 ibc = { path = "../../ibc/modules", default-features = false }
 ibc-proto = { path = "../../ibc/proto", default-features = false }
-ibc-primitives = { path = "../../contracts/pallet-ibc/primitives" }
-ibc-derive = { path = "../../ibc/derive" }
+ibc-derive = { path = "../../ibc/derive", default-features = false }
 
 tendermint-proto = { git = "https://github.com/informalsystems/tendermint-rs", rev = "e81f7bf23d63ffbcd242381d1ce5e35da3515ff1", default-features = false }
 
-guestchain = { path = "../../../emulated-light-client/common/guestchain" }
-lib = { path = "../../../emulated-light-client/common/lib", features = ["borsh"] }
-trie-ids = { path = "../../../emulated-light-client/common/trie-ids" }
-sealable-trie = { path = "../../../emulated-light-client/common/sealable-trie", features = ["borsh"] }
-stdx = { path = "../../../emulated-light-client/common/stdx" }
+guestchain = { path = "../../../emulated-light-client/common/guestchain", default-features = false }
+lib = { path = "../../../emulated-light-client/common/lib", features = ["borsh"], default-features = false }
+trie-ids = { path = "../../../emulated-light-client/common/trie-ids", default-features = false }
+sealable-trie = { path = "../../../emulated-light-client/common/sealable-trie", features = ["borsh"], default-features = false }
+stdx = { path = "../../../emulated-light-client/common/stdx", default-features = false }
 
 [build-dependencies]
 prost-build = { version = "0.11", default-features = false }

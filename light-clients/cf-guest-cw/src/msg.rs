@@ -198,20 +198,15 @@ pub struct Height {
 impl TryFrom<Height> for ibc::Height {
 	type Error = cosmwasm_std::StdError;
 	fn try_from(height: Height) -> Result<Self, Self::Error> {
-		ibc::Height::new(height.revision_number.into(), height.revision_height.into()).map_err(
-			|_| cosmwasm_std::StdError::ParseErr {
-				target_type: "Height".into(),
-				msg: "unexpected zero height".into(),
-			},
-		)
+		Ok(ibc::Height::new(height.revision_number.into(), height.revision_height.into()))
 	}
 }
 
 impl From<ibc::Height> for Height {
 	fn from(height: ibc::Height) -> Self {
 		Self {
-			revision_number: height.revision_number().into(),
-			revision_height: height.revision_height().into(),
+			revision_number: height.revision_number.into(),
+			revision_height: height.revision_height.into(),
 		}
 	}
 }

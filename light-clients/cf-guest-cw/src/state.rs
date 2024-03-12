@@ -16,7 +16,7 @@
 use cosmwasm_std::Storage;
 use prost::Message;
 
-use crate::{ibc, ibc::proto::Any};
+use crate::{ibc, ibc::proto::google::protobuf::Any};
 
 type Result<T, E = crate::Error> = core::result::Result<T, E>;
 
@@ -166,7 +166,7 @@ impl ConsensusStates {
 	}
 
 	fn key(height: ibc::Height) -> Vec<u8> {
-		Self::key_impl(height.revision_number(), height.revision_height())
+		Self::key_impl(height.revision_number, height.revision_height)
 	}
 
 	fn key_impl(rev_number: u64, rev_height: u64) -> Vec<u8> {

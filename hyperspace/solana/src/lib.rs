@@ -67,13 +67,13 @@ use ibc_proto::{
 		},
 	},
 };
+use lib::hash::CryptoHash;
 use pallet_ibc::light_clients::{AnyClientMessage, AnyClientState, AnyConsensusState};
 use primitives::{
 	mock::LocalClientTypes, Chain, CommonClientState, IbcProvider, KeyProvider, LightClientSync,
 	MisbehaviourHandler, UndeliveredType, UpdateType,
 };
 use std::{result::Result, sync::Arc};
-use lib::hash::CryptoHash;
 use tokio_stream::Stream;
 
 use solana_ibc::storage::{SequenceKind, Serialised};
@@ -1320,37 +1320,13 @@ deserialize client state"
 			header.block_height,
 			64000 * 10_u64.pow(9),
 			header.epoch_id,
-			 false,
+			false,
 		);
 		let consensus_state = cf_guest::ConsensusState {
-			block_hash,
+			block_hash: blockhash.to_vec().into(),
 			timestamp_ns: header.timestamp_ns,
 		};
-		// let client_state = TmClientState::new(
-		// 	ChainId::from_string(&self.chain_id),
-		// 	TrustThreshold::default(),
-		// 	Duration::from_secs(64000),
-		// 	Duration::from_secs(1814400),
-		// 	Duration::new(15, 0),
-		// 	latest_height_timestamp.0,
-		// 	ProofSpecs::default(),
-		// 	vec!["upgrade".to_string(), "upgradedIBCState".to_string()],
-		// )
-		// .map_err(|e| Error::from(format!("Invalid client state {e}")))?;
-		// let timestamp_in_nano = latest_height_timestamp.1.nanoseconds();
-		// let secs = timestamp_in_nano / 10_u64.pow(9);
-		// let nano = timestamp_in_nano % 10_u64.pow(9);
-		// let time =
-		// 	Time::from_unix_timestamp(secs.try_into().unwrap(), nano.try_into().unwrap()).unwrap();
-		// let client_state_in_bytes = borsh::to_vec(&timestamp_in_nano).unwrap();
-		// let trie = self.get_trie().await;
-		// let sub_trie = trie.get_subtrie(&borsh::to_vec(&1).unwrap()).unwrap();
-		// println!("This is sub trie {:?} and time {:?}", sub_trie.len(), time);
-		// let consensus_state = TmConsensusState::new(client_state_in_bytes.into(), time, Hash::None);
-		Ok((
-			AnyClientState::Guest(client_state),
-			AnyConsensusState::Guest(consensus_state),
-		))
+		Ok((AnyClientState::Guest(client_state), AnyConsensusState::Guest(consensus_state)))
 	}
 
 	async fn query_client_id_from_tx_hash(
