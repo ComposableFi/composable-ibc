@@ -92,6 +92,13 @@ where
 					))
 					.into())
 				}
+				if header.finality_proof.unknown_headers.len() >= client_state.session_length() {
+					return Err(Error::Custom(format!(
+						"Number of unknown headers submitted exceeds max number of blocks in a session: max {}, got {}",
+						client_state.session_length(), header.finality_proof.unknown_headers.len()
+					))
+					.into())
+				}
 				let headers_with_finality_proof = ParachainHeadersWithFinalityProof {
 					finality_proof: header.finality_proof,
 					parachain_header: header.parachain_header,
