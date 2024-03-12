@@ -15,10 +15,9 @@
 #![allow(deprecated)]
 
 use crate::error::Error;
-use alloc::{string::ToString, vec::Vec};
+use alloc::{collections::BTreeSet, string::ToString, vec::Vec};
 use bytes::Buf;
 use core::cmp::Ordering;
-use tendermint::crypto::signature::Verifier;
 use ibc::{
 	core::{
 		ics02_client,
@@ -32,11 +31,14 @@ use ibc_proto::{
 	google::protobuf::Any,
 	ibc::lightclients::tendermint::v1::{Header as RawHeader, Misbehaviour as RawMisbehaviour},
 };
-use alloc::collections::BTreeSet;
 use prost::Message;
 use serde::{Deserialize, Serialize};
 use tendermint::{
-	block::{signed_header::SignedHeader, Commit, CommitSig}, validator::Set as ValidatorSet, vote::{SignedVote, ValidatorIndex}, PublicKey, Vote
+	block::{signed_header::SignedHeader, Commit, CommitSig},
+	crypto::signature::Verifier,
+	validator::Set as ValidatorSet,
+	vote::{SignedVote, ValidatorIndex},
+	PublicKey, Vote,
 };
 use tendermint_proto::Protobuf;
 
@@ -179,7 +181,10 @@ impl Header {
 		headers_compatible(&self.signed_header, &other_header.signed_header)
 	}
 
-	pub fn get_zk_input<V: Verifier>(&self, size: usize) -> Result<(Vec<(Vec<u8>, Vec<u8>, Vec<u8>)>, u64), Error> {
+	pub fn get_zk_input<V: Verifier>(
+		&self,
+		size: usize,
+	) -> Result<(Vec<(Vec<u8>, Vec<u8>, Vec<u8>)>, u64), Error> {
 		#[derive(Clone)]
 		struct ZKInput {
 			pub_key: Vec<u8>,
@@ -204,6 +209,15 @@ impl Header {
 
 		let mut seen_validators = BTreeSet::new();
 		let total_voting_power = self.validator_set.total_voting_power().value();
+
+		log::debug!(
+			target: "hyperspace",
+			"total voting power: {}, non absent votes: missed {}/{},\n{:?}, ",
+			total_voting_power,
+			non_absent_votes.len(),
+			validator_set.validators().len(),
+			self.validator_set.validators()
+		);
 
 		for (signature, vote) in non_absent_votes {
 			// Ensure we only count a validator's power once
@@ -234,13 +248,7 @@ impl Header {
 			let sign_bytes = signed_vote.sign_bytes();
 
 			let signature = signed_vote.signature();
-			if validator
-				.verify_signature::<V>(
-					&sign_bytes,
-					signed_vote.signature(),
-				)
-				.is_err()
-			{}
+			if validator.verify_signature::<V>(&sign_bytes, signed_vote.signature()).is_err() {}
 
 			let mut zk_input = ZKInput {
 				// pub_key: vote.validator_address.into(),
@@ -250,22 +258,30 @@ impl Header {
 				voting_power: validator.power(),
 			};
 
-			let pub_key = &self.validator_set.validators().iter().find(|x| x.address == vote.validator_address).unwrap().pub_key;
+			let pub_key = &self
+				.validator_set
+				.validators()
+				.iter()
+				.find(|x| x.address == vote.validator_address)
+				.unwrap()
+				.pub_key;
 			let p = pub_key;
 			match p {
 				PublicKey::Ed25519(e) => {
 					zk_input.pub_key = e.as_bytes().to_vec();
 				},
-				_ => {}
+				_ => {},
 			};
+
+			log::debug!(target: "hyperspace", "voting power: {}, pub_key: {:?}", zk_input.voting_power, zk_input.pub_key,);
 			pre_input.push(zk_input);
 		}
 
 		if pre_input.len() < size {
 			// TODO: return error as there aren't enough votes
-			return Err(Error::validation(
-				"not enough validators have successfully signed".to_string(),
-			))
+			return Err(Error::validation(format!(
+				"not enough validators have successfully signed: {}/{}, ",
+			)))
 		}
 
 		let not_sorted_pre_input = pre_input.clone();
@@ -283,12 +299,14 @@ impl Header {
 				acc
 			});
 
+		log::debug!(target: "hyperspace", "voting power amount: {}, validator size: {}, total voting power: {}", voting_power_amount_validator_size, size, total_voting_power);
+
 		// signed votes haven't
 		if voting_power_amount_validator_size * 3 <= total_voting_power * 2 {
 			return Err(Error::validation("voting power is not > 2/3 + 1".to_string()))
 		}
 
-		let ret: Vec::<(Vec<u8>, Vec<u8>, Vec<u8>)> = pre_input
+		let ret: Vec<(Vec<u8>, Vec<u8>, Vec<u8>)> = pre_input
 			.into_iter()
 			.take(size)
 			.map(|ZKInput { pub_key, signature, message, .. }| (pub_key, signature, message))
@@ -296,13 +314,7 @@ impl Header {
 
 		let validators: Vec<u64> = not_sorted_pre_input
 			.iter()
-			.map(|element| {
-				if ret.iter().any(|x| x.0 == element.pub_key) {
-					1
-				} else {
-					0
-				}
-			})
+			.map(|element| if ret.iter().any(|x| x.0 == element.pub_key) { 1 } else { 0 })
 			.collect();
 
 		let mut bitmask: u64 = 0;
@@ -406,7 +418,6 @@ fn non_absent_vote(
 		signature: signature.clone(),
 	})
 }
-
 
 #[cfg(test)]
 pub mod test_util {
