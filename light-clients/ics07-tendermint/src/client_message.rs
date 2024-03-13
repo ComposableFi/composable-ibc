@@ -322,9 +322,11 @@ impl Header {
 		
 		//ensure that ret is not sorted and has the same order as signed_header.commit.signatures because the pub inputs on solidity depend on the order of the pub keys and the signatures and the messages
 		let mut ret = vec![];
+		log::info!(target: "hyperspace", "Order to be sent to ZK:");
 		for i in not_sorted_pre_input.iter() {
 			// if i is in ret_zk_input add into ret
 			if ret_zk_input.iter().any(|x| x.pub_key == i.pub_key) {
+				log::info!(target: "hyperspace", "Validator for ZK: {:?} Voting Power: {:?}", i.pub_key, i.voting_power);
 				ret.push((i.pub_key.clone(), i.signature.clone(), i.message.clone()));
 			}
 		}
@@ -352,7 +354,7 @@ impl Header {
 
 			if validator == 1 {
 				let str_pub_key = hex::encode(vote.validator_address);
-				log::info!(target: "hyperspace", "Validator for ZK: {:?} Voting Power: {:?}", str_pub_key, self.validator_set.validators()[index].power());
+				log::info!(target: "hyperspace", "Validator when bitmask index: {} : address {:?} Voting Power: {:?}", index, str_pub_key, self.validator_set.validators()[index].power());
 				bitmask |= 1 << index;
 			}
 		}
