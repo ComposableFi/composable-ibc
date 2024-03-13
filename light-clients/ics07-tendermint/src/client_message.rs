@@ -219,7 +219,7 @@ impl Header {
 			self.validator_set.validators()
 		);
 
-		for (signature, vote) in non_absent_votes {
+		for (signature, vote) in non_absent_votes.clone() {
 			// Ensure we only count a validator's power once
 			if seen_validators.contains(&vote.validator_address) {
 				return Err(Error::validation("validator seen twice".to_string()));
@@ -351,7 +351,9 @@ impl Header {
 			};
 
 			if validator == 1 {
-				log::info!("Validator: {:?} Voting Power: {:?}", f_pub_key.clone().unwrap_or(vec![]), self.validator_set.validators()[index].power());
+				let pub_key = f_pub_key.clone().unwrap_or(vec![]);
+				let str_pub_key = hex::encode(pub_key);
+				log::info!("Validator: {:?} Voting Power: {:?}", str_pub_key, self.validator_set.validators()[index].power());
 				bitmask |= 1 << index;
 			}
 		}

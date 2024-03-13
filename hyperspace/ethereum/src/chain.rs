@@ -526,6 +526,7 @@ fn tm_header_abi_token(header: &ics07_tendermint_zk::client_message::ZkHeader) -
 				);
 				let tuple = EthersToken::Tuple(vec![EthersToken::Int(BLOCK_ID_FLAG_ABSENT.into()), EthersToken::Bytes([0;32].into()), commit_timestamp, EthersToken::Bytes([0;32].into())]);
 				list_of_commit_sig.push(tuple);
+				info!(target: "hyperspace_ethereum", "BlockIdFlagAbsent, h: {:?}, pub_key: {:?}", header.signed_header.header.height, vec![0]);
 			}
 			CommitSig::BlockIdFlagCommit{validator_address, timestamp, signature} => {
 			
@@ -541,8 +542,11 @@ fn tm_header_abi_token(header: &ics07_tendermint_zk::client_message::ZkHeader) -
 				let s : Vec<u8> = signature.clone().unwrap().into();
 				let signature_bytes = EthersToken::Bytes(s.into());
 
+				let str_pub_key = hex::encode(validator_address.as_bytes());
+				info!(target: "hyperspace_ethereum", "BlockIdFlagCommit, h: {:?}, pub_key: {:?}", header.signed_header.header.height, str_pub_key);
 				let validator_address = EthersToken::Bytes(validator_address.as_bytes().into());
 				let tuple = EthersToken::Tuple(vec![EthersToken::Int(BLOCK_ID_FLAG_COMMIT.into()), validator_address, commit_timestamp, signature_bytes]);
+				
 				list_of_commit_sig.push(tuple);
 			}
 			CommitSig::BlockIdFlagNil{validator_address, timestamp, signature} => {
@@ -558,6 +562,8 @@ fn tm_header_abi_token(header: &ics07_tendermint_zk::client_message::ZkHeader) -
 				let s : Vec<u8> = signature.clone().unwrap().into();
 				let signature_bytes = EthersToken::Bytes(s.into());
 
+				let str_pub_key = hex::encode(validator_address.as_bytes());
+				info!(target: "hyperspace_ethereum", "BlockIdFlagNil, h: {:?}, pub_key: {:?}", header.signed_header.header.height, str_pub_key);
 				let validator_address = EthersToken::Bytes(validator_address.as_bytes().into());
 				let tuple = EthersToken::Tuple(vec![EthersToken::Int(BLOCK_ID_FLAG_NIL.into()), validator_address, commit_timestamp, signature_bytes]);
 				list_of_commit_sig.push(tuple);
