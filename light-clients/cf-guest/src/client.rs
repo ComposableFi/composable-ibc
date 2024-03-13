@@ -4,13 +4,12 @@ use crate::error::Error;
 use alloc::{string::{String, ToString}, vec::Vec};
 use ibc::{
 	core::{
-		ics02_client::{error::Error as Ics02ClientError, height::Height}, ics23_commitment::specs::ProofSpecs, ics24_host::identifier::ClientId
+		ics02_client::{height::Height}, ics23_commitment::specs::ProofSpecs, ics24_host::identifier::ClientId
 	},
 	timestamp::Timestamp,
 };
 use lib::hash::CryptoHash;
 use serde::{Deserialize, Serialize};
-use tendermint_proto::Protobuf;
 
 use crate::{client_def::GuestClient, proto, CLIENT_TYPE};
 

@@ -144,23 +144,6 @@ impl ConsensusStates {
 		Ok(())
 	}
 
-	pub fn get_all_metadata(&self) -> Result<Vec<crate::msg::ConsensusStateMetadata>> {
-		let mut records = Vec::new();
-		for record in self.all() {
-			let (key, _state, metadata) = record?;
-			let key = &key[key.len() - 16..];
-			records.push(crate::msg::ConsensusStateMetadata {
-				height: crate::msg::Height {
-					revision_number: u64::from_be_bytes(key[..8].try_into().unwrap()).into(),
-					revision_height: u64::from_be_bytes(key[8..].try_into().unwrap()).into(),
-				},
-				host_timestamp_ns: metadata.host_timestamp_ns.into(),
-				host_height: metadata.host_height.into(),
-			})
-		}
-		Ok(records)
-	}
-
 	pub fn del(&mut self, height: ibc::Height) {
 		self.0.remove(&Self::key(height))
 	}

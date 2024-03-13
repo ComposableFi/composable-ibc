@@ -24,7 +24,9 @@ optimize = """docker run --rm -v "$(pwd)":/code \
 
 [dependencies]
 cf-guest = { path = "../cf-guest", default-features = false }
-guestchain = { path = "../../../emulated-light-client/common/guestchain", default-features = false }
+ics08-wasm = { path = "../ics08-wasm", default-features = false, features = ["cosmwasm"] }
+
+guestchain = { git = "https://github.com/ComposableFi/emulated-light-client/", default-features = false }
 
 base64 = { version = "0.22", default-features = false, features = ["alloc"] }
 borsh = { version = "0.10.3", default-features = false }
@@ -34,9 +36,8 @@ derive_more = "0.99.17"
 ahash = { version = "=0.8.6", default-features = false }
 ed25519-dalek = { version = "2.1.1", default-features = false, features = ["pkcs8"] }
 
-# Same version emulated-light-client uses
 ibc = { path = "../../ibc/modules", default-features = false }
-ibc-proto = { path = "../../ibc/proto", default-features = false}
+ibc-proto = { path = "../../ibc/proto", default-features = false, features = ["json-schema"] }
 
 prost = { version = "0.11" ,features = ["prost-derive"], default-features = false }
 schemars = { version = "0.8.10", default-features = false }

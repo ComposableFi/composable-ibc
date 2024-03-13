@@ -22,9 +22,9 @@ mod context;
 mod contract;
 mod crypto;
 mod error;
+mod fake_inner;
 mod ibc;
 pub mod msg;
-mod serialisation;
 pub mod state;
 
 use crate::{crypto::PubKey, error::Error};

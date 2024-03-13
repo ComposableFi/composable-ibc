@@ -1,4 +1,4 @@
-use core::{convert::Infallible, marker::PhantomData};
+use core::marker::PhantomData;
 use guestchain::Signature;
 
 use crate::{alloc::string::ToString, proof::VerifyError};
@@ -12,7 +12,6 @@ use ibc::{
 		},
 		ics23_commitment::commitment::CommitmentPrefix,
 		ics24_host::{
-			identifier::ClientId,
 			path::{
 				self, AcksPath, ChannelEndsPath, ClientConsensusStatePath, ClientStatePath,
 				CommitmentsPath, ConnectionsPath, ReceiptsPath, SeqRecvsPath,
@@ -20,13 +19,12 @@ use ibc::{
 		},
 		ics26_routing::context::ReaderContext,
 	},
-	timestamp::Timestamp,
 };
 use prost::Message;
 use tendermint_proto::Protobuf;
 
 use crate::{
-	error::Error, proof::verify, ClientMessage, ClientState, CommonContext,
+	error::Error, proof::verify, ClientMessage, ClientState,
 	ConsensusState as ClientConsensusState,
 };
 

@@ -19,7 +19,7 @@ use cosmwasm_schema::write_api;
 fn main() {
 	write_api! {
 		instantiate: msg::InstantiateMsg,
-		sudo: msg::SudoMsg,
+		execute: msg::ExecuteMsg,
 		query: msg::QueryMsg,
 	}
 }

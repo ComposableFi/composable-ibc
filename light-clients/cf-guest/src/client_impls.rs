@@ -1,5 +1,3 @@
-use core::str::FromStr;
-
 use alloc::{string::ToString, vec::Vec};
 
 use guestchain::PubKey;
@@ -355,75 +353,8 @@ impl<PK: PubKey> ClientState<PK> {
 	) -> Result<bool> {
 		todo!()
 	}
-
-	/// Checks whether consensus state has expired.
-	fn consensus_has_expired(
-		&self,
-		consensus: &ConsensusState,
-		host_timestamp: ibc::Timestamp,
-	) -> bool {
-		let expiry_ns = consensus.timestamp_ns.get().saturating_add(self.trusting_period_ns);
-		expiry_ns <= host_timestamp.nanoseconds()
-	}
-
-	/// Removes all expired consensus states.
-	fn prune_oldest_consensus_state(
-		&self,
-		ctx: &mut impl CommonContext,
-		client_id: &ibc::ClientId,
-		host_timestamp: ibc::Timestamp,
-	) -> Result {
-		for height in ctx.sorted_consensus_state_heights(client_id)? {
-			let consensus: ConsensusState = ctx
-				.consensus_state(client_id, height)
-				.and_then(|state| state.try_into().map_err(error))?;
-			if !self.consensus_has_expired(&consensus, host_timestamp) {
-				break
-			}
-			ctx.delete_consensus_state_and_metadata(client_id, height)?;
-		}
-		Ok(())
-	}
 }
 
 fn error(msg: impl ToString) -> ibc::ClientError {
 	ibc::ClientError::implementation_specific(msg.to_string())
-}
-
-/// Checks client id’s client type is what’s expected and then parses the id as
-/// `ClientIdx`.
-///
-/// Checks that client id which was used in generating the path (if any) follows
-/// `<client-type>-<counter>` format where `<counter>` is a non-empty sequence
-/// of digits.  Doesn’t check leading zeros in the counter nor whether the value
-/// is too large.
-///
-/// Expected client type is [`surpe::CLIENT_TYPE`].
-fn parse_client_id(client_id: &ibc::ClientId) -> Result<trie_ids::ClientIdx> {
-	let binding = ibc_core_host_types::identifiers::ClientId::from_str(client_id.as_str()).unwrap();
-	let (what, value) = match trie_ids::ClientIdx::parse(&binding) {
-		Ok((super::CLIENT_TYPE, idx)) => return Ok(idx),
-		Ok((client_type, _)) => ("type", client_type),
-		Err(_) => ("id", client_id.as_str()),
-	};
-	let description = alloc::format!("invalid client {what}: {value}");
-	Err(ibc::ClientError::implementation_specific(description))
-}
-
-#[test]
-fn test_verify_client_type() {
-	use core::str::FromStr;
-
-	for (ok, id) in [
-		(true, "cf-guest-0"),
-		(true, "cf-guest-42"),
-		(false, "cf-guest1"),
-		(false, "cf-guest-"),
-		(false, "cf-guest--42"),
-		(false, "cf-guest-foo-42"),
-		(false, "cf-gues-42"),
-	] {
-		let client_id = ibc::ClientId::from_str(id).unwrap();
-		assert_eq!(ok, parse_client_id(&client_id).is_ok(), "id={id}");
-	}
 }

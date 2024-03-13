@@ -20,7 +20,8 @@ pub enum Error {
 	Std(StdError),
 	Client(crate::ibc::ClientError),
 	// Wasm(crate::ibc::wasm::Error),
-	BadProto(prost::DecodeError),
+	DecodeError(prost::DecodeError),
+	BadProto(ibc::protobuf::Error),
 	#[from(ignore)]
 	BadMessage,
 	#[from(ignore)]
