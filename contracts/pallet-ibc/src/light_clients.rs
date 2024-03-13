@@ -447,7 +447,6 @@ impl AnyConsensusState {
 		Ok(Self::Wasm(ics08_wasm::consensus_state::ConsensusState {
 			timestamp: inner.timestamp().nanoseconds(),
 			data: inner.encode_to_vec()?,
-			timestamp: inner.timestamp().nanoseconds(),
 			inner: Box::new(inner),
 		}))
 	}
@@ -492,7 +491,12 @@ impl AnyClientMessage {
 					h.inner.maybe_header_height(),
 				ics08_wasm::client_message::ClientMessage::Misbehaviour(_) => None,
 			},
-			#[cfg(test)]
+			Self::Guest(inner) => match inner {
+				cf_guest::ClientMessage::Header(h) => 
+					Some(Height::new(0, u64::from(h.block_header.block_height))),
+				cf_guest::ClientMessage::Misbehaviour(_) => None,
+			}
+			#[cfg(any(test, feature = "testing"))]
 			Self::Mock(inner) => match inner {
 				ibc::mock::header::MockClientMessage::Header(h) => Some(h.height()),
 				ibc::mock::header::MockClientMessage::Misbehaviour(_) => None,

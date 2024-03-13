@@ -145,16 +145,16 @@ impl IbcProvider for SolanaClient {
 			.client_state
 			.ok_or_else(|| Error::Custom("counterparty returned empty client state".to_string()))?;
 		log::info!("This is the type url in solana {:?}", client_state_response.type_url);
-		let AnyClientState::Tendermint(client_state) =
+		let AnyClientState::Guest(client_state) =
 			AnyClientState::decode_recursive(client_state_response, |c| {
-				matches!(c, AnyClientState::Tendermint(_))
+				matches!(c, AnyClientState::Guest(_))
 			})
 			.ok_or_else(|| Error::Custom(format!("Could not decode client state")))?
 		else {
 			unreachable!()
 		};
 		log::info!("This is client state {:?}", client_state);
-		let latest_cp_client_height = u64::from(client_state.latest_height.revision_height);
+		let latest_cp_client_height = u64::from(client_state.latest_height);
 		println!("This is counterparty client height {:?}", latest_cp_client_height);
 		let latest_height = self.latest_height_and_timestamp().await?.0;
 		let mut block_events: Vec<(u64, Vec<IbcEvent>)> = Vec::new();
@@ -188,8 +188,7 @@ impl IbcProvider for SolanaClient {
 				.filter_map(|event| {
 					convert_new_event_to_old(
 						event.clone(),
-						client_state.latest_height(),
-						// Height::new(0, client_state.latest_height),
+						Height::new(0, u64::from(client_state.latest_height)),
 					)
 				})
 				.collect();
@@ -207,28 +206,20 @@ impl IbcProvider for SolanaClient {
 				header.signed_header.commit.height =
 					tendermint::block::Height::try_from(latest_height.revision_height).unwrap();
 				header.trusted_height = Height::new(0, latest_height.revision_height);
+				
+				let guest_header = cf_guest::Header {
+					genesis_hash: client_state.genesis_hash.clone(),
+					block_hash: client_state.genesis_hash.clone(),
+					block_header: chain_account.head().unwrap().clone(),
+					epoch_commitment: client_state.epoch_commitment.clone(),
+					epoch: Epoch::new(Vec::new(), core::num::NonZeroU128::new(1).unwrap()).unwrap(),
+					signatures: Vec::new(),
+				};
 				let msg = MsgUpdateAnyClient::<LocalClientTypes> {
 					client_id: self.client_id(),
-					client_message: AnyClientMessage::Tendermint(ics07_tendermint::client_message::ClientMessage::Header(
-						header,
-					)),
-						signer: counterparty.account_id(),
+					client_message: AnyClientMessage::Guest(cf_guest::ClientMessage::Header(guest_header)),
+					signer: counterparty.account_id(),
 				};
-				// let guest_header = cf_guest::Header {
-				// 	genesis_hash: client_state.genesis_hash.clone(),
-				// 	block_hash: client_state.genesis_hash.clone(),
-				// 	block_header: chain_account.head().unwrap().clone(),
-				// 	epoch_commitment: client_state.epoch_commitment.clone(),
-				// 	epoch: Epoch::new(Vec::new(), core::num::NonZeroU128::new(1).unwrap()).unwrap(),
-				// 	signatures: Vec::new(),
-				// };
-				// let msg = MsgUpdateAnyClient::<LocalClientTypes> {
-				// 	client_id: self.client_id(),
-				// 	client_message: AnyClientMessage::Guest(cf_guest::ClientMessage::Header(
-				// 		guest_header,
-				// 	)),
-				// 	signer: counterparty.account_id(),
-				// };
 				let value = msg
 					.encode_vec()
 					.map_err(|e| {
@@ -1339,43 +1330,18 @@ deserialize client state"
 		let chain = self.get_chain_storage().await;
 		let header = chain.head().unwrap().clone();
 		let blockhash = header.calc_hash();
-		// let client_state = cf_guest::ClientState::new(
-		// 	chain.genesis().unwrap(),
-		// 	header.block_height,
-		// 	64000 * 10_u64.pow(9),
-		// 	header.epoch_id,
-		// 	false,
-		// );
-		// let consensus_state = cf_guest::ConsensusState {
-		// 	block_hash: blockhash.to_vec().into(),
-		// 	timestamp_ns: header.timestamp_ns,
-		// };
-		let client_state = TmClientState::new(
-			ChainId::from_string(&self.chain_id),
-			TrustThreshold::default(),
-			Duration::from_secs(64000),
-			Duration::from_secs(1814400),
-			Duration::new(15, 0),
-			latest_height_timestamp.0,
-			ProofSpecs::default(),
-			vec!["upgrade".to_string(), "upgradedIBCState".to_string()],
-		)
-		.map_err(|e| Error::from(format!("Invalid client state {e}")))?;
-		let timestamp_in_nano = latest_height_timestamp.1.nanoseconds();
-		let secs = timestamp_in_nano / 10_u64.pow(9);
-		let nano = timestamp_in_nano % 10_u64.pow(9);
-		let time =
-			Time::from_unix_timestamp(secs.try_into().unwrap(), nano.try_into().unwrap()).unwrap();
-		let client_state_in_bytes = borsh::to_vec(&timestamp_in_nano).unwrap();
-		let trie = self.get_trie().await;
-		let sub_trie = trie.get_subtrie(&borsh::to_vec(&1).unwrap()).unwrap();
-		println!("This is sub trie {:?}", sub_trie.len());
-		let consensus_state = TmConsensusState::new(client_state_in_bytes.into(), time, Hash::None);
-		Ok((
-			AnyClientState::Tendermint(client_state),
-			AnyConsensusState::Tendermint(consensus_state),
-		))
-		// Ok((AnyClientState::Guest(client_state), AnyConsensusState::Guest(consensus_state)))
+		let client_state = cf_guest::ClientState::new(
+			chain.genesis().unwrap(),
+			header.block_height,
+			64000 * 10_u64.pow(9),
+			header.epoch_id,
+			false,
+		);
+		let consensus_state = cf_guest::ConsensusState {
+			block_hash: blockhash.to_vec().into(),
+			timestamp_ns: header.timestamp_ns,
+		};
+		Ok((AnyClientState::Guest(client_state), AnyConsensusState::Guest(consensus_state)))
 	}
 
 	async fn query_client_id_from_tx_hash(

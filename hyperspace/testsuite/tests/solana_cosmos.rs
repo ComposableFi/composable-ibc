@@ -55,7 +55,7 @@ impl Default for Args {
 		let solana = std::env::var("SOLANA_HOST").unwrap_or_else(|_| "192.168.1.18".to_string());
 		let cosmos = std::env::var("COSMOS_HOST").unwrap_or_else(|_| "192.168.1.18".to_string());
 		let wasm_path = std::env::var("WASM_PATH").unwrap_or_else(|_| {
-			"../../target/wasm32-unknown-unknown/release/icsxx_solana_cw.wasm".to_string()
+			"../../target/wasm32-unknown-unknown/release/cf_guest_cw.wasm".to_string()
 		});
 
 		Args {
@@ -84,7 +84,7 @@ async fn setup_clients() -> (AnyChain, AnyChain) {
 		client_id: None,
 		connection_id: None,
 		commitment_prefix: args.connection_prefix_a.as_bytes().to_vec(),
-		wasm_checksum: None,
+		wasm_code_id: None,
 		rpc_url: args.chain_a.clone().parse().unwrap(),
 		ws_url: args.solana_ws.clone().parse().unwrap(),
 		chain_id: "solana-1".to_string(),
@@ -159,7 +159,7 @@ async fn setup_clients() -> (AnyChain, AnyChain) {
 	};
 	let code_id_str = hex::encode(code_id);
 	log::info!("This is wasm checksum {:?}", code_id_str);
-	config_b.wasm_checksum = Some(code_id_str);
+	config_b.wasm_code_id = Some(code_id_str);
 
 	let mut chain_a_wrapped = AnyConfig::Solana(config_a).into_client().await.unwrap();
 	let mut chain_b_wrapped = AnyConfig::Cosmos(config_b).into_client().await.unwrap();

@@ -38,6 +38,16 @@ fn instantiate(
 	// let metadata = ctx.metadata;
 	// ctx.consensus_states_mut().set(height, &msg.consensus_state, metadata);
 
+	let mut ctx = context::new(deps, env);
+	// let client_id = ClientId::from_str("08-wasm-0").expect("client id is valid");
+	let client_state = ctx
+		.client_state()
+		.map_err(|e| ContractError::Tendermint(e.to_string()))?;
+	ctx.store_update_height(client_id.clone(), client_state.latest_height, ctx.host_height)
+		.map_err(|e| ContractError::Tendermint(e.to_string()))?;
+	ctx.store_update_time(client_id, client_state.latest_height, ctx.host_timestamp())
+		.map_err(|e| ContractError::Tendermint(e.to_string()))?;
+
 	Ok(Response::default())
 }
 

@@ -66,19 +66,19 @@ ibc-rpc = { path = "../../contracts/pallet-ibc/rpc" }
 pallet-ibc = { path = "../../contracts/pallet-ibc", features = ["testing"]}
 
 # Trie
-lib = { path = "../../../emulated-light-client/common/lib" }
-memory = { path = "../../../emulated-light-client/common/memory" }
-sealable-trie = { path = "../../../emulated-light-client/common/sealable-trie", features = ["borsh"] }
-stdx = { path = "../../../emulated-light-client/common/stdx" }
-solana-trie = { path = "../../../emulated-light-client/solana/trie" }
-trie-ids = { path = "../../../emulated-light-client/common/trie-ids", features = ["borsh"] }
+lib = { git = "https://github.com/ComposableFi/emulated-light-client/" }
+memory = { git = "https://github.com/ComposableFi/emulated-light-client/" }
+sealable-trie = { git = "https://github.com/ComposableFi/emulated-light-client/", features = ["borsh"] }
+stdx = { git = "https://github.com/ComposableFi/emulated-light-client/" }
+solana-trie = { git = "https://github.com/ComposableFi/emulated-light-client/" }
+trie-ids = { git = "https://github.com/ComposableFi/emulated-light-client/", features = ["borsh"] }
 cf-guest = { path = "../../light-clients/cf-guest", default-features = false }
-guestchain = { path = "../../../emulated-light-client/common/guestchain", default-features = false }
+guestchain = { git = "https://github.com/ComposableFi/emulated-light-client/", default-features = false }
 
 #Contract
-solana-ibc = { path = "../../../emulated-light-client/solana/solana-ibc/programs/solana-ibc", features = ["mocks", "no-entrypoint"]}
-solana-write-account = { path = "../../../emulated-light-client/solana/write-account", features = ["library"] }
-solana-signature-verifier = { path = "../../../emulated-light-client/solana/signature-verifier" }
+solana-ibc = { git = "https://github.com/ComposableFi/emulated-light-client/", features = ["mocks", "no-entrypoint"]}
+solana-write-account = { git = "https://github.com/ComposableFi/emulated-light-client/", features = ["library"] }
+solana-signature-verifier = { git = "https://github.com/ComposableFi/emulated-light-client/" }
 
 tracing = "0.1.36"
 

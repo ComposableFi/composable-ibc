@@ -125,7 +125,7 @@ fn wrap_any_msg_into_wasm(msg: Any, code_id: Bytes) -> Result<Any, anyhow::Error
 				MsgCreateAnyClient::<LocalClientTypes>::decode_vec(&msg.value).unwrap();
 			log::info!("THis is consensus state in wrap any message {:?}", msg_decoded.consensus_state.timestamp());
 			msg_decoded.consensus_state = AnyConsensusState::wasm(msg_decoded.consensus_state)?;
-			msg_decoded.client_state = AnyClientState::wasm(msg_decoded.client_state, checksum)?;
+			msg_decoded.client_state = AnyClientState::wasm(msg_decoded.client_state, code_id)?;
 			log::info!("THis is consensus state in wrap any message with wasm {:?}", msg_decoded.consensus_state.timestamp());
 			msg_decoded.to_any()
 		},
@@ -144,6 +144,7 @@ fn wrap_any_msg_into_wasm(msg: Any, code_id: Bytes) -> Result<Any, anyhow::Error
 				MsgUpdateAnyClient::<LocalClientTypes>::decode_vec(&msg.value).unwrap();
 			msg_decoded.client_message = AnyClientMessage::wasm(msg_decoded.client_message)?;
 
+			log::info!("This is msg decoded {:?}", msg_decoded.clone().to_any());
 			msg_decoded.to_any()
 		},
 		_ => msg,
