@@ -29,9 +29,7 @@ use core::{
 use cosmwasm_schema::cw_serde;
 use ibc::{
 	core::{
-		ics02_client::client_consensus::{
-			ConsensusState as IcsConsensusState, ConsensusState as IbcConsensusState,
-		},
+		ics02_client::client_consensus::ConsensusState as IbcConsensusState,
 		ics23_commitment::commitment::CommitmentRoot,
 	},
 	protobuf::Protobuf,
@@ -111,9 +109,7 @@ where
 	}
 }
 
-impl<AnyConsensusState: IbcConsensusState> From<ConsensusState<AnyConsensusState>>
-	for RawConsensusState
-{
+impl<AnyConsensusState> From<ConsensusState<AnyConsensusState>> for RawConsensusState {
 	fn from(value: ConsensusState<AnyConsensusState>) -> Self {
 		Self { data: value.data, timestamp: value.timestamp }
 	}
@@ -121,7 +117,8 @@ impl<AnyConsensusState: IbcConsensusState> From<ConsensusState<AnyConsensusState
 
 impl<AnyConsensusState> Protobuf<RawConsensusState> for ConsensusState<AnyConsensusState>
 where
-	AnyConsensusState: Clone + IbcConsensusState + TryFrom<Any>,
+	AnyConsensusState: Clone,
+	AnyConsensusState: TryFrom<Any>,
 	<AnyConsensusState as TryFrom<Any>>::Error: Display,
 {
 }

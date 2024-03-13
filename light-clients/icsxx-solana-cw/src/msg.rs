@@ -31,7 +31,7 @@ use ics07_tendermint::{
 	client_state::ClientState,
 };
 use ics08_wasm::{
-	client_message::Header as WasmHeader, client_state::ClientState as WasmClientState,
+	client_state::ClientState as WasmClientState,
 	consensus_state::ConsensusState as WasmConsensusState,
 };
 use prost::Message;
@@ -234,8 +234,15 @@ pub struct WasmMisbehaviour {
 }
 
 #[cw_serde]
+pub struct WasmHeader {
+	#[schemars(with = "String")]
+	#[serde(with = "Base64", default)]
+	pub data: Bytes,	
+}
+
+#[cw_serde]
 pub enum ClientMessageRaw {
-	Header(WasmHeader<FakeInner>),
+	Header(WasmHeader),
 	Misbehaviour(WasmMisbehaviour),
 }
 

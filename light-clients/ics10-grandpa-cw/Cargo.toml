@@ -61,8 +61,6 @@ hyperspace-primitives = { path = "../../hyperspace/primitives", features = ["tes
 pallet-ibc = { path = "../../contracts/pallet-ibc" }
 serde-json-wasm = { version = "0.5.0", default-features = false }
 serde_json = { version = "1.0.93", default-features = false }
-tendermint = { git = "https://github.com/informalsystems/tendermint-rs", rev = "e81f7bf23d63ffbcd242381d1ce5e35da3515ff1", default-features = false }
-
 
 [features]
 # for more explicit tests, cargo test --features=backtraces

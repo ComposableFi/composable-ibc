@@ -55,7 +55,7 @@ pub struct ClientState<AnyClient, AnyClientState, AnyConsensusState> {
 	pub data: Bytes,
 	#[cfg_attr(feature = "cosmwasm", schemars(with = "String"))]
 	#[cfg_attr(feature = "cosmwasm", serde(with = "Base64", default))]
-	pub checksum: Bytes,
+	pub code_id: Bytes,
 	pub latest_height: Height,
 	#[cfg_attr(feature = "cosmwasm", serde(skip))]
 	#[cfg_attr(feature = "cosmwasm", schemars(skip))]
@@ -166,7 +166,7 @@ where
 		let inner = AnyClientState::try_from(any).map_err(|e| e.to_string())?;
 		Ok(Self {
 			data: raw.data,
-			checksum: raw.checksum,
+			code_id: raw.code_id,
 			inner: Box::new(inner),
 			latest_height: raw
 				.latest_height
@@ -186,7 +186,7 @@ where
 	fn from(client_state: ClientState<AnyClient, AnyClientState, AnyConsensusState>) -> Self {
 		Self {
 			data: client_state.data,
-			checksum: client_state.checksum,
+			code_id: client_state.code_id,
 			latest_height: Some(client_state.latest_height.into()),
 		}
 	}
@@ -201,18 +201,4 @@ where
 	AnyConsensusState: Clone,
 	AnyClient: Clone,
 {
-}
-
-impl<AnyClient, AnyClientState: Default, AnyConsensusState> Default
-	for ClientState<AnyClient, AnyClientState, AnyConsensusState>
-{
-	fn default() -> Self {
-		ClientState {
-			data: vec![],
-			checksum: vec![],
-			latest_height: Default::default(),
-			inner: Box::new(AnyClientState::default()),
-			_phantom: Default::default(),
-		}
-	}
 }

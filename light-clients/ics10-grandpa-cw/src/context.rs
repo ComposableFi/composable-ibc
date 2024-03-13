@@ -18,22 +18,12 @@ use crate::{
 		GRANDPA_BLOCK_HASHES_CACHE_SIZE, GRANDPA_HEADER_HASHES_SET_STORAGE,
 		GRANDPA_HEADER_HASHES_STORAGE,
 	},
-	ics23::{
-		ClientStates, ConsensusStates, FakeInner, ReadonlyClientStates, ReadonlyConsensusStates,
-	},
+	ics23::{ClientStates, ConsensusStates, ReadonlyClientStates, ReadonlyConsensusStates},
 	ContractError,
 };
-use cosmwasm_std::{Deps, DepsMut, Env, Storage};
+use cosmwasm_std::{DepsMut, Env, Storage};
 use grandpa_light_client_primitives::HostFunctions;
-use ibc::{
-	core::{
-		ics02_client::{error::Error, events::Checksum},
-		ics24_host::identifier::ClientId,
-		ics26_routing::context::ReaderContext,
-	},
-	Height,
-};
-use ibc_proto::google::protobuf::Any;
+use ibc::{core::ics26_routing::context::ReaderContext, Height};
 use ics10_grandpa::{
 	client_message::RelayChainHeader, client_state::ClientState, consensus_state::ConsensusState,
 };
@@ -41,10 +31,8 @@ use sp_core::H256;
 use std::{fmt, fmt::Debug, marker::PhantomData};
 
 pub struct Context<'a, H> {
-	pub deps_mut: Option<DepsMut<'a>>,
-	pub deps: Option<Deps<'a>>,
+	pub deps: DepsMut<'a>,
 	pub env: Env,
-	pub checksum: Option<Checksum>,
 	_phantom: PhantomData<H>,
 }
 
@@ -70,35 +58,19 @@ impl<'a, H> Clone for Context<'a, H> {
 
 impl<'a, H> Context<'a, H> {
 	pub fn new(deps: DepsMut<'a>, env: Env) -> Self {
-		Self { deps_mut: Some(deps), deps: None, _phantom: Default::default(), env, checksum: None }
-	}
-
-	pub fn new_ro(deps: Deps<'a>, env: Env) -> Self {
-		Self { deps_mut: None, deps: Some(deps), _phantom: Default::default(), env, checksum: None }
+		Self { deps, _phantom: Default::default(), env }
 	}
 
 	pub fn log(&self, msg: &str) {
-		match &self.deps_mut {
-			Some(deps_mut) => deps_mut.api.debug(msg),
-			None => unimplemented!(),
-		}
+		self.deps.api.debug(msg)
 	}
 
 	pub fn storage(&self) -> &dyn Storage {
-		match &self.deps_mut {
-			Some(deps_mut) => deps_mut.storage,
-			None => match &self.deps {
-				Some(deps) => deps.storage,
-				None => unimplemented!(),
-			},
-		}
+		self.deps.storage
 	}
 
 	pub fn storage_mut(&mut self) -> &mut dyn Storage {
-		match &mut self.deps_mut {
-			Some(deps_mut) => deps_mut.storage,
-			None => unimplemented!(),
-		}
+		self.deps.storage
 	}
 
 	pub fn insert_relay_header_hashes(&mut self, headers: &[H256]) {
@@ -179,40 +151,13 @@ where
 		&mut self,
 		client_state: ClientState<H>,
 		prefix: &[u8],
-		client_id: ClientId,
 	) -> Result<(), ContractError> {
-		use prost::Message;
-		use tendermint_proto::Protobuf;
 		let client_states = ReadonlyClientStates::new(self.storage());
-		let checksum = match self.checksum.clone() {
-			None => {
-				let encoded_wasm_client_state =
-					client_states.get_prefixed(prefix).ok_or_else(|| {
-						ContractError::Grandpa(Error::client_not_found(client_id).to_string())
-					})?;
-				let any = Any::decode(&*encoded_wasm_client_state)
-					.map_err(Error::decode)
-					.map_err(|e| ContractError::Grandpa(e.to_string()))?;
-				let wasm_client_state = ics08_wasm::client_state::ClientState::<
-					FakeInner,
-					FakeInner,
-					FakeInner,
-				>::decode_vec(&any.value)
-				.map_err(|e| {
-					ContractError::Grandpa(
-						Error::implementation_specific(format!(
-								"[client_state]: error decoding client state bytes to WasmConsensusState {}",
-								e
-							))
-						.to_string(),
-					)
-				})?;
-				wasm_client_state.checksum
-			},
-			Some(x) => x,
-		};
-		let encoded = Context::<H>::encode_client_state(client_state, checksum)
-			.map_err(|e| ContractError::Grandpa(format!("error encoding client state: {:?}", e)))?;
+		let data = client_states.get_prefixed(prefix).ok_or_else(|| {
+			ContractError::Grandpa("no client state found for prefix".to_string())
+		})?;
+		let encoded = Context::<H>::encode_client_state(client_state, data)
+			.map_err(|e| ContractError::Grandpa(format!("error encoding client state: {e:?}")))?;
 		let mut client_states = ClientStates::new(self.storage_mut());
 		client_states.insert_prefixed(encoded, prefix);
 		Ok(())

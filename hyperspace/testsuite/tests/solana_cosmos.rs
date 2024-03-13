@@ -55,7 +55,7 @@ impl Default for Args {
 		let solana = std::env::var("SOLANA_HOST").unwrap_or_else(|_| "192.168.1.18".to_string());
 		let cosmos = std::env::var("COSMOS_HOST").unwrap_or_else(|_| "192.168.1.18".to_string());
 		let wasm_path = std::env::var("WASM_PATH").unwrap_or_else(|_| {
-			"../../target/wasm32-unknown-unknown/release/cf_guest_cw.wasm".to_string()
+			"../../target/wasm32-unknown-unknown/release/icsxx_solana_cw.wasm".to_string()
 		});
 
 		Args {
@@ -126,7 +126,7 @@ async fn setup_clients() -> (AnyChain, AnyChain) {
         // centauri1g5r2vmnp6lta9cpst4lzc4syy3kcj2ljte3tlh
         "decorate bright ozone fork gallery riot bus exhaust worth way bone indoor calm squirrel merry zero scheme cotton until shop any excess stage laundry"
             .to_string(),
-        wasm_checksum: None,
+        wasm_code_id: None,
         channel_whitelist: vec![],
         common: CommonClientConfig {
             skip_optional_client_updates: true,

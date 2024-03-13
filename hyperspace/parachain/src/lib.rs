@@ -186,7 +186,7 @@ pub struct ParachainClientConfig {
 	pub key_type: String,
 	/// All the client states and headers will be wrapped in WASM ones using the WASM code ID.
 	#[serde(default)]
-	pub wasm_checksum: Option<String>,
+	pub wasm_code_id: Option<String>,
 }
 
 impl<T> ParachainClient<T>

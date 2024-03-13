@@ -264,11 +264,11 @@ impl From<UpgradeClient> for IbcEvent {
 	}
 }
 
-pub type Checksum = Vec<u8>;
+pub type CodeId = Vec<u8>;
 
 /// Signals a recent pushed WASM code to the chain.
 #[derive(Clone, Debug, PartialEq, Eq, PartialOrd, Ord, Hash, Deserialize, Serialize)]
-pub struct PushWasmCode(pub Checksum);
+pub struct PushWasmCode(pub CodeId);
 
 impl From<PushWasmCode> for IbcEvent {
 	fn from(v: PushWasmCode) -> Self {

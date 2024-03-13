@@ -15,31 +15,24 @@
 
 use crate::{
 	ics23::{
-		ClientStates, ConsensusStates, FakeInner, ReadonlyClientStates, ReadonlyConsensusStates,
+		ClientStates, ConsensusStates, ReadonlyClientStates, ReadonlyConsensusStates,
 		ReadonlyProcessedStates,
 	},
 	ContractError,
 };
-use cosmwasm_std::{Deps, DepsMut, Env, Storage};
+use cosmwasm_std::{DepsMut, Env, Storage};
 use ibc::{
-	core::{
-		ics02_client::{error::Error, events::Checksum},
-		ics24_host::identifier::ClientId,
-		ics26_routing::context::ReaderContext,
-	},
+	core::{ics02_client::error::Error, ics26_routing::context::ReaderContext},
 	Height,
 };
-use ibc_proto::google::protobuf::Any;
 use ics07_tendermint::{
 	client_state::ClientState, consensus_state::ConsensusState, HostFunctionsProvider,
 };
 use std::{fmt, fmt::Debug, marker::PhantomData};
 
 pub struct Context<'a, H> {
-	pub deps_mut: Option<DepsMut<'a>>,
-	pub deps: Option<Deps<'a>>,
+	pub deps: DepsMut<'a>,
 	pub env: Env,
-	pub checksum: Option<Checksum>,
 	_phantom: PhantomData<H>,
 }
 
@@ -65,35 +58,19 @@ impl<'a, H> Clone for Context<'a, H> {
 
 impl<'a, H> Context<'a, H> {
 	pub fn new(deps: DepsMut<'a>, env: Env) -> Self {
-		Self { deps_mut: Some(deps), deps: None, _phantom: Default::default(), env, checksum: None }
-	}
-
-	pub fn new_ro(deps: Deps<'a>, env: Env) -> Self {
-		Self { deps_mut: None, deps: Some(deps), _phantom: Default::default(), env, checksum: None }
+		Self { deps, _phantom: Default::default(), env }
 	}
 
 	pub fn log(&self, msg: &str) {
-		match &self.deps_mut {
-			Some(deps_mut) => deps_mut.api.debug(msg),
-			None => unimplemented!(),
-		}
+		self.deps.api.debug(msg)
 	}
 
 	pub fn storage(&self) -> &dyn Storage {
-		match &self.deps_mut {
-			Some(deps_mut) => deps_mut.storage,
-			None => match &self.deps {
-				Some(deps) => deps.storage,
-				None => unimplemented!(),
-			},
-		}
+		self.deps.storage
 	}
 
 	pub fn storage_mut(&mut self) -> &mut dyn Storage {
-		match &mut self.deps_mut {
-			Some(deps_mut) => deps_mut.storage,
-			None => unimplemented!(),
-		}
+		self.deps.storage
 	}
 }
 
@@ -161,41 +138,13 @@ where
 		&mut self,
 		client_state: ClientState<H>,
 		prefix: &[u8],
-		client_id: ClientId,
 	) -> Result<(), ContractError> {
-		use prost::Message;
-		use tendermint_proto::Protobuf;
 		let client_states = ReadonlyClientStates::new(self.storage());
-		let checksum = match self.checksum.clone() {
-			None => {
-				let encoded_wasm_client_state =
-					client_states.get_prefixed(prefix).ok_or_else(|| {
-						ContractError::Tendermint(Error::client_not_found(client_id).to_string())
-					})?;
-				let any = Any::decode(&*encoded_wasm_client_state)
-					.map_err(Error::decode)
-					.map_err(|e| ContractError::Tendermint(e.to_string()))?;
-				let wasm_client_state = ics08_wasm::client_state::ClientState::<
-					FakeInner,
-					FakeInner,
-					FakeInner,
-				>::decode_vec(&any.value)
-				.map_err(|e| {
-					ContractError::Tendermint(
-						Error::implementation_specific(format!(
-							"[client_state]: error decoding client state bytes to WasmConsensusState {}",
-							e
-						))
-						.to_string(),
-					)
-				})?;
-				wasm_client_state.checksum
-			},
-			Some(x) => x,
-		};
-
-		let encoded = Context::<H>::encode_client_state(client_state, checksum).map_err(|e| {
-			ContractError::Tendermint(format!("error encoding client state: {:?}", e))
+		let data = client_states.get_prefixed(prefix).ok_or_else(|| {
+			ContractError::Tendermint("no client state found for prefix".to_string())
+		})?;
+		let encoded = Context::<H>::encode_client_state(client_state, data).map_err(|e| {
+			ContractError::Tendermint(format!("error encoding client state: {e:?}"))
 		})?;
 		let mut client_states = ClientStates::new(self.storage_mut());
 		client_states.insert_prefixed(encoded, prefix);

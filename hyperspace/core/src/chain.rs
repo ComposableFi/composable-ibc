@@ -31,7 +31,7 @@ use ibc::{
 	core::{
 		ics02_client::{
 			client_state::ClientType,
-			events::{Checksum, UpdateClient},
+			events::{CodeId, UpdateClient},
 			msgs::{create_client::MsgCreateAnyClient, update_client::MsgUpdateAnyClient},
 		},
 		ics03_connection::msgs::{
@@ -106,7 +106,7 @@ chains! {
 	Solana(SolanaClientConfig, SolanaClient),
 }
 
-fn wrap_any_msg_into_wasm(msg: Any, checksum: Bytes) -> Result<Any, anyhow::Error> {
+fn wrap_any_msg_into_wasm(msg: Any, code_id: Bytes) -> Result<Any, anyhow::Error> {
 	// TODO: consider rewriting with Ics26Envelope
 	use ibc::core::{
 		ics02_client::msgs::{
@@ -154,5 +154,5 @@ fn wrap_any_msg_into_wasm(msg: Any, checksum: Bytes) -> Result<Any, anyhow::Erro
 #[derive(Clone)]
 pub struct WasmChain {
 	pub inner: Box<AnyChain>,
-	pub checksum: Bytes,
+	pub code_id: Bytes,
 }
