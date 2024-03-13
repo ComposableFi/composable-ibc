@@ -313,26 +313,26 @@ impl Header {
 			return Err(Error::validation("voting power is not > 2/3 + 1".to_string()))
 		}
 
-		let ret: Vec<(Vec<u8>, Vec<u8>, Vec<u8>)> = pre_input
+		let ret_zk_input = pre_input
 			.into_iter()
-			.take(size)
-			.map(|ZKInput { pub_key, signature, message, .. }| (pub_key, signature, message))
-			.collect();
+			.take(size).collect::<Vec<ZKInput>>();
+			// .map(|ZKInput { pub_key, signature, message, .. }| (pub_key, signature, message))
+			// .collect();
 
-		let validators: Vec<u64> = not_sorted_pre_input
-			.iter()
-			.map(|element| if ret.iter().any(|x| x.0 == element.pub_key) { 1 } else { 0 })
-			.collect();
+		
+		//ensure that ret is not sorted and has the same order as signed_header.commit.signatures because the pub inputs on solidity depend on the order of the pub keys and the signatures and the messages
+		let mut ret = vec![];
+		for i in not_sorted_pre_input.iter() {
+			// if i is in ret_zk_input add into ret
+			if ret_zk_input.iter().any(|x| x.pub_key == i.pub_key) {
+				ret.push((i.pub_key.clone(), i.signature.clone(), i.message.clone()));
+			}
+		}
+
+		assert!(ret.len() == size);
 
 		let mut bitmask: u64 = 0;
 
-		//wrong implementation
-		// for (index, &validator) in validators.iter().enumerate() {
-		// 	if validator == 1 {
-		// 		bitmask |= 1 << index;
-		// 	}
-		// }
-		
 		for (index, (i, vote)) in non_absent_votes.enumerate() {
 
 			let pub_key = &self.validator_set.validators().iter().find(|x| x.address == vote.validator_address).unwrap().pub_key;
@@ -351,9 +351,8 @@ impl Header {
 			};
 
 			if validator == 1 {
-				let pub_key = f_pub_key.clone().unwrap_or(vec![]);
-				let str_pub_key = hex::encode(pub_key);
-				log::info!("Validator: {:?} Voting Power: {:?}", str_pub_key, self.validator_set.validators()[index].power());
+				let str_pub_key = hex::encode(vote.validator_address);
+				log::info!("Validator for ZK: {:?} Voting Power: {:?}", str_pub_key, self.validator_set.validators()[index].power());
 				bitmask |= 1 << index;
 			}
 		}
