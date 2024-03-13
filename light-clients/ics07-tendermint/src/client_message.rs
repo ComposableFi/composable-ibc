@@ -300,6 +300,11 @@ impl Header {
 				acc += x.voting_power;
 				acc
 			});
+		
+		//print the validators adress and their voting power
+		for x in pre_input.iter().take(size) {
+			log::info!("Validator: {:?} Voting Power: {:?}", x.pub_key, x.voting_power);
+		}
 
 		log::debug!(target: "hyperspace", "voting power amount: {}, validator size: {}, total voting power: {}", voting_power_amount_validator_size, size, total_voting_power);
 
@@ -320,8 +325,33 @@ impl Header {
 			.collect();
 
 		let mut bitmask: u64 = 0;
-		for (index, &validator) in validators.iter().enumerate() {
+
+		//wrong implementation
+		// for (index, &validator) in validators.iter().enumerate() {
+		// 	if validator == 1 {
+		// 		bitmask |= 1 << index;
+		// 	}
+		// }
+		
+		for (index, (i, vote)) in non_absent_votes.enumerate() {
+
+			let pub_key = &self.validator_set.validators().iter().find(|x| x.address == vote.validator_address).unwrap().pub_key;
+			let p = pub_key;
+			let mut f_pub_key = None;
+			match p {
+				PublicKey::Ed25519(e) => {
+					f_pub_key = Some(e.as_bytes().to_vec());
+				},
+				_ => {}
+			};
+			let validator = if ret.iter().any(|x| x.0 == f_pub_key.clone().unwrap_or(vec![])) {
+				1
+			} else {
+				0
+			};
+
 			if validator == 1 {
+				log::info!("Validator: {:?} Voting Power: {:?}", f_pub_key.clone().unwrap_or(vec![]), self.validator_set.validators()[index].power());
 				bitmask |= 1 << index;
 			}
 		}

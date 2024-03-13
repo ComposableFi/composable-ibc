@@ -608,6 +608,14 @@ async fn test_de(){
 
 }
 
+#[tokio::test(flavor = "multi_thread", worker_threads = 10)]
+#[ignore]
+async fn test_decode_u256(){
+	let s = "0x00000000000000000000000000000000c9ac1fbda1df2a16471c6744b5b81cbc";
+	let s = s.trim_start_matches("0x");
+	let x = U256::from(s);
+	println!("s: {:?}", x);
+}
 
 #[tokio::test(flavor = "multi_thread", worker_threads = 10)]
 #[ignore]
