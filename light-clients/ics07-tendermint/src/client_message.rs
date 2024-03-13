@@ -303,7 +303,7 @@ impl Header {
 		
 		//print the validators adress and their voting power
 		for x in pre_input.iter().take(size) {
-			log::info!("Validator: {:?} Voting Power: {:?}", x.pub_key, x.voting_power);
+			log::info!(target: "hyperspace", "ALL Validator: {:?} Voting Power: {:?}", x.pub_key, x.voting_power);
 		}
 
 		log::debug!(target: "hyperspace", "voting power amount: {}, validator size: {}, total voting power: {}", voting_power_amount_validator_size, size, total_voting_power);
@@ -352,7 +352,7 @@ impl Header {
 
 			if validator == 1 {
 				let str_pub_key = hex::encode(vote.validator_address);
-				log::info!("Validator for ZK: {:?} Voting Power: {:?}", str_pub_key, self.validator_set.validators()[index].power());
+				log::info!(target: "hyperspace", "Validator for ZK: {:?} Voting Power: {:?}", str_pub_key, self.validator_set.validators()[index].power());
 				bitmask |= 1 << index;
 			}
 		}
