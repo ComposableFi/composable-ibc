@@ -1624,13 +1624,11 @@ dependencies = [
  "ed25519-dalek 2.1.1",
  "guestchain",
  "ibc 0.15.0",
- "ibc 0.50.0",
  "ibc-proto 0.18.0",
  "prost 0.11.9",
  "schemars",
  "serde",
  "sha2 0.10.8",
- "trie-ids",
 ]
 
 [[package]]

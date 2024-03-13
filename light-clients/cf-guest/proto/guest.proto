@@ -30,6 +30,14 @@ message ClientState {
 	bool is_frozen = 5;
 }
 
+// ClientMessage 
+message ClientMessage {
+  oneof message {
+    Header header = 1;
+    Misbehaviour misbehaviour = 2;
+  }
+}
+
 message Header {
 	// 32-byte hash of the genesis block.
 	//

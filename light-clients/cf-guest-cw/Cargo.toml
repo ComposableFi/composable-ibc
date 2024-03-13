@@ -35,10 +35,8 @@ ahash = { version = "=0.8.6", default-features = false }
 ed25519-dalek = { version = "2.1.1", default-features = false, features = ["pkcs8"] }
 
 # Same version emulated-light-client uses
-ibc_new = { git = "https://github.com/cosmos/ibc-rs", rev = "6dd3c6465e594d4c177f21724dd896a15e8f3634", default-features = false, features = ["borsh", "serde"], package = "ibc" }
 ibc = { path = "../../ibc/modules", default-features = false }
 ibc-proto = { path = "../../ibc/proto", default-features = false}
-trie-ids = { path = "../../../emulated-light-client/common/trie-ids", default-features = false }
 
 prost = { version = "0.11" ,features = ["prost-derive"], default-features = false }
 schemars = { version = "0.8.10", default-features = false }

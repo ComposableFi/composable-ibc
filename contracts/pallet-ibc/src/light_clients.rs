@@ -63,7 +63,9 @@ pub const GUEST_CLIENT_STATE_TYPE_URL: &str =
 	"composable.finance/lightclients.guest.v1.ClientState";
 pub const GUEST_CONSENSUS_STATE_TYPE_URL: &str =
 	"composable.finance/lightclients.guest.v1.ConsensusState";
+pub const GUEST_CLIENT_MESSAGE_TYPE_URL: &str = "composable.finance/lightclients.guest.v1.ClientMessage";
 pub const GUEST_HEADER_TYPE_URL: &str = "composable.finance/lightclients.guest.v1.Header";
+pub const GUEST_MISBEHAVIOUR_TYPE_URL: &str = "composable.finance/lightclients.guest.v1.Misbehaviour";
 
 #[derive(Clone, Default, PartialEq, Debug, Eq)]
 pub struct HostFunctionsManager;
@@ -516,20 +518,20 @@ impl TryFrom<Any> for AnyClientMessage {
 					ics07_tendermint::client_message::Misbehaviour::decode_vec(&value.value)
 						.map_err(ics02_client::error::Error::decode_raw_header)?,
 				))),
-			// GUEST_CLIENT_MESSAGE_TYPE_URL => Ok(Self::Guest(
-			// 	cf_guest::ClientMessage::decode_vec(&value.value)
-			// 		.map_err(ics02_client::error::Error::decode_raw_header)?,
-			// )),
-			// GUEST_HEADER_TYPE_URL =>
-			// 	Ok(Self::Guest(cf_guest::ClientMessage::Header(
-			// 		ics07_tendermint::client_message::Header::decode_vec(&value.value)
-			// 			.map_err(ics02_client::error::Error::decode_raw_header)?,
-			// 	))),
-			// GUEST_MISBEHAVIOUR_TYPE_URL =>
-			// 	Ok(Self::Guest(cf_guest::ClientMessage::Misbehaviour(
-			// 		ics07_tendermint::client_message::Misbehaviour::decode_vec(&value.value)
-			// 			.map_err(ics02_client::error::Error::decode_raw_header)?,
-			// 	))),
+			GUEST_CLIENT_MESSAGE_TYPE_URL => Ok(Self::Guest(
+				cf_guest::ClientMessage::decode_vec(&value.value)
+					.map_err(ics02_client::error::Error::decode_raw_header)?,
+			)),
+			GUEST_HEADER_TYPE_URL =>
+				Ok(Self::Guest(cf_guest::ClientMessage::Header(
+					cf_guest::Header::decode_vec(&value.value)
+						.map_err(ics02_client::error::Error::decode_raw_header)?,
+				))),
+			GUEST_MISBEHAVIOUR_TYPE_URL =>
+				Ok(Self::Guest(cf_guest::ClientMessage::Misbehaviour(
+					cf_guest::Misbehaviour::decode_vec(&value.value)
+						.map_err(ics02_client::error::Error::decode_raw_header)?,
+				))),
 			WASM_CLIENT_MESSAGE_TYPE_URL => Ok(Self::Wasm(
 				ics08_wasm::client_message::ClientMessage::decode_vec(&value.value)
 					.map_err(ics02_client::error::Error::decode_raw_header)?,
@@ -564,8 +566,10 @@ impl From<AnyClientMessage> for Any {
 				type_url: TENDERMINT_CLIENT_MESSAGE_TYPE_URL.to_string(),
 				value: msg.encode_vec().expect("encode_vec failed"),
 			},
-			AnyClientMessage::Guest(_) => todo!(),
-
+			AnyClientMessage::Guest(msg) => Any {
+				type_url: GUEST_CLIENT_MESSAGE_TYPE_URL.to_string(),
+				value: msg.encode_vec().expect("encode_vec failed"),
+			},
 			#[cfg(any(test, feature = "testing"))]
 			AnyClientMessage::Mock(_msg) => panic!("MockHeader can't be serialized"),
 		}

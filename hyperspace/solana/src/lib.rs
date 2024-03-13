@@ -7,6 +7,7 @@ use client::FinalityEvent;
 use client_state::convert_new_client_state_to_old;
 use consensus_state::convert_new_consensus_state_to_old;
 use core::{pin::Pin, str::FromStr, time::Duration};
+use guestchain::Epoch;
 use ibc_core_channel_types::msgs::PacketMsg;
 use ibc_core_client_types::msgs::ClientMsg;
 use ibc_core_handler_types::msgs::MsgEnvelope;
@@ -144,15 +145,16 @@ impl IbcProvider for SolanaClient {
 			.client_state
 			.ok_or_else(|| Error::Custom("counterparty returned empty client state".to_string()))?;
 		log::info!("This is the type url in solana {:?}", client_state_response.type_url);
-		let AnyClientState::Tendermint(client_state) =
+		let AnyClientState::Guest(client_state) =
 			AnyClientState::decode_recursive(client_state_response, |c| {
-				matches!(c, AnyClientState::Tendermint(_))
+				matches!(c, AnyClientState::Guest(_))
 			})
 			.ok_or_else(|| Error::Custom(format!("Could not decode client state")))?
 		else {
 			unreachable!()
 		};
-		let latest_cp_client_height = client_state.latest_height().revision_height;
+		log::info!("This is client state {:?}", client_state);
+		let latest_cp_client_height = u64::from(client_state.latest_height);
 		println!("This is counterparty client height {:?}", latest_cp_client_height);
 		let latest_height = self.latest_height_and_timestamp().await?.0;
 		let mut block_events: Vec<(u64, Vec<IbcEvent>)> = Vec::new();
@@ -184,12 +186,16 @@ impl IbcProvider for SolanaClient {
 			let converted_events = events
 				.iter()
 				.filter_map(|event| {
-					convert_new_event_to_old(event.clone(), client_state.latest_height())
+					convert_new_event_to_old(
+						event.clone(),
+						Height::new(0, u64::from(client_state.latest_height)),
+					)
 				})
 				.collect();
 			block_events.push((sig.slot, converted_events));
 		}
 
+		let chain_account = self.get_chain_storage().await;
 		let updates: Vec<_> = block_events
 			.iter()
 			.map(|event| {
@@ -199,12 +205,19 @@ impl IbcProvider for SolanaClient {
 					tendermint::block::Height::try_from(latest_height.revision_height).unwrap();
 				header.signed_header.commit.height =
 					tendermint::block::Height::try_from(latest_height.revision_height).unwrap();
-				header.trusted_height = Height::new(1, latest_height.revision_height);
+				header.trusted_height = Height::new(0, latest_height.revision_height);
+				
+				let guest_header = cf_guest::Header {
+					genesis_hash: client_state.genesis_hash.clone(),
+					block_hash: client_state.genesis_hash.clone(),
+					block_header: chain_account.head().unwrap().clone(),
+					epoch_commitment: client_state.epoch_commitment.clone(),
+					epoch: Epoch::new(Vec::new(), core::num::NonZeroU128::new(1).unwrap()).unwrap(),
+					signatures: Vec::new(),
+				};
 				let msg = MsgUpdateAnyClient::<LocalClientTypes> {
 					client_id: self.client_id(),
-					client_message: AnyClientMessage::Tendermint(ClientMessage::Header(
-						header.clone(),
-					)),
+					client_message: AnyClientMessage::Guest(cf_guest::ClientMessage::Header(guest_header)),
 					signer: counterparty.account_id(),
 				};
 				let value = msg
@@ -213,9 +226,11 @@ impl IbcProvider for SolanaClient {
 						Error::from(format!("Failed to encode MsgUpdateClient {msg:?}: {e:?}"))
 					})
 					.unwrap();
+				let mut msg_decoded =
+					MsgUpdateAnyClient::<LocalClientTypes>::decode_vec(&value).unwrap();
 				(
 					Any { type_url: msg.type_url(), value },
-					Height::new(1, latest_height.revision_height),
+					Height::new(0, latest_height.revision_height),
 					event.1.clone(),
 					if event.1.len() > 0 { UpdateType::Mandatory } else { UpdateType::Optional },
 				)

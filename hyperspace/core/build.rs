@@ -27,9 +27,9 @@ static SOLANA_URL: Lazy<String> = Lazy::new(|| {
 
 #[tokio::main]
 async fn main() -> anyhow::Result<()> {
-	if cfg!(feature = "build-metadata-from-ws") {
-		subxt_codegen::build_script(&RELAY_URL, "polkadot").await?;
-		subxt_codegen::build_script(&SOLANA_URL, "parachain").await?;
-	}
+	// if cfg!(feature = "build-metadata-from-ws") {
+	// 	subxt_codegen::build_script(&RELAY_URL, "polkadot").await?;
+	// 	subxt_codegen::build_script(&SOLANA_URL, "parachain").await?;
+	// }
 	Ok(())
 }

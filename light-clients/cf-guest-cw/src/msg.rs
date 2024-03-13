@@ -22,15 +22,18 @@ use crate::{
 	state,
 };
 
+// #[cw_serde]
+// pub struct InstantiateMsg {
+// 	#[serde(with = "Base64")]
+// 	#[schemars(with = "String")]
+// 	pub client_state: state::ClientState,
+// 	#[serde(with = "Base64")]
+// 	#[schemars(with = "String")]
+// 	pub consensus_state: state::ConsensusState,
+// }
+
 #[cw_serde]
-pub struct InstantiateMsg {
-	#[serde(with = "Base64")]
-	#[schemars(with = "String")]
-	pub client_state: state::ClientState,
-	#[serde(with = "Base64")]
-	#[schemars(with = "String")]
-	pub consensus_state: state::ConsensusState,
-}
+pub struct InstantiateMsg {}
 
 #[cw_serde]
 pub enum SudoMsg {
@@ -132,7 +135,7 @@ pub struct VerifyStateProofMsg {
 	#[serde(with = "MaybeBase64", default, skip_serializing_if = "Option::is_none")]
 	#[schemars(with = "String")]
 	pub value: Option<Vec<u8>>,
-	#[serde(flatten)]
+	// #[serde(flatten)]
 	pub height: Height,
 }
 
