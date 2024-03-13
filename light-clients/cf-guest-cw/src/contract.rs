@@ -22,47 +22,118 @@ use crate::{context, context::log, crypto::Verifier, ibc, msg, state};
 
 type Result<T = (), E = crate::error::Error> = core::result::Result<T, E>;
 
+
 #[cfg_attr(not(feature = "library"), cosmwasm_std::entry_point)]
 fn instantiate(
-	deps: DepsMut,
-	env: Env,
+	_deps: DepsMut,
+	_env: Env,
 	_info: MessageInfo,
 	_msg: msg::InstantiateMsg,
 ) -> Result<Response> {
-	// let mut ctx = context::new(deps, env);
-	// log!(ctx, "instantiate: {msg:?}");
-
-	// ctx.client_states_mut().set(&msg.client_state);
-
-	// let height = ibc::Height::new(0, msg.client_state.latest_height.into()).unwrap();
-	// let metadata = ctx.metadata;
-	// ctx.consensus_states_mut().set(height, &msg.consensus_state, metadata);
-
-	let mut ctx = context::new(deps, env);
-	// let client_id = ClientId::from_str("08-wasm-0").expect("client id is valid");
-	let client_state = ctx
-		.client_state()
-		.map_err(|e| ContractError::Tendermint(e.to_string()))?;
-	ctx.store_update_height(client_id.clone(), client_state.latest_height, ctx.host_height)
-		.map_err(|e| ContractError::Tendermint(e.to_string()))?;
-	ctx.store_update_time(client_id, client_state.latest_height, ctx.host_timestamp())
-		.map_err(|e| ContractError::Tendermint(e.to_string()))?;
-
 	Ok(Response::default())
 }
 
+
 #[cfg_attr(not(feature = "library"), cosmwasm_std::entry_point)]
-fn sudo(deps: DepsMut, env: Env, msg: msg::SudoMsg) -> Result<Response> {
+fn execute(
+	deps: DepsMut,
+	env: Env,
+	_info: MessageInfo,
+	msg: msg::ExecuteMsg,
+) -> Result<Response> {
 	let mut ctx = context::new(deps, env);
-	log!(ctx, "sudo({msg:?})");
-	match msg {
-		msg::SudoMsg::UpdateStateOnMisbehaviour(_msg) => {
+	log!(ctx, "execute({msg:?})");
+	let result = match msg {
+		msg::ExecuteMsg::VerifyMembership(msg) => {
+			verify_state_proof(ctx, msg.into())?;
+			ContractResult::success()
+		},
+		msg::ExecuteMsg::VerifyNonMembership(msg) => {
+			verify_state_proof(ctx, msg.into())?;
+			ContractResult::success()
+		},
+		msg::ExecuteMsg::VerifyClientMessage(msg) => {
+			verify_client_msg(ctx, msg)?;
+			ContractResult::success()
+		},
+		msg::ExecuteMsg::CheckForMisbehaviour(msg) => {
+			let found = check_for_misbehaviour(ctx, msg)?;
+			ContractResult::success().found_misbehaviour(found)
+		},
+		msg::ExecuteMsg::UpdateStateOnMisbehaviour(_msg) => {
 			let client_state = ctx.client_state()?.frozen();
 			ctx.client_states_mut().set(client_state);
+			ContractResult::success()
 		},
-		msg::SudoMsg::UpdateState(msg) => process_update_state_msg(ctx, msg)?,
+		msg::SudoMsg::UpdateState(msg) => {
+			process_update_state_msg(ctx, msg)?;
+			ContractResult::success()
+		}
+	};
+	to_json_binary(&result)
+}
+
+struct VerifyStateProof {
+	pub proof: ibc::CommitmentProofBytes,
+	pub path: ibc::path::Path,
+	pub value: Option<Vec<u8>>,
+	pub height: ibc::Height,
+}
+
+impl From<msg::VerifyMembershipMsg> for VerifyStateProof {
+	fn from(msg: msg::VerifyMembershipMsg) -> Self {
+		Self {
+			proof: msg.proof,
+			path: msg.path,
+			value: Some(msg.value),
+			height: msg.height,
+		}
 	}
-	Ok(Response::default())
+}
+
+impl From<msg::VerifyNonMembershipMsg> for VerifyStateProof {
+	fn from(msg: msg::VerifyNonMembershipMsg) -> Self {
+		Self {
+			proof: msg.proof,
+			path: msg.path,
+			value: None,
+			height: msg.height,
+		}
+	}
+}
+
+fn verify_state_proof(ctx: context::Context, msg: VerifyStateProof) -> Result<()> {
+	let consensus_state = ctx.consensus_state(height)?;
+	let result = cf_guest::proof::verify(
+		&ibc::CommitmentPrefix::default(),
+		&msg.proof,
+		&consensus_state.block_hash,
+		msg.path,
+		msg.value.as_deref(),
+	);
+	match result {
+		Ok(()) => Ok(msg::ContractResult::success()),
+		Err(err) => Err(StdError::GenericErr { msg: err.to_string() })
+	}
+}
+
+fn verify_client_msg(ctx: context::Context, msg: msg::VerifyClientMessageMsg) -> Result {
+	let client_message =
+		ibc::proto::google::protobuf::Any::decode(msg.client_message.as_slice()).map_err(crate::Error::from)?;
+	ctx.client_state()?
+		.verify_client_message(&Verifier, &ctx.client_id, client_message.try_into().unwrap())
+		.map_err(crate::Error::from)
+}
+
+fn check_for_misbehaviour_msg(
+	ctx: context::Context,
+	msg: msg::CheckForMisbehaviourMsg,
+) -> Result<bool> {
+	let client_message =
+	ibc::proto::google::protobuf::Any::decode(msg.client_message.as_slice()).map_err(crate::Error::from)?;
+	ctx.client_state()?
+		.check_for_misbehaviour(&Verifier, &ctx.client_id, client_message)
+		.map_err(crate::Error::from)
 }
 
 fn process_update_state_msg(mut ctx: context::ContextMut, msg: msg::UpdateStateMsg) -> Result {
@@ -81,71 +152,21 @@ fn process_update_state_msg(mut ctx: context::ContextMut, msg: msg::UpdateStateM
 	Ok(())
 }
 
+
 #[cfg_attr(not(feature = "library"), cosmwasm_std::entry_point)]
 fn query(deps: Deps, env: Env, msg: msg::QueryMsg) -> StdResult<Binary> {
 	let ctx = context::new_ro(deps, env);
-	match msg {
-		msg::QueryMsg::VerifyClientMessage(msg) => {
-			query_verify_client_msg(ctx, msg)?;
-			to_json_binary(&())
-		},
-		msg::QueryMsg::CheckForMisbehaviour(msg) => {
-			let res = query_check_for_misbehaviour_msg(ctx, msg)?;
-			to_json_binary(&res)
-		},
-		msg::QueryMsg::VerifyStateProof(msg) => {
-			query_verify_state_proof(ctx, msg)?;
-			to_json_binary(&())
-		},
-		msg::QueryMsg::Status(msg::StatusMsg {}) => to_json_binary(&query_status(ctx)?),
-		msg::QueryMsg::TimestampAtHeight(msg) => {
-			let height = msg.height.try_into()?;
-			let state = ctx.consensus_state(height)?;
-			to_json_binary(&Uint64::from(state.timestamp_ns.get()))
-		},
-		msg::QueryMsg::ExportMetadata(msg::ExportMetadataMsg {}) => {
-			let meta = ctx.consensus_states().get_all_metadata()?;
-			to_json_binary(&meta)
-		},
-	}
+	let response = match msg {
+		msg::QueryMsg::ExportMetadata(_) => msg::QueryResponse::new(),
+		msg::QueryMsg::Status(msg::StatusMsg {}) => query_status(ctx)?,
+	};
+	to_json_binary(&response)
 }
 
-fn query_verify_state_proof(ctx: context::Context, msg: msg::VerifyStateProofMsg) -> StdResult<()> {
-	let height = msg.height.try_into()?;
-	let consensus_state = ctx.consensus_state(height)?;
-	cf_guest::proof::verify(
-		&ibc::CommitmentPrefix::default(),
-		&msg.proof,
-		&consensus_state.block_hash,
-		msg.path,
-		msg.value.as_deref(),
-	)
-	.map_err(|err| StdError::GenericErr { msg: err.to_string() })
-}
-
-fn query_verify_client_msg(ctx: context::Context, msg: msg::VerifyClientMessageMsg) -> Result {
-	let client_message =
-		ibc::proto::google::protobuf::Any::decode(msg.client_message.as_slice()).map_err(crate::Error::from)?;
-	ctx.client_state()?
-		.verify_client_message(&Verifier, &ctx.client_id, client_message.try_into().unwrap())
-		.map_err(crate::Error::from)
-}
-
-fn query_check_for_misbehaviour_msg(
-	ctx: context::Context,
-	msg: msg::CheckForMisbehaviourMsg,
-) -> Result<bool> {
-	let client_message =
-	ibc::proto::google::protobuf::Any::decode(msg.client_message.as_slice()).map_err(crate::Error::from)?;
-	ctx.client_state()?
-		.check_for_misbehaviour(&Verifier, &ctx.client_id, client_message)
-		.map_err(crate::Error::from)
-}
-
-fn query_status(ctx: context::Context) -> StdResult<msg::StatusResponse> {
+fn query_status(ctx: context::Context) -> StdResult<msg::QueryResponse> {
 	let client_state = ctx.client_state()?;
 	if client_state.is_frozen {
-		return Ok(msg::StatusResponse::Frozen)
+		return Ok(msg::QueryResponse::frozen())
 	}
 
 	let height = client_state.latest_height;
@@ -154,8 +175,8 @@ fn query_status(ctx: context::Context) -> StdResult<msg::StatusResponse> {
 
 	let age = ctx.host_timestamp_ns.saturating_sub(consensus_state.timestamp_ns.get());
 	Ok(if age >= client_state.trusting_period_ns {
-		msg::StatusResponse::Expired
+		msg::QueryResponse::expired()
 	} else {
-		msg::StatusResponse::Active
+		msg::QueryResponse::active()
 	})
 }
