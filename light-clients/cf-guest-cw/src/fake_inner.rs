@@ -24,7 +24,6 @@ use ibc::{
 use ibc_proto::google::protobuf::Any;
 use std::{convert::Infallible, time::Duration};
 
-
 #[derive(Eq, Default)]
 #[cw_serde]
 pub struct FakeInner;

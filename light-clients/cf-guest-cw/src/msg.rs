@@ -17,10 +17,7 @@ use core::str::FromStr;
 use cosmwasm_schema::cw_serde;
 
 use ibc::{
-	core::{
-		ics23_commitment::commitment::CommitmentProofBytes,
-		ics24_host::Path,
-	},
+	core::{ics23_commitment::commitment::CommitmentProofBytes, ics24_host::Path},
 	protobuf::Protobuf,
 	Height,
 };
@@ -32,7 +29,7 @@ use ics08_wasm::{
 use prost::Message;
 use serde::{Deserializer, Serializer};
 
-use crate::{Error, fake_inner::FakeInner, state};
+use crate::{fake_inner::FakeInner, state, Error};
 
 struct Base64;
 
@@ -174,19 +171,17 @@ impl TryFrom<VerifyNonMembershipMsgRaw> for VerifyStateProof {
 }
 
 impl VerifyStateProof {
-	fn new(proof: Vec<u8>, path: MerklePath, value: Option<Vec<u8>>, height: HeightRaw) -> Result<Self, Error> {
-		let proof = CommitmentProofBytes::try_from(proof)
-			.map_err(|_| Error::BadMessage)?;
+	fn new(
+		proof: Vec<u8>,
+		path: MerklePath,
+		value: Option<Vec<u8>>,
+		height: HeightRaw,
+	) -> Result<Self, Error> {
+		let proof = CommitmentProofBytes::try_from(proof).map_err(|_| Error::BadMessage)?;
 		let path_str = path.key_path.join("");
-		let path = Path::from_str(&path_str)
-			.map_err(|_| Error::BadMessage)?;
+		let path = Path::from_str(&path_str).map_err(|_| Error::BadMessage)?;
 		let height = Height::from(height);
-		Ok(Self {
-			proof,
-			path,
-			value,
-			height,
-		})
+		Ok(Self { proof, path, value, height })
 	}
 }
 

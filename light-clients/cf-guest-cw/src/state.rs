@@ -14,6 +14,7 @@
 // limitations under the License.
 
 use cosmwasm_std::Storage;
+use ::ibc::Height;
 use prost::Message;
 
 use crate::{
@@ -29,6 +30,9 @@ pub type ClientState = cf_guest::ClientState<crate::PubKey>;
 pub type ConsensusState = cf_guest::ConsensusState;
 pub type Header = cf_guest::Header<crate::PubKey>;
 pub type Misbehaviour = cf_guest::Misbehaviour<crate::PubKey>;
+
+type WasmClientState = ics08_wasm::client_state::ClientState<FakeInner, FakeInner, FakeInner>;
+type WasmConsensusState = ics08_wasm::consensus_state::ConsensusState<FakeInner>;
 
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
 pub(crate) struct Metadata {
@@ -99,10 +103,7 @@ impl ConsensusStates {
 		unsafe { wrap_ref(storage) }
 	}
 
-	pub fn get<T, E>(&self, height: ibc::Height) -> Result<Option<(T, Metadata)>, E>
-	where
-		T: TryFrom<Any>,
-		E: From<T::Error> + From<prost::DecodeError>,
+	pub fn get(&self, height: ibc::Height) -> Result<Option<ConsensusState>>
 	{
 		self.get_impl(&Self::key(height))
 	}
@@ -116,8 +117,8 @@ impl ConsensusStates {
 	) -> impl Iterator<Item = Result<(Vec<u8>, Any, Metadata), prost::DecodeError>> + 'a {
 		self.0
 			.range(
-				Some(Self::key_impl(0, 0).as_slice()),
-				Some(Self::key_impl(u64::MAX, u64::MAX).as_slice()),
+				Some(Self::key(Height::new(0, 0)).as_slice()),
+				Some(Self::key(Height::new(u64::MAX, u64::MAX)).as_slice()),
 				cosmwasm_std::Order::Ascending,
 			)
 			.map(|(key, value)| {
@@ -149,27 +150,23 @@ impl ConsensusStates {
 	}
 
 	fn key(height: ibc::Height) -> Vec<u8> {
-		Self::key_impl(height.revision_number, height.revision_height)
+		format!("consensusStates/{height}").into_bytes()
 	}
 
-	fn key_impl(rev_number: u64, rev_height: u64) -> Vec<u8> {
-		let rev_number = rev_number.to_be_bytes();
-		let rev_height = rev_height.to_be_bytes();
-		[b"consensusStates/", &rev_number[..], b"-", &rev_height[..]].concat()
-	}
-
-	fn get_impl<T, E>(&self, key: &[u8]) -> Result<Option<(T, Metadata)>, E>
-	where
-		T: TryFrom<Any>,
-		E: From<T::Error> + From<prost::DecodeError>,
+	fn get_impl(&self, key: &[u8]) -> Result<Option<ConsensusState>>
 	{
 		// panic!("key {:?}",  String::from_utf8(key);
 		let value = match self.0.get(&key) {
 			None => return Ok(None),
 			Some(value) => value,
 		};
-		let (any, metadata) = ConsensusWithMetadata::decode(value.as_slice())?.into_parts();
-		Ok(Some((T::try_from(any)?, metadata)))
+		let any = Any::decode(value.as_slice())?;
+		let wasm_state =
+			ics08_wasm::consensus_state::ConsensusState::<FakeInner>::decode_vec(
+				&any.value,
+			).unwrap();
+		let any = Any::decode(wasm_state.data.as_slice())?;
+		Ok(Some(ConsensusState::try_from(any).unwrap()))
 	}
 
 	fn set_impl(&mut self, key: Vec<u8>, state: impl Into<Any>, metadata: Metadata) {

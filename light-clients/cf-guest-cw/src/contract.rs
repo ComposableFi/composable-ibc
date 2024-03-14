@@ -13,6 +13,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
+use cf_guest::ConsensusState;
 use cosmwasm_std::{
 	to_json_binary, Binary, Deps, DepsMut, Env, MessageInfo, Response, StdError, StdResult,
 };
@@ -54,7 +55,7 @@ fn execute(deps: DepsMut, env: Env, _info: MessageInfo, msg: msg::ExecuteMsg) ->
 		},
 		msg::ExecuteMsg::UpdateStateOnMisbehaviour(_msg) => {
 			let client_state = ctx.client_state()?.frozen();
-			ctx.client_states_mut().set(client_state);
+			ctx.client_states_mut().set(&client_state);
 			msg::ContractResult::success()
 		},
 		msg::ExecuteMsg::UpdateState(msg) => {
@@ -101,21 +102,17 @@ fn process_update_state_msg(mut ctx: context::ContextMut, msg: msg::UpdateStateM
 	let header = crate::state::Header::try_from(msg.client_message).unwrap();
 	let header_height = ibc::Height::new(0, header.block_header.block_height.into());
 
-	if ctx
-		.consensus_states()
-		.get::<state::ConsensusState, crate::Error>(header_height)?
-		.is_some()
-	{
-		return Ok(())
+	if ctx.consensus_states().get(header_height)?.is_some() {
+		return Ok(());
 	}
 
 	let metadata = ctx.metadata;
 	ctx.consensus_states_mut()
 		.prune_oldest_consensus_state(&client_state, metadata.host_timestamp_ns)?;
 
-	ctx.client_states_mut().set(client_state.with_header(&header));
+	ctx.client_states_mut().set(&client_state.with_header(&header));
 	ctx.consensus_states_mut()
-		.set(header_height, state::ConsensusState::from(&header), metadata);
+		.set(header_height, &state::ConsensusState::from(&header), metadata);
 
 	Ok(())
 }
@@ -143,7 +140,7 @@ fn query_status(ctx: context::Context) -> StdResult<&'static str> {
 	// };
 
 	let height = client_state.latest_height;
-	let height = ibc::Height::new(0, height.into());
+	let height = ibc::Height::new(1, height.into());
 	let consensus_state = ctx.consensus_state(height)?;
 
 	let age = ctx.host_timestamp_ns.saturating_sub(consensus_state.timestamp_ns.get());

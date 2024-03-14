@@ -13,8 +13,8 @@ pub use ibc::{
 		ics24_host::{identifier::ClientId, path},
 	},
 	protobuf,
-	Height,
 	timestamp::Timestamp,
+	Height,
 };
 
 pub use ibc_proto as proto;
