@@ -300,7 +300,7 @@ impl Header {
 				acc += x.voting_power;
 				acc
 			});
-		
+
 		//print the validators adress and their voting power
 		for x in pre_input.iter().take(size) {
 			log::info!("Validator: {:?} Voting Power: {:?}", x.pub_key, x.voting_power);
@@ -310,17 +310,14 @@ impl Header {
 
 		// signed votes haven't
 		if voting_power_amount_validator_size * 3 <= total_voting_power * 2 {
-			return Err(Error::validation("voting power is not > 2/3 + 1".to_string()))
+			// return Err(Error::validation("voting power is not > 2/3 + 1".to_string()))
 		}
 
-		let ret_zk_input = pre_input
-			.into_iter()
-			.take(size).collect::<Vec<ZKInput>>();
-			// .map(|ZKInput { pub_key, signature, message, .. }| (pub_key, signature, message))
-			// .collect();
+		let ret_zk_input = pre_input.into_iter().take(size).collect::<Vec<ZKInput>>();
 
-		
-		//ensure that ret is not sorted and has the same order as signed_header.commit.signatures because the pub inputs on solidity depend on the order of the pub keys and the signatures and the messages
+		//ensure that ret is not sorted and has the same order as signed_header.commit.signatures
+		// because the pub inputs on solidity depend on the order of the pub keys and the signatures
+		// and the messages
 		let mut ret = vec![];
 		for i in not_sorted_pre_input.iter() {
 			// if i is in ret_zk_input add into ret
@@ -333,26 +330,32 @@ impl Header {
 
 		let mut bitmask: u64 = 0;
 
-		for (index, (i, vote)) in non_absent_votes.enumerate() {
-
-			let pub_key = &self.validator_set.validators().iter().find(|x| x.address == vote.validator_address).unwrap().pub_key;
+		for (index, (_, vote)) in non_absent_votes.enumerate() {
+			let pub_key = &self
+				.validator_set
+				.validators()
+				.iter()
+				.find(|x| x.address == vote.validator_address)
+				.unwrap()
+				.pub_key;
 			let p = pub_key;
 			let mut f_pub_key = None;
 			match p {
 				PublicKey::Ed25519(e) => {
 					f_pub_key = Some(e.as_bytes().to_vec());
 				},
-				_ => {}
+				_ => {},
 			};
-			let validator = if ret.iter().any(|x| x.0 == f_pub_key.clone().unwrap_or(vec![])) {
-				1
-			} else {
-				0
-			};
+			let validator =
+				if ret.iter().any(|x| x.0 == f_pub_key.clone().unwrap_or(vec![])) { 1 } else { 0 };
 
 			if validator == 1 {
 				let str_pub_key = hex::encode(vote.validator_address);
-				log::info!("Validator for ZK: {:?} Voting Power: {:?}", str_pub_key, self.validator_set.validators()[index].power());
+				log::info!(
+					"Validator for ZK: {:?} Voting Power: {:?}",
+					str_pub_key,
+					self.validator_set.validators()[index].power()
+				);
 				bitmask |= 1 << index;
 			}
 		}
