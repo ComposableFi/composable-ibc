@@ -150,6 +150,54 @@
   },
   {
     "type": "function",
+    "name": "concatenateStrings",
+    "inputs": [
+      {
+        "name": "str1",
+        "type": "string",
+        "internalType": "string"
+      },
+      {
+        "name": "str2",
+        "type": "string",
+        "internalType": "string"
+      }
+    ],
+    "outputs": [
+      {
+        "name": "",
+        "type": "string",
+        "internalType": "string"
+      }
+    ],
+    "stateMutability": "pure"
+  },
+  {
+    "type": "function",
+    "name": "concatenateWithDelimiter",
+    "inputs": [
+      {
+        "name": "validators",
+        "type": "bytes[]",
+        "internalType": "bytes[]"
+      },
+      {
+        "name": "delimiter",
+        "type": "string",
+        "internalType": "string"
+      }
+    ],
+    "outputs": [
+      {
+        "name": "",
+        "type": "string",
+        "internalType": "string"
+      }
+    ],
+    "stateMutability": "pure"
+  },
+  {
+    "type": "function",
     "name": "getClientState",
     "inputs": [
       {
@@ -441,36 +489,6 @@
             "name": "clientMessage",
             "type": "bytes",
             "internalType": "bytes"
-          },
-          {
-            "name": "prevClientState",
-            "type": "bytes",
-            "internalType": "bytes"
-          },
-          {
-            "name": "zkProof",
-            "type": "bytes",
-            "internalType": "bytes"
-          },
-          {
-            "name": "bitmask",
-            "type": "uint64",
-            "internalType": "uint64"
-          },
-          {
-            "name": "_pA",
-            "type": "uint256[2]",
-            "internalType": "uint256[2]"
-          },
-          {
-            "name": "_pB",
-            "type": "uint256[2][2]",
-            "internalType": "uint256[2][2]"
-          },
-          {
-            "name": "_pC",
-            "type": "uint256[2]",
-            "internalType": "uint256[2]"
           }
         ]
       }
@@ -650,6 +668,22 @@
         "name": "_contractOwner",
         "type": "address",
         "internalType": "address"
+      }
+    ]
+  },
+  {
+    "type": "error",
+    "name": "SafeCastOverflowedIntDowncast",
+    "inputs": [
+      {
+        "name": "bits",
+        "type": "uint8",
+        "internalType": "uint8"
+      },
+      {
+        "name": "value",
+        "type": "int256",
+        "internalType": "int256"
       }
     ]
   }

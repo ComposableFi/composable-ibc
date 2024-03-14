@@ -247,7 +247,7 @@
   },
   {
     "type": "function",
-    "name": "tokenUpdateOwnership",
+    "name": "tokenTransferOwnership",
     "inputs": [
       {
         "name": "token",
