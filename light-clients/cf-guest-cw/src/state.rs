@@ -16,7 +16,8 @@
 use cosmwasm_std::Storage;
 use prost::Message;
 
-use crate::{ibc, ibc::proto::google::protobuf::Any};
+use crate::{fake_inner::FakeInner, ibc, ibc::proto::google::protobuf::Any};
+use ibc::protobuf::Protobuf;
 
 type Result<T, E = crate::Error> = core::result::Result<T, E>;
 
@@ -25,6 +26,9 @@ pub type ClientState = cf_guest::ClientState<crate::PubKey>;
 pub type ConsensusState = cf_guest::ConsensusState;
 pub type Header = cf_guest::Header<crate::PubKey>;
 pub type Misbehaviour = cf_guest::Misbehaviour<crate::PubKey>;
+
+type WasmClientState = ics08_wasm::client_state::ClientState<FakeInner, FakeInner, FakeInner>;
+type WasmConsensusState = ics08_wasm::consensus_state::ConsensusState<FakeInner>;
 
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
 pub(crate) struct Metadata {
@@ -49,36 +53,29 @@ impl ClientStates {
 		unsafe { wrap_ref(storage) }
 	}
 
-	pub fn get<T, E>(&self) -> Result<Option<T>, E>
-	where
-		T: TryFrom<Any>,
-		E: From<T::Error> + From<prost::DecodeError>,
-	{
+	pub fn get(&self) -> Result<Option<ClientState>> {
 		self.get_impl(Self::KEY)
 	}
 
-	pub fn set(&mut self, state: impl Into<Any>) {
+	pub fn set(&mut self, state: &ClientState) {
 		self.set_impl(Self::KEY, state)
 	}
 
-	const KEY: &'static [u8] = b"clientState/";
+	const KEY: &'static [u8] = b"clientState";
 
-	fn get_impl<T, E>(&self, key: &[u8]) -> Result<Option<T>, E>
-	where
-		T: TryFrom<Any>,
-		E: From<T::Error> + From<prost::DecodeError>,
-	{
-		self.0
-			.get(&key)
-			.map(|value| {
-				let any = Any::decode(value.as_slice())?;
-				T::try_from(any).map_err(|err| err.into())
-			})
-			.transpose()
+	fn get_impl(&self, key: &[u8]) -> Result<Option<ClientState>> {
+		let value = match self.0.get(&key) {
+			None => return Ok(None),
+			Some(value) => value,
+		};
+		let any = Any::decode(value.as_slice())?;
+		let wasm_state = WasmClientState::decode_vec(&any.value)?;
+		let any = Any::decode(wasm_state.data.as_slice())?;
+		Ok(Some(ClientState::try_from(any)?))
 	}
 
-	fn set_impl(&mut self, key: &[u8], state: impl Into<Any>) {
-		self.0.set(&key, state.into().encode_to_vec().as_slice())
+	fn set_impl(&mut self, _key: &[u8], _state: &ClientState) {
+		todo!()
 	}
 }
 
@@ -99,49 +96,20 @@ impl ConsensusStates {
 		unsafe { wrap_ref(storage) }
 	}
 
-	pub fn get<T, E>(&self, height: ibc::Height) -> Result<Option<(T, Metadata)>, E>
-	where
-		T: TryFrom<Any>,
-		E: From<T::Error> + From<prost::DecodeError>,
-	{
+	pub fn get(&self, height: ibc::Height) -> Result<Option<ConsensusState>> {
 		self.get_impl(&Self::key(height))
 	}
 
-	pub fn set(&mut self, height: ibc::Height, state: impl Into<Any>, metadata: Metadata) {
+	pub fn set(&mut self, height: ibc::Height, state: &ConsensusState, metadata: Metadata) {
 		self.set_impl(Self::key(height), state, metadata)
-	}
-
-	fn all<'a>(
-		&'a self,
-	) -> impl Iterator<Item = Result<(Vec<u8>, Any, Metadata), prost::DecodeError>> + 'a {
-		self.0
-			.range(
-				Some(Self::key_impl(0, 0).as_slice()),
-				Some(Self::key_impl(u64::MAX, u64::MAX).as_slice()),
-				cosmwasm_std::Order::Ascending,
-			)
-			.map(|(key, value)| {
-				let (any, metadata) = ConsensusWithMetadata::decode(value.as_slice())?.into_parts();
-				Ok((key, any, metadata))
-			})
 	}
 
 	pub fn prune_oldest_consensus_state(
 		&mut self,
-		client_state: &ClientState,
-		now_ns: u64,
+		_client_state: &ClientState,
+		_now_ns: u64,
 	) -> Result<()> {
-		let (key, any) = match self.all().next() {
-			None => return Ok(()),
-			Some(Err(err)) => return Err(err.into()),
-			Some(Ok((key, any, _metadata))) => (key, any),
-		};
-		let state = ConsensusState::try_from(any)?;
-		let elapsed = now_ns.saturating_sub(state.timestamp_ns.get());
-		if elapsed >= client_state.trusting_period_ns {
-			self.0.remove(key.as_slice());
-		}
-		Ok(())
+		todo!()
 	}
 
 	pub fn del(&mut self, height: ibc::Height) {
@@ -149,31 +117,22 @@ impl ConsensusStates {
 	}
 
 	fn key(height: ibc::Height) -> Vec<u8> {
-		Self::key_impl(height.revision_number, height.revision_height)
+		format!("consensusStates/{height}").into_bytes()
 	}
 
-	fn key_impl(rev_number: u64, rev_height: u64) -> Vec<u8> {
-		let rev_number = rev_number.to_be_bytes();
-		let rev_height = rev_height.to_be_bytes();
-		[b"consensusState/", &rev_number[..], &rev_height[..]].concat()
-	}
-
-	fn get_impl<T, E>(&self, key: &[u8]) -> Result<Option<(T, Metadata)>, E>
-	where
-		T: TryFrom<Any>,
-		E: From<T::Error> + From<prost::DecodeError>,
-	{
-		let value = match self.0.get(&key) {
+	fn get_impl(&self, key: &[u8]) -> Result<Option<ConsensusState>> {
+		let value = match self.0.get(key) {
 			None => return Ok(None),
 			Some(value) => value,
 		};
-		let (any, metadata) = ConsensusWithMetadata::decode(value.as_slice())?.into_parts();
-		Ok(Some((T::try_from(any)?, metadata)))
+		let any = Any::decode(value.as_slice())?;
+		let wasm_state = WasmConsensusState::decode_vec(&any.value)?;
+		let any = Any::decode(wasm_state.data.as_slice())?;
+		Ok(Some(ConsensusState::try_from(any)?))
 	}
 
-	fn set_impl(&mut self, key: Vec<u8>, state: impl Into<Any>, metadata: Metadata) {
-		let state = ConsensusWithMetadata::new(state, metadata);
-		self.0.set(&key, state.encode_to_vec().as_slice())
+	fn set_impl(&mut self, _key: Vec<u8>, _state: &ConsensusState, _metadata: Metadata) {
+		todo!()
 	}
 }
 

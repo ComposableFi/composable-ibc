@@ -174,9 +174,8 @@ fn req_client_state(
 fn req_consensus_state(
 	client_id: &ibc::ClientId,
 	height: ibc::Height,
-	state: Result<Option<(state::ConsensusState, state::Metadata)>>,
+	state: Result<Option<state::ConsensusState>>,
 ) -> Result<state::ConsensusState> {
-	let make_err =
-		|| ibc::ClientError::consensus_state_not_found (client_id.clone(), height ).into();
-	state.and_then(|state| state.map(|(state, _metadata)| state).ok_or_else(make_err))
+	let make_err = || ibc::ClientError::consensus_state_not_found(client_id.clone(), height).into();
+	state.and_then(|state| state.ok_or_else(make_err))
 }

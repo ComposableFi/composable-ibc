@@ -21,7 +21,6 @@ use crate::{context, context::log, crypto::Verifier, ibc, msg, state};
 
 type Result<T = (), E = crate::error::Error> = core::result::Result<T, E>;
 
-
 #[cfg_attr(not(feature = "library"), cosmwasm_std::entry_point)]
 fn instantiate(
 	_deps: DepsMut,
@@ -32,14 +31,8 @@ fn instantiate(
 	Ok(Response::default())
 }
 
-
 #[cfg_attr(not(feature = "library"), cosmwasm_std::entry_point)]
-fn execute(
-	deps: DepsMut,
-	env: Env,
-	_info: MessageInfo,
-	msg: msg::ExecuteMsg,
-) -> Result<Response> {
+fn execute(deps: DepsMut, env: Env, _info: MessageInfo, msg: msg::ExecuteMsg) -> Result<Response> {
 	let mut ctx = context::new(deps, env);
 	log!(ctx, "execute({msg:?})");
 	let result = match msg {
@@ -61,13 +54,13 @@ fn execute(
 		},
 		msg::ExecuteMsg::UpdateStateOnMisbehaviour(_msg) => {
 			let client_state = ctx.client_state()?.frozen();
-			ctx.client_states_mut().set(client_state);
+			ctx.client_states_mut().set(&client_state);
 			msg::ContractResult::success()
 		},
 		msg::ExecuteMsg::UpdateState(msg) => {
 			process_update_state_msg(ctx, msg.try_into()?)?;
 			msg::ContractResult::success()
-		}
+		},
 
 		msg::ExecuteMsg::CheckSubstituteAndUpdateState(_) => unimplemented!(),
 		msg::ExecuteMsg::VerifyUpgradeAndUpdateState(_) => unimplemented!(),
@@ -83,7 +76,8 @@ fn verify_state_proof(ctx: context::ContextMut, msg: msg::VerifyStateProof) -> R
 		&consensus_state.block_hash,
 		msg.path,
 		msg.value.as_deref(),
-	).map_err(|err| StdError::GenericErr { msg: err.to_string() }.into())
+	)
+	.map_err(|err| StdError::GenericErr { msg: err.to_string() }.into())
 }
 
 fn verify_client_message(ctx: context::ContextMut, msg: msg::VerifyClientMessageMsg) -> Result {
@@ -105,10 +99,9 @@ fn process_update_state_msg(mut ctx: context::ContextMut, msg: msg::UpdateStateM
 	let client_state = ctx.client_state()?;
 
 	let header = crate::state::Header::try_from(msg.client_message).unwrap();
-	let header_height =
-		ibc::Height::new(0, header.block_header.block_height.into());
+	let header_height = ibc::Height::new(0, header.block_header.block_height.into());
 
-	if ctx.consensus_states().get::<state::ConsensusState, crate::Error>(header_height)?.is_some() {
+	if ctx.consensus_states().get(header_height)?.is_some() {
 		return Ok(());
 	}
 
@@ -116,15 +109,12 @@ fn process_update_state_msg(mut ctx: context::ContextMut, msg: msg::UpdateStateM
 	ctx.consensus_states_mut()
 		.prune_oldest_consensus_state(&client_state, metadata.host_timestamp_ns)?;
 
-	ctx.client_states_mut().set(client_state.with_header(&header));
-	ctx.consensus_states_mut().set(
-		header_height,
-		state::ConsensusState::from(&header),
-		metadata);
+	ctx.client_states_mut().set(&client_state.with_header(&header));
+	ctx.consensus_states_mut()
+		.set(header_height, &state::ConsensusState::from(&header), metadata);
 
 	Ok(())
 }
-
 
 #[cfg_attr(not(feature = "library"), cosmwasm_std::entry_point)]
 fn query(deps: Deps, env: Env, msg: msg::QueryMsg) -> StdResult<Binary> {

@@ -12,8 +12,9 @@ pub use ibc::{
 		ics23_commitment::commitment::{CommitmentPrefix, CommitmentProofBytes},
 		ics24_host::{identifier::ClientId, path},
 	},
-	Height,
+	protobuf,
 	timestamp::Timestamp,
+	Height,
 };
 
 pub use ibc_proto as proto;
