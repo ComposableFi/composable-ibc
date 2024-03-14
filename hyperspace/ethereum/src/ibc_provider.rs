@@ -60,7 +60,7 @@ use std::{
 use crate::{
 	chain::{
 		client_state_abi_token, client_state_from_abi_token, consensus_state_from_abi_token,
-		tm_header_from_abi_token,
+		prev_client_state_from_abi_token, tm_header_from_abi_token,
 	},
 	client::{run_updates_fetcher, ClientError, EthereumClient},
 	config::ContractName,
@@ -341,7 +341,7 @@ impl EthereumClient {
 							return Err(ClientError::Other("calldata should be bytes".to_string()))
 						};
 						let header = tm_header_from_abi_token(toks[1].clone())?;
-						let client_state_token = toks[2].clone();
+						let client_state_token = prev_client_state_from_abi_token(toks[1].clone())?;
 						let mut cs =
 							client_state_from_abi_token::<LocalClientTypes>(client_state_token)?;
 						if header.signed_header.header.height.value() >
@@ -773,6 +773,7 @@ impl IbcProvider for EthereumClient {
 		Ok(QueryConsensusStateResponse { consensus_state: Some(any), proof, proof_height })
 	}
 
+	// TODO: refactor ethereum `query_client_state`
 	async fn query_client_state(
 		&self,
 		at: Height,
@@ -829,8 +830,10 @@ impl IbcProvider for EthereumClient {
 						let Token::Tuple(toks) = calldata else {
 							return Err(ClientError::Other("calldata should be bytes".to_string()))
 						};
+
 						let header = tm_header_from_abi_token(toks[1].clone())?;
-						let client_state_token = toks[2].clone();
+						let client_state_token = prev_client_state_from_abi_token(toks[1].clone())?;
+
 						let mut cs =
 							client_state_from_abi_token::<LocalClientTypes>(client_state_token)?;
 						if header.signed_header.header.height.value() >
