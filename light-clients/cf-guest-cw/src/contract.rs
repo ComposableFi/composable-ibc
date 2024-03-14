@@ -21,7 +21,6 @@ use crate::{context, context::log, crypto::Verifier, ibc, msg, state};
 
 type Result<T = (), E = crate::error::Error> = core::result::Result<T, E>;
 
-
 #[cfg_attr(not(feature = "library"), cosmwasm_std::entry_point)]
 fn instantiate(
 	_deps: DepsMut,
@@ -32,14 +31,8 @@ fn instantiate(
 	Ok(Response::default())
 }
 
-
 #[cfg_attr(not(feature = "library"), cosmwasm_std::entry_point)]
-fn execute(
-	deps: DepsMut,
-	env: Env,
-	_info: MessageInfo,
-	msg: msg::ExecuteMsg,
-) -> Result<Response> {
+fn execute(deps: DepsMut, env: Env, _info: MessageInfo, msg: msg::ExecuteMsg) -> Result<Response> {
 	let mut ctx = context::new(deps, env);
 	log!(ctx, "execute({msg:?})");
 	let result = match msg {
@@ -67,7 +60,7 @@ fn execute(
 		msg::ExecuteMsg::UpdateState(msg) => {
 			process_update_state_msg(ctx, msg.try_into()?)?;
 			msg::ContractResult::success()
-		}
+		},
 
 		msg::ExecuteMsg::CheckSubstituteAndUpdateState(_) => unimplemented!(),
 		msg::ExecuteMsg::VerifyUpgradeAndUpdateState(_) => unimplemented!(),
@@ -83,7 +76,8 @@ fn verify_state_proof(ctx: context::ContextMut, msg: msg::VerifyStateProof) -> R
 		&consensus_state.block_hash,
 		msg.path,
 		msg.value.as_deref(),
-	).map_err(|err| StdError::GenericErr { msg: err.to_string() }.into())
+	)
+	.map_err(|err| StdError::GenericErr { msg: err.to_string() }.into())
 }
 
 fn verify_client_message(ctx: context::ContextMut, msg: msg::VerifyClientMessageMsg) -> Result {
@@ -105,11 +99,14 @@ fn process_update_state_msg(mut ctx: context::ContextMut, msg: msg::UpdateStateM
 	let client_state = ctx.client_state()?;
 
 	let header = crate::state::Header::try_from(msg.client_message).unwrap();
-	let header_height =
-		ibc::Height::new(0, header.block_header.block_height.into());
+	let header_height = ibc::Height::new(0, header.block_header.block_height.into());
 
-	if ctx.consensus_states().get::<state::ConsensusState, crate::Error>(header_height)?.is_some() {
-		return Ok(());
+	if ctx
+		.consensus_states()
+		.get::<state::ConsensusState, crate::Error>(header_height)?
+		.is_some()
+	{
+		return Ok(())
 	}
 
 	let metadata = ctx.metadata;
@@ -117,41 +114,38 @@ fn process_update_state_msg(mut ctx: context::ContextMut, msg: msg::UpdateStateM
 		.prune_oldest_consensus_state(&client_state, metadata.host_timestamp_ns)?;
 
 	ctx.client_states_mut().set(client_state.with_header(&header));
-	ctx.consensus_states_mut().set(
-		header_height,
-		state::ConsensusState::from(&header),
-		metadata);
+	ctx.consensus_states_mut()
+		.set(header_height, state::ConsensusState::from(&header), metadata);
 
 	Ok(())
 }
 
-
 #[cfg_attr(not(feature = "library"), cosmwasm_std::entry_point)]
 fn query(deps: Deps, env: Env, msg: msg::QueryMsg) -> StdResult<Binary> {
+	let s = deps.storage;
 	let ctx = context::new_ro(deps, env);
 	let response = match msg {
 		msg::QueryMsg::ClientTypeMsg(_) => unimplemented!(),
 		msg::QueryMsg::GetLatestHeightsMsg(_) => unimplemented!(),
 		msg::QueryMsg::ExportMetadata(_) => msg::QueryResponse::new(""),
-		msg::QueryMsg::Status(msg::StatusMsg {}) => query_status(ctx)?,
+		msg::QueryMsg::Status(msg::StatusMsg {}) =>
+			msg::QueryResponse::new(query_status(ctx)?),
 	};
 	to_json_binary(&response)
 }
 
-fn query_status(ctx: context::Context) -> StdResult<msg::QueryResponse> {
-	let client_state = ctx.client_state()?;
-	if client_state.is_frozen {
-		return Ok(msg::QueryResponse::new("Frozen"))
-	}
+fn query_status(ctx: context::Context) -> StdResult<&'static str> {
+	let client_state = ctx.client_state().unwrap();
+	//  {
+	// 	Err(_) => return Ok("Unknown"),
+	// 	Ok(state) if state.is_frozen => return Ok("Frozen"),
+	// 	Ok(state) => state,
+	// };
 
 	let height = client_state.latest_height;
 	let height = ibc::Height::new(0, height.into());
 	let consensus_state = ctx.consensus_state(height)?;
 
 	let age = ctx.host_timestamp_ns.saturating_sub(consensus_state.timestamp_ns.get());
-	Ok(if age >= client_state.trusting_period_ns {
-		msg::QueryResponse::new("Expired")
-	} else {
-		msg::QueryResponse::new("Active")
-	})
+	Ok(if age >= client_state.trusting_period_ns { "Expired" } else { "Active" })
 }

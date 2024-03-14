@@ -16,7 +16,11 @@
 use cosmwasm_std::Storage;
 use prost::Message;
 
-use crate::{ibc, ibc::proto::google::protobuf::Any};
+use crate::{
+	fake_inner::FakeInner,
+	ibc,
+	ibc::{proto::google::protobuf::Any, protobuf::Protobuf},
+};
 
 type Result<T, E = crate::Error> = core::result::Result<T, E>;
 
@@ -49,11 +53,7 @@ impl ClientStates {
 		unsafe { wrap_ref(storage) }
 	}
 
-	pub fn get<T, E>(&self) -> Result<Option<T>, E>
-	where
-		T: TryFrom<Any>,
-		E: From<T::Error> + From<prost::DecodeError>,
-	{
+	pub fn get(&self) -> Result<Option<ClientState>> {
 		self.get_impl(Self::KEY)
 	}
 
@@ -61,20 +61,20 @@ impl ClientStates {
 		self.set_impl(Self::KEY, state)
 	}
 
-	const KEY: &'static [u8] = b"clientState/";
+	const KEY: &'static [u8] = b"clientState";
 
-	fn get_impl<T, E>(&self, key: &[u8]) -> Result<Option<T>, E>
-	where
-		T: TryFrom<Any>,
-		E: From<T::Error> + From<prost::DecodeError>,
-	{
-		self.0
-			.get(&key)
-			.map(|value| {
-				let any = Any::decode(value.as_slice())?;
-				T::try_from(any).map_err(|err| err.into())
-			})
-			.transpose()
+	fn get_impl(&self, key: &[u8]) -> Result<Option<ClientState>> {
+		let value = match self.0.get(&key) {
+			None => return Ok(None),
+			Some(value) => value,
+		};
+		let any = Any::decode(value.as_slice())?;
+		let wasm_state =
+			ics08_wasm::client_state::ClientState::<FakeInner, FakeInner, FakeInner>::decode_vec(
+				&any.value,
+			)?;
+		let any = Any::decode(wasm_state.data.as_slice())?;
+		Ok(Some(ClientState::try_from(any)?))
 	}
 
 	fn set_impl(&mut self, key: &[u8], state: impl Into<Any>) {
@@ -155,7 +155,7 @@ impl ConsensusStates {
 	fn key_impl(rev_number: u64, rev_height: u64) -> Vec<u8> {
 		let rev_number = rev_number.to_be_bytes();
 		let rev_height = rev_height.to_be_bytes();
-		[b"consensusState/", &rev_number[..], &rev_height[..]].concat()
+		[b"consensusStates/", &rev_number[..], b"-", &rev_height[..]].concat()
 	}
 
 	fn get_impl<T, E>(&self, key: &[u8]) -> Result<Option<(T, Metadata)>, E>
@@ -163,6 +163,7 @@ impl ConsensusStates {
 		T: TryFrom<Any>,
 		E: From<T::Error> + From<prost::DecodeError>,
 	{
+		// panic!("key {:?}",  String::from_utf8(key);
 		let value = match self.0.get(&key) {
 			None => return Ok(None),
 			Some(value) => value,
@@ -230,5 +231,33 @@ unsafe fn wrap_mut<F: ?Sized, T: ?Sized>(from: &mut F) -> &mut T {
 		// are unspecified.
 		let outer_ptr: *mut T = core::mem::transmute_copy(&inner_ptr);
 		&mut *outer_ptr
+	}
+}
+
+mod tests {
+	use cf_guest::ClientState;
+	use ibc_proto::google::protobuf::Any;
+
+	use crate::crypto::PubKey;
+
+	#[test]
+	fn test_something() {
+		use prost::Message;
+		let value: Vec<u8> = vec![
+			10, 37, 47, 105, 98, 99, 46, 108, 105, 103, 104, 116, 99, 108, 105, 101, 110, 116, 115,
+			46, 119, 97, 115, 109, 46, 118, 49, 46, 67, 108, 105, 101, 110, 116, 83, 116, 97, 116,
+			101, 18, 179, 1, 10, 135, 1, 10, 52, 99, 111, 109, 112, 111, 115, 97, 98, 108, 101, 46,
+			102, 105, 110, 97, 110, 99, 101, 47, 108, 105, 103, 104, 116, 99, 108, 105, 101, 110,
+			116, 115, 46, 103, 117, 101, 115, 116, 46, 118, 49, 46, 67, 108, 105, 101, 110, 116,
+			83, 116, 97, 116, 101, 18, 79, 10, 32, 23, 73, 231, 109, 175, 164, 147, 98, 253, 128,
+			9, 235, 178, 102, 105, 78, 146, 41, 118, 36, 214, 13, 209, 83, 105, 66, 53, 156, 72,
+			20, 209, 47, 16, 241, 4, 24, 128, 128, 144, 202, 210, 198, 14, 34, 32, 23, 73, 231,
+			109, 175, 164, 147, 98, 253, 128, 9, 235, 178, 102, 105, 78, 146, 41, 118, 36, 214, 13,
+			209, 83, 105, 66, 53, 156, 72, 20, 209, 47, 18, 32, 209, 131, 161, 8, 250, 155, 213,
+			117, 252, 41, 115, 130, 66, 71, 146, 79, 9, 83, 151, 243, 192, 113, 135, 219, 133, 172,
+			74, 201, 183, 16, 77, 4, 26, 5, 8, 1, 16, 241, 4,
+		];
+		let any = Any::decode(value.as_slice()).expect("jaskldjald");
+		ClientState::<PubKey>::try_from(any).unwrap();
 	}
 }

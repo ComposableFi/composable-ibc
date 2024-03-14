@@ -44,6 +44,7 @@ use crate::{
 	utils::{new_ed25519_instruction_with_signature, non_absent_vote},
 };
 use solana_ibc::{chain::ChainData, ix_data_account, storage::PrivateStorage};
+use solana_ibc::events::BlockFinalised;
 use tendermint_new::vote::{SignedVote, ValidatorIndex};
 
 pub enum DeliverIxType {
@@ -132,13 +133,10 @@ pub struct SolanaClientConfig {
 
 #[derive(Debug, Clone)]
 pub enum FinalityEvent {
-	Tendermint {
-		previous_blockhash: String,
-		blockhash: String,
-		height: u64,
-		timestamp: u64,
-		slot: u64,
-	},
+	Guest {
+		blockhash: CryptoHash,
+		block_height: u64,
+	}
 }
 
 #[derive(Clone)]

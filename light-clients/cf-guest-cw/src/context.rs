@@ -15,7 +15,9 @@
 
 use core::str::FromStr;
 
+use cf_guest::{error::Error, ClientState};
 use cosmwasm_std::{Api, Deps, DepsMut, Env, Storage};
+use ::ibc::core::ics24_host::identifier::ClientId;
 
 use crate::{ibc, state};
 
@@ -79,7 +81,7 @@ impl<'a> ContextBase<'a> {
 			host_height: env.block.height,
 		};
 		let address = env.contract.address.as_str();
-		let client_id = ibc::ClientId::from_str(address).unwrap();
+		let client_id = ibc::ClientId::from_str("08-wasm-0").unwrap();
 		Self { client_id, metadata, api }
 	}
 
@@ -99,11 +101,37 @@ macro_rules! log {
 
 pub(crate) use log;
 
+// fn deserialize_client_state<H: Clone>(client_state: Vec<u8>) -> Result<ClientState<H>, Error> {
+// 	let any = Any::decode(&*client_state).map_err(Error::decode)?;
+// 	let wasm_state =
+// 		ics08_wasm::client_state::ClientState::<FakeInner, FakeInner, FakeInner>::decode_vec(
+// 			&any.value,
+// 		)
+// 		.map_err(|e| {
+// 			Error::implementation_specific(format!(
+// 				"[client_state]: error decoding client state bytes to WasmClientState {e}"
+// 			))
+// 		})?;
+// 	let any = Any::decode(&*wasm_state.data).map_err(Error::decode)?;
+// 	let state =
+// 		ClientState::<H>::decode_vec(&any.value).map_err(Error::invalid_any_client_state)?;
+// 	Ok(state)
+// }
+
+// 	/// Retrieves raw bytes from storage and deserializes them into [`ClientState`]
+// pub fn get_client_state<PK>(deps: Deps) -> Result<ClientState<PK>, Error> {
+// 	deps.storage
+// 		.get(&"clientState".to_string().into_bytes())
+// 		.ok_or_else(|| Error::UnknownConsensusStateType{ description: "lakdsfjlkadsf".to_string()})
+// 		.and_then(deserialize_client_state)
+// }
+
 impl<'a> Context<'a> {
 	/// Reads this light client’s client state from storage.
 	pub fn client_state(&self) -> Result<state::ClientState> {
-		req_client_state(&self.client_id, self.client_states().get())
+		req_client_state(&ClientId::from_str("08-wasm-0").unwrap(), self.client_states().get())
 	}
+
 
 	/// Returns object providing access to read client state from the
 	/// storage.

@@ -1,3 +1,13 @@
+use anchor_client::{
+	solana_client::{
+		nonblocking::rpc_client::RpcClient, rpc_client::GetConfirmedSignaturesForAddress2Config,
+	},
+	solana_sdk::pubkey::Pubkey,
+};
+use guestchain::Signature as SignatureTrait;
+use lib::hash::CryptoHash;
+use serde::{Deserialize, Serialize};
+use solana_transaction_status::EncodedConfirmedTransactionWithStatusMeta;
 use std::str::FromStr;
 
 use base64::Engine;
@@ -30,6 +40,7 @@ use ibc::{
 	timestamp::Timestamp,
 	Height,
 };
+use pallet_ibc::light_clients::{PubKey, Signature};
 
 pub fn convert_new_event_to_old(
 	event: ibc_core_handler_types::events::IbcEvent,
@@ -363,7 +374,21 @@ pub fn convert_new_event_to_old(
 	}
 }
 
-pub fn get_events_from_logs(logs: Vec<String>) -> Vec<ibc_core_handler_types::events::IbcEvent> {
+pub fn get_ibc_events_from_logs(
+	logs: Vec<String>,
+) -> Vec<ibc_core_handler_types::events::IbcEvent> {
+	let events = get_events_from_logs(logs);
+	let events: Vec<ibc_core_handler_types::events::IbcEvent> = events
+		.iter()
+		.filter_map(|event| match event {
+			solana_ibc::events::Event::IbcEvent(e) => Some(e.clone()),
+			_ => None,
+		})
+		.collect();
+	events
+}
+
+pub fn get_events_from_logs(logs: Vec<String>) -> Vec<solana_ibc::events::Event<'static>> {
 	let serialized_events: Vec<&str> = logs
 		.iter()
 		.filter_map(|log| {
@@ -374,17 +399,92 @@ pub fn get_events_from_logs(logs: Vec<String>) -> Vec<ibc_core_handler_types::ev
 			}
 		})
 		.collect();
-	let events: Vec<ibc_core_handler_types::events::IbcEvent> = serialized_events
+	let events: Vec<solana_ibc::events::Event> = serialized_events
 		.iter()
-		.filter_map(|event| {
+		.map(|event| {
 			let decoded_event = base64::prelude::BASE64_STANDARD.decode(event).unwrap();
 			let decoded_event: solana_ibc::events::Event =
 				borsh::BorshDeserialize::try_from_slice(&decoded_event).unwrap();
-			match decoded_event {
-				solana_ibc::events::Event::IbcEvent(e) => Some(e),
-				_ => None,
-			}
+			decoded_event
 		})
 		.collect();
 	events
+}
+
+pub async fn get_signatures_for_blockhash(
+	rpc: RpcClient,
+	program_id: Pubkey,
+	blockhash: CryptoHash,
+) -> Vec<(u16, Signature)> {
+	let transaction_signatures = rpc
+		.get_signatures_for_address_with_config(
+			&program_id,
+			GetConfirmedSignaturesForAddress2Config { limit: Some(20), ..Default::default() },
+		)
+		.await
+		.unwrap();
+	let mut body = vec![];
+	for sig in transaction_signatures {
+		let signature = sig.signature.clone();
+		let payload = Payload {
+			jsonrpc: "2.0".to_string(),
+			id: 1,
+			method: "getTransaction".to_string(),
+			params: vec![signature, "json".to_string()],
+		};
+		body.push(payload);
+	}
+	let transactions = tokio::task::spawn_blocking(move || {
+		let transactions: std::result::Result<Vec<Response>, reqwest::Error> =
+			reqwest::blocking::Client::new()
+				.post(rpc.url())
+				.json(&body)
+				.send()
+				.unwrap()
+				.json();
+		transactions
+	})
+	.await
+	.unwrap();
+
+	let mut signatures = Vec::new();
+	let mut end = false;
+	let mut index = 0;
+	for tx in transactions.unwrap() {
+		let logs = match tx.result.transaction.meta.clone().unwrap().log_messages {
+			solana_transaction_status::option_serializer::OptionSerializer::Some(e) => e,
+			_ => Vec::new(),
+		};
+		let events = get_events_from_logs(logs);
+		// Find block signed events with blockhash
+		events.iter().for_each(|event| match event {
+			solana_ibc::events::Event::NewBlock(e) => {
+				end = true;
+			},
+			solana_ibc::events::Event::BlockSigned(e) =>
+				if e.block_hash == blockhash {
+					signatures.push((0_u16, Signature::from_bytes(&e.signature.to_vec()).unwrap()))
+				},
+			_ => (),
+		});
+		if end {
+			break
+		}
+	}
+	signatures
+}
+
+#[derive(Debug, Serialize, Deserialize)]
+pub struct Payload {
+	jsonrpc: String,
+	id: u64,
+	method: String,
+	params: Vec<String>,
+}
+
+#[derive(Debug, Serialize, Deserialize)]
+pub struct Response {
+	jsonrpc: String,
+	id: u64,
+	result: EncodedConfirmedTransactionWithStatusMeta,
 }

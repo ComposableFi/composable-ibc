@@ -42,6 +42,7 @@ solana-transaction-status = "1.16.18"
 base64 = { version = "0.21.4", default-features = false, features = ["alloc"] }
 borsh = { version = "0.10.3", default-features = false }
 bytemuck = { version = "1.14", default-features = false }
+reqwest = "0.11.24"
 
 # New IBC
 ibc-new-primitives = { git = "https://github.com/cosmos/ibc-rs", rev = "6dd3c6465e594d4c177f21724dd896a15e8f3634", default-features = false, features = ["borsh", "serde"] , package="ibc-primitives" }

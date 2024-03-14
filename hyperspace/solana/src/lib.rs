@@ -7,7 +7,7 @@ use client::FinalityEvent;
 use client_state::convert_new_client_state_to_old;
 use consensus_state::convert_new_consensus_state_to_old;
 use core::{pin::Pin, str::FromStr, time::Duration};
-use guestchain::Epoch;
+use guestchain::{Epoch, PubKey, Validator};
 use ibc_core_channel_types::msgs::PacketMsg;
 use ibc_core_client_types::msgs::ClientMsg;
 use ibc_core_handler_types::msgs::MsgEnvelope;
@@ -17,7 +17,7 @@ use ics07_tendermint::{
 };
 use msgs::convert_old_msgs_to_new;
 use solana_transaction_status::UiTransactionEncoding;
-use std::ops::Deref;
+use std::{num::NonZeroU128, ops::Deref};
 use tendermint::{Hash, Time};
 use tendermint_proto::Protobuf;
 use tokio::sync::mpsc::unbounded_channel;
@@ -74,6 +74,7 @@ use primitives::{
 	mock::LocalClientTypes, Chain, CommonClientState, IbcProvider, KeyProvider, LightClientSync,
 	MisbehaviourHandler, UndeliveredType, UpdateType,
 };
+use solana_ibc::events::Event;
 use std::{result::Result, sync::Arc};
 use tokio_stream::Stream;
 
@@ -81,6 +82,7 @@ use solana_ibc::storage::{SequenceKind, Serialised};
 
 use trie_ids::{ClientIdx, ConnectionIdx, PortChannelPK, Tag, TrieKey};
 
+use crate::events::get_events_from_logs;
 pub use crate::{
 	client::{DeliverIxType, SolanaClient, SolanaClientConfig},
 	events::convert_new_event_to_old,
@@ -126,16 +128,9 @@ impl IbcProvider for SolanaClient {
 		T: Chain,
 	{
 		log::info!("Came into solana lts events");
-		let (_finality_event_height, _finality_event_timestamp, _finality_event_slot) =
-			match finality_event {
-				FinalityEvent::Tendermint {
-					previous_blockhash: _,
-					blockhash: _,
-					height,
-					timestamp,
-					slot,
-				} => (height, timestamp, slot),
-			};
+		let (blockhash, _height) = match finality_event {
+			FinalityEvent::Guest { blockhash, block_height } => (blockhash, block_height),
+		};
 		let client_id = self.client_id();
 		let latest_cp_height = counterparty.latest_height_and_timestamp().await?.0;
 		log::info!("this is the latest cp height {:?}", latest_cp_height);
@@ -182,7 +177,7 @@ impl IbcProvider for SolanaClient {
 						Error::Custom(String::from("Logs were skipped, so not available")).into()
 					),
 			};
-			let events = events::get_events_from_logs(logs);
+			let events = events::get_ibc_events_from_logs(logs);
 			let converted_events = events
 				.iter()
 				.filter_map(|event| {
@@ -196,6 +191,9 @@ impl IbcProvider for SolanaClient {
 		}
 
 		let chain_account = self.get_chain_storage().await;
+		let signatures =
+			events::get_signatures_for_blockhash(rpc_client, solana_ibc::ID, blockhash.clone())
+				.await;
 		let updates: Vec<_> = block_events
 			.iter()
 			.map(|event| {
@@ -206,18 +204,34 @@ impl IbcProvider for SolanaClient {
 				header.signed_header.commit.height =
 					tendermint::block::Height::try_from(latest_height.revision_height).unwrap();
 				header.trusted_height = Height::new(0, latest_height.revision_height);
-				
+
+				let validator_pubkey =
+					Pubkey::from_str("oxyzEsUj9CV6HsqPCUZqVwrFJJvpd9iCBrPdzTBWLBb").unwrap();
+				let old_validator = chain_account.validator(validator_pubkey).unwrap().unwrap();
+				let new_validator: Validator<pallet_ibc::light_clients::PubKey> = Validator::new(
+					PubKey::from_bytes(&old_validator.pubkey.to_vec()).unwrap(),
+					NonZeroU128::new(2000).unwrap(),
+				);
 				let guest_header = cf_guest::Header {
 					genesis_hash: client_state.genesis_hash.clone(),
-					block_hash: client_state.genesis_hash.clone(),
+					block_hash: blockhash.clone(),
 					block_header: chain_account.head().unwrap().clone(),
 					epoch_commitment: client_state.epoch_commitment.clone(),
-					epoch: Epoch::new(Vec::new(), core::num::NonZeroU128::new(1).unwrap()).unwrap(),
-					signatures: Vec::new(),
+					epoch: Epoch::new_with(vec![new_validator], |total| {
+						let quorum = NonZeroU128::new(total.get() / 2 + 1).unwrap();
+						// min_quorum_stake may be greater than total_stake so we’re not
+						// using .clamp to make sure we never return value higher than
+						// total_stake.
+						quorum.max(NonZeroU128::new(1000).unwrap()).min(total)
+					})
+					.unwrap(),
+					signatures: signatures.clone(),
 				};
 				let msg = MsgUpdateAnyClient::<LocalClientTypes> {
 					client_id: self.client_id(),
-					client_message: AnyClientMessage::Guest(cf_guest::ClientMessage::Header(guest_header)),
+					client_message: AnyClientMessage::Guest(cf_guest::ClientMessage::Header(
+						guest_header,
+					)),
 					signer: counterparty.account_id(),
 				};
 				let value = msg
@@ -255,7 +269,7 @@ impl IbcProvider for SolanaClient {
 			loop {
 				match receiver.recv() {
 					Ok(logs) => {
-						let events = events::get_events_from_logs(logs.value.logs);
+						let events = events::get_ibc_events_from_logs(logs.value.logs);
 						log::info!("These are events {:?} ", events);
 						log::info!("Total {:?} events", events.len());
 						let mut broke = false;
@@ -895,7 +909,7 @@ deserialize client state"
 					solana_transaction_status::option_serializer::OptionSerializer::Some(e) => e,
 					_ => Vec::new(),
 				};
-				let events = events::get_events_from_logs(logs);
+				let events = events::get_ibc_events_from_logs(logs);
 				let send_packet_event = events.iter().find(|event| {
 					matches!(event, ibc_core_handler_types::events::IbcEvent::SendPacket(_))
 				});
@@ -986,7 +1000,7 @@ deserialize client state"
 					solana_transaction_status::option_serializer::OptionSerializer::Some(e) => e,
 					_ => Vec::new(),
 				};
-				let events = events::get_events_from_logs(logs);
+				let events = events::get_ibc_events_from_logs(logs);
 				let send_packet_event = events.iter().find(|event| {
 					matches!(event, ibc_core_handler_types::events::IbcEvent::ReceivePacket(_)) ||
 						matches!(
@@ -1362,7 +1376,7 @@ deserialize client state"
 			solana_transaction_status::option_serializer::OptionSerializer::Skip =>
 				return Err(Error::Custom(String::from("Logs were skipped, so not available"))),
 		};
-		let events = events::get_events_from_logs(logs);
+		let events = events::get_ibc_events_from_logs(logs);
 		let result: Vec<&ibc_core_client_types::events::CreateClient> = events
 			.iter()
 			.filter_map(|event| match event {
@@ -1398,7 +1412,7 @@ deserialize client state"
 			solana_transaction_status::option_serializer::OptionSerializer::Skip =>
 				return Err(Error::Custom(String::from("Logs were skipped, so not available"))),
 		};
-		let events = events::get_events_from_logs(logs);
+		let events = events::get_ibc_events_from_logs(logs);
 		let result: Vec<&ibc_core_connection_types::events::OpenInit> = events
 			.iter()
 			.filter_map(|event| match event {
@@ -1437,7 +1451,7 @@ deserialize client state"
 			solana_transaction_status::option_serializer::OptionSerializer::Skip =>
 				return Err(Error::Custom(String::from("Logs were skipped, so not available"))),
 		};
-		let events = events::get_events_from_logs(logs);
+		let events = events::get_ibc_events_from_logs(logs);
 		let result: Vec<&ibc_core_channel_types::events::OpenInit> = events
 			.iter()
 			.filter_map(|event| match event {
@@ -1520,35 +1534,37 @@ impl Chain for SolanaClient {
 		let (tx, rx) = unbounded_channel();
 		let ws_url = self.ws_url.clone();
 		tokio::task::spawn_blocking(move || {
-			let (_logs_listener, receiver) = PubsubClient::block_subscribe(
-				&ws_url, /* Quicknode rpc should be used for devnet/mainnet and
-				          * incase of localnet,
-				          * the flag `--rpc-pubsub-enable-block-subscription` has
-				          * to be passed to
-				          * local validator. */
-				RpcBlockSubscribeFilter::All,
-				Some(RpcBlockSubscribeConfig {
-					commitment: Some(CommitmentConfig::finalized()),
-					..Default::default()
-				}),
+			let (_logs_subscription, receiver) = PubsubClient::logs_subscribe(
+				&ws_url,
+				RpcTransactionLogsFilter::Mentions(vec![solana_ibc::ID.to_string()]),
+				RpcTransactionLogsConfig { commitment: Some(CommitmentConfig::processed()) },
 			)
 			.unwrap();
 
 			loop {
 				match receiver.recv() {
-					Ok(logs) =>
-						if logs.value.block.is_some() {
-							let block_info = logs.value.block.clone().unwrap();
-							let slot = logs.value.slot;
-							let finality_event = FinalityEvent::Tendermint {
-								previous_blockhash: block_info.previous_blockhash,
-								blockhash: block_info.blockhash,
-								height: block_info.block_height.unwrap(),
-								timestamp: block_info.block_time.unwrap() as u64,
-								slot,
+					Ok(logs) => {
+						let events = events::get_events_from_logs(logs.value.logs);
+						let finality_events: Vec<&solana_ibc::events::BlockFinalised> = events
+							.iter()
+							.filter_map(|event| match event {
+								Event::BlockFinalised(e) => Some(e),
+								_ => None,
+							})
+							.collect();
+						// Only one finality event is emitted in a transaction
+						if !finality_events.is_empty() {
+							assert_eq!(finality_events.len(), 1);
+							let finality_event = finality_events[0].clone();
+							let finality_event = FinalityEvent::Guest {
+								blockhash: finality_event.block_hash,
+								block_height: u64::from(finality_event.block_height),
 							};
-							tx.send(finality_event).unwrap();
-						},
+							tx.send(finality_event).expect(
+								"Channel was closed while listening to finality notifications",
+							);
+						}
+					},
 					Err(err) => {
 						panic!("{}", format!("Disconnected: {err}"));
 					},
@@ -1592,7 +1608,7 @@ impl Chain for SolanaClient {
 			let blockhash = rpc.get_latest_blockhash().await.unwrap();
 
 			let write_account_program_id =
-				Pubkey::from_str("BHgp5XwSmDpbVQXy5vFkExjEhKL86hBy1JBTHCYDtA4e").unwrap();
+				Pubkey::from_str("ABSs2mB3e89upgw6TohL3gUZbr91MyRSVPUgJcdZDwF5").unwrap();
 
 			let (mut chunks, chunk_account, _) = write::instruction::WriteIter::new(
 				&write_account_program_id,

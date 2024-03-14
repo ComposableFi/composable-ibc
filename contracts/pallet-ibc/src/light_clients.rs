@@ -4,6 +4,7 @@ use alloc::{borrow::ToOwned, boxed::Box, format, string::ToString, vec::Vec};
 // 	ConsensusState::TYPE_URL as GUEST_CONSENSUS_STATE_TYPE_URL,
 // 	Header::TYPE_URL as GUEST_HEADER_TYPE_URL,
 // };
+use borsh::maybestd::io;
 use frame_support::{
 	pallet_prelude::{StorageValue, ValueQuery},
 	traits::StorageInstance,
@@ -65,15 +66,16 @@ use tendermint::{
 	PublicKey, Signature as TmSignature,
 };
 use tendermint_proto::Protobuf;
-use borsh::maybestd::io;
 
 pub const GUEST_CLIENT_STATE_TYPE_URL: &str =
 	"composable.finance/lightclients.guest.v1.ClientState";
 pub const GUEST_CONSENSUS_STATE_TYPE_URL: &str =
 	"composable.finance/lightclients.guest.v1.ConsensusState";
-pub const GUEST_CLIENT_MESSAGE_TYPE_URL: &str = "composable.finance/lightclients.guest.v1.ClientMessage";
+pub const GUEST_CLIENT_MESSAGE_TYPE_URL: &str =
+	"composable.finance/lightclients.guest.v1.ClientMessage";
 pub const GUEST_HEADER_TYPE_URL: &str = "composable.finance/lightclients.guest.v1.Header";
-pub const GUEST_MISBEHAVIOUR_TYPE_URL: &str = "composable.finance/lightclients.guest.v1.Misbehaviour";
+pub const GUEST_MISBEHAVIOUR_TYPE_URL: &str =
+	"composable.finance/lightclients.guest.v1.Misbehaviour";
 
 #[derive(Clone, Default, PartialEq, Debug, Eq)]
 pub struct HostFunctionsManager;
@@ -121,7 +123,6 @@ impl Ord for PubKey {
 		self.0.as_bytes().cmp(rhs.0.as_bytes())
 	}
 }
-
 
 /// Ed25519 signature.
 #[derive(Clone, PartialEq, Eq, Debug)]
@@ -400,6 +401,7 @@ impl AnyClientState {
 
 impl AnyClientState {
 	pub fn wasm(inner: Self, code_id: Bytes) -> Result<Self, tendermint_proto::Error> {
+		log::info!("This is height in any client state {:?}", inner.latest_height());
 		Ok(Self::Wasm(
 			ics08_wasm::client_state::ClientState::<AnyClient, Self, AnyConsensusState> {
 				data: inner.encode_to_vec()?,
@@ -418,7 +420,7 @@ impl AnyClientState {
 			AnyClientState::Tendermint(client_state) => client_state.latest_height(),
 			AnyClientState::Wasm(client_state) => client_state.latest_height(),
 			AnyClientState::Guest(client_state) =>
-				ibc::Height::new(0, u64::from(client_state.latest_height)),
+				ibc::Height::new(1, u64::from(client_state.latest_height)),
 			#[cfg(any(test, feature = "testing"))]
 			AnyClientState::Mock(client_state) => client_state.latest_height(),
 		}
@@ -492,10 +494,10 @@ impl AnyClientMessage {
 				ics08_wasm::client_message::ClientMessage::Misbehaviour(_) => None,
 			},
 			Self::Guest(inner) => match inner {
-				cf_guest::ClientMessage::Header(h) => 
-					Some(Height::new(0, u64::from(h.block_header.block_height))),
+				cf_guest::ClientMessage::Header(h) =>
+					Some(Height::new(1, u64::from(h.block_header.block_height))),
 				cf_guest::ClientMessage::Misbehaviour(_) => None,
-			}
+			},
 			#[cfg(any(test, feature = "testing"))]
 			Self::Mock(inner) => match inner {
 				ibc::mock::header::MockClientMessage::Header(h) => Some(h.height()),
@@ -505,15 +507,20 @@ impl AnyClientMessage {
 	}
 
 	pub fn wasm(inner: Self) -> Result<Self, tendermint_proto::Error> {
+		println!("I was called in wasm");
 		let maybe_height = inner.maybe_header_height();
+		println!("This is header height {:?}", maybe_height);
 		Ok(match maybe_height {
-			Some(height) => Self::Wasm(ics08_wasm::client_message::ClientMessage::Header(
-				ics08_wasm::client_message::Header {
-					data: inner.encode_to_vec()?,
-					height,
-					inner: Box::new(inner),
-				},
-			)),
+			Some(height) => {
+				println!("This is height in any client message {:?}", height);
+				Self::Wasm(ics08_wasm::client_message::ClientMessage::Header(
+					ics08_wasm::client_message::Header {
+						data: inner.encode_to_vec()?,
+						height,
+						inner: Box::new(inner),
+					},
+				))
+			},
 			None => Self::Wasm(ics08_wasm::client_message::ClientMessage::Misbehaviour(
 				ics08_wasm::client_message::Misbehaviour {
 					data: inner.encode_to_vec()?,
@@ -588,16 +595,14 @@ impl TryFrom<Any> for AnyClientMessage {
 				cf_guest::ClientMessage::decode_vec(&value.value)
 					.map_err(ics02_client::error::Error::decode_raw_header)?,
 			)),
-			GUEST_HEADER_TYPE_URL =>
-				Ok(Self::Guest(cf_guest::ClientMessage::Header(
-					cf_guest::Header::decode_vec(&value.value)
-						.map_err(ics02_client::error::Error::decode_raw_header)?,
-				))),
-			GUEST_MISBEHAVIOUR_TYPE_URL =>
-				Ok(Self::Guest(cf_guest::ClientMessage::Misbehaviour(
-					cf_guest::Misbehaviour::decode_vec(&value.value)
-						.map_err(ics02_client::error::Error::decode_raw_header)?,
-				))),
+			GUEST_HEADER_TYPE_URL => Ok(Self::Guest(cf_guest::ClientMessage::Header(
+				cf_guest::Header::decode_vec(&value.value)
+					.map_err(ics02_client::error::Error::decode_raw_header)?,
+			))),
+			GUEST_MISBEHAVIOUR_TYPE_URL => Ok(Self::Guest(cf_guest::ClientMessage::Misbehaviour(
+				cf_guest::Misbehaviour::decode_vec(&value.value)
+					.map_err(ics02_client::error::Error::decode_raw_header)?,
+			))),
 			WASM_CLIENT_MESSAGE_TYPE_URL => Ok(Self::Wasm(
 				ics08_wasm::client_message::ClientMessage::decode_vec(&value.value)
 					.map_err(ics02_client::error::Error::decode_raw_header)?,
