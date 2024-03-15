@@ -1,0 +1,45 @@
+[package]
+name = "cf-guest"
+authors = ["Michal Nazarewicz <mina86@mina86.com>"]
+version = "0.0.1"
+edition = "2021"
+
+[dependencies]
+borsh = "0.10"
+bytemuck = { version = "1.14", default-features = false, features = ["must_cast"]}
+derive_more = { version = "0.99", features = ["from"], default-features = false  }
+prost = { version = "0.11" ,features = ["prost-derive"], default-features = false }
+ed25519-consensus = { version = "2", default-features = false }
+serde = { version = "1.0", default-features = false, features = ["derive"] }
+
+# New IBC
+ibc-core-client-types = { git = "https://github.com/cosmos/ibc-rs", rev = "6dd3c6465e594d4c177f21724dd896a15e8f3634", default-features = false }
+ibc-core-handler-types = { git = "https://github.com/cosmos/ibc-rs", rev = "6dd3c6465e594d4c177f21724dd896a15e8f3634", default-features = false }
+ibc-core-host-types = { git = "https://github.com/cosmos/ibc-rs", rev = "6dd3c6465e594d4c177f21724dd896a15e8f3634", default-features = false, features = ["borsh", "serde"]}
+
+# Old IBC
+ibc = { path = "../../ibc/modules", default-features = false }
+ibc-proto = { path = "../../ibc/proto", default-features = false }
+ibc-derive = { path = "../../ibc/derive", default-features = false }
+
+tendermint-proto = { git = "https://github.com/informalsystems/tendermint-rs", rev = "e81f7bf23d63ffbcd242381d1ce5e35da3515ff1", default-features = false }
+
+guestchain = { git = "https://github.com/ComposableFi/emulated-light-client/", default-features = false }
+lib = { git = "https://github.com/ComposableFi/emulated-light-client/", features = ["borsh"], default-features = false }
+trie-ids = { git = "https://github.com/ComposableFi/emulated-light-client/", default-features = false }
+sealable-trie = { git = "https://github.com/ComposableFi/emulated-light-client/", features = ["borsh"], default-features = false }
+stdx = { git = "https://github.com/ComposableFi/emulated-light-client/", default-features = false }
+
+[build-dependencies]
+prost-build = { version = "0.11", default-features = false }
+
+[dev-dependencies]
+insta = { version = "1.34.0" }
+rand = { version = "0.8.5" }
+
+guestchain = { git = "https://github.com/ComposableFi/emulated-light-client/", default-features = false, features = ["test_utils"] }
+lib = { git = "https://github.com/ComposableFi/emulated-light-client/", features = ["test_utils"] }
+memory = { git = "https://github.com/ComposableFi/emulated-light-client/", features = ["test_utils"] }
+
+[features]
+std = []
