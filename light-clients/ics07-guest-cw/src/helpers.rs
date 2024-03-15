@@ -136,3 +136,26 @@ pub fn prune_oldest_consensus_state(
 		}
 	}
 }
+
+pub fn verify_delay_passed(
+	ctx: &Context,
+	height: Height,
+	delay_period_time: u64,
+	delay_period_height: u64,
+) -> Result<(), Ics02Error> {
+	let current_timestamp = ctx.host_timestamp();
+	let current_height = ctx.host_height();
+
+	let processed_time = ctx.processed_timestamp(height)?;
+	let processed_height = ctx.processed_height(height)?;
+
+	ClientState::<crate::crypto::PubKey>::verify_delay_passed(
+		current_timestamp,
+		current_height,
+		processed_time,
+		processed_height,
+		delay_period_time,
+		delay_period_height,
+	)
+	.map_err(|e| e.into())
+}
