@@ -151,16 +151,16 @@ fn process_message(
 				.map_err(|e| ContractError::Tendermint(format!("{e:?}")))
 				.map(|_| to_binary(&ContractResult::success()))
 		},
-		// ExecuteMsg::CheckForMisbehaviour(msg) => {
-		// 	let client_state = ctx
-		// 		.client_state(&client_id)
-		// 		.map_err(|e| ContractError::Tendermint(e.to_string()))?;
-		// 	let msg = CheckForMisbehaviourMsg::try_from(msg)?;
-		// 	client
-		// 		.check_for_misbehaviour(ctx, client_id, client_state, msg.client_message)
-		// 		.map_err(|e| ContractError::Tendermint(e.to_string()))
-		// 		.map(|result| to_binary(&ContractResult::success().misbehaviour(result)))
-		// },
+		ExecuteMsg::CheckForMisbehaviour(msg) => {
+			let client_state = ctx
+				.client_state(&client_id)
+				.map_err(|e| ContractError::Tendermint(e.to_string()))?;
+			let msg = CheckForMisbehaviourMsg::try_from(msg)?;
+			client
+				.check_for_misbehaviour(ctx, client_id, client_state, msg.client_message)
+				.map_err(|e| ContractError::Tendermint(e.to_string()))
+				.map(|result| to_binary(&ContractResult::success().misbehaviour(result)))
+		},
 		// ExecuteMsg::UpdateStateOnMisbehaviour(msg_raw) => {
 		// 	let client_state = ctx
 		// 		.client_state(&client_id)
@@ -267,10 +267,11 @@ pub fn query(deps: Deps, env: Env, msg: QueryMsg) -> StdResult<Binary> {
 			}
 
 			let height = client_state.latest_height;
-			let height = ibc::Height::new(0, height.into());
+			let height = ibc::Height::new(1, height.into());
 			let consensus_state = match get_consensus_state(deps, &client_id, height) {
 				Ok(state) => state,
-				Err(_) => return to_binary(&QueryResponse::status("Expired".to_string())),
+				Err(e) => panic!("This is error {:?}", e)
+				// return to_binary(&QueryResponse::status("Expired".to_string())),
 			};
 
 			let last_update = consensus_state.timestamp_ns.get();

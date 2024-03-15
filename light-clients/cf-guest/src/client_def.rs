@@ -94,7 +94,7 @@ where
 		_client_state: Self::ClientState,
 		_client_msg: Self::ClientMessage,
 	) -> Result<bool, Ics02ClientError> {
-		todo!()
+		Ok(false)
 	}
 
 	fn verify_upgrade_and_update_state<Ctx: ibc::core::ics26_routing::context::ReaderContext>(
