@@ -130,8 +130,10 @@ fn wrap_any_msg_into_wasm(msg: Any, code_id: Bytes) -> Result<Any, anyhow::Error
 			msg_decoded.to_any()
 		},
 		CONN_OPEN_TRY_TYPE_URL => {
+			log::info!("I am in connection open try");
 			let msg_decoded =
 				MsgConnectionOpenTry::<LocalClientTypes>::decode_vec(&msg.value).unwrap();
+			log::info!("This is msg decoded {:?} {:?}", msg_decoded, msg);
 			msg_decoded.to_any()
 		},
 		CONN_OPEN_ACK_TYPE_URL => {

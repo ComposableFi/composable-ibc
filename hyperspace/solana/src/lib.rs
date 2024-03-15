@@ -142,10 +142,16 @@ impl IbcProvider for SolanaClient {
 			.ok_or_else(|| Error::Custom("counterparty returned empty client state".to_string()))?;
 		log::info!("This is the type url in solana {:?}", client_state_response.type_url);
 		let AnyClientState::Guest(client_state) =
-			AnyClientState::decode_recursive(client_state_response, |c| {
+			AnyClientState::decode_recursive(client_state_response.clone(), |c| {
 				matches!(c, AnyClientState::Guest(_))
 			})
-			.ok_or_else(|| Error::Custom(format!("Could not decode client state")))?
+			.or_else(|| {
+				log::info!("This is wasm");
+				let wasm_client_state = AnyClientState::decode_recursive(client_state_response, |c| {
+					matches!(c, AnyClientState::Wasm(_))
+				}).unwrap();
+				Some(wasm_client_state.unpack_recursive().clone())
+			}).unwrap()
 		else {
 			unreachable!()
 		};
@@ -184,7 +190,7 @@ impl IbcProvider for SolanaClient {
 				.filter_map(|event| {
 					convert_new_event_to_old(
 						event.clone(),
-						Height::new(0, u64::from(client_state.latest_height)),
+						Height::new(1, u64::from(client_state.latest_height)),
 					)
 				})
 				.collect();
@@ -206,7 +212,7 @@ impl IbcProvider for SolanaClient {
 					tendermint::block::Height::try_from(latest_height.revision_height).unwrap();
 				header.signed_header.commit.height =
 					tendermint::block::Height::try_from(latest_height.revision_height).unwrap();
-				header.trusted_height = Height::new(0, latest_height.revision_height);
+				header.trusted_height = Height::new(1, latest_height.revision_height);
 
 				let validator_pubkey =
 					Pubkey::from_str("oxyzEsUj9CV6HsqPCUZqVwrFJJvpd9iCBrPdzTBWLBb").unwrap();
@@ -215,7 +221,6 @@ impl IbcProvider for SolanaClient {
 					PubKey::from_bytes(&old_validator.pubkey.to_vec()).unwrap(),
 					NonZeroU128::new(2000).unwrap(),
 				);
-				log::info!("This is guest header epoch id {:?}", block_header.epoch_id.clone());
 				let guest_header = cf_guest::Header {
 					genesis_hash: client_state.genesis_hash.clone(),
 					block_hash: blockhash.clone(),
@@ -248,7 +253,7 @@ impl IbcProvider for SolanaClient {
 					MsgUpdateAnyClient::<LocalClientTypes>::decode_vec(&value).unwrap();
 				(
 					Any { type_url: msg.type_url(), value },
-					Height::new(0, latest_height.revision_height),
+					Height::new(1, latest_height.revision_height),
 					event.1.clone(),
 					if event.1.len() > 0 { UpdateType::Mandatory } else { UpdateType::Optional },
 				)
@@ -681,7 +686,7 @@ deserialize client state"
 		})?;
 		log::info!("THis is the timestamp of solana {:?}", timestamp);
 		Ok((
-			Height::new(0, height),
+			Height::new(1, height),
 			Timestamp::from_nanoseconds((timestamp * 10_i64.pow(9)).try_into().unwrap()).unwrap(),
 		))
 	}

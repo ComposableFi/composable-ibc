@@ -506,6 +506,6 @@ fn convert_old_path_to_new(path: ibc::path::Path) -> ibc_core_host_types::path::
 				sequence: u64::from(e.sequence.0).into(),
 			}),
 		::ibc::core::ics24_host::Path::Upgrade(_) => panic!("Not supported"),
-		::ibc::core::ics24_host::Path::Outside(_) => panic!("Not supported"),
+		::ibc::core::ics24_host::Path::Outside(e) =>  panic!("Not supported {:?}", e),
 	}
 }

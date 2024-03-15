@@ -96,17 +96,16 @@ pub async fn parse_events(
 						)
 						.await?;
 
+					let proof_height = connection_response.proof_height.ok_or_else(|| Error::Custom("[get_messages_for_events - open_conn_init] Proof height not found in response".to_string()))?;
+					let proof_height =
+						Height::new(1, proof_height.revision_height);
+					// client_state.latest_height();
+					let client_state_proof =
+						CommitmentProofBytes::try_from(client_state_response.proof).ok();
 					let client_state = client_state_response
 						.client_state
 						.map(AnyClientState::try_from)
 						.ok_or_else(|| Error::Custom("Client state is empty".to_string()))??;
-
-					let proof_height = connection_response.proof_height.ok_or_else(|| Error::Custom("[get_messages_for_events - open_conn_init] Proof height not found in response".to_string()))?;
-					let proof_height =
-						Height::new(proof_height.revision_number, proof_height.revision_height);
-					// client_state.latest_height();
-					let client_state_proof =
-						CommitmentProofBytes::try_from(client_state_response.proof).ok();
 
 					let consensus_proof = source
 						.query_client_consensus(

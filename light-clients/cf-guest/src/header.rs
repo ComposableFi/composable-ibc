@@ -1,6 +1,4 @@
 
-use std::println;
-
 use alloc::vec::Vec;
 
 use guestchain::{PubKey, Signature};
@@ -57,24 +55,19 @@ impl<PK: PubKey> TryFrom<proto::Header> for Header<PK> {
 impl<PK: PubKey> TryFrom<&proto::Header> for Header<PK> {
 	type Error = proto::BadMessage;
 	fn try_from(msg: &proto::Header) -> Result<Self, Self::Error> {
-		println!("This is all {:?}", msg);
-		println!("Try from was called, {:?}", msg.genesis_hash.len());
 		let genesis_hash = lib::hash::CryptoHash::try_from(msg.genesis_hash.as_slice())
 			.map_err(|_| proto::BadMessage)?;
 
 		let bytes = msg.block_header.as_slice();
-		println!("Before block header");
 		let block_header =
 			borsh::BorshDeserialize::try_from_slice(bytes).map_err(|_| proto::BadMessage)?;
 		let block_hash = CryptoHash::digest(bytes);
 
 		let bytes = msg.epoch.as_slice();
-		println!("Before epoch");
 		let epoch =
 			borsh::BorshDeserialize::try_from_slice(bytes).map_err(|_| proto::BadMessage)?;
 		let epoch_commitment = CryptoHash::digest(bytes);
 
-		println!("Before signature");
 		let signatures = msg
 			.signatures
 			.iter()
@@ -86,7 +79,6 @@ impl<PK: PubKey> TryFrom<&proto::Header> for Header<PK> {
 			})
 			.collect::<Result<Vec<_>, _>>()?;
 
-		println!("All good");
 		Ok(Self { genesis_hash, block_hash, block_header, epoch_commitment, epoch, signatures })
 	}
 }

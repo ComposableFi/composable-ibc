@@ -22,6 +22,8 @@ use crate::{
 	ibc,
 	ibc::{proto::google::protobuf::Any, protobuf::Protobuf},
 };
+use ibc_proto::ibc::lightclients::wasm::v1::ClientState as RawClientState;
+use ::ibc::core::ics02_client::client_consensus::ConsensusState as ConsensusStateTrait;
 
 type Result<T, E = crate::Error> = core::result::Result<T, E>;
 
@@ -61,7 +63,7 @@ impl ClientStates {
 		self.get_impl(Self::KEY)
 	}
 
-	pub fn set(&mut self, state: impl Into<Any>) {
+	pub fn set(&mut self, state: ClientState) {
 		self.set_impl(Self::KEY, state)
 	}
 
@@ -81,8 +83,27 @@ impl ClientStates {
 		Ok(Some(ClientState::decode(any.value.as_slice())?))
 	}
 
-	fn set_impl(&mut self, key: &[u8], state: impl Into<Any>) {
-		self.0.set(&key, state.into().encode_to_vec().as_slice())
+	fn set_impl(&mut self, key: &[u8], state: ClientState) {
+		let value = match self.0.get(&key) {
+			None => panic!("No value found"),
+			Some(value) => value,
+		};
+		let any = Any::decode(value.as_slice()).unwrap();
+		let mut wasm_client_state =
+			ics08_wasm::client_state::ClientState::<FakeInner, FakeInner, FakeInner>::decode_vec(
+				&any.value,
+			)
+			.unwrap();
+		wasm_client_state.data = state.encode_to_vec().unwrap();
+		wasm_client_state.latest_height = Height::new(1, u64::from(state.latest_height));
+		let vec1 = wasm_client_state.to_any().encode_to_vec();
+		// let raw_client_state = RawClientState {
+		// 	data: state.encode_to_vec().unwrap(),
+		// 	code_id: wasm_state.code_id,
+		// 	latest_height: Some(wasm_state.latest_height.into()),
+		// };
+		// let wasm_client_state: ics08_wasm::client_state::ClientState<FakeInner, FakeInner, FakeInner> = ics08_wasm::client_state::ClientState::try_from(raw_client_state).unwrap();
+		self.0.set(&key, vec1.as_slice())
 	}
 }
 
@@ -107,7 +128,7 @@ impl ConsensusStates {
 		self.get_impl(&Self::key(height))
 	}
 
-	pub fn set(&mut self, height: ibc::Height, state: impl Into<Any>, metadata: Metadata) {
+	pub fn set(&mut self, height: ibc::Height, state: ConsensusState, metadata: Metadata) {
 		self.set_impl(Self::key(height), state, metadata)
 	}
 
@@ -138,7 +159,7 @@ impl ConsensusStates {
 		};
 		let wasm_state =
 			ics08_wasm::consensus_state::ConsensusState::<FakeInner>::decode_vec(&any.value)
-			.unwrap();
+				.unwrap();
 		let any = Any::decode(wasm_state.data.as_slice())?;
 		let state = ConsensusState::decode(any.value.as_slice())?;
 		let elapsed = now_ns.saturating_sub(state.timestamp_ns.get());
@@ -157,7 +178,6 @@ impl ConsensusStates {
 	}
 
 	fn get_impl(&self, key: &[u8]) -> Result<Option<ConsensusState>> {
-		// panic!("key {:?}",  String::from_utf8(key);
 		let value = match self.0.get(&key) {
 			None => return Ok(None),
 			Some(value) => value,
@@ -170,9 +190,15 @@ impl ConsensusStates {
 		Ok(Some(ConsensusState::decode(any.value.as_slice())?))
 	}
 
-	fn set_impl(&mut self, key: Vec<u8>, state: impl Into<Any>, metadata: Metadata) {
-		let state = ConsensusWithMetadata::new(state, metadata);
-		self.0.set(&key, state.encode_to_vec().as_slice())
+	fn set_impl(&mut self, key: Vec<u8>, consensus_state: ConsensusState, metadata: Metadata) {
+		let wasm_consensus_state = ics08_wasm::consensus_state::ConsensusState {
+			data: consensus_state.encode_to_vec().unwrap(),
+			timestamp: consensus_state.timestamp().nanoseconds(),
+			inner: Box::new(FakeInner),
+		};
+		let wasm_consensus_state = wasm_consensus_state.to_any().encode_to_vec();
+		// let state = ConsensusWithMetadata::new(state, metadata);
+		self.0.set(&key, wasm_consensus_state.as_slice())
 	}
 }
 

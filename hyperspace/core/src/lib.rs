@@ -293,6 +293,14 @@ async fn process_updates<A: Chain, B: Chain>(
 			.await
 			.map_err(|e| anyhow!("Failed to parse events: {:?}", e))?;
 
+		if let Some(index) = messages
+			.iter()
+			.position(|value| value.type_url == "/ibc.core.connection.v1.MsgConnectionOpenTry")
+		{
+			log::info!("Remvoign open try");
+			messages.swap_remove(index);
+		}
+
 		log::trace!(
 			target: "hyperspace",
 			"Received messages count: {}, is the update optional: {}",

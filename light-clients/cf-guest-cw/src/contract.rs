@@ -60,7 +60,7 @@ fn execute(deps: DepsMut, env: Env, _info: MessageInfo, msg: msg::ExecuteMsg) ->
 		},
 		msg::ExecuteMsg::UpdateStateOnMisbehaviour(_msg) => {
 			let client_state = ctx.client_state()?.frozen();
-			ctx.client_states_mut().set(&client_state);
+			ctx.client_states_mut().set(client_state);
 			msg::ContractResult::success()
 		},
 		msg::ExecuteMsg::UpdateState(msg) => {
@@ -122,9 +122,9 @@ fn process_update_state_msg(mut ctx: context::ContextMut, metadata: state::Metad
 	ctx.consensus_states_mut()
 		.prune_oldest_consensus_state(&client_state, metadata.host_timestamp_ns)?;
 
-	ctx.client_states_mut().set(&client_state.with_header(&header));
+	ctx.client_states_mut().set(client_state.with_header(&header));
 	ctx.consensus_states_mut()
-		.set(header_height, &state::ConsensusState::from(&header), metadata);
+		.set(header_height, state::ConsensusState::from(&header), metadata);
 
 	Ok(())
 }
@@ -153,6 +153,7 @@ fn query_status(ctx: context::Context) -> StdResult<&'static str> {
 	let height = client_state.latest_height;
 	let height = ibc::Height::new(1, height.into());
 	let consensus_state = ctx.consensus_state(height)?;
+	// panic!("After consensus state {:?}", consensus_state);
 
 	let age = ctx.host_timestamp_ns.saturating_sub(consensus_state.timestamp_ns.get());
 	Ok(if age >= client_state.trusting_period_ns { "Expired" } else { "Active" })

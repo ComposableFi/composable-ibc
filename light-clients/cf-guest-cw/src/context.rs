@@ -129,7 +129,7 @@ pub(crate) use log;
 impl<'a> Context<'a> {
 	/// Reads this light client’s client state from storage.
 	pub fn client_state(&self) -> Result<state::ClientState> {
-		req_client_state(&ClientId::from_str("08-wasm-0").unwrap(), self.client_states().get())
+		req_client_state(&self.client_id, self.client_states().get())
 	}
 
 

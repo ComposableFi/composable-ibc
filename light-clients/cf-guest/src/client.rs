@@ -125,7 +125,7 @@ impl<PK: guestchain::PubKey> ClientState<PK> {
 	pub fn verify_height(&self, client_id: &ClientId, height: ibc::Height) -> Result<(), Error> {
 		if self.latest_height < height.revision_height.into() {
 			return Err(Error::InsufficientHeight {
-				latest_height: Height::new(0, self.latest_height.into()),
+				latest_height: Height::new(1, self.latest_height.into()),
 				target_height: height,
 			})
 		}
@@ -166,12 +166,12 @@ where
 	}
 
 	fn latest_height(&self) -> ibc::Height {
-		Height::new(0, u64::from(self.latest_height))
+		Height::new(1, u64::from(self.latest_height))
 	}
 
 	fn frozen_height(&self) -> Option<ibc::Height> {
 		match self.is_frozen {
-			true => Some(Height::new(0, u64::from(self.latest_height))),
+			true => Some(Height::new(1, u64::from(self.latest_height))),
 			false => None,
 		}
 	}
