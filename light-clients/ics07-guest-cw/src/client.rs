@@ -20,7 +20,6 @@ use crate::{
 		ReadonlyClients, ReadonlyConsensusStates, ReadonlyProcessedStates,
 	},
 };
-use guestchain::PubKey;
 use ibc::{
 	core::{
 		ics02_client::{
@@ -46,14 +45,14 @@ use cf_guest::{client_def::GuestClient, ClientMessage, ClientState, ConsensusSta
 use prost::Message;
 use std::str::FromStr;
 
-impl<'a, PK: guestchain::PubKey> ClientTypes for Context<'a, PK> {
-	type AnyClientMessage = ClientMessage<PK>;
-	type AnyClientState = ClientState<PK>;
+impl<'a> ClientTypes for Context<'a> {
+	type AnyClientMessage = ClientMessage<crate::crypto::PubKey>;
+	type AnyClientState = ClientState<crate::crypto::PubKey>;
 	type AnyConsensusState = ConsensusState;
-	type ClientDef = GuestClient<PK>;
+	type ClientDef = GuestClient<crate::crypto::PubKey>;
 }
 
-impl<'a, PK: PubKey> ClientReader for Context<'a, PK> {
+impl<'a> ClientReader for Context<'a> {
 	fn client_type(&self, client_id: &ClientId) -> Result<ClientType, Error> {
 		let clients = ReadonlyClients::new(self.storage());
 		if !clients.contains_key(client_id) {
@@ -74,7 +73,7 @@ impl<'a, PK: PubKey> ClientReader for Context<'a, PK> {
 		}
 	}
 
-	fn client_state(&self, client_id: &ClientId) -> Result<ClientState<PK>, Error> {
+	fn client_state(&self, client_id: &ClientId) -> Result<ClientState<crate::crypto::PubKey>, Error> {
 		let client_states = ReadonlyClientStates::new(self.storage());
 		let data = client_states.get().ok_or_else(|| Error::client_not_found(client_id.clone()))?;
 		let state = Self::decode_client_state(&data)?;
@@ -152,7 +151,7 @@ impl<'a, PK: PubKey> ClientReader for Context<'a, PK> {
 		&self,
 		_height: Height,
 		_proof: Option<Vec<u8>>,
-		_client_state: &ClientState<PK>,
+		_client_state: &ClientState<crate::crypto::PubKey>,
 	) -> Result<ConsensusState, Error> {
 		unimplemented!()
 		/*let consensus_state =
@@ -173,7 +172,7 @@ impl<'a, PK: PubKey> ClientReader for Context<'a, PK> {
 	}
 }
 
-impl<'a, PK: PubKey> ClientKeeper for Context<'a, PK> {
+impl<'a> ClientKeeper for Context<'a> {
 	fn store_client_type(
 		&mut self,
 		_client_id: ClientId,
@@ -244,8 +243,8 @@ impl<'a, PK: PubKey> ClientKeeper for Context<'a, PK> {
 	}
 }
 
-impl<'a, PK: PubKey> Context<'a, PK> {
-	pub fn decode_client_state(data: &[u8]) -> Result<ClientState<PK>, Error> {
+impl<'a> Context<'a> {
+	pub fn decode_client_state(data: &[u8]) -> Result<ClientState<crate::crypto::PubKey>, Error> {
 		let any = Any::decode(data).map_err(Error::decode)?;
 		let wasm_state =
 			ics08_wasm::client_state::ClientState::<FakeInner, FakeInner, FakeInner>::decode_vec(
@@ -258,7 +257,7 @@ impl<'a, PK: PubKey> Context<'a, PK> {
 			})?;
 		let any = Any::decode(&*wasm_state.data).map_err(Error::decode)?;
 		let state =
-			ClientState::<PK>::decode_vec(&any.value).map_err(Error::invalid_any_client_state)?;
+			ClientState::decode_vec(&any.value).map_err(Error::invalid_any_client_state)?;
 		Ok(state)
 	}
 
@@ -274,7 +273,7 @@ impl<'a, PK: PubKey> Context<'a, PK> {
 	}
 
 	pub fn encode_client_state(
-		client_state: ClientState<PK>,
+		client_state: ClientState<crate::crypto::PubKey>,
 		encoded_wasm_client_state: Vec<u8>,
 	) -> Result<Vec<u8>, Error> {
 		let any = Any::decode(&*encoded_wasm_client_state).map_err(Error::decode)?;
@@ -287,15 +286,15 @@ impl<'a, PK: PubKey> Context<'a, PK> {
 					"[client_state]: error decoding client state bytes to WasmConsensusState {e}"
 				))
 			})?;
-		wasm_client_state.data = client_state.to_any().encode_to_vec();
-		wasm_client_state.latest_height = client_state.latest_height();
+		wasm_client_state.data = ibc_proto::google::protobuf::Any::from(&client_state).encode_to_vec();
+		wasm_client_state.latest_height = ibc::Height::new(0, client_state.latest_height.into());
 		let vec1 = wasm_client_state.to_any().encode_to_vec();
 		Ok(vec1)
 	}
 
 	pub fn encode_consensus_state(consensus_state: ConsensusState) -> Vec<u8> {
 		let wasm_consensus_state = ics08_wasm::consensus_state::ConsensusState {
-			data: consensus_state.to_any().encode_to_vec(),
+			data: ibc_proto::google::protobuf::Any::from(&consensus_state).encode_to_vec(),
 			timestamp: consensus_state.timestamp().nanoseconds(),
 			inner: Box::new(FakeInner),
 		};

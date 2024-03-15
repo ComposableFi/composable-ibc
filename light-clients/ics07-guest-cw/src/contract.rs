@@ -41,7 +41,6 @@ use ibc::core::{
 	ics24_host::identifier::ClientId,
 };
 use ics08_wasm::SUBJECT_PREFIX;
-use sha2::{Digest, Sha256};
 use std::str::FromStr;
 
 #[cfg_attr(not(feature = "library"), entry_point)]
@@ -52,14 +51,15 @@ pub fn instantiate(
 	_msg: InstantiateMsg,
 ) -> Result<Response, ContractError> {
 	let _client = GuestClient::<crate::crypto::PubKey>::default();
-	let mut ctx = Context::<crate::crypto::PubKey>::new(deps, env);
+	let mut ctx = Context::new(deps, env);
 	let client_id = ClientId::from_str("08-wasm-0").expect("client id is valid");
 	let client_state = ctx
 		.client_state(&client_id)
 		.map_err(|e| ContractError::Tendermint(e.to_string()))?;
-	ctx.store_update_height(client_id.clone(), client_state.latest_height, ctx.host_height())
+	let latest_height = ibc::Height::new(0, client_state.latest_height.into());
+	ctx.store_update_height(client_id.clone(), latest_height, ctx.host_height())
 		.map_err(|e| ContractError::Tendermint(e.to_string()))?;
-	ctx.store_update_time(client_id, client_state.latest_height, ctx.host_timestamp())
+	ctx.store_update_time(client_id, latest_height, ctx.host_timestamp())
 		.map_err(|e| ContractError::Tendermint(e.to_string()))?;
 
 	Ok(Response::default())
@@ -73,7 +73,7 @@ pub fn execute(
 	msg: ExecuteMsg,
 ) -> Result<Response, ContractError> {
 	let client = GuestClient::<crate::crypto::PubKey>::default();
-	let mut ctx = Context::<crate::crypto::PubKey>::new(deps, env);
+	let mut ctx = Context::new(deps, env);
 	let client_id = ClientId::from_str("08-wasm-0").expect("client id is valid");
 	let data = process_message(msg, client, &mut ctx, client_id)?;
 	let mut response = Response::default();
@@ -84,7 +84,7 @@ pub fn execute(
 fn process_message(
 	msg: ExecuteMsg,
 	client: GuestClient<crate::crypto::PubKey>,
-	ctx: &mut Context<crate::crypto::PubKey>,
+	ctx: &mut Context,
 	client_id: ClientId,
 ) -> Result<Binary, ContractError> {
 	//log!(ctx, "process_message: {:?}", msg);
@@ -94,7 +94,7 @@ fn process_message(
 				.client_state(&client_id)
 				.map_err(|e| ContractError::Tendermint(e.to_string()))?;
 			let msg = VerifyMembershipMsg::try_from(msg)?;
-			GuestClient::verify_delay_passed(
+			GuestClient::<crate::crypto::PubKey>::verify_delay_passed(
 				ctx,
 				msg.height,
 				msg.delay_time_period,
@@ -120,7 +120,7 @@ fn process_message(
 				.client_state(&client_id)
 				.map_err(|e| ContractError::Tendermint(e.to_string()))?;
 			let msg = VerifyNonMembershipMsg::try_from(msg)?;
-			GuestClient::verify_delay_passed(
+			GuestClient::<crate::crypto::PubKey>::verify_delay_passed(
 				ctx,
 				msg.height,
 				msg.delay_time_period,
@@ -198,7 +198,7 @@ fn process_message(
 									.map_err(|e| ContractError::Tendermint(e.to_string()))?;
 							},
 					}
-					if cs.latest_height > latest_revision_height {
+					if u64::from(cs.latest_height) > latest_revision_height {
 						ctx.store_client_state(client_id, cs)
 							.map_err(|e| ContractError::Tendermint(e.to_string()))?;
 					}
@@ -258,28 +258,28 @@ pub fn query(deps: Deps, env: Env, msg: QueryMsg) -> StdResult<Binary> {
 		},
 		QueryMsg::Status(StatusMsg {}) => {
 			let client_state = match get_client_state::<crate::crypto::PubKey>(deps) {
-				Ok(client_state) => client_state,
+				Ok(state) => state,
 				Err(_) => return to_binary(&QueryResponse::status("Unknown".to_string())),
 			};
 
 			if client_state.frozen_height().is_some() {
-				to_binary(&QueryResponse::status("Frozen".to_string()))
-			} else {
-				let height = client_state.latest_height;
-				match get_consensus_state(deps, &client_id, height) {
-					Ok(consensus_state) => {
-						let last_update =
-							consensus_state.timestamp().unix_timestamp().unsigned_abs();
-						let tp = client_state.trusting_period.as_secs();
-						let now = env.block.time.seconds();
-						if (last_update + tp) < now {
-							return to_binary(&QueryResponse::status("Expired".to_string()))
-						}
-						to_binary(&QueryResponse::status("Active".to_string()))
-					},
-					Err(_) => to_binary(&QueryResponse::status("Expired".to_string())),
-				}
+				return to_binary(&QueryResponse::status("Frozen".to_string()));
 			}
+
+			let height = client_state.latest_height;
+			let height = ibc::Height::new(0, height.into());
+			let consensus_state = match get_consensus_state(deps, &client_id, height) {
+				Ok(state) => state,
+				Err(_) => return to_binary(&QueryResponse::status("Expired".to_string())),
+			};
+
+			let last_update = consensus_state.timestamp_ns.get();
+			let trusting_period = client_state.trusting_period_ns;
+			let now = env.block.time.nanos();
+			if last_update + trusting_period < now {
+				return to_binary(&QueryResponse::status("Expired".to_string()))
+			}
+			to_binary(&QueryResponse::status("Active".to_string()))
 		},
 	}
 }

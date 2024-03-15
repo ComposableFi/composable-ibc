@@ -22,42 +22,40 @@ use crate::{
 };
 use cf_guest::{ClientState, ConsensusState};
 use cosmwasm_std::{DepsMut, Env, Storage};
-use guestchain::PubKey;
 use ibc::{
 	core::{ics02_client::error::Error, ics26_routing::context::ReaderContext},
 	Height,
 };
-use std::{fmt, fmt::Debug, marker::PhantomData};
+use std::{fmt, fmt::Debug};
 
-pub struct Context<'a, H> {
+pub struct Context<'a> {
 	pub deps: DepsMut<'a>,
 	pub env: Env,
-	_phantom: PhantomData<H>,
 }
 
-impl<'a, H> PartialEq for Context<'a, H> {
+impl<'a> PartialEq for Context<'a> {
 	fn eq(&self, _other: &Self) -> bool {
 		true
 	}
 }
 
-impl<'a, H> Eq for Context<'a, H> {}
+impl<'a> Eq for Context<'a> {}
 
-impl<'a, H> Debug for Context<'a, H> {
+impl<'a> Debug for Context<'a> {
 	fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
 		write!(f, "Context {{ deps: DepsMut }}")
 	}
 }
 
-impl<'a, PK: PubKey> Clone for Context<'a, PK> {
+impl<'a> Clone for Context<'a> {
 	fn clone(&self) -> Self {
 		panic!("Context is not cloneable")
 	}
 }
 
-impl<'a, PK: PubKey> Context<'a, PK> {
+impl<'a> Context<'a> {
 	pub fn new(deps: DepsMut<'a>, env: Env) -> Self {
-		Self { deps, _phantom: Default::default(), env }
+		Self { deps, env }
 	}
 
 	pub fn log(&self, msg: &str) {
@@ -73,7 +71,7 @@ impl<'a, PK: PubKey> Context<'a, PK> {
 	}
 }
 
-impl<'a, PK: PubKey> Context<'a, PK> {
+impl<'a> Context<'a> {
 	pub fn processed_timestamp(&self, height: Height) -> Result<u64, Error> {
 		let processed_state = ReadonlyProcessedStates::new(self.storage());
 		match processed_state.get_processed_time(height, &mut Vec::new()) {
@@ -105,7 +103,7 @@ impl<'a, PK: PubKey> Context<'a, PK> {
 					"no consensus state found for height {height} and prefix {prefix:?}",
 				))
 			})?;
-		Context::<H>::decode_consensus_state(&bytes).map_err(|e| {
+		Context::decode_consensus_state(&bytes).map_err(|e| {
 			ContractError::Tendermint(format!("error decoding consensus state: {e:?}"))
 		})
 	}
@@ -116,12 +114,12 @@ impl<'a, PK: PubKey> Context<'a, PK> {
 		consensus_state: ConsensusState,
 		prefix: &[u8],
 	) {
-		let encoded = Context::<PK>::encode_consensus_state(consensus_state);
+		let encoded = Context::encode_consensus_state(consensus_state);
 		let mut consensus_states = ConsensusStates::new(self.storage_mut());
 		consensus_states.insert_prefixed(height, encoded, prefix);
 	}
 
-	pub fn client_state_prefixed(&self, prefix: &[u8]) -> Result<ClientState<H>, ContractError> {
+	pub fn client_state_prefixed(&self, prefix: &[u8]) -> Result<ClientState<crate::crypto::PubKey>, ContractError> {
 		let bytes =
 			ReadonlyClientStates::new(self.storage()).get_prefixed(prefix).ok_or_else(|| {
 				ContractError::Tendermint(format!("no client state found for prefix {prefix:?}",))
@@ -132,14 +130,14 @@ impl<'a, PK: PubKey> Context<'a, PK> {
 
 	pub fn store_client_state_prefixed(
 		&mut self,
-		client_state: ClientState<H>,
+		client_state: ClientState<crate::crypto::PubKey>,
 		prefix: &[u8],
 	) -> Result<(), ContractError> {
 		let client_states = ReadonlyClientStates::new(self.storage());
 		let data = client_states.get_prefixed(prefix).ok_or_else(|| {
 			ContractError::Tendermint("no client state found for prefix".to_string())
 		})?;
-		let encoded = Context::<crate::crypto::PubKey>::encode_client_state(client_state, data)
+		let encoded = Context::encode_client_state(client_state, data)
 			.map_err(|e| {
 				ContractError::Tendermint(format!("error encoding client state: {e:?}"))
 			})?;
@@ -149,4 +147,4 @@ impl<'a, PK: PubKey> Context<'a, PK> {
 	}
 }
 
-impl<'a, PK: PubKey + 'static> ReaderContext for Context<'a, PK> {}
+impl<'a> ReaderContext for Context<'a> {}

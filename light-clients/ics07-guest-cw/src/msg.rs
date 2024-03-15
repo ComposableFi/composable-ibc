@@ -16,7 +16,6 @@
 use crate::{ics23::FakeInner, Bytes, ContractError};
 use core::{str::FromStr, time::Duration};
 use cosmwasm_schema::cw_serde;
-use guestchain::PubKey;
 use ibc::{
 	core::{
 		ics02_client::trust_threshold::TrustThreshold,
@@ -356,12 +355,8 @@ impl TryFrom<VerifyUpgradeAndUpdateStateMsgRaw> for VerifyUpgradeAndUpdateStateM
 
 	fn try_from(raw: VerifyUpgradeAndUpdateStateMsgRaw) -> Result<Self, Self::Error> {
 		let any = Any::decode(&mut raw.upgrade_client_state.data.as_slice())?;
-		let upgrade_client_state: ClientState<<crate::crypto::PubKey>> = ClientState::decode_vec(&any.value)?;
-		if upgrade_client_state.trust_level != TrustThreshold::ZERO ||
-			upgrade_client_state.trusting_period != Duration::ZERO ||
-			upgrade_client_state.max_clock_drift != Duration::ZERO ||
-			upgrade_client_state.frozen_height.is_some()
-		{
+		let upgrade_client_state: ClientState<crate::crypto::PubKey> = ClientState::decode_vec(&any.value)?;
+		if upgrade_client_state.is_frozen {
 			return ibc::prelude::Err(ContractError::Tendermint(
 				"Upgrade client state not zeroed".to_string(),
 			))

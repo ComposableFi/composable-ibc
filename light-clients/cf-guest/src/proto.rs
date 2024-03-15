@@ -75,12 +75,12 @@ macro_rules! impl_proto {
 			/// however it’s a `const` and is set at compile time.  (In current
 			/// Prost implementation, `type_url` method computes the URL at
 			/// run-time).
-			
+
 
 			// "/ibc.lightclients.wasm.v1.ClientState"
 
 			pub const TYPE_URL: &'static str =
-				concat!("composable.finance/lightclients.guest.v1.", stringify!($Msg));
+				concat!("/lightclients.guest.v1.", stringify!($Msg));
 
 			/// An example test message.
 			#[cfg(test)]

@@ -144,7 +144,7 @@ impl ConsensusState for FakeInner {
 		unimplemented!()
 	}
 
-	fn encode_to_vec(&self) -> Result<Vec<u8>, cf_guest::error::Error> {
+	fn encode_to_vec(&self) -> Result<Vec<u8>, ibc::protobuf::Error> {
 		unimplemented!()
 	}
 }
@@ -186,13 +186,13 @@ impl ClientState for FakeInner {
 		unimplemented!()
 	}
 
-	fn encode_to_vec(&self) -> Result<Vec<u8>, cf_guest::error::Error> {
+	fn encode_to_vec(&self) -> Result<Vec<u8>, ibc::protobuf::Error> {
 		unimplemented!()
 	}
 }
 
 impl ClientMessage for FakeInner {
-	fn encode_to_vec(&self) -> Result<Vec<u8>, cf_guest::error::Error> {
+	fn encode_to_vec(&self) -> Result<Vec<u8>, ibc::protobuf::Error> {
 		unimplemented!()
 	}
 }

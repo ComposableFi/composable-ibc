@@ -117,18 +117,19 @@ impl CwTemplateContract {
 // 	Ok((subject_client_state, substitute_consensus_state))
 // }
 
-pub fn prune_oldest_consensus_state<PK: PubKey + 'static>(
-	ctx: &mut Context<PK>,
-	client_state: &ClientState<PK>,
+pub fn prune_oldest_consensus_state(
+	ctx: &mut Context,
+	client_state: &ClientState<crate::crypto::PubKey>,
 	current_time: u64,
 ) {
 	let mut processed_states = ProcessedStates::new(ctx.storage_mut());
-	if let Some(earliest_height) = processed_states.get_earliest_height(client_state.latest_height)
-	{
+	let latest_height = ibc::Height::new(0, client_state.latest_height.into());
+	if let Some(earliest_height) = processed_states.get_earliest_height(latest_height) {
 		let processed_time =
 			processed_states.get_processed_time(earliest_height, &mut Vec::new()).unwrap();
-		let elapsed = Duration::from_nanos(current_time - processed_time);
-		if client_state.expired(elapsed) {
+		let elapsed = current_time.saturating_sub(processed_time);
+		let expired = elapsed > client_state.trusting_period_ns;
+		if expired {
 			processed_states.remove_states_at_height(earliest_height);
 			let mut consensus_states = ConsensusStates::new(ctx.storage_mut());
 			consensus_states.remove(earliest_height);
