@@ -303,7 +303,7 @@ impl Header {
 
 		//print the validators adress and their voting power
 		for x in pre_input.iter().take(size) {
-			log::info!("Validator: {:?} Voting Power: {:?}", x.pub_key, x.voting_power);
+			log::info!(target: "hyperspace", "ALL Validator: {:?} Voting Power: {:?}", x.pub_key, x.voting_power);
 		}
 
 		log::debug!(target: "hyperspace", "voting power amount: {}, validator size: {}, total voting power: {}", voting_power_amount_validator_size, size, total_voting_power);
@@ -319,9 +319,11 @@ impl Header {
 		// because the pub inputs on solidity depend on the order of the pub keys and the signatures
 		// and the messages
 		let mut ret = vec![];
+		log::info!(target: "hyperspace", "Order to be sent to ZK:");
 		for i in not_sorted_pre_input.iter() {
 			// if i is in ret_zk_input add into ret
 			if ret_zk_input.iter().any(|x| x.pub_key == i.pub_key) {
+				log::info!(target: "hyperspace", "Validator for ZK: {:?} Voting Power: {:?}", i.pub_key, i.voting_power);
 				ret.push((i.pub_key.clone(), i.signature.clone(), i.message.clone()));
 			}
 		}
@@ -352,8 +354,8 @@ impl Header {
 			if validator == 1 {
 				let str_pub_key = hex::encode(vote.validator_address);
 				log::info!(
-					"Validator for ZK: {:?} Voting Power: {:?}",
-					str_pub_key,
+					target: "hyperspace", "Validator when bitmask index: {} : address {:?} Voting Power: {:?}",
+					index,str_pub_key,
 					self.validator_set.validators()[index].power()
 				);
 				bitmask |= 1 << index;
