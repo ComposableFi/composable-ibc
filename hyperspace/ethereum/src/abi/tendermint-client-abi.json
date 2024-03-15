@@ -150,30 +150,6 @@
   },
   {
     "type": "function",
-    "name": "concatenateStrings",
-    "inputs": [
-      {
-        "name": "str1",
-        "type": "string",
-        "internalType": "string"
-      },
-      {
-        "name": "str2",
-        "type": "string",
-        "internalType": "string"
-      }
-    ],
-    "outputs": [
-      {
-        "name": "",
-        "type": "string",
-        "internalType": "string"
-      }
-    ],
-    "stateMutability": "pure"
-  },
-  {
-    "type": "function",
     "name": "concatenateWithDelimiter",
     "inputs": [
       {
