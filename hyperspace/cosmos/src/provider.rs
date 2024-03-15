@@ -55,9 +55,7 @@ use ibc_proto::{
 	},
 };
 use ibc_rpc::PacketInfo;
-use ics07_tendermint::{
-	client_message::ClientMessage, client_state::ClientState, consensus_state::ConsensusState,
-};
+use ics07_tendermint::{client_state::ClientState, consensus_state::ConsensusState};
 use ics08_wasm::msg::MsgPushNewWasmCode;
 use pallet_ibc::light_clients::{
 	AnyClientMessage, AnyClientState, AnyConsensusState, HostFunctionsManager,
@@ -68,14 +66,14 @@ use primitives::{
 };
 use prost::Message;
 use rand::Rng;
-use std::{collections::HashSet, f32::consts::E, pin::Pin, str::FromStr, time::Duration};
+use std::{collections::HashSet, pin::Pin, str::FromStr, time::Duration};
 use tendermint::block::Height as TmHeight;
 pub use tendermint::Hash;
 use tendermint_rpc::{
 	endpoint::tx::Response,
 	event::{Event, EventData},
 	query::{EventType, Query},
-	request, Client, Error as RpcError, Order, SubscriptionClient,
+	Client, Error as RpcError, Order, SubscriptionClient,
 };
 use tokio::{task::JoinSet, time::sleep};
 
