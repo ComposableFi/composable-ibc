@@ -63,7 +63,8 @@ use pallet_ibc::light_clients::{
 	AnyClientMessage, AnyClientState, AnyConsensusState, HostFunctionsManager,
 };
 use primitives::{
-	filter_events_by_ids, mock::LocalClientTypes, Chain, IbcProvider, KeyProvider, UpdateType,
+	filter_events_by_ids, mock::LocalClientTypes, query_maximum_height_for_timeout_proofs, Chain,
+	IbcProvider, KeyProvider, UpdateType,
 };
 use prost::Message;
 use rand::Rng;
@@ -126,6 +127,13 @@ where
 		let latest_cp_client_height = client_state.latest_height().revision_height;
 		let latest_height = self.latest_height_and_timestamp().await?.0;
 		let latest_revision = latest_height.revision_number;
+
+		let max_timeout_proof_height =
+			query_maximum_height_for_timeout_proofs(self, counterparty).await;
+
+		if let Some(h) = max_timeout_proof_height {
+			log::info!(target: "hyperspace_cosmos", "Max timeout proof height: {:?}", h);
+		}
 
 		let mut find_update_tries = 0;
 		let mut updates = Vec::new();
@@ -203,7 +211,9 @@ where
 								&IbcEventType::TimeoutOnClose
 						)
 					})
-					.map(|ev| ev.height().increment())
+					.map(|ev| ev.height())
+					.chain(max_timeout_proof_height.into_iter())
+					.map(|h| h.increment())
 					.max()
 					.unwrap_or_else(|| Height::zero());
 

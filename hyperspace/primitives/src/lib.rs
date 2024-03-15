@@ -833,10 +833,11 @@ pub async fn find_suitable_proof_height_for_client(
 	None
 }
 
+// TODO: query_maximum_height_for_timeout_proofs: return Result<Option<Height>, _>
 pub async fn query_maximum_height_for_timeout_proofs(
 	source: &impl Chain,
 	sink: &impl Chain,
-) -> Option<u64> {
+) -> Option<Height> {
 	let (source_height, ..) = source.latest_height_and_timestamp().await.ok()?;
 	let (sink_height, ..) = sink.latest_height_and_timestamp().await.ok()?;
 	let mut join_set: JoinSet<Option<_>> = JoinSet::new();
@@ -883,27 +884,27 @@ pub async fn query_maximum_height_for_timeout_proofs(
 					sink.query_timestamp_at(height.revision_height).await.ok()?;
 				let period = send_packet.timeout_timestamp.saturating_sub(timestamp_at_creation);
 				if period == 0 {
-					return Some(send_packet.timeout_height.revision_height)
+					return Some(Height::from(send_packet.timeout_height))
 				}
 				let period = Duration::from_nanos(period);
 				let period =
 					calculate_block_delay(period, sink.expected_block_time()).saturating_add(1);
 				let approx_height = revision_height + period;
 				let timeout_height = if send_packet.timeout_height.revision_height < approx_height {
-					send_packet.timeout_height.revision_height
+					Height::from(send_packet.timeout_height)
 				} else {
-					approx_height
+					Height::new(send_packet.timeout_height.revision_number, approx_height)
 				};
 
 				Some(timeout_height)
 			});
 		}
 	}
-	let mut min_timeout_height = None;
+	let mut max_timeout_height = None;
 	while let Some(timeout_height) = join_set.join_next().await {
-		min_timeout_height = min_timeout_height.max(timeout_height.ok()?)
+		max_timeout_height = max_timeout_height.max(timeout_height.ok()?)
 	}
-	min_timeout_height
+	max_timeout_height
 }
 
 pub fn filter_events_by_ids(
