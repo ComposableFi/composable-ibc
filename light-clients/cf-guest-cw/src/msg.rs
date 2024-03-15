@@ -218,14 +218,16 @@ impl TryFrom<VerifyClientMessageMsgRaw> for VerifyClientMessageMsg {
 
 impl VerifyClientMessageMsg {
 	fn decode_client_message(raw: ClientMessageRaw) -> Result<state::ClientMessage, Error> {
+		// let any = Any::decode(&mut data.as_slice()).unwrap();
+		// let state = state::ClientMessage::decode_vec(&any.value).unwrap();
 		let client_message = match raw {
 			ClientMessageRaw::Header(header) => {
 				let any = Any::decode(&mut header.data.as_slice())?;
-				state::ClientMessage::Header(state::Header::decode_vec(&any.value)?)
+				state::ClientMessage::decode_vec(&any.value)?
 			},
 			ClientMessageRaw::Misbehaviour(misbehaviour) => {
 				let any = Any::decode(&mut misbehaviour.data.as_slice())?;
-				state::ClientMessage::Misbehaviour(state::Misbehaviour::decode_vec(&any.value)?)
+				state::ClientMessage::decode_vec(&any.value)?
 			},
 		};
 		Ok(client_message)
@@ -341,38 +343,27 @@ mod unit_test {
 	use ibc_proto::google::protobuf::Any;
 	use ics08_wasm::client_message::Header;
 
-	use crate::{fake_inner::FakeInner, state};
+	use crate::{fake_inner::FakeInner, state::{self, ConsensusState}};
 	use ::ibc::protobuf::Protobuf;
 	use prost::Message;
 
 	#[test]
 	pub fn test_decoding() {
 		let data = vec![
-			10, 54, 99, 111, 109, 112, 111, 115, 97, 98, 108, 101, 46, 102, 105, 110, 97, 110, 99,
-			101, 47, 108, 105, 103, 104, 116, 99, 108, 105, 101, 110, 116, 115, 46, 103, 117, 101,
-			115, 116, 46, 118, 49, 46, 67, 108, 105, 101, 110, 116, 77, 101, 115, 115, 97, 103,
-			101, 18, 222, 2, 10, 47, 99, 111, 109, 112, 111, 115, 97, 98, 108, 101, 46, 102, 105,
-			110, 97, 110, 99, 101, 47, 108, 105, 103, 104, 116, 99, 108, 105, 101, 110, 116, 115,
-			46, 103, 117, 101, 115, 116, 46, 118, 49, 46, 72, 101, 97, 100, 101, 114, 18, 170, 2,
-			10, 32, 101, 237, 176, 45, 187, 52, 214, 1, 58, 10, 117, 77, 241, 134, 115, 208, 230,
-			118, 88, 164, 160, 16, 82, 154, 235, 236, 229, 166, 167, 103, 43, 143, 18, 122, 0, 94,
-			197, 73, 107, 151, 104, 159, 43, 144, 178, 143, 109, 122, 147, 221, 198, 90, 74, 94,
-			132, 195, 93, 142, 39, 183, 173, 18, 146, 28, 173, 194, 147, 199, 0, 0, 0, 0, 0, 0, 0,
-			62, 10, 0, 0, 0, 0, 0, 0, 0, 164, 28, 75, 93, 199, 188, 23, 20, 2, 191, 82, 235, 2,
-			150, 30, 106, 159, 131, 167, 151, 71, 206, 243, 65, 57, 216, 20, 32, 46, 50, 71, 129,
-			218, 248, 97, 79, 68, 12, 171, 101, 237, 176, 45, 187, 52, 214, 1, 58, 10, 117, 77,
-			241, 134, 115, 208, 230, 118, 88, 164, 160, 16, 82, 154, 235, 236, 229, 166, 167, 103,
-			43, 143, 0, 26, 70, 0, 1, 0, 0, 0, 0, 12, 8, 4, 81, 129, 165, 153, 230, 192, 225, 51,
-			119, 216, 14, 69, 225, 73, 7, 204, 144, 39, 213, 91, 255, 136, 38, 95, 131, 197, 4,
-			101, 186, 208, 7, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 233, 3, 0, 0, 0, 0, 0, 0,
-			0, 0, 0, 0, 0, 0, 0, 0, 34, 66, 18, 64, 45, 11, 100, 232, 23, 25, 151, 70, 245, 58, 39,
-			54, 227, 197, 46, 148, 178, 61, 250, 97, 208, 158, 242, 48, 110, 23, 31, 112, 77, 205,
-			81, 236, 82, 186, 67, 198, 132, 122, 129, 246, 136, 74, 236, 220, 218, 254, 208, 152,
-			229, 3, 76, 0, 224, 46, 100, 131, 89, 248, 101, 71, 221, 16, 173, 2,
+			10, 103, 10, 55, 99, 111, 109, 112, 111, 115, 97, 98, 108, 101, 46, 102, 105, 110, 97,
+			110, 99, 101, 47, 108, 105, 103, 104, 116, 99, 108, 105, 101, 110, 116, 115, 46, 103,
+			117, 101, 115, 116, 46, 118, 49, 46, 67, 111, 110, 115, 101, 110, 115, 117, 115, 83,
+			116, 97, 116, 101, 18, 44, 10, 32, 116, 178, 154, 83, 135, 120, 95, 99, 184, 182, 87,
+			49, 240, 126, 146, 5, 170, 86, 186, 125, 181, 226, 217, 226, 189, 224, 18, 192, 136,
+			173, 242, 189, 16, 128, 244, 203, 147, 182, 138, 179, 222, 23, 16, 128, 244, 203, 147,
+			182, 138, 179, 222, 23,
 		];
-		// let header = Header { inner: Box::new(FakeInner), data, height: ibc::Height::new(1, 1755)
-		// };
-		let any = Any::decode(&mut data.as_slice()).unwrap();
-		let state = state::ClientMessage::Header(state::Header::decode_vec(&any.value).unwrap());
+		let any = Any {
+			type_url: "/ibc.lightclients.wasm.v1.ConsensusState".to_string(),
+			value: data
+		};
+		let wasm_state =
+			ics08_wasm::consensus_state::ConsensusState::<FakeInner>::decode_vec(&any.value)
+				.unwrap();
 	}
 }

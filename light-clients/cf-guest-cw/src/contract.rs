@@ -18,7 +18,12 @@ use cosmwasm_std::{
 	to_json_binary, Binary, Deps, DepsMut, Env, MessageInfo, Response, StdError, StdResult,
 };
 
-use crate::{context, context::log, crypto::Verifier, ibc, msg, state};
+use crate::{
+	context::{self, log},
+	crypto::Verifier,
+	ibc, msg,
+	state::{self, ClientMessage},
+};
 
 type Result<T = (), E = crate::error::Error> = core::result::Result<T, E>;
 
@@ -34,7 +39,7 @@ fn instantiate(
 
 #[cfg_attr(not(feature = "library"), cosmwasm_std::entry_point)]
 fn execute(deps: DepsMut, env: Env, _info: MessageInfo, msg: msg::ExecuteMsg) -> Result<Response> {
-	let mut ctx = context::new(deps, env);
+	let mut ctx = context::new(deps, env.clone());
 	log!(ctx, "execute({msg:?})");
 	let result = match msg {
 		msg::ExecuteMsg::VerifyMembership(msg) => {
@@ -59,7 +64,11 @@ fn execute(deps: DepsMut, env: Env, _info: MessageInfo, msg: msg::ExecuteMsg) ->
 			msg::ContractResult::success()
 		},
 		msg::ExecuteMsg::UpdateState(msg) => {
-			process_update_state_msg(ctx, msg.try_into()?)?;
+			let metadata = state::Metadata {
+				host_timestamp_ns: env.block.time.nanos(),
+				host_height: env.block.height,
+			};
+			process_update_state_msg(ctx, metadata, msg.try_into()?)?;
 			msg::ContractResult::success()
 		},
 
@@ -96,17 +105,20 @@ fn check_for_misbehaviour(
 		.map_err(crate::Error::from)
 }
 
-fn process_update_state_msg(mut ctx: context::ContextMut, msg: msg::UpdateStateMsg) -> Result {
+fn process_update_state_msg(mut ctx: context::ContextMut, metadata: state::Metadata, msg: msg::UpdateStateMsg) -> Result {
 	let client_state = ctx.client_state()?;
 
-	let header = crate::state::Header::try_from(msg.client_message).unwrap();
-	let header_height = ibc::Height::new(0, header.block_header.block_height.into());
+	let header = match msg.client_message {
+		ClientMessage::Header(header) => header,
+		ClientMessage::Misbehaviour(_) => panic!("unexpected message"),
+	};
+	let header_height = ibc::Height::new(1, header.block_header.block_height.into());
 
 	if ctx.consensus_states().get(header_height)?.is_some() {
-		return Ok(());
+		return Ok(())
 	}
 
-	let metadata = ctx.metadata;
+	// let metadata = ctx.metadata;
 	ctx.consensus_states_mut()
 		.prune_oldest_consensus_state(&client_state, metadata.host_timestamp_ns)?;
 
@@ -125,8 +137,7 @@ fn query(deps: Deps, env: Env, msg: msg::QueryMsg) -> StdResult<Binary> {
 		msg::QueryMsg::ClientTypeMsg(_) => unimplemented!(),
 		msg::QueryMsg::GetLatestHeightsMsg(_) => unimplemented!(),
 		msg::QueryMsg::ExportMetadata(_) => msg::QueryResponse::new(""),
-		msg::QueryMsg::Status(msg::StatusMsg {}) =>
-			msg::QueryResponse::new(query_status(ctx)?),
+		msg::QueryMsg::Status(msg::StatusMsg {}) => msg::QueryResponse::new(query_status(ctx)?),
 	};
 	to_json_binary(&response)
 }

@@ -136,7 +136,11 @@ impl ConsensusStates {
 			Some(Err(err)) => return Err(err.into()),
 			Some(Ok((key, any, _metadata))) => (key, any),
 		};
-		let state = ConsensusState::try_from(any)?;
+		let wasm_state =
+			ics08_wasm::consensus_state::ConsensusState::<FakeInner>::decode_vec(&any.value)
+			.unwrap();
+		let any = Any::decode(wasm_state.data.as_slice())?;
+		let state = ConsensusState::decode(any.value.as_slice())?;
 		let elapsed = now_ns.saturating_sub(state.timestamp_ns.get());
 		if elapsed >= client_state.trusting_period_ns {
 			self.0.remove(key.as_slice());

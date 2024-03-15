@@ -192,10 +192,11 @@ impl IbcProvider for SolanaClient {
 		}
 
 		let chain_account = self.get_chain_storage().await;
-		let signatures =
+		let (signatures, block_header) =
 			events::get_signatures_for_blockhash(rpc_client, solana_ibc::ID, blockhash.clone())
-				.await;
-	  log::info!("These are signatures {signatures:?}");
+				.await
+				.unwrap();
+		log::info!("These are signatures {signatures:?}");
 		let updates: Vec<_> = block_events
 			.iter()
 			.map(|event| {
@@ -214,11 +215,12 @@ impl IbcProvider for SolanaClient {
 					PubKey::from_bytes(&old_validator.pubkey.to_vec()).unwrap(),
 					NonZeroU128::new(2000).unwrap(),
 				);
+				log::info!("This is guest header epoch id {:?}", block_header.epoch_id.clone());
 				let guest_header = cf_guest::Header {
 					genesis_hash: client_state.genesis_hash.clone(),
 					block_hash: blockhash.clone(),
-					block_header: chain_account.head().unwrap().clone(),
-					epoch_commitment: client_state.epoch_commitment.clone(),
+					block_header: block_header.clone(),
+					epoch_commitment: block_header.epoch_id.clone(),
 					epoch: Epoch::new_with(vec![new_validator], |total| {
 						let quorum = NonZeroU128::new(total.get() / 2 + 1).unwrap();
 						// min_quorum_stake may be greater than total_stake so we’re not
@@ -1346,13 +1348,29 @@ deserialize client state"
 		let chain = self.get_chain_storage().await;
 		let header = chain.head().unwrap().clone();
 		let blockhash = header.calc_hash();
+		let validator_pubkey =
+			Pubkey::from_str("oxyzEsUj9CV6HsqPCUZqVwrFJJvpd9iCBrPdzTBWLBb").unwrap();
+		let old_validator = chain.validator(validator_pubkey).unwrap().unwrap();
+		let new_validator: Validator<pallet_ibc::light_clients::PubKey> = Validator::new(
+			PubKey::from_bytes(&old_validator.pubkey.to_vec()).unwrap(),
+			NonZeroU128::new(2000).unwrap(),
+		);
+		let epoch = Epoch::new_with(vec![new_validator], |total| {
+			let quorum = NonZeroU128::new(total.get() / 2 + 1).unwrap();
+			// min_quorum_stake may be greater than total_stake so we’re not
+			// using .clamp to make sure we never return value higher than
+			// total_stake.
+			quorum.max(NonZeroU128::new(1000).unwrap()).min(total)
+		})
+		.unwrap();
 		let client_state = cf_guest::ClientState::new(
 			chain.genesis().unwrap(),
 			header.block_height,
 			64000 * 10_u64.pow(9),
-			header.epoch_id,
+			epoch.calc_commitment(),
 			false,
 		);
+		log::info!("This is epoch id {:?}", header.epoch_id);
 		let consensus_state = cf_guest::ConsensusState {
 			block_hash: blockhash.to_vec().into(),
 			timestamp_ns: header.timestamp_ns,

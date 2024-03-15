@@ -4,7 +4,7 @@ use anchor_client::{
 	},
 	solana_sdk::{commitment_config::CommitmentConfig, pubkey::Pubkey},
 };
-use guestchain::Signature as SignatureTrait;
+use guestchain::{BlockHeader, Signature as SignatureTrait};
 use lib::hash::CryptoHash;
 use serde::{Deserialize, Serialize};
 use solana_transaction_status::EncodedConfirmedTransactionWithStatusMeta;
@@ -415,7 +415,7 @@ pub async fn get_signatures_for_blockhash(
 	rpc: RpcClient,
 	program_id: Pubkey,
 	blockhash: CryptoHash,
-) -> Vec<(u16, Signature)> {
+) -> Result<(Vec<(u16, Signature)>, BlockHeader), String> {
 	sleep(Duration::from_secs(15));
 	let transaction_signatures = rpc
 		.get_signatures_for_address_with_config(
@@ -449,7 +449,6 @@ pub async fn get_signatures_for_blockhash(
 	.unwrap();
 
 	let mut signatures = Vec::new();
-	let mut end = false;
 	let mut index = 0;
 	for tx in transactions.unwrap() {
 		let logs = match tx.result.transaction.meta.clone().unwrap().log_messages {
@@ -458,14 +457,15 @@ pub async fn get_signatures_for_blockhash(
 		};
 		let events = get_events_from_logs(logs);
 		// Find block signed events with blockhash
-		events.iter().for_each(|event| match event {
+		let block_header: Vec<Option<BlockHeader>> = events.iter().map(|event| match event {
 			solana_ibc::events::Event::NewBlock(e) => {
 				println!("This is new block event {:?}", e.block_header.0.block_height);
 				let new_blockhash = e.block_header.0.calc_hash();
 				if blockhash == new_blockhash {
 					println!("New block event where it is true");
-					end = true;
+					return Some(e.block_header.0.clone());
 				}
+				None
 			},
 			solana_ibc::events::Event::BlockSigned(e) => {
 				println!("This is block signed event {:?}", e.block_height);
@@ -473,14 +473,15 @@ pub async fn get_signatures_for_blockhash(
 					println!("This is block signed in side blockhash");
 					signatures.push((0_u16, Signature::from_bytes(&e.signature.to_vec()).unwrap()))
 				};
+				None
 			},
-			_ => (),
-		});
-		if end {
-			break
-		}
+			_ => None,
+		}).collect();
+		if let Some(header) = block_header.iter().find(|b| b.is_some()) {
+			return Ok((signatures, header.clone().unwrap()))
+		}	
 	}
-	signatures
+	Err("Couldnt find blocks".to_string())
 }
 
 #[derive(Debug, Serialize, Deserialize)]
