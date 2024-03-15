@@ -1795,12 +1795,12 @@ dependencies = [
 
 [[package]]
 name = "clap"
-version = "4.5.2"
+version = "4.5.3"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "b230ab84b0ffdf890d5a10abdbc8b83ae1c4918275daea1ab8801f71536b2651"
+checksum = "949626d00e063efc93b6dca932419ceb5432f99769911c0b995f7e884c778813"
 dependencies = [
  "clap_builder",
- "clap_derive 4.5.0",
+ "clap_derive 4.5.3",
 ]
 
 [[package]]
@@ -1839,11 +1839,11 @@ dependencies = [
 
 [[package]]
 name = "clap_derive"
-version = "4.5.0"
+version = "4.5.3"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "307bc0538d5f0f83b8248db3087aa92fe504e4691294d0c96c0eabc33f47ba47"
+checksum = "90239a040c80f5e14809ca132ddc4176ab33d5e17e49691793296e3fcb34d72f"
 dependencies = [
- "heck 0.4.1",
+ "heck 0.5.0",
  "proc-macro2",
  "quote",
  "syn 2.0.52",
@@ -2428,7 +2428,7 @@ name = "cumulus-client-cli"
 version = "0.1.0"
 source = "git+https://github.com/paritytech/cumulus?branch=polkadot-v0.9.43#b8999fce0f61fb757f9e57e326cda48e70137019"
 dependencies = [
- "clap 4.5.2",
+ "clap 4.5.3",
  "parity-scale-codec",
  "sc-chain-spec",
  "sc-cli",
@@ -4136,7 +4136,7 @@ dependencies = [
  "Inflector",
  "array-bytes 4.2.0",
  "chrono",
- "clap 4.5.2",
+ "clap 4.5.3",
  "comfy-table",
  "frame-benchmarking",
  "frame-support",
@@ -4856,9 +4856,9 @@ dependencies = [
 
 [[package]]
 name = "h2"
-version = "0.3.24"
+version = "0.3.25"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "bb2c4422095b67ee78da96fbb51a4cc413b3b25883c7717ff7ca1ab31022c9c9"
+checksum = "4fbd2820c5e49886948654ab546d0688ff24530286bdcf8fca3cefb16d4618eb"
 dependencies = [
  "bytes",
  "fnv",
@@ -4988,6 +4988,12 @@ name = "heck"
 version = "0.4.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "95505c38b4572b2d910cecb0281560f54b440a19336cbbcb27bf6ce6adc6f5a8"
+
+[[package]]
+name = "heck"
+version = "0.5.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "2304e00983f87ffb38b55b444b5e3b60a884b5d30c0fca7d82fe33449bbe55ea"
 
 [[package]]
 name = "hermit-abi"
@@ -6275,6 +6281,38 @@ dependencies = [
  "tendermint-testgen 0.34.0",
  "tracing",
  "typed-builder",
+]
+
+[[package]]
+name = "ics07-guest-cw"
+version = "0.1.0"
+dependencies = [
+ "borsh 0.10.3",
+ "byteorder",
+ "cf-guest 0.0.1",
+ "cosmwasm-schema",
+ "cosmwasm-std",
+ "cw-multi-test",
+ "derive_more",
+ "digest 0.10.7",
+ "ed25519-dalek 2.1.1",
+ "guestchain",
+ "hex",
+ "hyperspace-primitives",
+ "ibc 0.15.0",
+ "ibc-derive 0.1.0",
+ "ibc-proto 0.18.0",
+ "ics08-wasm",
+ "ics23 0.10.0",
+ "pallet-ibc",
+ "prost 0.11.9",
+ "schemars",
+ "serde",
+ "serde-json-wasm 0.5.2",
+ "serde_json",
+ "sha2 0.10.8",
+ "sha3 0.10.8",
+ "thiserror",
 ]
 
 [[package]]
@@ -10081,7 +10119,7 @@ dependencies = [
 name = "parachain-node"
 version = "0.1.0"
 dependencies = [
- "clap 4.5.2",
+ "clap 4.5.3",
  "cumulus-client-cli",
  "cumulus-client-collator",
  "cumulus-client-consensus-aura",
@@ -10653,7 +10691,7 @@ name = "polkadot-cli"
 version = "0.9.43"
 source = "git+https://github.com/paritytech/polkadot?branch=release-v0.9.43#ba42b9ce51d25bdaf52d2c61e0763a6e3da50d25"
 dependencies = [
- "clap 4.5.2",
+ "clap 4.5.3",
  "frame-benchmarking-cli",
  "futures",
  "log",
@@ -13259,7 +13297,7 @@ source = "git+https://github.com/paritytech//substrate.git?branch=polkadot-v0.9.
 dependencies = [
  "array-bytes 4.2.0",
  "chrono",
- "clap 4.5.2",
+ "clap 4.5.3",
  "fdlimit",
  "futures",
  "libp2p-identity",
@@ -14110,7 +14148,7 @@ name = "sc-storage-monitor"
 version = "0.1.0"
 source = "git+https://github.com/paritytech//substrate.git?branch=polkadot-v0.9.43#5e49f6e44820affccaf517fd22af564f4b495d40"
 dependencies = [
- "clap 4.5.2",
+ "clap 4.5.3",
  "fs4",
  "futures",
  "log",
@@ -18281,9 +18319,9 @@ dependencies = [
 
 [[package]]
 name = "tokio-stream"
-version = "0.1.14"
+version = "0.1.15"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "397c988d37662c7dda6d2208364a706264bf3d6138b11d436cbac0ad38832842"
+checksum = "267ac89e0bec6e691e5813911606935d77c476ff49024f98abcea3e7b15e37af"
 dependencies = [
  "futures-core",
  "pin-project-lite 0.2.13",
@@ -18723,7 +18761,7 @@ version = "0.10.0-dev"
 source = "git+https://github.com/paritytech//substrate.git?branch=polkadot-v0.9.43#5e49f6e44820affccaf517fd22af564f4b495d40"
 dependencies = [
  "async-trait",
- "clap 4.5.2",
+ "clap 4.5.3",
  "frame-remote-externalities",
  "hex",
  "log",
