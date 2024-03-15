@@ -20,7 +20,6 @@ use crate::{
 		ReadonlyClients, ReadonlyConsensusStates, ReadonlyProcessedStates,
 	},
 };
-use guestchain::PubKey;
 use ibc::{
 	core::{
 		ics02_client::{
@@ -287,15 +286,15 @@ impl<'a> Context<'a> {
 					"[client_state]: error decoding client state bytes to WasmConsensusState {e}"
 				))
 			})?;
-		wasm_client_state.data = client_state.to_any().encode_to_vec();
-		wasm_client_state.latest_height = client_state.latest_height();
+		wasm_client_state.data = ibc_proto::google::protobuf::Any::from(&client_state).encode_to_vec();
+		wasm_client_state.latest_height = ibc::Height::new(0, client_state.latest_height.into());
 		let vec1 = wasm_client_state.to_any().encode_to_vec();
 		Ok(vec1)
 	}
 
 	pub fn encode_consensus_state(consensus_state: ConsensusState) -> Vec<u8> {
 		let wasm_consensus_state = ics08_wasm::consensus_state::ConsensusState {
-			data: consensus_state.to_any().encode_to_vec(),
+			data: ibc_proto::google::protobuf::Any::from(&consensus_state).encode_to_vec(),
 			timestamp: consensus_state.timestamp().nanoseconds(),
 			inner: Box::new(FakeInner),
 		};

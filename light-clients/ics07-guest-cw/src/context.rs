@@ -22,14 +22,12 @@ use crate::{
 };
 use cf_guest::{ClientState, ConsensusState};
 use cosmwasm_std::{DepsMut, Env, Storage};
-use guestchain::PubKey;
 use ibc::{
 	core::{ics02_client::error::Error, ics26_routing::context::ReaderContext},
 	Height,
 };
-use std::{fmt, fmt::Debug, marker::PhantomData};
+use std::{fmt, fmt::Debug};
 
-#[derive(Eq)]
 pub struct Context<'a> {
 	pub deps: DepsMut<'a>,
 	pub env: Env,
@@ -41,13 +39,15 @@ impl<'a> PartialEq for Context<'a> {
 	}
 }
 
+impl<'a> Eq for Context<'a> {}
+
 impl<'a> Debug for Context<'a> {
 	fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
 		write!(f, "Context {{ deps: DepsMut }}")
 	}
 }
 
-impl<'a, PK: PubKey> Clone for Context<'a, PK> {
+impl<'a> Clone for Context<'a> {
 	fn clone(&self) -> Self {
 		panic!("Context is not cloneable")
 	}
@@ -55,7 +55,7 @@ impl<'a, PK: PubKey> Clone for Context<'a, PK> {
 
 impl<'a> Context<'a> {
 	pub fn new(deps: DepsMut<'a>, env: Env) -> Self {
-		Self { deps, _phantom: Default::default(), env }
+		Self { deps, env }
 	}
 
 	pub fn log(&self, msg: &str) {
@@ -137,7 +137,7 @@ impl<'a> Context<'a> {
 		let data = client_states.get_prefixed(prefix).ok_or_else(|| {
 			ContractError::Tendermint("no client state found for prefix".to_string())
 		})?;
-		let encoded = Context::<crate::crypto::PubKey>::encode_client_state(client_state, data)
+		let encoded = Context::encode_client_state(client_state, data)
 			.map_err(|e| {
 				ContractError::Tendermint(format!("error encoding client state: {e:?}"))
 			})?;

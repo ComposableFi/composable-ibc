@@ -14,7 +14,6 @@
 // limitations under the License.
 
 use crate::context::Context;
-use guestchain::PubKey;
 use ibc::{
 	core::{
 		ics03_connection::{connection::ConnectionEnd, context::ConnectionReader, error::Error},

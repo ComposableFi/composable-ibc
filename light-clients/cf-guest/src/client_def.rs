@@ -339,6 +339,17 @@ fn verify_delay_passed<Ctx: ReaderContext, PK: PubKey>(
 	.map_err(|e| e.into())
 }
 
+impl<PK: PubKey> GuestClient<PK> {
+	pub fn verify_delay_passed(
+		ctx: &impl ReaderContext,
+		height: ibc::Height,
+		delay_time_period: u64,
+		delay_block_period: u64,
+	) -> Result<(), Ics02ClientError> {
+		todo!()
+	}
+}
+
 impl<PK: PubKey> Verifier<PK> for GuestClient<PK> {
 	fn verify(&self, message: &[u8], pubkey: &PK, signature: &PK::Signature) -> bool {
 		let pubkey_in_bytes = pubkey.to_vec();
