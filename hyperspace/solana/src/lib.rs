@@ -128,9 +128,10 @@ impl IbcProvider for SolanaClient {
 		T: Chain,
 	{
 		log::info!("Came into solana lts events");
-		let (blockhash, _height) = match finality_event {
+		let (blockhash, height) = match finality_event {
 			FinalityEvent::Guest { blockhash, block_height } => (blockhash, block_height),
 		};
+		log::info!("This is solaan height {:?}", height);
 		let client_id = self.client_id();
 		let latest_cp_height = counterparty.latest_height_and_timestamp().await?.0;
 		log::info!("this is the latest cp height {:?}", latest_cp_height);
@@ -194,6 +195,7 @@ impl IbcProvider for SolanaClient {
 		let signatures =
 			events::get_signatures_for_blockhash(rpc_client, solana_ibc::ID, blockhash.clone())
 				.await;
+	  log::info!("These are signatures {signatures:?}");
 		let updates: Vec<_> = block_events
 			.iter()
 			.map(|event| {

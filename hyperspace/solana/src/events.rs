@@ -2,13 +2,13 @@ use anchor_client::{
 	solana_client::{
 		nonblocking::rpc_client::RpcClient, rpc_client::GetConfirmedSignaturesForAddress2Config,
 	},
-	solana_sdk::pubkey::Pubkey,
+	solana_sdk::{commitment_config::CommitmentConfig, pubkey::Pubkey},
 };
 use guestchain::Signature as SignatureTrait;
 use lib::hash::CryptoHash;
 use serde::{Deserialize, Serialize};
 use solana_transaction_status::EncodedConfirmedTransactionWithStatusMeta;
-use std::str::FromStr;
+use std::{str::FromStr, thread::sleep, time::Duration};
 
 use base64::Engine;
 use ibc::{
@@ -416,10 +416,11 @@ pub async fn get_signatures_for_blockhash(
 	program_id: Pubkey,
 	blockhash: CryptoHash,
 ) -> Vec<(u16, Signature)> {
+	sleep(Duration::from_secs(15));
 	let transaction_signatures = rpc
 		.get_signatures_for_address_with_config(
 			&program_id,
-			GetConfirmedSignaturesForAddress2Config { limit: Some(20), ..Default::default() },
+			GetConfirmedSignaturesForAddress2Config { limit: Some(50), ..Default::default() },
 		)
 		.await
 		.unwrap();
@@ -459,12 +460,20 @@ pub async fn get_signatures_for_blockhash(
 		// Find block signed events with blockhash
 		events.iter().for_each(|event| match event {
 			solana_ibc::events::Event::NewBlock(e) => {
-				end = true;
+				println!("This is new block event {:?}", e.block_header.0.block_height);
+				let new_blockhash = e.block_header.0.calc_hash();
+				if blockhash == new_blockhash {
+					println!("New block event where it is true");
+					end = true;
+				}
 			},
-			solana_ibc::events::Event::BlockSigned(e) =>
+			solana_ibc::events::Event::BlockSigned(e) => {
+				println!("This is block signed event {:?}", e.block_height);
 				if e.block_hash == blockhash {
+					println!("This is block signed in side blockhash");
 					signatures.push((0_u16, Signature::from_bytes(&e.signature.to_vec()).unwrap()))
-				},
+				};
+			},
 			_ => (),
 		});
 		if end {
