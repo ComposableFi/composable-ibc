@@ -25,7 +25,7 @@ use ibc::{
 };
 use std::time::Duration;
 
-impl<'a, PK: PubKey> ConnectionReader for Context<'a, PK> {
+impl<'a> ConnectionReader for Context<'a> {
 	fn minimum_delay_period(&self) -> Duration {
 		unimplemented!("minimum_delay_period")
 	}

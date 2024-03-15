@@ -84,7 +84,7 @@ pub fn execute(
 fn process_message(
 	msg: ExecuteMsg,
 	client: GuestClient<crate::crypto::PubKey>,
-	ctx: &mut Context<crate::crypto::PubKey>,
+	ctx: &mut Context,
 	client_id: ClientId,
 ) -> Result<Binary, ContractError> {
 	//log!(ctx, "process_message: {:?}", msg);

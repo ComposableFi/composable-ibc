@@ -117,9 +117,9 @@ impl CwTemplateContract {
 // 	Ok((subject_client_state, substitute_consensus_state))
 // }
 
-pub fn prune_oldest_consensus_state<PK: PubKey + 'static>(
-	ctx: &mut Context<PK>,
-	client_state: &ClientState<PK>,
+pub fn prune_oldest_consensus_state(
+	ctx: &mut Context,
+	client_state: &ClientState<crate::crypto::PubKey>,
 	current_time: u64,
 ) {
 	let mut processed_states = ProcessedStates::new(ctx.storage_mut());

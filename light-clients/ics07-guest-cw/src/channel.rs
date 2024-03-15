@@ -31,7 +31,7 @@ use ibc::{
 };
 use std::time::Duration;
 
-impl<'a, PK: PubKey> ChannelReader for Context<'a, PK> {
+impl<'a> ChannelReader for Context<'a> {
 	fn channel_end(&self, _port_channel_id: &(PortId, ChannelId)) -> Result<ChannelEnd, Error> {
 		Err(Error::implementation_specific(
 			"'channel_end' is unavailable from the client".to_string(),
