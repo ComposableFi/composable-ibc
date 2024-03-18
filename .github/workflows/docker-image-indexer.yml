@@ -28,76 +28,67 @@ jobs:
       cancel-in-progress: true
 
     steps:
-    - name: Clean up
-      continue-on-error: true
-      run: |
-        sudo chown -R $USER:$USER $GITHUB_WORKSPACE
-        docker system prune --force --all --volumes
+      - name: Clean up
+        continue-on-error: true
+        run: |
+          sudo chown -R $USER:$USER $GITHUB_WORKSPACE
+          docker system prune --force --all --volumes
 
-    - name: Install dependencies
-      run: |
-        sudo apt-get install -y make build-essential
+      - name: Install dependencies
+        run: |
+          sudo apt-get install -y make build-essential
 
-    - uses: actions/checkout@v2
-      with:
-        fetch-depth: 0
+      - uses: actions/checkout@v2
+        with:
+          fetch-depth: 0
 
-    - name: Set up QEMU
-      uses: docker/setup-qemu-action@v3
+      - name: Set up QEMU
+        uses: docker/setup-qemu-action@v3
 
-    - name: Set up Docker Buildx
-      uses: docker/setup-buildx-action@v3
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
 
-    - name: Extract metadata (tags, labels) for Docker (tag)
-      id: meta-tag
-      if: github.ref_type == 'tag'
-      uses: docker/metadata-action@v5
-      with:
-        images: ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}
-        tags: |
-          type=semver,pattern={{version}}
-          type=semver,pattern={{major}}.{{minor}}
+      - name: Extract metadata (tags, labels) for Docker (tag)
+        id: meta-tag
+        if: github.ref_type == 'tag'
+        uses: docker/metadata-action@v5
+        with:
+          images: ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}
+          tags: |
+            type=semver,pattern={{version}}
+            type=semver,pattern={{major}}.{{minor}}
 
-    - name: Extract metadata (tags, labels) for Docker (branch)
-      id: meta-branch
-      if: github.ref_type == 'branch'
-      uses: docker/metadata-action@v5
-      with:
-        images: ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}
-        tags: |
-          type=ref,event=branch
-          type=sha,prefix={{branch}}-
+      - name: Extract metadata (tags, labels) for Docker (branch)
+        id: meta-branch
+        if: github.ref_type == 'branch'
+        uses: docker/metadata-action@v5
+        with:
+          images: ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}
+          tags: |
+            type=ref,event=branch
+            type=sha,prefix={{branch}}-
 
-    - name: Login to GitHub Container Registry
-      uses: docker/login-action@v2
-      with:
-        registry: ${{ env.REGISTRY }}
-        username: ${{ github.repository_owner }}
-        password: ${{ secrets.GITHUB_TOKEN }}
+      - name: Login to GitHub Container Registry
+        uses: docker/login-action@v2
+        with:
+          registry: ${{ env.REGISTRY }}
+          username: ${{ github.repository_owner }}
+          password: ${{ secrets.GITHUB_TOKEN }}
 
-    - name: Build and push Docker image
-      uses: docker/build-push-action@v5
-      with:
-        file: scripts/indexer.Dockerfile
-        push: ${{ github.event_name != 'pull_request' }}
-        tags: ${{ steps.meta.outputs.tags }}
-        labels: ${{ steps.meta.outputs.labels }}
+      - name: Build and push Docker image (tag)
+        if: github.ref_type == 'tag'
+        uses: docker/build-push-action@v5
+        with:
+          file: scripts/indexer.Dockerfile
+          push: ${{ github.event_name != 'pull_request' }}
+          tags: ${{ steps.meta-tag.outputs.tags }}
+          labels: ${{ steps.meta-tag.outputs.labels }}
 
-
-    - name: Build and push Docker image (tag)
-      if: github.ref_type == 'tag'
-      uses: docker/build-push-action@v5
-      with:
-        file: scripts/indexer.Dockerfile
-        push: ${{ github.event_name != 'pull_request' }}
-        tags: ${{ steps.meta-tag.outputs.tags }}
-        labels: ${{ steps.meta-tag.outputs.labels }}
-
-    - name: Build and push Docker image (branch)
-      if: github.ref_type == 'branch'
-      uses: docker/build-push-action@v5
-      with:
-        file: scripts/indexer.Dockerfile
-        push: ${{ github.event_name != 'pull_request' }}
-        tags: ${{ steps.meta-branch.outputs.tags }}
-        labels: ${{ steps.meta-branch.outputs.labels }}
+      - name: Build and push Docker image (branch)
+        if: github.ref_type == 'branch'
+        uses: docker/build-push-action@v5
+        with:
+          file: scripts/indexer.Dockerfile
+          push: ${{ github.event_name != 'pull_request' }}
+          tags: ${{ steps.meta-branch.outputs.tags }}
+          labels: ${{ steps.meta-branch.outputs.labels }}
