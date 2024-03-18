@@ -335,9 +335,22 @@ impl Header {
 
 		let mut bitmask: u64 = 0;
 
-		for (index, (i, vote)) in non_absent_votes.enumerate() {
+		for (index, s) in signed_header.commit.signatures.iter().enumerate() {
 
-			let pub_key = &self.validator_set.validators().iter().find(|x| x.address == vote.validator_address).unwrap().pub_key;
+			let validator_address = match s {
+				CommitSig::BlockIdFlagAbsent { .. } => None,
+				CommitSig::BlockIdFlagCommit { validator_address, .. } =>
+					Some(*validator_address),
+				CommitSig::BlockIdFlagNil { validator_address, .. } =>
+					Some(*validator_address),
+			};
+
+			let vote = match validator_address {
+				Some(vote) => vote,
+				None => continue,
+			};
+
+			let pub_key = &self.validator_set.validators().iter().find(|x| x.address == vote).unwrap().pub_key;
 			let p = pub_key;
 			let mut f_pub_key = None;
 			match p {
@@ -353,12 +366,13 @@ impl Header {
 			};
 
 			if validator == 1 {
-				let str_pub_key = hex::encode(vote.validator_address);
+				let str_pub_key = hex::encode(vote);
 				log::info!(target: "hyperspace", "Validator when bitmask index: {} : address {:?} Voting Power: {:?}", index, str_pub_key, self.validator_set.validators()[index].power());
 				bitmask |= 1 << index;
 			}
 		}
 
+		log::info!(target: "hyperspace", "Header Height: {:?} Bitmask : {} Validators : {:?}", self.height(), bitmask, ret);
 		Ok((ret, bitmask))
 	}
 }
