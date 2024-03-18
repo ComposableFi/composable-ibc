@@ -38,6 +38,7 @@ rand = "0.8.5"
 itertools = "0.10.5"
 scale-decode = "0.5.0"
 scale-encode = "0.1.2"
+sha2 = "0.10.8"
 
 # ibc
 ibc = { path = "../../ibc/modules", features = [] }

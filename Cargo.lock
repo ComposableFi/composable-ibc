@@ -5630,6 +5630,7 @@ dependencies = [
  "scale-decode",
  "scale-encode",
  "serde",
+ "sha2 0.10.8",
  "sp-beefy",
  "sp-core 7.0.0",
  "sp-keyring",

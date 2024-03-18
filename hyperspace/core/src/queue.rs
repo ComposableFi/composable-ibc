@@ -15,6 +15,9 @@
 use ibc_proto::google::protobuf::Any;
 use metrics::handler::MetricsHandler;
 use primitives::Chain;
+use sha2::Digest;
+
+const DEBUG_MESSAGES: bool = true;
 
 /// This sends messages to the sink chain in a gas-aware manner.
 pub async fn flush_message_batch(
@@ -27,6 +30,21 @@ pub async fn flush_message_batch(
 
 	if let Some(metrics) = metrics {
 		metrics.handle_transaction_costs(batch_weight, &msgs).await;
+	}
+
+	if DEBUG_MESSAGES {
+		let name = sink.name();
+		for msg in &msgs {
+			let content = format!("{}\n{}", msg.type_url, hex::encode(&msg.value));
+			let mut hasher = sha2::Sha256::default();
+			hasher.update(content.as_bytes());
+			let hash = hex::encode(&hasher.finalize());
+			let f_name = format!("messages/{}_{}_{hash}.txt", name, msg.type_url);
+			log::debug!(target: "hyperspace", "Writing message to file: {}", f_name);
+			if let Err(e) = std::fs::write(f_name, content) {
+				log::error!(target: "hyperspace", "Failed to write message to file: {:?}", e);
+			}
+		}
 	}
 
 	log::debug!(target: "hyperspace", "Outgoing messages weight: {} block max weight: {}", batch_weight, block_max_weight);
