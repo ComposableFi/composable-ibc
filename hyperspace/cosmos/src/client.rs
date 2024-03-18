@@ -7,7 +7,7 @@ use super::{
 use crate::{error::Error, eth_zk_utils::ZKProver};
 use bech32::ToBase32;
 use bip32::{DerivationPath, ExtendedPrivateKey, XPrv, XPub as ExtendedPublicKey};
-use core::{convert::{From, Into, TryFrom}, time};
+use core::convert::{From, Into, TryFrom};
 use digest::Digest;
 use ibc::core::{
 	ics02_client::height::Height,
@@ -188,21 +188,17 @@ pub struct CosmosClient<H> {
 }
 
 #[derive(Clone, Debug)]
-pub struct ZkProofRequest{
+pub struct ZkProofRequest {
 	pub proof_id: String,
 	pub request_time: std::time::SystemTime,
 	pub bitmask: u64,
 }
 
-impl ZkProofRequest{
+impl ZkProofRequest {
 	pub fn new(proof_id: String, bitmask: u64) -> Self {
-		Self {
-			proof_id,
-			request_time: std::time::SystemTime::now(),
-			bitmask,
-		}
+		Self { proof_id, request_time: std::time::SystemTime::now(), bitmask }
 	}
-	pub fn is_waiting_for_proof_too_long(&self, possible_delay_secs: u64 ) -> bool {
+	pub fn is_waiting_for_proof_too_long(&self, possible_delay_secs: u64) -> bool {
 		let t = std::time::SystemTime::now();
 		let diff = t.duration_since(self.request_time.clone()).unwrap();
 		if diff.as_secs() > possible_delay_secs {
@@ -212,21 +208,18 @@ impl ZkProofRequest{
 	}
 }
 
-
 #[derive(Clone, Default)]
 pub struct MockZkProover {
-	pub map_height_time : HashMap<Height, std::time::SystemTime>,
+	pub map_height_time: HashMap<Height, std::time::SystemTime>,
 }
 
-impl MockZkProover{
+impl MockZkProover {
 	fn new() -> Self {
-		Self {
-			map_height_time : HashMap::new(),
-		}
+		Self { map_height_time: HashMap::new() }
 	}
 
 	pub fn request(&mut self, height: Height) {
-		if self.map_height_time.contains_key(&height){
+		if self.map_height_time.contains_key(&height) {
 			return;
 		}
 
@@ -246,7 +239,6 @@ impl MockZkProover{
 		}
 		return false;
 	}
-
 }
 
 /// config options for [`ParachainClient`]
@@ -385,7 +377,11 @@ where
 			join_handles: Arc::new(TokioMutex::new(vec![ws_driver_jh])),
 			mock_zk_prover: Arc::new(Mutex::new(MockZkProover::new())),
 			zk_proof_requests: Arc::new(Mutex::new(HashMap::new())),
-			zk_prover_api: ZKProver::new(config.zk_prover_remote_uri, Duration::from_secs(config.zk_prover_allowed_delay_secs).as_secs(), config.zk_val_len),
+			zk_prover_api: ZKProver::new(
+				config.zk_prover_remote_uri,
+				Duration::from_secs(config.zk_prover_allowed_delay_secs).as_secs(),
+				config.zk_val_len,
+			),
 		})
 	}
 

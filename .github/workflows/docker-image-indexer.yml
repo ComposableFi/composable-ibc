@@ -48,14 +48,23 @@ jobs:
     - name: Set up Docker Buildx
       uses: docker/setup-buildx-action@v3
 
-    - name: Extract metadata (tags, labels) for Docker
-      id: meta
+    - name: Extract metadata (tags, labels) for Docker (tag)
+      id: meta-tag
+      if: github.ref_type == 'tag'
       uses: docker/metadata-action@v5
       with:
         images: ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}
         tags: |
           type=semver,pattern={{version}}
           type=semver,pattern={{major}}.{{minor}}
+
+    - name: Extract metadata (tags, labels) for Docker (branch)
+      id: meta-branch
+      if: github.ref_type == 'branch'
+      uses: docker/metadata-action@v5
+      with:
+        images: ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}
+        tags: |
           type=ref,event=branch
           type=sha,prefix={{branch}}-
 
@@ -73,3 +82,22 @@ jobs:
         push: ${{ github.event_name != 'pull_request' }}
         tags: ${{ steps.meta.outputs.tags }}
         labels: ${{ steps.meta.outputs.labels }}
+
+
+    - name: Build and push Docker image (tag)
+      if: github.ref_type == 'tag'
+      uses: docker/build-push-action@v5
+      with:
+        file: scripts/indexer.Dockerfile
+        push: ${{ github.event_name != 'pull_request' }}
+        tags: ${{ steps.meta-tag.outputs.tags }}
+        labels: ${{ steps.meta-tag.outputs.labels }}
+
+    - name: Build and push Docker image (branch)
+      if: github.ref_type == 'branch'
+      uses: docker/build-push-action@v5
+      with:
+        file: scripts/indexer.Dockerfile
+        push: ${{ github.event_name != 'pull_request' }}
+        tags: ${{ steps.meta-branch.outputs.tags }}
+        labels: ${{ steps.meta-branch.outputs.labels }}

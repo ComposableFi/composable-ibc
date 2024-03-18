@@ -1,7 +1,8 @@
 use super::ibc_provider::*;
 use crate::{
 	chain::{
-		client_state_from_abi_token, consensus_state_from_abi_token, tm_header_from_abi_token,
+		client_state_from_abi_token, consensus_state_from_abi_token,
+		prev_client_state_from_abi_token, tm_header_from_abi_token,
 	},
 	client::{ClientError, EthereumClient},
 	events::TryFromEvent,
@@ -171,7 +172,7 @@ impl EthereumClient {
 							return Err(ClientError::Other("calldata should be bytes".to_string()))
 						};
 						let header = tm_header_from_abi_token(toks[1].clone())?;
-						let client_state_token = toks[2].clone();
+						let client_state_token = prev_client_state_from_abi_token(toks[1].clone())?;
 						// let mut cs =
 						// 	client_state_from_abi_token::<LocalClientTypes>(client_state_token)?;
 						// cs.latest_height = Height::new(
@@ -378,7 +379,7 @@ impl IbcProvider for EthereumClient {
 		let events = parse_ethereum_events(&self, logs).await?;
 
 		let update_client_header = {
-			log::info!(target: "hyperspace_ethereum", "update client header height: {}, finalized slot: {}",
+			log::trace!(target: "hyperspace_ethereum", "update client header height: {}, finalized slot: {}",
 				update.execution_payload.block_number,
 				update.finalized_header.slot
 			);
@@ -687,7 +688,7 @@ impl IbcProvider for EthereumClient {
 							return Err(ClientError::Other("calldata should be bytes".to_string()))
 						};
 						let header = tm_header_from_abi_token(toks[1].clone())?;
-						let client_state_token = toks[2].clone();
+						let client_state_token = prev_client_state_from_abi_token(toks[1].clone())?;
 						let mut cs =
 							client_state_from_abi_token::<LocalClientTypes>(client_state_token)?;
 						cs.latest_height = Height::new(

@@ -15,11 +15,16 @@
 use crate::utils::ETH_NODE_PORT_WS;
 use core::time::Duration;
 use ethers::{
-	abi::{ethabi, Bytes, ParamType, StateMutability, Token}, core::k256::elliptic_curve::consts::U265, middleware::SignerMiddleware, prelude::{
+	abi::{ethabi, Bytes, ParamType, StateMutability, Token},
+	core::k256::elliptic_curve::consts::U265,
+	middleware::SignerMiddleware,
+	prelude::{
 		coins_bip39::{English, Mnemonic},
 		transaction::eip2718::TypedTransaction,
 		ContractInstance, Http, LocalWallet, Middleware, MnemonicBuilder, Provider, Signer,
-	}, types::{Address, BlockNumber, TransactionRequest, U256}, utils::{keccak256, AnvilInstance}
+	},
+	types::{Address, BlockNumber, TransactionRequest, U256},
+	utils::{keccak256, AnvilInstance},
 };
 use ethers_solc::ProjectCompileOutput;
 use hyperspace_core::{
@@ -27,10 +32,16 @@ use hyperspace_core::{
 	logging,
 	packets::utils::construct_recv_message,
 };
-use hyperspace_cosmos::{client::{CosmosClient, CosmosClientConfig}, eth_zk_utils::CreateProofInput};
-use hyperspace_cosmos::eth_zk_utils::ZKProver;
+use hyperspace_cosmos::{
+	client::{CosmosClient, CosmosClientConfig},
+	eth_zk_utils::{CreateProofInput, ZKProver},
+};
 use hyperspace_ethereum::{
-	client::{ClientError, EthereumClient}, config::{ContractName, ContractName::ICS20Bank}, ibc_provider, ibc_provider::PublicKeyData, mock::{
+	client::{ClientError, EthereumClient},
+	config::{ContractName, ContractName::ICS20Bank},
+	ibc_provider,
+	ibc_provider::PublicKeyData,
+	mock::{
 		utils,
 		utils::{hyperspace_ethereum_client_fixture, ETH_NODE_PORT, USE_GETH},
 	},
@@ -381,7 +392,6 @@ async fn setup_clients() -> (AnyChain, AnyChain, JoinHandle<()>) {
 	let db_url = config_a.indexer_pg_url.clone();
 	let redis_url = config_a.indexer_redis_url.clone();
 	let indexer_handle = tokio::spawn(async move {
-
 		indexer::run_indexer(db_url, redis_url, config_a.ibc_core_diamond_address).await;
 	});
 
@@ -482,29 +492,28 @@ async fn zk_prover_bitmask() {
 	//1 was included into voting power calculation
 	let expected_validators = vec![0, 1, 1, 0, 1, 1, 0]; //all validators
 	let size = expected_validators.len();
-    let mut bitmask: u64 = 0;
+	let mut bitmask: u64 = 0;
 
-    for (index, &validator) in expected_validators.iter().enumerate() {
-        if validator == 1 {
-            bitmask |= 1 << index;
-        }
-    }
+	for (index, &validator) in expected_validators.iter().enumerate() {
+		if validator == 1 {
+			bitmask |= 1 << index;
+		}
+	}
 
-    println!("Bitmask: {}", bitmask);
-    println!("Bitmask: {:064b}", bitmask);
+	println!("Bitmask: {}", bitmask);
+	println!("Bitmask: {:064b}", bitmask);
 	//bitmask will be sent to eth side together with zk proof
 
-
 	// let bitmask: u64 = 0b00000000000001100110;
-    let mut actual_validators = vec![0; size]; // Assuming 7-bit bitmask
+	let mut actual_validators = vec![0; size]; // Assuming 7-bit bitmask
 
-    for i in 0..size {
-        if (bitmask >> i) & 1 == 1 {
-            actual_validators[i] = 1;
-        }
-    }
+	for i in 0..size {
+		if (bitmask >> i) & 1 == 1 {
+			actual_validators[i] = 1;
+		}
+	}
 
-    println!("Validators: {:?}", actual_validators);
+	println!("Validators: {:?}", actual_validators);
 	assert_eq!(actual_validators, expected_validators);
 }
 
@@ -515,19 +524,32 @@ async fn test_u256_conversion() {
 	let x = U256::from_dec_str(pi_a_0).unwrap();
 }
 
-
-
 #[tokio::test(flavor = "multi_thread", worker_threads = 10)]
 #[ignore]
 async fn zk_prover_integration_test() {
-
 	let h = 0;
 
-	let zk_prover = ZKProver::new("http://127.0.0.1:8000".to_string(), Duration::from_secs(60).as_secs(), 1);
+	let zk_prover =
+		ZKProver::new("http://127.0.0.1:8000".to_string(), Duration::from_secs(60).as_secs(), 1);
 	let proof_input = CreateProofInput {
-		signatures: vec![vec![101, 168, 183, 134, 143, 54, 1, 63, 148, 125, 195, 152, 170, 120, 195, 218, 68, 126, 139, 93, 180, 148, 179, 82, 108, 189, 188, 127, 111, 147, 233, 36, 70, 169, 214, 104, 165, 109, 216, 165, 7, 246, 111, 41, 104, 152, 168, 234, 251, 37, 43, 20, 57, 185, 154, 38, 159, 204, 186, 76, 153, 87, 85, 14]],
-		msgs: vec![vec![111, 8, 2, 17, 36, 0, 0, 0, 0, 0, 0, 0, 34, 72, 10, 32, 66, 15, 32, 152, 208, 7, 69, 219, 166, 26, 244, 231, 127, 247, 196, 94, 155, 127, 207, 55, 136, 84, 147, 228, 153, 98, 60, 132, 217, 5, 138, 158, 18, 36, 8, 1, 18, 32, 11, 240, 43, 121, 197, 33, 157, 232, 109, 180, 116, 4, 121, 90, 247, 22, 40, 58, 232, 238, 206, 228, 227, 85, 28, 80, 93, 168, 110, 223, 49, 183, 42, 12, 8, 176, 194, 170, 174, 6, 16, 144, 206, 240, 168, 2, 50, 10, 99, 101, 110, 116, 97, 117, 114, 105, 45, 49]],
-		public_keys: vec![vec![16, 147, 45, 80, 193, 165, 204, 196, 89, 59, 167, 137, 249, 34, 61, 211, 57, 184, 100, 157, 6, 199, 160, 237, 149, 254, 14, 202, 131, 61, 183, 163]],
+		signatures: vec![vec![
+			101, 168, 183, 134, 143, 54, 1, 63, 148, 125, 195, 152, 170, 120, 195, 218, 68, 126,
+			139, 93, 180, 148, 179, 82, 108, 189, 188, 127, 111, 147, 233, 36, 70, 169, 214, 104,
+			165, 109, 216, 165, 7, 246, 111, 41, 104, 152, 168, 234, 251, 37, 43, 20, 57, 185, 154,
+			38, 159, 204, 186, 76, 153, 87, 85, 14,
+		]],
+		msgs: vec![vec![
+			111, 8, 2, 17, 36, 0, 0, 0, 0, 0, 0, 0, 34, 72, 10, 32, 66, 15, 32, 152, 208, 7, 69,
+			219, 166, 26, 244, 231, 127, 247, 196, 94, 155, 127, 207, 55, 136, 84, 147, 228, 153,
+			98, 60, 132, 217, 5, 138, 158, 18, 36, 8, 1, 18, 32, 11, 240, 43, 121, 197, 33, 157,
+			232, 109, 180, 116, 4, 121, 90, 247, 22, 40, 58, 232, 238, 206, 228, 227, 85, 28, 80,
+			93, 168, 110, 223, 49, 183, 42, 12, 8, 176, 194, 170, 174, 6, 16, 144, 206, 240, 168,
+			2, 50, 10, 99, 101, 110, 116, 97, 117, 114, 105, 45, 49,
+		]],
+		public_keys: vec![vec![
+			16, 147, 45, 80, 193, 165, 204, 196, 89, 59, 167, 137, 249, 34, 61, 211, 57, 184, 100,
+			157, 6, 199, 160, 237, 149, 254, 14, 202, 131, 61, 183, 163,
+		]],
 		height: h,
 	};
 	let status = zk_prover.status().unwrap();
@@ -538,10 +560,9 @@ async fn zk_prover_integration_test() {
 
 	let mut new_reqeust = proof_input;
 	new_reqeust.height = h + 1;
-	let resp_when_server_was_busy_with_oter_proof = zk_prover.create_proof(new_reqeust.clone()).unwrap();
+	let resp_when_server_was_busy_with_oter_proof =
+		zk_prover.create_proof(new_reqeust.clone()).unwrap();
 	assert!(resp_when_server_was_busy_with_oter_proof.proof_id.is_none()); //none because server was busy with previous request
-
-
 
 	let proof = zk_prover.poll_proof(&resp.proof_id.clone().unwrap(), h).unwrap();
 	assert!(proof.is_none());
@@ -554,13 +575,36 @@ async fn zk_prover_integration_test() {
 
 	let json_data: json::Value = json::from_str(proof.unwrap().as_str()).unwrap();
 	//take a first element of the array as a array of strings
-	let s1 = json_data[0].as_array().unwrap().iter().map(|x| x.as_str().unwrap().to_string()).collect::<Vec<_>>();
+	let s1 = json_data[0]
+		.as_array()
+		.unwrap()
+		.iter()
+		.map(|x| x.as_str().unwrap().to_string())
+		.collect::<Vec<_>>();
 	//take second element of the array as a array of arrays of strings
-	let s2 = json_data[1].as_array().unwrap().iter().map(|x| x.as_array().unwrap().iter().map(|x| x.as_str().unwrap().to_string()).collect::<Vec<_>>()).collect::<Vec<_>>();
+	let s2 = json_data[1]
+		.as_array()
+		.unwrap()
+		.iter()
+		.map(|x| {
+			x.as_array()
+				.unwrap()
+				.iter()
+				.map(|x| x.as_str().unwrap().to_string())
+				.collect::<Vec<_>>()
+		})
+		.collect::<Vec<_>>();
 	//take third element of the array as a array of strings
-	let s3 = json_data[2].as_array().unwrap().iter().map(|x| x.as_str().unwrap().to_string()).collect::<Vec<_>>();
+	let s3 = json_data[2]
+		.as_array()
+		.unwrap()
+		.iter()
+		.map(|x| x.as_str().unwrap().to_string())
+		.collect::<Vec<_>>();
 
-	let proof = zk_prover.poll_proof(&new_reqeust.height.to_string(), new_reqeust.height).unwrap();
+	let proof = zk_prover
+		.poll_proof(&new_reqeust.height.to_string(), new_reqeust.height)
+		.unwrap();
 	assert!(proof.is_none());
 	return;
 }
@@ -576,7 +620,7 @@ enum DataItem {
 
 #[tokio::test(flavor = "multi_thread", worker_threads = 10)]
 #[ignore]
-async fn test_de(){
+async fn test_de() {
 	let data = r#"[
         ["0x139855728d26774998f6a74260935dbf2b41a2e1e12ff0ef546605ac921d94e5", "0x0c6f6e5ab5df25ea175f8831649bd2f0154ca8544043c61b450b12118d4d6b1f"],
         [["0x2ac4e68c7d097f2ba324b71166e313585b77e13e1d6faae52ffea257d951d88e", "0x00514c55fcab6a307d412bac507efd1bdb2e032763210c8179a9141a81d84c5b"],
@@ -585,18 +629,39 @@ async fn test_de(){
         ["0x0000000000000000000000000000000000000000000000000000000000000000","0x0000000000000000000000000000000013b7cff91a80a211b9ce7146aea27e4b","0x00000000000000000000000000000000c2d1b2e882294a7aa8f726e774bb008c"]
     ]"#;
 
-    let json_data: json::Value = json::from_str(data).unwrap();
+	let json_data: json::Value = json::from_str(data).unwrap();
 	//take a first element of the array as a array of strings
-	let s1 = json_data[0].as_array().unwrap().iter().map(|x| x.as_str().unwrap().to_string()).collect::<Vec<_>>();
+	let s1 = json_data[0]
+		.as_array()
+		.unwrap()
+		.iter()
+		.map(|x| x.as_str().unwrap().to_string())
+		.collect::<Vec<_>>();
 	//take second element of the array as a array of arrays of strings
-	let s2 = json_data[1].as_array().unwrap().iter().map(|x| x.as_array().unwrap().iter().map(|x| x.as_str().unwrap().to_string()).collect::<Vec<_>>()).collect::<Vec<_>>();
+	let s2 = json_data[1]
+		.as_array()
+		.unwrap()
+		.iter()
+		.map(|x| {
+			x.as_array()
+				.unwrap()
+				.iter()
+				.map(|x| x.as_str().unwrap().to_string())
+				.collect::<Vec<_>>()
+		})
+		.collect::<Vec<_>>();
 	//take third element of the array as a array of strings
-	let s3 = json_data[2].as_array().unwrap().iter().map(|x| x.as_str().unwrap().to_string()).collect::<Vec<_>>();
-    println!("{:?}", json_data);
+	let s3 = json_data[2]
+		.as_array()
+		.unwrap()
+		.iter()
+		.map(|x| x.as_str().unwrap().to_string())
+		.collect::<Vec<_>>();
+	println!("{:?}", json_data);
 	println!();
-    println!("{:?}", s1);
+	println!("{:?}", s1);
 	println!();
-    println!("{:?}", s2);
+	println!("{:?}", s2);
 	println!();
 	println!("{:?}", s3);
 	let s = "0x139855728d26774998f6a74260935dbf2b41a2e1e12ff0ef546605ac921d94e5";
@@ -604,13 +669,15 @@ async fn test_de(){
 	let x = U256::from(s);
 	println!("s: {:?}", s);
 	println!("x: {:?}", x);
-	assert_eq!(x.to_string(), "8863094613666630156452150948347003576288661784136564298813652772034157843685");
-
+	assert_eq!(
+		x.to_string(),
+		"8863094613666630156452150948347003576288661784136564298813652772034157843685"
+	);
 }
 
 #[tokio::test(flavor = "multi_thread", worker_threads = 10)]
 #[ignore]
-async fn test_decode_u256(){
+async fn test_decode_u256() {
 	let s = "0x00000000000000000000000000000000c9ac1fbda1df2a16471c6744b5b81cbc";
 	let s = s.trim_start_matches("0x");
 	let x = U256::from(s);
@@ -619,7 +686,7 @@ async fn test_decode_u256(){
 
 #[tokio::test(flavor = "multi_thread", worker_threads = 10)]
 #[ignore]
-async fn decode_yui_error(){
+async fn decode_yui_error() {
 	let error = "0x08c379a00000000000000000000000000000000000000000000000000000000000000020000000000000000000000000000000000000000000000000000000000000001570726f6f665f726573756c742069732066616c73650000000";
 	let error = hex::decode(error).unwrap();
 	let s = String::from_utf8_lossy(&error);
@@ -630,11 +697,15 @@ async fn decode_yui_error(){
 #[ignore]
 async fn ethereum_to_cosmos_ibc_messaging_full_integration_test() {
 	std::env::set_var("KEY_PASS", "mybullishpassword ^_^");
-	// std::env::set_var("RUST_LOG", "hyperspace_cosmos=error,hyperspace_ethereum=error,hyperspace=error,prover=error");
-	std::env::set_var("RUST_LOG", "hyperspace_cosmos=debug,hyperspace_ethereum=debug,hyperspace=trace,prover=debug");
-	// std::env::set_var("RUST_LOG", "hyperspace_cosmos=trace,hyperspace_ethereum=trace,hyperspace=trace,prover=debug,info");
+	// std::env::set_var("RUST_LOG",
+	// "hyperspace_cosmos=error,hyperspace_ethereum=error,hyperspace=error,prover=error");
+	std::env::set_var(
+		"RUST_LOG",
+		"hyperspace_cosmos=debug,hyperspace_ethereum=debug,hyperspace=trace,prover=debug",
+	);
+	// std::env::set_var("RUST_LOG",
+	// "hyperspace_cosmos=trace,hyperspace_ethereum=trace,hyperspace=trace,prover=debug,info");
 	logging::setup_logging();
-
 
 	let asset_str = "pica".to_string();
 	let asset_native_str = "ETH".to_string();
@@ -1293,7 +1364,7 @@ async fn ethereum_to_cosmos_governance_and_filters_test() {
 		(ICS20Bank, "transferFrom", Module), // Also Anyone, if `from` == sender
 		(ICS20Bank, "renounceRole", Module),
 		(ICS20Bank, "transferRole", Module),
-		(ICS20Bank, "tokenUpdateOwnership", Owner),
+		(ICS20Bank, "tokenTransferOwnership", Owner),
 		(ICS20Bank, "tokenSetDecimals", Owner),
 		(ICS20Bank, "tokenSetName", Owner),
 		(ICS20Bank, "tokenSetSymbol", Owner),
@@ -1800,7 +1871,6 @@ mod xx {
 	// 	Deployed Bank module address: 0x0486ee42d89d569c4d8143e47a82c4b14545ae43
 	// 	Deployed ICS-20 Transfer module address: 0x4976bb932815783f092dd0e3cca567d5502be46e
 	// 	 */
-
 	// 	// relay(client_a, client_b, None, None, None).await.unwrap();
 	// 	Ok(())
 	// }

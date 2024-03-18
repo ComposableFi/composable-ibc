@@ -1,8 +1,4 @@
 use anyhow::{anyhow, Error};
-use std::{
-	thread,
-	time::{Duration, SystemTime},
-};
 use ureq;
 
 #[derive(Debug, Clone)]
@@ -31,41 +27,38 @@ pub struct CreateProofInput {
 	pub height: u64,
 }
 
-impl CreateProofInput{
-	pub fn new(signatures: Vec<Vec<u8>>, msgs: Vec<Vec<u8>>, public_keys: Vec<Vec<u8>>, height: u64) -> Self {
+impl CreateProofInput {
+	pub fn new(
+		signatures: Vec<Vec<u8>>,
+		msgs: Vec<Vec<u8>>,
+		public_keys: Vec<Vec<u8>>,
+		height: u64,
+	) -> Self {
 		Self { signatures, msgs, public_keys, height }
 	}
 }
 
 impl ZKProver {
 	pub fn new(prover_url: String, delay_secs: u64, zk_val_len: usize) -> Self {
-		Self { prover_url, delay_secs: delay_secs, zk_val_len: zk_val_len }
+		Self { prover_url, delay_secs, zk_val_len }
 	}
 
-    pub fn status(&self) -> Result<String, Error> {
-        let url = format!("{}{}", self.prover_url, "/status");
-		let result= ureq::get(url.as_str())
-            .call()?
-            .into_string()?;
-        Ok(result)
+	pub fn status(&self) -> Result<String, Error> {
+		let url = format!("{}{}", self.prover_url, "/status");
+		let result = ureq::get(url.as_str()).call()?.into_string()?;
+		Ok(result)
 	}
-
-
 
 	pub fn create_proof(&self, proof_input: CreateProofInput) -> Result<Response, Error> {
-        let url = format!("{}{}", self.prover_url, "/create_proof");
-		let result= ureq::post(url.as_str())
-			.send_json(ureq::json!(proof_input))?
-			.into_string();
-        match result {
-            Ok(r) => {
-                let resp: Response = serde_json::from_str(&r)?;
-                Ok(resp)
-            },
-            Err(e) => {
-                Err(anyhow!("Error: {:?}", e))
-            }
-        }
+		let url = format!("{}{}", self.prover_url, "/create_proof");
+		let result = ureq::post(url.as_str()).send_json(ureq::json!(proof_input))?.into_string();
+		match result {
+			Ok(r) => {
+				let resp: Response = serde_json::from_str(&r)?;
+				Ok(resp)
+			},
+			Err(e) => Err(anyhow!("Error: {:?}", e)),
+		}
 	}
 
 	pub fn poll_proof(&self, proof_id: &str, height: u64) -> Result<Option<String>, Error> {
@@ -77,7 +70,7 @@ impl ZKProver {
 			}))?
 			.into_string()?;
 
-        let resp: ResponseProofRequest = serde_json::from_str(&resp)?;
+		let resp: ResponseProofRequest = serde_json::from_str(&resp)?;
 
 		// TOOD: handle some edge cases
 		match resp.status.as_str() {

@@ -55,26 +55,25 @@ use ibc_proto::{
 	},
 };
 use ibc_rpc::PacketInfo;
-use ics07_tendermint::{
-	client_message::ClientMessage, client_state::ClientState, consensus_state::ConsensusState,
-};
+use ics07_tendermint::{client_state::ClientState, consensus_state::ConsensusState};
 use ics08_wasm::msg::MsgPushNewWasmCode;
 use pallet_ibc::light_clients::{
 	AnyClientMessage, AnyClientState, AnyConsensusState, HostFunctionsManager,
 };
 use primitives::{
-	filter_events_by_ids, mock::LocalClientTypes, Chain, IbcProvider, KeyProvider, UpdateType,
+	filter_events_by_ids, mock::LocalClientTypes, query_maximum_height_for_timeout_proofs, Chain,
+	IbcProvider, KeyProvider, UpdateType,
 };
 use prost::Message;
 use rand::Rng;
-use std::{collections::HashSet, f32::consts::E, pin::Pin, str::FromStr, time::Duration};
+use std::{collections::HashSet, pin::Pin, str::FromStr, time::Duration};
 use tendermint::block::Height as TmHeight;
 pub use tendermint::Hash;
 use tendermint_rpc::{
 	endpoint::tx::Response,
 	event::{Event, EventData},
 	query::{EventType, Query},
-	request, Client, Error as RpcError, Order, SubscriptionClient,
+	Client, Error as RpcError, Order, SubscriptionClient,
 };
 use tokio::{task::JoinSet, time::sleep};
 
@@ -127,236 +126,280 @@ where
 		let latest_height = self.latest_height_and_timestamp().await?.0;
 		let latest_revision = latest_height.revision_number;
 
-		let from = TmHeight::try_from(latest_cp_client_height).unwrap();
-		let to = finality_event_height.min(
-			TmHeight::try_from(latest_cp_client_height + NUMBER_OF_BLOCKS_TO_PROCESS_PER_ITER)
-				.expect("should not overflow"),
-		);
-		log::info!(target: "hyperspace_cosmos", "Getting blocks {}..{}", from, to);
-		let to2 = to.clone();
+		let max_timeout_proof_height =
+			query_maximum_height_for_timeout_proofs(self, counterparty).await;
 
-		let update_headers =
-			self.msg_update_client_header(from, to, client_state.latest_height).await?;
-		let mut block_events = Vec::new();
-		let mut join_set: JoinSet<Result<_, anyhow::Error>> = JoinSet::new();
-		let range = (from.value()..to.value()).collect::<Vec<_>>();
-		let delay_to = self.rpc_call_delay().as_millis();
-		for heights in range.chunks(100) {
-			for height in heights.iter().copied() {
-				log::trace!(target: "hyperspace_cosmos", "Parsing events at height {:?}", height);
-				let client = self.clone();
-				let duration =
-					Duration::from_millis(rand::thread_rng().gen_range(0..delay_to) as u64);
-				let counterparty = counterparty.clone();
-				join_set.spawn(async move {
-					sleep(duration).await;
-					let xs = tokio::time::timeout(
-						Duration::from_secs(30),
-						client.parse_ibc_events_at(&counterparty, latest_revision, height),
-					)
-					.await??;
-					log::info!(
-						"Parsed events {:#?} at {:?}",
-						xs.iter().map(|x| x.event_type()).collect::<Vec<_>>(),
-						height
-					);
-					Ok((height, xs))
-				});
-			}
-			while let Some(res) = join_set.join_next().await {
-				let out = res??;
-				block_events.push(out);
-			}
+		if let Some(h) = max_timeout_proof_height {
+			log::info!(target: "hyperspace_cosmos", "Max timeout proof height: {:?}", h);
 		}
 
-		if block_events.len() != update_headers.len() {
-			return Err(anyhow::anyhow!(
-				"block events and updates must match, got {} and {}",
-				block_events.len(),
-				update_headers.len()
-			))
-		}
-		block_events.sort_by_key(|(height, _)| *height);
-
-		let all_ibc_events =
-			block_events.iter().map(|ev| ev.1.clone()).flatten().collect::<Vec<_>>();
-
-		let max_event_height = all_ibc_events
-			.iter()
-			.filter(|ev| {
-				matches!(
-					&ev.event_type(),
-					&IbcEventType::OpenInitConnection |
-						&IbcEventType::OpenInitChannel |
-						&IbcEventType::OpenTryConnection |
-						&IbcEventType::OpenTryChannel |
-						&IbcEventType::OpenAckChannel |
-						&IbcEventType::OpenAckConnection |
-						&IbcEventType::CloseInitChannel |
-						&IbcEventType::SendPacket |
-						&IbcEventType::ReceivePacket |
-						&IbcEventType::WriteAck | &IbcEventType::Timeout |
-						&IbcEventType::TimeoutOnClose
-				)
-			})
-			.map(|ev| ev.height().increment())
-			.max()
-			.unwrap_or_else(|| Height::zero());
-
+		let mut find_update_tries = 0;
 		let mut updates = Vec::new();
-		let mut continew = false;
-		let mut exist_at_least_one_proof = false;
-		for (i, (events, (update_header, mut update_type))) in block_events
-			.into_iter()
-			.map(|(_, events)| events)
-			.zip(update_headers)
-			.enumerate()
-		{
-			if i == NUMBER_OF_BLOCKS_TO_PROCESS_PER_ITER as usize - 1 {
-				update_type = UpdateType::Mandatory;
+		let mut from = TmHeight::try_from(latest_cp_client_height).unwrap();
+
+		// in the loop we query updates by chunks until we reach the finality event height
+		loop {
+			let to = finality_event_height.min(
+				TmHeight::try_from(from.value() + NUMBER_OF_BLOCKS_TO_PROCESS_PER_ITER)
+					.expect("should not overflow"),
+			);
+			log::info!(target: "hyperspace_cosmos", "Getting blocks {}..{}", from, to);
+
+			let update_headers =
+				self.msg_update_client_header(from, to, client_state.latest_height).await?;
+			let mut block_events = Vec::new();
+			let mut join_set: JoinSet<Result<_, anyhow::Error>> = JoinSet::new();
+			let range = (from.value()..to.value()).collect::<Vec<_>>();
+			let delay_to = self.rpc_call_delay().as_millis();
+
+			for heights in range.chunks(100) {
+				for height in heights.iter().copied() {
+					log::trace!(target: "hyperspace_cosmos", "Parsing events at height {:?}", height);
+					let client = self.clone();
+					let duration =
+						Duration::from_millis(rand::thread_rng().gen_range(0..delay_to) as u64);
+					let counterparty = counterparty.clone();
+					join_set.spawn(async move {
+						sleep(duration).await;
+						let xs = tokio::time::timeout(
+							Duration::from_secs(30),
+							client.parse_ibc_events_at(&counterparty, latest_revision, height),
+						)
+						.await??;
+						if !xs.is_empty() {
+							log::info!(
+								"Parsed events {:#?} at {:?}",
+								xs.iter().map(|x| x.event_type()).collect::<Vec<_>>(),
+								height
+							);
+						}
+						Ok((height, xs))
+					});
+				}
+				while let Some(res) = join_set.join_next().await {
+					let out = res??;
+					block_events.push(out);
+				}
 			}
-			let height = update_header.height();
 
-			let mut is_request_ready = false;
-			let mut zk_proof = Vec::new();
-			let mut zk_bitmask = 0;
+			if block_events.len() != update_headers.len() {
+				return Err(anyhow::anyhow!(
+					"block events and updates must match, got {} and {}",
+					block_events.len(),
+					update_headers.len()
+				))
+			}
+			block_events.sort_by_key(|(height, _)| *height);
 
-			if update_type == UpdateType::Mandatory || height == max_event_height {
+			let all_ibc_events =
+				block_events.iter().map(|ev| ev.1.clone()).flatten().collect::<Vec<_>>();
+
+			let max_event_height =
+				all_ibc_events
+					.iter()
+					.filter(|ev| {
+						matches!(
+							&ev.event_type(),
+							&IbcEventType::OpenInitConnection |
+								&IbcEventType::OpenInitChannel | &IbcEventType::OpenTryConnection |
+								&IbcEventType::OpenTryChannel | &IbcEventType::OpenAckChannel |
+								&IbcEventType::OpenAckConnection | &IbcEventType::CloseInitChannel |
+								&IbcEventType::SendPacket | &IbcEventType::ReceivePacket |
+								&IbcEventType::WriteAck | &IbcEventType::Timeout |
+								&IbcEventType::TimeoutOnClose
+						)
+					})
+					.map(|ev| ev.height())
+					.chain(max_timeout_proof_height.into_iter())
+					.map(|h| h.increment())
+					.max()
+					.unwrap_or_else(|| Height::zero());
+
+			let mut continew = false;
+			let mut exist_at_least_one_proof = false;
+			for (i, (events, (update_header, mut update_type))) in block_events
+				.into_iter()
+				.map(|(_, events)| events)
+				.zip(update_headers)
+				.enumerate()
+			{
+				// TODO: filter blocks so that they have at least self.zk_prover_api.zk_val_len
+				// signatures
+				if i == NUMBER_OF_BLOCKS_TO_PROCESS_PER_ITER as usize - 1 {
+					update_type = UpdateType::Mandatory;
+				}
+				let height = update_header.height();
+
+				let mut is_request_ready = false;
+				let mut zk_proof = Vec::new();
+				let mut zk_bitmask = 0;
 				let mock_zk_prover = false;
-				if mock_zk_prover {
-					let mut zk_proover = self.mock_zk_prover.lock().unwrap();
-					zk_proover.request(height);
-					is_request_ready = zk_proover.poll(height);
-					log::debug!(target: "hyperspace_cosmos", "requested proof: {:?}, {:?}, {}", update_type, height, is_request_ready);
 
-					if true {
-						zk_proof = vec![1, 2, 3, 4, 5, 6, 7, 8, 9, 10];
-						zk_bitmask = 1; //it is real bitmask for local tests with 1 validator [1]
-						is_request_ready = true;
-						exist_at_least_one_proof = true;
-					}
-					if !is_request_ready {
-						continew = true;
-					}
-				} else {
-					let mut zk_height_proof_id_map = self.zk_proof_requests.lock().unwrap();
-					let zk_prover = self.zk_prover_api.clone();
-					let delay_secs = self.zk_prover_api.delay_secs;
-					let proof_id = zk_height_proof_id_map.get(&height);
-					if let Some(proof_request) = proof_id {
-						let proof_request = proof_request.clone();
-						drop(zk_height_proof_id_map);
-						let proof =
-							zk_prover.poll_proof(&proof_request.proof_id, height.revision_height);
-						match proof {
-							Ok(proof) =>
-								if let Some(proof) = proof {
-									zk_proof = proof.as_bytes().to_vec();
-									zk_bitmask = proof_request.bitmask;
-									is_request_ready = true;
-									exist_at_least_one_proof = true;
-								} else {
-									log::info!(target: "hyperspace", "proof not ready Yet. proof is None. proof_id: {:?}, height: {:?}", proof_request, height);
-									if proof_request.is_waiting_for_proof_too_long(delay_secs) {
-										log::error!(target: "hyperspace", "Proof not ready too long. proof_id: {:?}, height: {:?}, requested proof at : {:?}", proof_request, height, proof_request.request_time);
-										let mut zk_height_proof_id_map =
-											self.zk_proof_requests.lock().unwrap();
-										zk_height_proof_id_map.remove(&height);
-									}
-								},
-							Err(e) => {
-								log::error!(target: "hyperspace", "failed to poll proof_id: {:?}, height: {:?}. error: {:?}", proof_request, height, e);
-							},
+				if update_type == UpdateType::Mandatory || height == max_event_height {
+					// TODO: implement mock ZK prover mode
+					// if mock_zk_prover {
+					if false {
+						let mut zk_proover = self.mock_zk_prover.lock().unwrap();
+						zk_proover.request(height);
+						is_request_ready = zk_proover.poll(height);
+						log::debug!(target: "hyperspace_cosmos", "Requested ZK proof: {:?}, {:?}, {}", update_type, height, is_request_ready);
+
+						if true {
+							zk_proof = vec![1, 2, 3, 4, 5, 6, 7, 8, 9, 10];
+							zk_bitmask = 1; // it is real bitmask for local tests with 1 validator [1]
+							is_request_ready = true;
+							exist_at_least_one_proof = true;
+						}
+						if !is_request_ready {
+							continew = true;
 						}
 					} else {
-						let size = self.zk_prover_api.zk_val_len;
-						/* pub_key, signature, message */
-						let zk_input = update_header.get_zk_input::<HostFunctionsManager>(size);
-						match zk_input {
-							Ok((input, bitmask)) => {
-								let pub_keys_list = input
-									.iter()
-									.map(|(pub_keys, _, _)| pub_keys.clone())
-									.collect::<Vec<_>>();
-								let signatures_list = input
-									.iter()
-									.map(|(_, signatures, _)| signatures.clone())
-									.collect::<Vec<_>>();
-								let msg =
-									input.iter().map(|(_, _, msg)| msg.clone()).collect::<Vec<_>>();
-
-								let result = zk_prover.create_proof(CreateProofInput::new(
-									signatures_list,
-									msg,
-									pub_keys_list,
-									height.revision_height,
-								));
-								match result {
-									Ok(resp) =>
-										if let Some(proof_id) = resp.proof_id {
-											let proof_id = ZkProofRequest::new(proof_id, bitmask);
-											zk_height_proof_id_map.insert(height, proof_id);
-										} else {
-											log::info!(target: "hyperspace", "proof_id is None. It means that zk server busy generating other proof. height: {:?}", height);
-										},
-									Err(e) => {
-										log::error!(target: "hyperspace", "failed to create_proof. height: {:?}. error: {:?}", height, e);
+						let mut zk_height_proof_id_map = self.zk_proof_requests.lock().unwrap();
+						let zk_prover = self.zk_prover_api.clone();
+						let delay_secs = self.zk_prover_api.delay_secs;
+						let proof_id = zk_height_proof_id_map.get(&height);
+						if let Some(proof_request) = proof_id {
+							let proof_request = proof_request.clone();
+							drop(zk_height_proof_id_map);
+							let proof = if mock_zk_prover {
+								zk_prover.poll_proof("1", 1)
+							} else {
+								zk_prover
+									.poll_proof(&proof_request.proof_id, height.revision_height)
+							};
+							match proof {
+								Ok(proof) =>
+									if let Some(proof) = proof {
+										zk_proof = proof.as_bytes().to_vec();
+										zk_bitmask = proof_request.bitmask;
+										is_request_ready = true;
+										exist_at_least_one_proof = true;
+									} else {
+										log::info!(target: "hyperspace", "Proof is not ready yet. proof_id: {:?}, height: {:?}", proof_request, height);
+										if proof_request.is_waiting_for_proof_too_long(delay_secs) {
+											log::error!(target: "hyperspace", "Proof generation takes too long. proof_id: {:?}, height: {:?}, requested proof at: {:?}", proof_request, height, proof_request.request_time);
+											let mut zk_height_proof_id_map =
+												self.zk_proof_requests.lock().unwrap();
+											zk_height_proof_id_map.remove(&height);
+										}
 									},
-								}
-							},
-							Err(e) => {
-								log::error!(target: "hyperspace", "failed to get zk input for heigth : {:?}, size: {}, error: {:?}", update_header.height(), size, e);
-							},
+								Err(e) => {
+									log::error!(target: "hyperspace", "Failed to poll proof id: {:?}, height: {:?}. error: {:?}", proof_request, height, e);
+								},
+							}
+						} else {
+							let size = self.zk_prover_api.zk_val_len;
+							/* pub_key, signature, message */
+							let zk_input = update_header.get_zk_input::<HostFunctionsManager>(size);
+							match zk_input {
+								Ok((input, bitmask)) => {
+									let pub_keys_list = input
+										.iter()
+										.map(|(pub_keys, _, _)| pub_keys.clone())
+										.collect::<Vec<_>>();
+									let signatures_list = input
+										.iter()
+										.map(|(_, signatures, _)| signatures.clone())
+										.collect::<Vec<_>>();
+									let msg = input
+										.iter()
+										.map(|(_, _, msg)| msg.clone())
+										.collect::<Vec<_>>();
+
+									let req_height =
+										if mock_zk_prover { 1 } else { height.revision_height };
+									let result = zk_prover.create_proof(CreateProofInput::new(
+										signatures_list,
+										msg,
+										pub_keys_list,
+										req_height,
+									));
+									match result {
+										Ok(resp) =>
+											if let Some(proof_id) = resp.proof_id {
+												let proof_id =
+													ZkProofRequest::new(proof_id, bitmask);
+												zk_height_proof_id_map.insert(height, proof_id);
+											} else {
+												log::info!(target: "hyperspace", "proof_id is none. Probably ZK server busy generating another proof. Height: {:?}", height);
+											},
+										Err(e) => {
+											log::error!(target: "hyperspace", "Failed to create ZK proof. height: {:?}. error: {:?}", height, e);
+										},
+									}
+								},
+								Err(e) => {
+									log::error!(target: "hyperspace", "Failed to get ZK input for height : {:?}, size: {}, error: {:?}", update_header.height(), size, e);
+								},
+							}
+						}
+
+						log::debug!(target: "hyperspace", "Requested ZK proof: {:?}, {:?}, {}", update_type, height, is_request_ready);
+						if !is_request_ready {
+							continew = true;
 						}
 					}
+				};
 
-					log::debug!(target: "hyperspace", "real zk proover was requested proof: {:?}, {:?}, {}", update_type, height, is_request_ready);
-					if !is_request_ready {
-						continew = true;
-					}
+				if continew || (update_type.is_optional() && height > max_event_height) {
+					continue;
 				}
-			};
 
-			if continew || (update_type.is_optional() && height > max_event_height) {
-				log::debug!(target: "hyperspace_cosmos", "skiped: {:?}", height);
-				continue;
+				let zk_update_header = ics07_tendermint_zk::client_message::ZkHeader {
+					signed_header: update_header.signed_header.clone(),
+					validator_set: update_header.validator_set.clone(),
+					trusted_height: update_header.trusted_height.clone(),
+					trusted_validator_set: update_header.trusted_validator_set.clone(),
+					zk_proof,
+					zk_bitmask,
+				};
+
+				let update_client_header = {
+					let msg = MsgUpdateAnyClient::<LocalClientTypes> {
+						client_id: client_id.clone(),
+						client_message: AnyClientMessage::TendermintZk(
+							ics07_tendermint_zk::client_message::ZkClientMessage::Header(
+								zk_update_header,
+							),
+						),
+						signer: counterparty.account_id(),
+					};
+					let value = msg.encode_vec().map_err(|e| {
+						Error::from(format!("Failed to encode MsgUpdateClient {msg:?}: {e:?}"))
+					})?;
+					Any { value, type_url: msg.type_url() }
+				};
+				// TODO: collect the events between the cycles (currently, for each cycle we query
+				// the events only for the current range). This is not a problem for now,
+				// because we usually need those events only when establishing connections and
+				// channels.
+				updates.push((update_client_header, height, events, update_type));
 			}
 
-			let zk_update_header = ics07_tendermint_zk::client_message::ZkHeader {
-				signed_header: update_header.signed_header.clone(),
-				validator_set: update_header.validator_set.clone(),
-				trusted_height: update_header.trusted_height.clone(),
-				trusted_validator_set: update_header.trusted_validator_set.clone(),
-				zk_proof,
-				zk_bitmask,
-			};
+			// this is the case when we do not have any proof.
+			// not allowed to remove this logic
+			// for example there is no events at all and no mandatary but if we put at least 1
+			// header without events and proof the caller code could decide to submit the update
+			// client to eth even there is no reason for it. if you remove this logic then relayer
+			// will try submit the header without proof to eth. do not remove it.
+			if !exist_at_least_one_proof {
+				updates.clear();
+			}
 
-			let update_client_header = {
-				let msg = MsgUpdateAnyClient::<LocalClientTypes> {
-					client_id: client_id.clone(),
-					client_message: AnyClientMessage::TendermintZk(
-						ics07_tendermint_zk::client_message::ZkClientMessage::Header(
-							zk_update_header,
-						),
-					),
-					signer: counterparty.account_id(),
-				};
-				let value = msg.encode_vec().map_err(|e| {
-					Error::from(format!("Failed to encode MsgUpdateClient {msg:?}: {e:?}"))
-				})?;
-				Any { value, type_url: msg.type_url() }
-			};
-			updates.push((update_client_header, height, events, update_type));
-		}
+			if !updates.is_empty() {
+				break;
+			}
 
-		//this is the case when we do not have any proof.
-		//not allowed to remove this logic
-		//for example there is no events at all and no mandatary but if we put at least 1 header
-		// without events and proof the caller code could decide to submit the update client to eth
-		// even there is no reason for it. if you remove this logic then relayer will try submit the
-		// header without proof to eth. do not remove it.
-		if !exist_at_least_one_proof {
-			updates.clear();
+			from = TmHeight::try_from(
+				(from.value() + NUMBER_OF_BLOCKS_TO_PROCESS_PER_ITER)
+					.min(finality_event_height.value()),
+			)
+			.expect("should not overflow");
+			if from == finality_event_height {
+				break;
+			}
+			find_update_tries += 1;
+			log::info!(target: "hyperspace_cosmos", "No updates found, trying again ({find_update_tries})");
 		}
 
 		Ok(updates)

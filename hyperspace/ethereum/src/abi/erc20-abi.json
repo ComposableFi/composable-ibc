@@ -3,12 +3,12 @@
     "type": "constructor",
     "inputs": [
       {
-        "name": "name",
+        "name": "initialName",
         "type": "string",
         "internalType": "string"
       },
       {
-        "name": "symbol",
+        "name": "initialSymbol",
         "type": "string",
         "internalType": "string"
       },
@@ -18,7 +18,7 @@
         "internalType": "uint256"
       },
       {
-        "name": "precision",
+        "name": "initialDecimals",
         "type": "uint8",
         "internalType": "uint8"
       }
@@ -59,7 +59,7 @@
         "internalType": "address"
       },
       {
-        "name": "amount",
+        "name": "value",
         "type": "uint256",
         "internalType": "uint256"
       }
@@ -125,54 +125,6 @@
   },
   {
     "type": "function",
-    "name": "decreaseAllowance",
-    "inputs": [
-      {
-        "name": "spender",
-        "type": "address",
-        "internalType": "address"
-      },
-      {
-        "name": "subtractedValue",
-        "type": "uint256",
-        "internalType": "uint256"
-      }
-    ],
-    "outputs": [
-      {
-        "name": "",
-        "type": "bool",
-        "internalType": "bool"
-      }
-    ],
-    "stateMutability": "nonpayable"
-  },
-  {
-    "type": "function",
-    "name": "increaseAllowance",
-    "inputs": [
-      {
-        "name": "spender",
-        "type": "address",
-        "internalType": "address"
-      },
-      {
-        "name": "addedValue",
-        "type": "uint256",
-        "internalType": "uint256"
-      }
-    ],
-    "outputs": [
-      {
-        "name": "",
-        "type": "bool",
-        "internalType": "bool"
-      }
-    ],
-    "stateMutability": "nonpayable"
-  },
-  {
-    "type": "function",
     "name": "mint",
     "inputs": [
       {
@@ -227,7 +179,7 @@
     "name": "setDecimals",
     "inputs": [
       {
-        "name": "precision",
+        "name": "newDecimals",
         "type": "uint8",
         "internalType": "uint8"
       }
@@ -240,7 +192,7 @@
     "name": "setName",
     "inputs": [
       {
-        "name": "name",
+        "name": "newName",
         "type": "string",
         "internalType": "string"
       }
@@ -253,7 +205,7 @@
     "name": "setSymbol",
     "inputs": [
       {
-        "name": "symbol",
+        "name": "newSymbol",
         "type": "string",
         "internalType": "string"
       }
@@ -297,7 +249,7 @@
         "internalType": "address"
       },
       {
-        "name": "amount",
+        "name": "value",
         "type": "uint256",
         "internalType": "uint256"
       }
@@ -326,7 +278,7 @@
         "internalType": "address"
       },
       {
-        "name": "amount",
+        "name": "value",
         "type": "uint256",
         "internalType": "uint256"
       }
@@ -346,19 +298,6 @@
     "inputs": [
       {
         "name": "newOwner",
-        "type": "address",
-        "internalType": "address"
-      }
-    ],
-    "outputs": [],
-    "stateMutability": "nonpayable"
-  },
-  {
-    "type": "function",
-    "name": "updateOwnership",
-    "inputs": [
-      {
-        "name": "account",
         "type": "address",
         "internalType": "address"
       }
@@ -412,6 +351,45 @@
   },
   {
     "type": "event",
+    "name": "SetDecimals",
+    "inputs": [
+      {
+        "name": "precision",
+        "type": "uint8",
+        "indexed": false,
+        "internalType": "uint8"
+      }
+    ],
+    "anonymous": false
+  },
+  {
+    "type": "event",
+    "name": "SetName",
+    "inputs": [
+      {
+        "name": "name",
+        "type": "string",
+        "indexed": false,
+        "internalType": "string"
+      }
+    ],
+    "anonymous": false
+  },
+  {
+    "type": "event",
+    "name": "SetSymbol",
+    "inputs": [
+      {
+        "name": "symbol",
+        "type": "string",
+        "indexed": false,
+        "internalType": "string"
+      }
+    ],
+    "anonymous": false
+  },
+  {
+    "type": "event",
     "name": "Transfer",
     "inputs": [
       {
@@ -434,5 +412,113 @@
       }
     ],
     "anonymous": false
+  },
+  {
+    "type": "error",
+    "name": "ERC20InsufficientAllowance",
+    "inputs": [
+      {
+        "name": "spender",
+        "type": "address",
+        "internalType": "address"
+      },
+      {
+        "name": "allowance",
+        "type": "uint256",
+        "internalType": "uint256"
+      },
+      {
+        "name": "needed",
+        "type": "uint256",
+        "internalType": "uint256"
+      }
+    ]
+  },
+  {
+    "type": "error",
+    "name": "ERC20InsufficientBalance",
+    "inputs": [
+      {
+        "name": "sender",
+        "type": "address",
+        "internalType": "address"
+      },
+      {
+        "name": "balance",
+        "type": "uint256",
+        "internalType": "uint256"
+      },
+      {
+        "name": "needed",
+        "type": "uint256",
+        "internalType": "uint256"
+      }
+    ]
+  },
+  {
+    "type": "error",
+    "name": "ERC20InvalidApprover",
+    "inputs": [
+      {
+        "name": "approver",
+        "type": "address",
+        "internalType": "address"
+      }
+    ]
+  },
+  {
+    "type": "error",
+    "name": "ERC20InvalidReceiver",
+    "inputs": [
+      {
+        "name": "receiver",
+        "type": "address",
+        "internalType": "address"
+      }
+    ]
+  },
+  {
+    "type": "error",
+    "name": "ERC20InvalidSender",
+    "inputs": [
+      {
+        "name": "sender",
+        "type": "address",
+        "internalType": "address"
+      }
+    ]
+  },
+  {
+    "type": "error",
+    "name": "ERC20InvalidSpender",
+    "inputs": [
+      {
+        "name": "spender",
+        "type": "address",
+        "internalType": "address"
+      }
+    ]
+  },
+  {
+    "type": "error",
+    "name": "OwnableInvalidOwner",
+    "inputs": [
+      {
+        "name": "owner",
+        "type": "address",
+        "internalType": "address"
+      }
+    ]
+  },
+  {
+    "type": "error",
+    "name": "OwnableUnauthorizedAccount",
+    "inputs": [
+      {
+        "name": "account",
+        "type": "address",
+        "internalType": "address"
+      }
+    ]
   }
 ]

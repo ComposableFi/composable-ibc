@@ -237,7 +237,7 @@ where
 	let max_height_for_timeouts =
 		query_maximum_height_for_timeout_proofs(counterparty, source).await;
 	let timeout_update_required = if let Some(max_height) = max_height_for_timeouts {
-		let max_height = max_height as u32;
+		let max_height = max_height.revision_height as u32;
 		finalized_blocks.contains(&max_height)
 	} else {
 		false
@@ -305,9 +305,9 @@ where
 
 	if timeout_update_required {
 		let max_height_for_timeouts = max_height_for_timeouts.unwrap();
-		if max_height_for_timeouts > client_state.latest_height().revision_height {
+		if max_height_for_timeouts > client_state.latest_height() {
 			let max_timeout_height = <<T as subxt::Config>::Header as Header>::Number::from(
-				max_height_for_timeouts as u32,
+				max_height_for_timeouts.revision_height as u32,
 			);
 			headers_with_events.insert(max_timeout_height);
 		}
@@ -554,7 +554,7 @@ where
 	let max_height_for_timeouts =
 		query_maximum_height_for_timeout_proofs(counterparty, source).await;
 	let timeout_update_required = if let Some(max_height) = max_height_for_timeouts {
-		let max_height = max_height as u32;
+		let max_height = max_height.revision_height as u32;
 		finalized_blocks.contains(&max_height)
 	} else {
 		false
@@ -606,9 +606,9 @@ where
 
 	if timeout_update_required {
 		let max_height_for_timeouts = max_height_for_timeouts.unwrap();
-		if max_height_for_timeouts > client_state.latest_height().revision_height {
+		if max_height_for_timeouts > client_state.latest_height() {
 			let max_timeout_height = <<T as subxt::Config>::Header as Header>::Number::from(
-				max_height_for_timeouts as u32,
+				max_height_for_timeouts.revision_height as u32,
 			);
 			headers_with_events.insert(max_timeout_height);
 		}
