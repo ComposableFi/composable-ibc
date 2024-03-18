@@ -250,7 +250,7 @@ async fn process_some_finality_event<A: Chain, B: Chain>(
 
 	log::trace!(
 		target: "hyperspace",
-		"Received timeouts count: {}, packets count: {}",
+		"Received timeouts count: {}, packets count: {}!",
 		timeout_msgs.len(),
 		ready_packets.len(),
 	);
@@ -273,7 +273,7 @@ async fn process_updates<A: Chain, B: Chain>(
 	msgs: &mut Vec<Any>,
 ) -> anyhow::Result<()> {
 	// for timeouts we need both chains to be up to date
-	let sink_has_undelivered_acks =  sink.has_undelivered_sequences(UndeliveredType::Recvs) || 
+	let sink_has_undelivered_acks = sink.has_undelivered_sequences(UndeliveredType::Recvs) ||
 		sink.has_undelivered_sequences(UndeliveredType::Acks) ||
 		sink.has_undelivered_sequences(UndeliveredType::Timeouts);
 
@@ -341,11 +341,10 @@ async fn process_updates<A: Chain, B: Chain>(
 
 	log::debug!(target: "hyperspace", "Received'' {}, has_instant_events = {has_instant_events}, update_delay_passed = {update_delay_passed}, need_to_update = {need_to_update}", mandatory_updates.len(), );
 
-	
 	if !updates.is_empty() &&
 		(mandatory_updates.is_empty() && update_delay_passed && need_to_update) ||
 		has_instant_events
-	{	
+	{
 		let (forced_update, height) = updates.last().map(|(msg, h, ..)| (msg.clone(), h)).unwrap();
 		if !mandatory_updates.is_empty() {
 			let (_, last_height) =
