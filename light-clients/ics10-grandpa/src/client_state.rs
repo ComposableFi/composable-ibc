@@ -146,6 +146,14 @@ impl<H> ClientState<H> {
 		elapsed > self.relay_chain.trusting_period()
 	}
 
+	pub fn session_length(&self) -> usize {
+		match self.relay_chain {
+			RelayChain::Polkadot => 2400,
+			RelayChain::Kusama => 600,
+			RelayChain::Rococo => 600,
+		}
+	}
+
 	pub fn with_frozen_height(self, h: Height) -> Result<Self, Error> {
 		if h == Height::zero() {
 			return Err(Error::Custom(

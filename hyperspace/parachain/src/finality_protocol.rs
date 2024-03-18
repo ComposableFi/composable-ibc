@@ -644,7 +644,7 @@ where
 		headers_with_events.insert(finalized_para_header.number());
 	}
 
-	let ParachainHeadersWithFinalityProof { finality_proof, parachain_headers, .. } = prover
+	let ParachainHeadersWithFinalityProof { finality_proof, parachain_header, .. } = prover
 		.query_finalized_parachain_headers_with_proof::<T::Header>(
 			client_state.latest_relay_height,
 			justification.commit.target_number,
@@ -677,7 +677,7 @@ where
 	let grandpa_header = GrandpaHeader {
 		finality_proof: codec::Decode::decode(&mut &*finality_proof.encode())
 			.expect("Same struct from different crates,decode should not fail"),
-		parachain_headers: parachain_headers.into(),
+		parachain_header: parachain_header.into(),
 		height: Height::new(source.para_id as u64, finalized_para_height as u64),
 	};
 	let height = grandpa_header.height();

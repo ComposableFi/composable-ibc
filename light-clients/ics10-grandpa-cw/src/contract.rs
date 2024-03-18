@@ -36,6 +36,7 @@ use digest::Digest;
 use grandpa_light_client_primitives::justification::AncestryChain;
 use ibc::core::{
 	ics02_client::{
+		client_consensus::ConsensusState as CS,
 		client_def::{ClientDef, ConsensusUpdateResult},
 		context::{ClientKeeper, ClientReader},
 		height::Height,
@@ -48,6 +49,7 @@ use ics10_grandpa::{
 	client_message::{ClientMessage, RelayChainHeader},
 	client_state::ClientState,
 	consensus_state::ConsensusState,
+	error::Error,
 };
 use light_client_common::{verify_membership, verify_non_membership};
 use sp_core::H256;
@@ -101,15 +103,6 @@ impl grandpa_light_client_primitives::HostFunctions for HostFunctions {
 		)
 		.expect("key is always valid; qed");
 		pub_key.verify(&sig, msg).is_ok()
-	}
-
-	fn insert_relay_header_hashes(_headers: &[<Self::Header as Header>::Hash]) {
-		// implementation of this method is in `Context`
-	}
-
-	fn contains_relay_header_hash(_hash: <Self::Header as Header>::Hash) -> bool {
-		// implementation of this method is in `Context`
-		true
 	}
 }
 
@@ -190,7 +183,16 @@ fn process_message(
 						|| ContractError::Grandpa("Unknown headers can't be empty!".to_string()),
 					)?;
 				let first_parent = first_base.parent_hash;
-				if !ctx.contains_relay_header_hash(first_parent) {
+				let cs =
+					ctx.consensus_state(&client_id, ibc::Height::new(client_state.para_id as u64, misbehavior.para_height))
+						.map_err(|_| {
+							Error::Custom(
+								"Could not find the known header for first finality proof".to_string(),
+							)
+						})?
+						.downcast::<<GrandpaClient<HostFunctions> as ClientDef>::ConsensusState>()
+						.ok_or_else(|| Error::Custom(format!("Wrong consensus state type stored for Grandpa client with {client_id} at {}", misbehavior.para_height)))?;
+				if !cs.relaychain_hashes.contains(&first_parent) {
 					Err(ContractError::Grandpa(
 						"Could not find the known header for first finality proof".to_string(),
 					))?
@@ -253,7 +255,6 @@ fn process_message(
 				.update_state(ctx, client_id.clone(), client_state, msg.client_message)
 				.map_err(|e| ContractError::Grandpa(e.to_string()))
 				.and_then(|(cs, cu)| {
-					ctx.insert_relay_header_hashes(&finalized_headers);
 					store_client_and_consensus_states(ctx, client_id.clone(), cs, cu)
 				})
 		},

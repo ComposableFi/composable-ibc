@@ -14,6 +14,7 @@
 
 #![allow(clippy::all)]
 
+use anyhow::anyhow;
 use std::{
 	collections::{BTreeMap, HashSet},
 	path::PathBuf,
@@ -45,14 +46,15 @@ use crate::{
 use beefy_light_client_primitives::{ClientState, MmrUpdateProof};
 use beefy_prover::Prover;
 use codec::Decode;
-use grandpa_light_client_primitives::ParachainHeaderProofs;
+use finality_grandpa_rpc::GrandpaApiClient;
+use grandpa_light_client_primitives::{FinalityProof, ParachainHeaderProofs};
 use grandpa_prover::GrandpaProver;
 use ibc::{
 	core::ics24_host::identifier::{ChannelId, ClientId, ConnectionId, PortId},
 	timestamp::Timestamp,
 };
 use ics10_grandpa::{
-	client_state::ClientState as GrandpaClientState,
+	client_message::RelayChainHeader, client_state::ClientState as GrandpaClientState,
 	consensus_state::ConsensusState as GrandpaConsensusState,
 };
 use ics11_beefy::{
@@ -644,12 +646,34 @@ where
 				.expect("Timestamp should exist");
 			let timestamp_nanos = Duration::from_millis(unix_timestamp_millis).as_nanos() as u64;
 
+			let encoded =
+				GrandpaApiClient::<crate::chain::JustificationNotification, H256, u32>::prove_finality(
+					&*self.relay_ws_client,
+					light_client_state.latest_relay_height,
+				)
+					.await?
+					.ok_or_else(|| {
+						Error::Custom(format!(
+							"No justification found for block: {:?}",
+							light_client_state.latest_relay_height,
+						))
+					})?
+					.0;
+
+			let mut trusted_finality_proof =
+				FinalityProof::<RelayChainHeader>::decode(&mut &encoded[..])?;
+
 			let consensus_state = AnyConsensusState::Grandpa(GrandpaConsensusState {
 				timestamp: Timestamp::from_nanoseconds(timestamp_nanos)
 					.unwrap()
 					.into_tm_time()
 					.unwrap(),
 				root: decoded_para_head.state_root.as_bytes().to_vec().into(),
+				relaychain_hashes: trusted_finality_proof
+					.unknown_headers
+					.into_iter()
+					.map(|hash| hash.hash())
+					.collect::<Vec<H256>>(),
 			});
 
 			return Ok((AnyClientState::Grandpa(client_state), consensus_state))

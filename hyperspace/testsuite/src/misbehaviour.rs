@@ -16,7 +16,7 @@ use log::info;
 use pallet_ibc::light_clients::{AnyClientMessage, AnyClientState};
 use polkadot_core_primitives::Header;
 use sp_consensus_grandpa::{AuthorityId, AuthoritySignature};
-use sp_core::{Decode, Encode, Pair};
+use sp_core::{Decode, Encode, Pair, H256};
 use sp_keyring::ed25519::Keyring;
 use sp_runtime::{codec::Compact, traits::BlakeTwo256};
 use sp_state_machine::{prove_read_on_trie_backend, TrieBackendBuilder};
@@ -172,7 +172,7 @@ where
 		justification: justification.encode(),
 		unknown_headers: headers.clone(),
 	};
-	let mut parachain_headers = BTreeMap::default();
+
 	let state_proof = prove_read_on_trie_backend(
 		&TrieBackendBuilder::new(para_db.clone(), root).build(),
 		&[key.as_ref()],
@@ -182,20 +182,18 @@ where
 	.into_iter()
 	.collect::<Vec<_>>();
 	// for each relaychain header we construct a corresponding parachain header proofs
-	for header in &headers {
-		parachain_headers.insert(
-			header.hash(),
-			ParachainHeaderProofs {
-				state_proof: state_proof.clone(),
-				extrinsic: timestamp_extrinsic.clone(),
-				extrinsic_proof: extrinsic_proof.clone(),
-			},
-		);
-	}
+	let mal_parachain_header = (
+		headers.last().expect("should have more than 1").hash(),
+		ParachainHeaderProofs {
+			state_proof: state_proof.clone(),
+			extrinsic: timestamp_extrinsic.clone(),
+			extrinsic_proof: extrinsic_proof.clone(),
+		},
+	);
 
 	let grandpa_header = GrandpaHeader {
 		finality_proof,
-		parachain_headers,
+		parachain_header: mal_parachain_header,
 		height: Height::new(client_state.para_id as u64, parachain_header.number as u64),
 	};
 	let client_message = AnyClientMessage::Grandpa(ClientMessage::Header(grandpa_header));
