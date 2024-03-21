@@ -382,7 +382,8 @@ pub fn get_ibc_events_from_logs(
 		.iter()
 		.filter_map(|event| match event {
 			solana_ibc::events::Event::IbcEvent(e) => Some(e.clone()),
-			_ => None,
+			_ => 
+				None,
 		})
 		.collect();
 	events
@@ -416,37 +417,8 @@ pub async fn get_signatures_for_blockhash(
 	program_id: Pubkey,
 	blockhash: CryptoHash,
 ) -> Result<(Vec<(u16, Signature)>, BlockHeader), String> {
-	sleep(Duration::from_secs(15));
-	let transaction_signatures = rpc
-		.get_signatures_for_address_with_config(
-			&program_id,
-			GetConfirmedSignaturesForAddress2Config { limit: Some(50), ..Default::default() },
-		)
-		.await
-		.unwrap();
-	let mut body = vec![];
-	for sig in transaction_signatures {
-		let signature = sig.signature.clone();
-		let payload = Payload {
-			jsonrpc: "2.0".to_string(),
-			id: 1,
-			method: "getTransaction".to_string(),
-			params: vec![signature, "json".to_string()],
-		};
-		body.push(payload);
-	}
-	let transactions = tokio::task::spawn_blocking(move || {
-		let transactions: std::result::Result<Vec<Response>, reqwest::Error> =
-			reqwest::blocking::Client::new()
-				.post(rpc.url())
-				.json(&body)
-				.send()
-				.unwrap()
-				.json();
-		transactions
-	})
-	.await
-	.unwrap();
+	// sleep(Duration::from_secs(10));
+	let transactions = get_previous_transactions(rpc, program_id).await;
 
 	let mut signatures = Vec::new();
 	let mut index = 0;
@@ -457,31 +429,108 @@ pub async fn get_signatures_for_blockhash(
 		};
 		let events = get_events_from_logs(logs);
 		// Find block signed events with blockhash
-		let block_header: Vec<Option<BlockHeader>> = events.iter().map(|event| match event {
+		let block_header: Vec<Option<BlockHeader>> = events
+			.iter()
+			.map(|event| match event {
+				solana_ibc::events::Event::NewBlock(e) => {
+					println!("This is new block event {:?}", e.block_header.0.block_height);
+					let new_blockhash = e.block_header.0.calc_hash();
+					if blockhash == new_blockhash {
+						println!("New block event where it is true");
+						return Some(e.block_header.0.clone())
+					}
+					None
+				},
+				solana_ibc::events::Event::BlockSigned(e) => {
+					println!("This is block signed event {:?}", e.block_height);
+					if e.block_hash == blockhash {
+						println!("This is block signed in side blockhash");
+						signatures
+							.push((0_u16, Signature::from_bytes(&e.signature.to_vec()).unwrap()))
+					};
+					None
+				},
+				_ => None,
+			})
+			.collect();
+		if let Some(header) = block_header.iter().find(|b| b.is_some()) {
+			return Ok((signatures, header.clone().unwrap()))
+		}
+	}
+	Err("Couldnt find blocks".to_string())
+}
+
+pub async fn get_header_from_height(
+	rpc: RpcClient,
+	program_id: Pubkey,
+	height: u64,
+) -> Option<BlockHeader> {
+	// sleep(Duration::from_secs(2));
+	let transactions = get_previous_transactions(rpc, program_id).await;
+	let mut block_header = None;
+	for tx in transactions.unwrap() {
+		let logs = match tx.result.transaction.meta.clone().unwrap().log_messages {
+			solana_transaction_status::option_serializer::OptionSerializer::Some(e) => e,
+			_ => Vec::new(),
+		};
+		let events = get_events_from_logs(logs);
+		// Find block signed events with blockhash
+		block_header = events.iter().find_map(|event| match event {
 			solana_ibc::events::Event::NewBlock(e) => {
-				println!("This is new block event {:?}", e.block_header.0.block_height);
-				let new_blockhash = e.block_header.0.calc_hash();
-				if blockhash == new_blockhash {
-					println!("New block event where it is true");
-					return Some(e.block_header.0.clone());
+				println!(
+					"This is new block event when fetching for height {:?}",
+					e.block_header.0.block_height
+				);
+				let block_height = u64::from(e.block_header.0.block_height);
+				if block_height == height {
+					println!("New block event where it is true for height {:?}", height);
+					return Some(e.block_header.0.clone())
 				}
 				None
 			},
-			solana_ibc::events::Event::BlockSigned(e) => {
-				println!("This is block signed event {:?}", e.block_height);
-				if e.block_hash == blockhash {
-					println!("This is block signed in side blockhash");
-					signatures.push((0_u16, Signature::from_bytes(&e.signature.to_vec()).unwrap()))
-				};
-				None
-			},
 			_ => None,
-		}).collect();
-		if let Some(header) = block_header.iter().find(|b| b.is_some()) {
-			return Ok((signatures, header.clone().unwrap()))
-		}	
+		});
+		if block_header.is_some() {
+			return block_header
+		}
 	}
-	Err("Couldnt find blocks".to_string())
+	block_header
+}
+
+pub async fn get_previous_transactions(
+	rpc: RpcClient,
+	program_id: Pubkey,
+) -> Result<Vec<Response>, reqwest::Error> {
+	let transaction_signatures = rpc
+		.get_signatures_for_address_with_config(
+			&program_id,
+			GetConfirmedSignaturesForAddress2Config { limit: Some(200), commitment: Some(CommitmentConfig::confirmed()), ..Default::default() },
+		)
+		.await
+		.unwrap();
+	let mut body = vec![];
+	for sig in transaction_signatures {
+		let signature = sig.signature.clone();
+		let payload = Payload {
+			jsonrpc: "2.0".to_string(),
+			id: 1,
+			method: "getTransaction".to_string(),
+			params: (signature, Param { commitment: "confirmed".to_string() }),
+		};
+		body.push(payload);
+	}
+	tokio::task::spawn_blocking(move || {
+		let transactions: std::result::Result<Vec<Response>, reqwest::Error> =
+			reqwest::blocking::Client::new()
+				.post(rpc.url())
+				.json(&body)
+				.send()
+				.unwrap()
+				.json();
+		transactions
+	})
+	.await
+	.unwrap()
 }
 
 #[derive(Debug, Serialize, Deserialize)]
@@ -489,7 +538,12 @@ pub struct Payload {
 	jsonrpc: String,
 	id: u64,
 	method: String,
-	params: Vec<String>,
+	params: (String, Param),
+}
+
+#[derive(Debug, Serialize, Deserialize)]
+pub struct Param {
+	commitment: String,
 }
 
 #[derive(Debug, Serialize, Deserialize)]
@@ -497,4 +551,13 @@ pub struct Response {
 	jsonrpc: String,
 	id: u64,
 	result: EncodedConfirmedTransactionWithStatusMeta,
+}
+
+#[test]
+pub fn testing_events() {
+	let events = vec!["Program data: ABQMAAAAaWJjX3RyYW5zZmVyBQAAAAYAAABzZW5kZXIsAAAAQXZ4SFNwbmZGSEJtZWpGbkJKbXI2RTlIbVIyaUY4WTU2SzRkVjR1WDdrNDQIAAAAcmVjZWl2ZXIvAAAAY2VudGF1cmkxaGo1ZnZlZXI1Y2p0bjR3ZDZ3c3R6dWdqZmR4emwweHB6eGx3Z3MGAAAAYW1vdW50CQAAADIwMDAwMDAwMAUAAABkZW5vbSwAAAAzM1dWU2VmOXphdzQ5S2JOZFBHVG1BQ1ZSbkFYek4zbzFmc3FiVXJMcDJtaAQAAABtZW1vAAAAAA==".to_string()];
+	let converted_events = get_events_from_logs(events.clone());
+	let ibc = get_ibc_events_from_logs(events);
+	println!("These are events {:?}", converted_events);
+	println!("These are events {:?}", ibc);
 }

@@ -68,14 +68,14 @@ use tendermint::{
 use tendermint_proto::Protobuf;
 
 pub const GUEST_CLIENT_STATE_TYPE_URL: &str =
-	"composable.finance/lightclients.guest.v1.ClientState";
+	"/lightclients.guest.v1.ClientState";
 pub const GUEST_CONSENSUS_STATE_TYPE_URL: &str =
-	"composable.finance/lightclients.guest.v1.ConsensusState";
+	"/lightclients.guest.v1.ConsensusState";
 pub const GUEST_CLIENT_MESSAGE_TYPE_URL: &str =
-	"composable.finance/lightclients.guest.v1.ClientMessage";
-pub const GUEST_HEADER_TYPE_URL: &str = "composable.finance/lightclients.guest.v1.Header";
+	"/lightclients.guest.v1.ClientMessage";
+pub const GUEST_HEADER_TYPE_URL: &str = "/lightclients.guest.v1.Header";
 pub const GUEST_MISBEHAVIOUR_TYPE_URL: &str =
-	"composable.finance/lightclients.guest.v1.Misbehaviour";
+	"/lightclients.guest.v1.Misbehaviour";
 
 #[derive(Clone, Default, PartialEq, Debug, Eq)]
 pub struct HostFunctionsManager;

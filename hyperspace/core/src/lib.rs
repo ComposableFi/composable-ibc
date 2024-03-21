@@ -286,20 +286,19 @@ async fn process_updates<A: Chain, B: Chain>(
 			}
 		}
 
-		// println!("These are events {:?}", events);
-
+		// println!("These are events {:?} from chain {:?}", events, source.name());
 		let event_types = events.iter().map(|ev| ev.event_type()).collect::<Vec<_>>();
 		let mut messages = parse_events(source, sink, events, mode)
 			.await
 			.map_err(|e| anyhow!("Failed to parse events: {:?}", e))?;
 
-		if let Some(index) = messages
-			.iter()
-			.position(|value| value.type_url == "/ibc.core.connection.v1.MsgConnectionOpenTry")
-		{
-			log::info!("Remvoign open try");
-			messages.swap_remove(index);
-		}
+		// if let Some(index) = messages
+		// 	.iter()
+		// 	.position(|value| value.type_url == "/ibc.core.connection.v1.MsgConnectionOpenTry")
+		// {
+		// 	log::info!("Remvoign open try");
+		// 	messages.swap_remove(index);
+		// }
 
 		log::trace!(
 			target: "hyperspace",

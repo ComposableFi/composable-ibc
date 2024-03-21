@@ -23,11 +23,12 @@ use ibc::{
 				acknowledgement::MsgAcknowledgement, recv_packet::MsgRecvPacket,
 				timeout::MsgTimeout, timeout_on_close::MsgTimeoutOnClose,
 			},
-			packet::{Packet, TimeoutVariant},
+			packet::{Packet, Sequence, TimeoutVariant},
 		},
 		ics23_commitment::commitment::CommitmentProofBytes,
-		ics24_host::path::{
-			AcksPath, ChannelEndsPath, CommitmentsPath, ReceiptsPath, SeqRecvsPath,
+		ics24_host::{
+			identifier::{ChannelId, PortId},
+			path::{AcksPath, ChannelEndsPath, CommitmentsPath, ReceiptsPath, SeqRecvsPath},
 		},
 	},
 	proofs::Proofs,
@@ -38,7 +39,7 @@ use ibc::{
 use ibc_proto::google::protobuf::Any;
 use pallet_ibc::light_clients::AnyClientState;
 use primitives::{find_suitable_proof_height_for_client, Chain};
-use std::time::Duration;
+use std::{str::FromStr, time::Duration};
 use tendermint_proto::Protobuf;
 
 #[allow(clippy::too_many_arguments)]
@@ -372,4 +373,53 @@ pub fn get_key_path(key_path_type: KeyPathType, packet: &Packet) -> String {
 			)
 		},
 	}
+}
+
+#[test]
+pub fn test_path() {
+	use trie_ids::TrieKey;
+	let packet = Packet {
+		source_port: PortId::from_str("transfer").unwrap(),
+		source_channel: ChannelId::new(1),
+		destination_port: PortId::from_str("transfer").unwrap(),
+		destination_channel: ChannelId::new(1),
+		sequence: Sequence::from_str("1").unwrap(),
+		timeout_height: Height::new(0, 1),
+		timeout_timestamp: Timestamp::from_nanoseconds(1).unwrap(),
+		data: Vec::new(),
+	};
+	let key = get_key_path(KeyPathType::CommitmentPath, &packet);
+	println!("Old key path {:?} and bytes {:?}", key, key.as_bytes());
+	let new_port_id =
+		ibc_core_host_types::identifiers::PortId::from_str(packet.source_port.as_str()).unwrap();
+	let new_channel_id =
+		ibc_core_host_types::identifiers::ChannelId::new(packet.source_channel.sequence());
+	let new_seq = ibc_core_host_types::identifiers::Sequence::from(u64::from(packet.sequence));
+	let packet_commitment_path = ibc_core_host_types::path::CommitmentPath {
+		port_id: new_port_id,
+		channel_id: new_channel_id,
+		sequence: new_seq,
+	};
+	let packet_commitment_trie_key = TrieKey::try_from(&packet_commitment_path).unwrap();
+	println!("This is trie key {:?}", packet_commitment_trie_key);
+	// assert_eq!(
+	// 	get_key_path(KeyPathType::SeqRecv, &packet),
+	// 	"seqs/destination_port/destination_channel"
+	// );
+	// assert_eq!(
+	// 	get_key_path(KeyPathType::ReceiptPath, &packet),
+	// 	"receipts/destination_port/destination_channel/1"
+	// );
+	// assert_eq!(
+	// 	get_key_path(KeyPathType::CommitmentPath, &packet),
+	// 	"commitments/source_port/source_channel/1"
+	// );
+	// assert_eq!(
+	// 	get_key_path(KeyPathType::AcksPath, &packet),
+	// 	"acks/destination_port/destination_channel/1"
+	// );
+	// assert_eq!(
+	// 	get_key_path(KeyPathType::ChannelPath, &packet),
+	// 	"channels/destination_port/destination_channel"
+	// );
 }

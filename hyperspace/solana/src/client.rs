@@ -405,7 +405,7 @@ deserialize consensus state"
 					}
 					program
 						.request()
-						.instruction(ComputeBudgetInstruction::set_compute_unit_limit(1_000_000u32))
+						.instruction(ComputeBudgetInstruction::set_compute_unit_limit(2_000_000u32))
 						.instruction(ComputeBudgetInstruction::request_heap_frame(128 * 1024))
 						.instruction(ComputeBudgetInstruction::set_compute_unit_price(500000))
 						.instruction(new_ed25519_instruction_with_signature(
@@ -483,7 +483,7 @@ deserialize consensus state"
 						let tx = program
 							.request()
 							.instruction(ComputeBudgetInstruction::set_compute_unit_limit(
-								1_000_000u32,
+								2_000_000u32,
 							))
 							.instruction(ComputeBudgetInstruction::set_compute_unit_price(500000))
 							.accounts(solana_ibc::accounts::InitMint {
@@ -530,7 +530,7 @@ deserialize consensus state"
 						get_associated_token_address(&authority.pubkey(), &token_mint);
 					program
 						.request()
-						.instruction(ComputeBudgetInstruction::set_compute_unit_limit(1_000_000u32))
+						.instruction(ComputeBudgetInstruction::set_compute_unit_limit(2_000_000u32))
 						.instruction(ComputeBudgetInstruction::request_heap_frame(128 * 1024))
 						.instruction(ComputeBudgetInstruction::set_compute_unit_price(500000))
 						.accounts(solana_ibc::ix_data_account::Accounts::new(
@@ -565,7 +565,7 @@ deserialize consensus state"
 				},
 				DeliverIxType::Normal => program
 					.request()
-					.instruction(ComputeBudgetInstruction::set_compute_unit_limit(1_000_000u32))
+					.instruction(ComputeBudgetInstruction::set_compute_unit_limit(2_000_000u32))
 					.instruction(ComputeBudgetInstruction::request_heap_frame(128 * 1024))
 					.instruction(ComputeBudgetInstruction::set_compute_unit_price(500000))
 					.accounts(solana_ibc::ix_data_account::Accounts::new(
@@ -643,6 +643,7 @@ deserialize consensus state"
 		let port_id =
 			ibc_core_host_types::identifiers::PortId::from_str(msg.source_port.as_str()).unwrap();
 		let prefixed_denom = ibc_app_transfer_types::PrefixedDenom {
+			// TODO(dhruv): implement conversion
 			trace_path: ibc_app_transfer_types::TracePath::default(),
 			base_denom: ibc_app_transfer_types::BaseDenom::from_str(
 				msg.token.denom.base_denom.as_str(),
@@ -660,10 +661,11 @@ deserialize consensus state"
 					[port_id.as_bytes(), channel_id.as_bytes(), hashed_denom.as_ref()];
 				let escrow_account =
 					Pubkey::find_program_address(&escrow_seeds, &self.program_id).0;
-				let prefix = TracePrefix::new(port_id.clone(), channel_id.clone());
-				let mut trace_path = token.denom.trace_path.clone();
-				trace_path.remove_prefix(&prefix);
-				let token_mint = Pubkey::from_str(&trace_path.to_string()).unwrap();
+				// let prefix = TracePrefix::new(port_id.clone(), channel_id.clone());
+				let base_denom = token.denom.base_denom.clone();
+				// trace_path.remove_prefix(&prefix);
+				log::info!("This is base denom {:?} and trace path {:?}", base_denom, token.denom.trace_path);
+				let token_mint = Pubkey::from_str(&base_denom.to_string()).unwrap();
 				(Some(escrow_account), token_mint)
 			} else {
 				let token_mint_seeds = [hashed_denom.as_ref()];
@@ -702,7 +704,7 @@ deserialize consensus state"
 
 		let sig = program
 			.request()
-			.instruction(ComputeBudgetInstruction::set_compute_unit_limit(1_000_000u32))
+			.instruction(ComputeBudgetInstruction::set_compute_unit_limit(2_000_000u32))
 			.accounts(solana_ibc::accounts::SendTransfer {
 				sender: authority.pubkey(),
 				receiver: None,

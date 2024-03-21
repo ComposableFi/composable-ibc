@@ -7,14 +7,14 @@ use alloc::{
 
 use guestchain::BlockHeader;
 use ibc_core_host_types::path::{
-	AckPath, ChannelEndPath, ClientConnectionPath, CommitmentPath, ConnectionPath, PortPath,
+	AckPath, ChannelEndPath, ClientConnectionPath, CommitmentPath, ConnectionPath, Path, PortPath,
 	ReceiptPath, SeqAckPath, SeqRecvPath, SeqSendPath,
 };
 use lib::hash::CryptoHash;
 
 mod ibc {
 	pub use ibc::core::{
-        ics02_client::error::Error as ClientError,
+		ics02_client::error::Error as ClientError,
 		ics04_channel::packet::Sequence,
 		ics23_commitment::commitment::{CommitmentPrefix, CommitmentProofBytes, CommitmentRoot},
 		ics24_host::{
@@ -137,11 +137,11 @@ pub enum VerifyError {
 	/// Proof verification failed.
 	VerificationFailed,
 
-    /// Signature is malformed
-    MalformedSignature,
+	/// Signature is malformed
+	MalformedSignature,
 
-    /// Public key is malformed
-    MalformedPublicKey,
+	/// Public key is malformed
+	MalformedPublicKey,
 }
 
 impl From<borsh::maybestd::io::Error> for VerifyError {
@@ -182,7 +182,7 @@ pub fn verify(
 	}
 	let root = <&CryptoHash>::try_from(root.as_bytes()).map_err(|_| VerifyError::BadRoot)?;
 	let new_path = convert_old_path_to_new(path.clone());
-	let path = trie_ids::PathInfo::try_from(new_path)?;
+	let path = trie_ids::PathInfo::try_from(new_path.clone())?;
 
 	// TODO(mina86): There’s currently no way to borrow contents of
 	// CommitmentProofBytes.  Since we don’t own proof, the only way to
@@ -195,6 +195,7 @@ pub fn verify(
 		let (header, proof): (BlockHeader, sealable_trie::proof::Proof) =
 			borsh::BorshDeserialize::deserialize_reader(&mut proof_bytes)?;
 		if root != &header.calc_hash() {
+			panic!("Proof doesnt seem to match");
 			return Err(VerifyError::VerificationFailed)
 		}
 		(header.state_root, proof)
@@ -228,7 +229,11 @@ pub fn verify(
 			super::digest_with_client_id(&ibc::ClientId::from_str(id.as_str()).unwrap(), value)
 		} else {
 			// Otherwise, simply hash the value.
-			CryptoHash::digest(value)
+			if matches!(new_path, Path::Commitment(_)) {
+				<CryptoHash>::try_from(value).unwrap()
+			} else {
+				CryptoHash::digest(value)
+			}
 		})
 	} else {
 		None
@@ -506,6 +511,6 @@ fn convert_old_path_to_new(path: ibc::path::Path) -> ibc_core_host_types::path::
 				sequence: u64::from(e.sequence.0).into(),
 			}),
 		::ibc::core::ics24_host::Path::Upgrade(_) => panic!("Not supported"),
-		::ibc::core::ics24_host::Path::Outside(e) =>  panic!("Not supported {:?}", e),
+		::ibc::core::ics24_host::Path::Outside(e) => panic!("Not supported {:?}", e),
 	}
 }

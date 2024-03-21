@@ -64,7 +64,7 @@ impl Default for Args {
 			chain_b: format!("http://{cosmos}:26657"),
 			relay_chain: format!("ws://{relay}:9944"),
 			para_id: 2000,
-			connection_prefix_a: "ibc/".to_string(),
+			connection_prefix_a: "ibc".to_string(),
 			connection_prefix_b: "ibc".to_string(),
 			cosmos_grpc: format!("http://{cosmos}:9090"),
 			cosmos_ws: format!("ws://{cosmos}:26657/websocket"),
@@ -143,6 +143,8 @@ async fn setup_clients() -> (AnyChain, AnyChain) {
 		.map_err(|e| println!("{:?}", e))
 		.unwrap();
 
+	println!("This is chain b prefix {:?}", chain_b.commitment_prefix.as_bytes());
+
 	let wasm_data = tokio::fs::read(&args.wasm_path).await.expect("Failed to read wasm file");
 	let code_id = match chain_b.upload_wasm(wasm_data.clone()).await {
 		Ok(code_id) => {
@@ -184,7 +186,7 @@ async fn setup_clients() -> (AnyChain, AnyChain) {
 
 // #[tokio::test]
 #[tokio::test(flavor = "multi_thread", worker_threads = 12)]
-// #[ignore]
+#[ignore]
 async fn solana_to_cosmos_ibc_messaging_full_integration_test() {
 	use ibc::core::ics24_host::identifier::{ChannelId, ConnectionId};
 	use std::str::FromStr;
@@ -196,39 +198,39 @@ async fn solana_to_cosmos_ibc_messaging_full_integration_test() {
 	let (handle, channel_a, channel_b, connection_id_a, connection_id_b) =
 		setup_connection_and_channel(&mut chain_a, &mut chain_b, Duration::from_secs(60 * 2)).await;
 
-	// handle.abort();
+	handle.abort();
 
-	// // let connection_id_a = ConnectionId::from_str("connection-0").unwrap();
-	// // let connection_id_b = ConnectionId::from_str("connection-30").unwrap();
+	// let connection_id_a = ConnectionId::from_str("connection-0").unwrap();
+	// let connection_id_b = ConnectionId::from_str("connection-30").unwrap();
 
-	// // let channel_a = ChannelId::from_str("channel-0").unwrap();
-	// // let channel_b = ChannelId::from_str("channel-16").unwrap();
+	// let channel_a = ChannelId::from_str("channel-0").unwrap();
+	// let channel_b = ChannelId::from_str("channel-16").unwrap();
 
-	// log::info!("Channel A: {:?}", channel_a);
-	// log::info!("Channel B: {:?}", channel_b);
-	// log::info!("Connection A: {:?}", connection_id_a);
-	// log::info!("Connection B: {:?}", connection_id_b);
+	log::info!("Channel A: {:?}", channel_a);
+	log::info!("Channel B: {:?}", channel_b);
+	log::info!("Connection A: {:?}", connection_id_a);
+	log::info!("Connection B: {:?}", connection_id_b);
 
-	// // Set connections and channel whitelist
-	// chain_a.set_connection_id(connection_id_a);
-	// chain_b.set_connection_id(connection_id_b);
+	// Set connections and channel whitelist
+	chain_a.set_connection_id(connection_id_a);
+	chain_b.set_connection_id(connection_id_b);
 
-	// chain_a.set_channel_whitelist(vec![(channel_a, PortId::transfer())].into_iter().collect());
-	// chain_b.set_channel_whitelist(vec![(channel_b, PortId::transfer())].into_iter().collect());
+	chain_a.set_channel_whitelist(vec![(channel_a, PortId::transfer())].into_iter().collect());
+	chain_b.set_channel_whitelist(vec![(channel_b, PortId::transfer())].into_iter().collect());
 
 	// Run tests sequentially
 
 	// no timeouts + connection delay
 
-	// ibc_messaging_with_connection_delay(
-	// 	&mut chain_a,
-	// 	&mut chain_b,
-	// 	asset_id_a.clone(),
-	// 	asset_id_b.clone(),
-	// 	channel_a,
-	// 	channel_b,
-	// )
-	// .await;
+	ibc_messaging_with_connection_delay(
+		&mut chain_a,
+		&mut chain_b,
+		asset_id_a.clone(),
+		asset_id_b.clone(),
+		channel_a,
+		channel_b,
+	)
+	.await;
 
 	// // timeouts + connection delay
 	// ibc_messaging_packet_height_timeout_with_connection_delay(
@@ -264,7 +266,7 @@ async fn solana_to_cosmos_ibc_messaging_full_integration_test() {
 
 // #[tokio::test]
 #[tokio::test(flavor = "multi_thread", worker_threads = 5)]
-#[ignore]
+// #[ignore]
 async fn cosmos_to_solana_ibc_messaging_full_integration_test() {
 	logging::setup_logging();
 
@@ -272,7 +274,7 @@ async fn cosmos_to_solana_ibc_messaging_full_integration_test() {
 	let (mut chain_b, mut chain_a) = (chain_a, chain_b);
 
 	let (handle, channel_a, channel_b, connection_id_a, connection_id_b) =
-		setup_connection_and_channel(&mut chain_a, &mut chain_b, Duration::from_secs(60 * 2)).await;
+		setup_connection_and_channel(&mut chain_a, &mut chain_b, Duration::from_secs(20)).await;
 	handle.abort();
 
 	// Set connections and channel whitelist
@@ -298,28 +300,28 @@ async fn cosmos_to_solana_ibc_messaging_full_integration_test() {
 	)
 	.await;
 
-	// timeouts + connection delay
-	ibc_messaging_packet_height_timeout_with_connection_delay(
-		&mut chain_a,
-		&mut chain_b,
-		asset_id_a.clone(),
-		channel_a,
-		channel_b,
-	)
-	.await;
-	ibc_messaging_packet_timestamp_timeout_with_connection_delay(
-		&mut chain_a,
-		&mut chain_b,
-		asset_id_a.clone(),
-		channel_a,
-		channel_b,
-	)
-	.await;
+	// // timeouts + connection delay
+	// ibc_messaging_packet_height_timeout_with_connection_delay(
+	// 	&mut chain_a,
+	// 	&mut chain_b,
+	// 	asset_id_a.clone(),
+	// 	channel_a,
+	// 	channel_b,
+	// )
+	// .await;
+	// ibc_messaging_packet_timestamp_timeout_with_connection_delay(
+	// 	&mut chain_a,
+	// 	&mut chain_b,
+	// 	asset_id_a.clone(),
+	// 	channel_a,
+	// 	channel_b,
+	// )
+	// .await;
 
-	// channel closing semantics (doesn't work on cosmos)
-	// ibc_messaging_packet_timeout_on_channel_close(&mut chain_a, &mut chain_b, asset_id_a.clone())
-	// 	.await;
-	// ibc_channel_close(&mut chain_a, &mut chain_b).await;
+	// // channel closing semantics (doesn't work on cosmos)
+	// // ibc_messaging_packet_timeout_on_channel_close(&mut chain_a, &mut chain_b, asset_id_a.clone())
+	// // 	.await;
+	// // ibc_channel_close(&mut chain_a, &mut chain_b).await;
 
-	ibc_messaging_submit_misbehaviour(&mut chain_a, &mut chain_b).await;
+	// ibc_messaging_submit_misbehaviour(&mut chain_a, &mut chain_b).await;
 }

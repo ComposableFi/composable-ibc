@@ -56,7 +56,7 @@ pub fn instantiate(
 	let client_state = ctx
 		.client_state(&client_id)
 		.map_err(|e| ContractError::Tendermint(e.to_string()))?;
-	let latest_height = ibc::Height::new(0, client_state.latest_height.into());
+	let latest_height = ibc::Height::new(1, client_state.latest_height.into());
 	ctx.store_update_height(client_id.clone(), latest_height, ctx.host_height())
 		.map_err(|e| ContractError::Tendermint(e.to_string()))?;
 	ctx.store_update_time(client_id, latest_height, ctx.host_timestamp())

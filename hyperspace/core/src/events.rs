@@ -16,6 +16,7 @@
 use crate::send_packet_relay::packet_relay_status;
 use crate::Mode;
 use codec::Encode;
+use core::time::Duration;
 use ibc::{
 	core::{
 		ics02_client::client_state::ClientState as ClientStateT,
@@ -97,8 +98,7 @@ pub async fn parse_events(
 						.await?;
 
 					let proof_height = connection_response.proof_height.ok_or_else(|| Error::Custom("[get_messages_for_events - open_conn_init] Proof height not found in response".to_string()))?;
-					let proof_height =
-						Height::new(1, proof_height.revision_height);
+					let proof_height = Height::new(1, proof_height.revision_height);
 					// client_state.latest_height();
 					let client_state_proof =
 						CommitmentProofBytes::try_from(client_state_response.proof).ok();
@@ -118,6 +118,11 @@ pub async fn parse_events(
 						query_host_consensus_state_proof(sink, client_state.clone()).await?;
 
 					// Construct OpenTry
+					log::info!(
+						"This was the delay period {:?} in nanos: {:?}",
+						connection_end.delay_period(),
+						connection_end.delay_period().as_nanos()
+					);
 					let msg = MsgConnectionOpenTry::<LocalClientTypes> {
 						client_id: counterparty.client_id().clone(),
 						// client state proof is mandatory in conn_open_try
@@ -164,6 +169,7 @@ pub async fn parse_events(
 					let connection_response = source
 						.query_connection_end(open_try.height(), connection_id.clone())
 						.await?;
+					log::info!("This is connection open ack from cosmos {:?}", connection_response);
 					let connection_end = ConnectionEnd::try_from(
 						connection_response.connection.ok_or_else(|| {
 							Error::Custom(format!(
@@ -172,6 +178,11 @@ pub async fn parse_events(
 							))
 						})?,
 					)?;
+					log::info!("This is the connection end in open ack {:?}", connection_end);
+					log::info!(
+						"Encoded connection end in open ack {:?}",
+						connection_end.encode_vec()?
+					);
 					let counterparty = connection_end.counterparty();
 
 					let connection_proof =
@@ -187,11 +198,20 @@ pub async fn parse_events(
 					let proof_height =
 						Height::new(proof_height.revision_number, proof_height.revision_height);
 					let client_state_proof =
-						CommitmentProofBytes::try_from(client_state_response.proof).ok();
-					let client_state = client_state_response
+						CommitmentProofBytes::try_from(client_state_response.clone().proof).ok();
+					log::info!(
+						"This is from cosmos {:?}",
+						client_state_response.clone().client_state
+					);
+					let client_state: AnyClientState = client_state_response
 						.client_state
 						.map(AnyClientState::try_from)
 						.ok_or_else(|| Error::Custom("Client state is empty".to_string()))??;
+					log::info!("THis is the client state of solana on cosmos {:?}", client_state);
+					log::info!(
+						"This is encoded client state in open ack {:?}",
+						client_state.encode_vec()
+					);
 					let consensus_proof = source
 						.query_client_consensus(
 							open_try.height(),
@@ -527,6 +547,7 @@ pub async fn parse_events(
 					.expect("Proof height should be present");
 				let proof_height =
 					Height::new(proof_height.revision_number, proof_height.revision_height);
+				log::info!("Proof height while sending receive packet {:?}", proof_height);
 				let msg = MsgRecvPacket {
 					packet: packet.clone(),
 					proofs: Proofs::new(commitment_proof, None, None, None, proof_height)?,
@@ -562,12 +583,12 @@ pub async fn parse_events(
 					ConnectionEnd::try_from(connection_response.connection.ok_or_else(|| {
 						Error::Custom(format!("ConnectionEnd not found for {connection_id:?}"))
 					})?)?;
-				// if !connection_end.delay_period().is_zero() {
-				// 	log::debug!(target: "hyperspace", "Skipping write acknowledgement because of
-				// connection delay {:?}", 		connection_end.delay_period());
-				// 	// We can't send this packet immediately because of connection delays
-				// 	continue
-				// }
+				if !connection_end.delay_period().is_zero() {
+					log::debug!(target: "hyperspace", "Skipping write acknowledgement because of
+				connection delay {:?}", 		connection_end.delay_period());
+					// We can't send this packet immediately because of connection delays
+					continue
+				}
 				let seq = u64::from(write_ack.packet.sequence);
 				let packet = write_ack.packet;
 				let packet_acknowledgement_response = source
@@ -582,6 +603,7 @@ pub async fn parse_events(
 					.expect("Proof height should be present");
 				let proof_height =
 					Height::new(proof_height.revision_number, proof_height.revision_height);
+				log::info!("Proof height while sending acknowledgement {:?}", proof_height);
 				let msg = MsgAcknowledgement {
 					packet,
 					acknowledgement: acknowledgement.into(),

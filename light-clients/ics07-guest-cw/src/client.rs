@@ -139,7 +139,7 @@ impl<'a> ClientReader for Context<'a> {
 	}
 
 	fn host_height(&self) -> Height {
-		Height::new(0, self.env.block.height)
+		Height::new(1, self.env.block.height)
 	}
 
 	fn host_timestamp(&self) -> Timestamp {
@@ -287,7 +287,7 @@ impl<'a> Context<'a> {
 				))
 			})?;
 		wasm_client_state.data = ibc_proto::google::protobuf::Any::from(&client_state).encode_to_vec();
-		wasm_client_state.latest_height = ibc::Height::new(0, client_state.latest_height.into());
+		wasm_client_state.latest_height = ibc::Height::new(1, client_state.latest_height.into());
 		let vec1 = wasm_client_state.to_any().encode_to_vec();
 		Ok(vec1)
 	}

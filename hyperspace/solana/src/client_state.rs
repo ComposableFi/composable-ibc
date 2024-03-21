@@ -19,6 +19,7 @@ pub fn convert_new_client_state_to_old(
 	match client_state {
 		solana_ibc::client_state::AnyClientState::Tendermint(client) => {
 			let inner_client = client.inner();
+			log::info!("This is latest height on solana {:?}", inner_client.latest_height);
 			AnyClientState::Tendermint(ics07_tendermint::client_state::ClientState {
 				chain_id: ChainId::from_str(inner_client.chain_id.as_str()).unwrap(),
 				trust_level: TrustThreshold::new(
@@ -127,38 +128,55 @@ pub fn convert_old_client_state_to_new(
 		AnyClientState::Wasm(cs) => {
 			let cs = AnyClientState::decode_vec(&cs.data).unwrap();
 			println!("This is tendermint\n {:?}", cs);
-			let cs = match cs {
-				AnyClientState::Tendermint(e) => e,
-				_ => panic!("Invalid state"),
-			};
-			solana_ibc::client_state::AnyClientState::Tendermint(
-				ClientState {
-					chain_id: cs.chain_id.to_string(),
-					trust_level: Some(Fraction {
-						numerator: cs.trust_level.numerator(),
-						denominator: cs.trust_level.denominator(),
-					}),
-					trusting_period: Some(cs.trusting_period.into()),
-					unbonding_period: Some(cs.unbonding_period.into()),
-					max_clock_drift: Some(cs.max_clock_drift.into()),
-					frozen_height: cs.frozen_height.and_then(|height| {
-						Some(ibc_proto_new::ibc::core::client::v1::Height {
-							revision_number: height.revision_number,
-							revision_height: height.revision_height,
-						})
-					}),
-					latest_height: Some(ibc_proto_new::ibc::core::client::v1::Height {
-						revision_number: cs.latest_height.revision_number,
-						revision_height: cs.latest_height.revision_height,
-					}),
-					proof_specs: ibc_core_commitment_types::specs::ProofSpecs::cosmos().into(),
-					upgrade_path: cs.upgrade_path,
-					allow_update_after_expiry: false,
-					allow_update_after_misbehaviour: false,
-				}
-				.try_into()
-				.unwrap(),
-			)
+			match cs {
+				AnyClientState::Tendermint(e) => {
+					log::info!(
+						"This is default {:?}",
+						ibc_core_commitment_types::specs::ProofSpecs::cosmos()
+					);
+					log::info!("This is from client state {:?}", e.proof_specs);
+					solana_ibc::client_state::AnyClientState::Tendermint(
+						ClientState {
+							chain_id: e.chain_id.to_string(),
+							trust_level: Some(Fraction {
+								numerator: e.trust_level.numerator(),
+								denominator: e.trust_level.denominator(),
+							}),
+							trusting_period: Some(e.trusting_period.into()),
+							unbonding_period: Some(e.unbonding_period.into()),
+							max_clock_drift: Some(e.max_clock_drift.into()),
+							frozen_height: e.frozen_height.and_then(|height| {
+								Some(ibc_proto_new::ibc::core::client::v1::Height {
+									revision_number: height.revision_number,
+									revision_height: height.revision_height,
+								})
+							}),
+							latest_height: Some(ibc_proto_new::ibc::core::client::v1::Height {
+								revision_number: e.latest_height.revision_number,
+								revision_height: e.latest_height.revision_height,
+							}),
+							proof_specs: ibc_core_commitment_types::specs::ProofSpecs::cosmos()
+								.into(),
+							upgrade_path: e.upgrade_path,
+							allow_update_after_expiry: false,
+							allow_update_after_misbehaviour: false,
+						}
+						.try_into()
+						.unwrap(),
+					)
+				},
+				AnyClientState::Guest(e) =>
+					solana_ibc::client_state::AnyClientState::Guest(cf_guest_og::ClientState::<
+						sigverify::ed25519::PubKey,
+					>::new(
+						e.genesis_hash,
+						e.latest_height,
+						e.trusting_period_ns,
+						e.epoch_commitment,
+						e.is_frozen,
+					)),
+				_ => panic!("Invalid state {:?}", cs),
+			}
 		},
 		_ => panic!("Client state not supported"),
 	}

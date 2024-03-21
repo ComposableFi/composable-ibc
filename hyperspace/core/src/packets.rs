@@ -224,12 +224,13 @@ pub async fn query_ready_and_timed_out_packets(
 					let sink = &sink;
 					let packet = packet_info_to_packet(&send_packet);
 					// Check if packet has timed out
-					// let packet_height = send_packet.height.ok_or_else(|| {
-					// 	Error::Custom(format!("Packet height not found for packet {packet:?}"))
-					// })?;
-					let packet_height = latest_source_height_on_sink.revision_height - 1;
+					let packet_height = send_packet.height.ok_or_else(|| {
+						Error::Custom(format!("Packet height not found for packet {packet:?}"))
+					})?;
+					// let packet_height = latest_source_height_on_sink.revision_height - 1;
 					println!("I am here in packets with {:?} {:?}", sink_timestamp, sink_height);
 					println!("height: {:?} {:?} timestamp: {:?} {:?}", packet.timeout_height, sink_height, packet.timeout_timestamp, sink_timestamp);
+					println!("Latest source height on sink {:?} and packet height {:?}", latest_source_height_on_sink.revision_height, packet_height);
 
 					if packet.timed_out(&sink_timestamp, sink_height) {
 						timeout_packets_count.fetch_add(1, Ordering::SeqCst);

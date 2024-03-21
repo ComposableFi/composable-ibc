@@ -711,7 +711,7 @@ pub async fn find_suitable_proof_height_for_client(
 	timestamp_to_match: Option<Timestamp>,
 	latest_client_height: Height,
 ) -> Option<Height> {
-	log::trace!(
+	log::info!(
 		target: "hyperspace",
 		"Searching for suitable proof height for client {} ({}) starting at {}, {:?}, latest_client_height={}",
 		client_id, sink.name(), start_height, timestamp_to_match, latest_client_height

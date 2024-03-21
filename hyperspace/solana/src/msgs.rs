@@ -1,3 +1,4 @@
+use codec::{Decode, Encode};
 use ibc::core::ics26_routing::msgs::Ics26Envelope;
 use ibc_core_channel_types::{
 	channel::Order,
@@ -26,8 +27,10 @@ use ibc_core_handler_types::msgs::MsgEnvelope;
 use ibc_core_host_types::identifiers::{ChannelId, ClientId, ConnectionId, PortId, Sequence};
 use ibc_new_primitives::{Signer, Timestamp};
 use ibc_proto_new::{google::protobuf::Any, ibc::core::connection::v1::Version};
+use ics08_wasm::client_state::WASM_CLIENT_STATE_TYPE_URL;
 use primitives::mock::LocalClientTypes;
 use std::str::FromStr;
+use tendermint_proto::Protobuf;
 
 use crate::{
 	client_state::convert_old_client_state_to_new,
@@ -181,16 +184,19 @@ pub fn convert_old_msgs_to_new(messages: Vec<Ics26Envelope<LocalClientTypes>>) -
 						},
 						previous_connection_id: String::default(),
 					})),
-				ibc::core::ics03_connection::msgs::ConnectionMsg::ConnectionOpenAck(e) =>
+				ibc::core::ics03_connection::msgs::ConnectionMsg::ConnectionOpenAck(e) => {
+					let encoded_cs = ibc_proto::google::protobuf::Any::from(e.client_state.as_ref().unwrap().clone());
+					log::info!("This is the proof height for consensus state {:?}", e.proofs.consensus_proof().unwrap().height());
+
 					MsgEnvelope::Connection(ConnectionMsg::OpenAck(MsgConnectionOpenAck {
 						signer: Signer::from(e.signer.as_ref().to_string()),
 						conn_id_on_a: ConnectionId::from_str(e.connection_id.as_str()).unwrap(),
 						conn_id_on_b: ConnectionId::from_str(e.counterparty_connection_id.as_str())
 							.unwrap(),
-						client_state_of_a_on_b: convert_old_client_state_to_new(
-							e.client_state.clone().unwrap(),
-						)
-						.into(),
+						client_state_of_a_on_b: Any {
+							type_url: WASM_CLIENT_STATE_TYPE_URL.to_string(),
+							value: encoded_cs.value,
+						},
 						proof_conn_end_on_b: CommitmentProofBytes::try_from(
 							e.proofs.object_proof().as_bytes().to_vec(),
 						)
@@ -234,7 +240,8 @@ pub fn convert_old_msgs_to_new(messages: Vec<Ics26Envelope<LocalClientTypes>>) -
 								.unwrap(),
 							)
 						},
-					})),
+					}))
+				},
 				ibc::core::ics03_connection::msgs::ConnectionMsg::ConnectionOpenConfirm(e) =>
 					MsgEnvelope::Connection(ConnectionMsg::OpenConfirm(MsgConnectionOpenConfirm {
 						signer: Signer::from(e.signer.as_ref().to_string()),
@@ -508,4 +515,21 @@ pub fn convert_old_msgs_to_new(messages: Vec<Ics26Envelope<LocalClientTypes>>) -
 		})
 		.collect();
 	new_messages
+}
+
+#[test]
+fn testing() {
+	let data = vec![
+		10, 37, 47, 105, 98, 99, 46, 108, 105, 103, 104, 116, 99, 108, 105, 101, 110, 116, 115, 46,
+		119, 97, 115, 109, 46, 118, 49, 46, 67, 108, 105, 101, 110, 116, 83, 116, 97, 116, 101, 18,
+		158, 1, 10, 116, 10, 34, 47, 108, 105, 103, 104, 116, 99, 108, 105, 101, 110, 116, 115, 46,
+		103, 117, 101, 115, 116, 46, 118, 49, 46, 67, 108, 105, 101, 110, 116, 83, 116, 97, 116,
+		101, 18, 78, 10, 32, 69, 112, 37, 137, 232, 166, 176, 223, 231, 32, 215, 25, 203, 76, 188,
+		214, 23, 31, 47, 38, 124, 219, 106, 227, 92, 143, 3, 58, 1, 236, 12, 132, 16, 17, 24, 128,
+		128, 144, 202, 210, 198, 14, 34, 32, 86, 12, 131, 131, 127, 125, 82, 54, 32, 207, 121, 149,
+		204, 11, 121, 102, 180, 211, 111, 54, 0, 207, 247, 125, 195, 57, 10, 10, 80, 84, 86, 152,
+		18, 32, 164, 76, 61, 62, 180, 193, 102, 227, 43, 192, 209, 38, 157, 235, 249, 246, 4, 222,
+		122, 174, 164, 82, 20, 20, 96, 34, 91, 173, 14, 136, 32, 213, 26, 4, 8, 1, 16, 17,
+	];
+	let decode_into_any = Any::decode(&mut data.as_slice()).unwrap();
 }
