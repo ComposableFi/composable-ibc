@@ -14,6 +14,8 @@ use ibc::{
 };
 use primitives::TestProvider;
 use tokio::sync::mpsc::unbounded_channel;
+use crate::events;
+use anchor_client::solana_client::rpc_config::{RpcTransactionLogsConfig, RpcTransactionLogsFilter};
 
 #[async_trait::async_trait]
 impl TestProvider for SolanaClient {
@@ -38,26 +40,35 @@ impl TestProvider for SolanaClient {
 		let (tx, rx) = unbounded_channel();
 		let ws_url = self.ws_url.clone();
 		tokio::task::spawn_blocking(move || {
-			let (_logs_listener, receiver) = PubsubClient::block_subscribe(
-				&ws_url, /* Quicknode rpc should be used for devnet/mainnet and incase of
-				          * localnet, the flag `--rpc-pubsub-enable-block-subscription`
-				          * has to be passed to local validator. */
-				RpcBlockSubscribeFilter::All,
-				Some(RpcBlockSubscribeConfig {
-					commitment: Some(CommitmentConfig::finalized()),
-					..Default::default()
-				}),
+			let (_logs_subscription, receiver) = PubsubClient::logs_subscribe(
+				&ws_url,
+				RpcTransactionLogsFilter::Mentions(vec![solana_ibc::ID.to_string()]),
+				RpcTransactionLogsConfig { commitment: Some(CommitmentConfig::confirmed()) },
 			)
 			.unwrap();
 
 			loop {
 				match receiver.recv() {
-					Ok(logs) =>
-						if logs.value.block.is_some() {
-							let block_info = logs.value.block.clone().unwrap();
-							let block_number = block_info.block_height.unwrap();
-							let _ = tx.send(block_number);
-						},
+					Ok(logs) => {
+						let events = events::get_events_from_logs(logs.clone().value.logs);
+						let finality_events: Vec<&solana_ibc::events::BlockFinalised> = events
+							.iter()
+							.filter_map(|event| match event {
+								solana_ibc::events::Event::BlockFinalised(e) => Some(e),
+								_ => None,
+							})
+							.collect();
+						// Only one finality event is emitted in a transaction
+						if !finality_events.is_empty() {
+							let mut broke = false;
+							assert_eq!(finality_events.len(), 1);
+							let finality_event = finality_events[0].clone();
+							let _ = tx.send(u64::from(finality_event.block_height)).map_err(|_| broke = true);
+							if broke {
+								break
+							}
+						}
+					},
 					Err(err) => {
 						panic!("{}", format!("Disconnected: {err}"));
 					},

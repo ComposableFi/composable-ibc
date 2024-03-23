@@ -707,6 +707,7 @@ deserialize client state"
 		let (_, proof) = trie
 			.prove(&trie_key)
 			.map_err(|_| Error::Custom("value is sealed and cannot be fetched".to_owned()))?;
+		log::info!("This is proof {:?}", proof);
 		let block_header =
 			events::get_header_from_height(self.rpc_client(), self.program_id, at.revision_height)
 				.await
@@ -1431,12 +1432,12 @@ deserialize client state"
 
 	async fn query_timestamp_at(&self, block_number: u64) -> Result<u64, Self::Error> {
 		let rpc_client = self.rpc_client();
-		let timestamp = rpc_client.get_block_time(block_number.into()).await.map_err(|e| {
-			Error::RpcError(
-				serde_json::to_string(&e.kind.get_transaction_error().unwrap()).unwrap(),
-			)
-		})?;
-		Ok(timestamp as u64)
+		let header = events::get_header_from_height(rpc_client, self.program_id, block_number).await;
+		if let Some(header) = header {
+			return Ok(header.timestamp_ns.into())
+		} else {
+			panic!("No block header found for height {:?}", block_number);
+		}
 	}
 
 	async fn query_clients(&self) -> Result<Vec<ClientId>, Self::Error> {
@@ -1868,6 +1869,20 @@ impl Chain for SolanaClient {
 					)
 					.await?;
 			} else if let MsgEnvelope::Packet(PacketMsg::Recv(e)) = message {
+				let packet_data: ibc_app_transfer_types::packet::PacketData =
+					serde_json::from_slice(&e.packet.data).unwrap();
+				signature = self
+					.send_deliver(
+						DeliverIxType::PacketTransfer {
+							token: packet_data.token,
+							port_id: e.packet.port_id_on_a,
+							channel_id: e.packet.chan_id_on_a,
+						},
+						chunk_account,
+						max_tries,
+					)
+					.await?;
+			} else if let MsgEnvelope::Packet(PacketMsg::Timeout(e)) = message {
 				let packet_data: ibc_app_transfer_types::packet::PacketData =
 					serde_json::from_slice(&e.packet.data).unwrap();
 				signature = self

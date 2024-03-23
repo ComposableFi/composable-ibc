@@ -52,7 +52,7 @@ ics23 = { git = "https://github.com/cosmos/ics23", rev = "74ce807b7be39a7e0afb4e
 
 #guest-chain
 cf-guest = { path = "../../light-clients/cf-guest" }
-guestchain = { git = "https://github.com/ComposableFi/emulated-light-client/", branch = "light-client-testing", default-features = false }
+guestchain = { git = "https://github.com/ComposableFi/emulated-light-client/", rev = "2e2d815e42ce82d9c0e948884019e8bfbdb2e66d", default-features = false }
 ed25519-dalek = { version = "2.1.1", default-features = false, features = ["pkcs8"] }
 
 grandpa-client-primitives = { package = "grandpa-light-client-primitives", path = "../../algorithms/grandpa/primitives", default-features = false }

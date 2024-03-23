@@ -54,6 +54,7 @@ ibc-core-channel-types = { git = "https://github.com/dhruvja/ibc-rs", rev = "6bb
 ibc-app-transfer-types = { git = "https://github.com/dhruvja/ibc-rs", rev = "6bb51e2d02c016d572974ec8f47633c1f85b6ba8", default-features = false }
 ibc-core-commitment-types = { git = "https://github.com/dhruvja/ibc-rs", rev = "6bb51e2d02c016d572974ec8f47633c1f85b6ba8", default-features = false }
 ibc-client-tendermint-types = { git = "https://github.com/dhruvja/ibc-rs", rev = "6bb51e2d02c016d572974ec8f47633c1f85b6ba8", default-features = false }
+ibc-client-wasm-types = { git = "https://github.com/dhruvja/ibc-rs", rev = "6bb51e2d02c016d572974ec8f47633c1f85b6ba8", default-features = false}
 ibc-testkit = { git = "https://github.com/dhruvja/ibc-rs", rev = "6bb51e2d02c016d572974ec8f47633c1f85b6ba8", default-features = false }
 ibc-proto-new = { version = "0.41.0", default-features = false, package="ibc-proto" }
 
@@ -67,20 +68,20 @@ ibc-rpc = { path = "../../contracts/pallet-ibc/rpc" }
 pallet-ibc = { path = "../../contracts/pallet-ibc", features = ["testing"]}
 
 # Trie
-lib = { git = "https://github.com/ComposableFi/emulated-light-client/", branch = "light-client-testing" }
-memory = { git = "https://github.com/ComposableFi/emulated-light-client/", branch = "light-client-testing" }
-sealable-trie = { git = "https://github.com/ComposableFi/emulated-light-client/", branch = "light-client-testing", features = ["borsh"] }
-stdx = { git = "https://github.com/ComposableFi/emulated-light-client/", branch = "light-client-testing" }
-solana-trie = { git = "https://github.com/ComposableFi/emulated-light-client/", branch = "light-client-testing" }
-trie-ids = { git = "https://github.com/ComposableFi/emulated-light-client/", branch = "light-client-testing", features = ["borsh"] }
+lib = { git = "https://github.com/ComposableFi/emulated-light-client/", rev = "2e2d815e42ce82d9c0e948884019e8bfbdb2e66d" }
+memory = { git = "https://github.com/ComposableFi/emulated-light-client/", rev = "2e2d815e42ce82d9c0e948884019e8bfbdb2e66d" }
+sealable-trie = { git = "https://github.com/ComposableFi/emulated-light-client/", rev = "2e2d815e42ce82d9c0e948884019e8bfbdb2e66d", features = ["borsh"] }
+stdx = { git = "https://github.com/ComposableFi/emulated-light-client/", rev = "2e2d815e42ce82d9c0e948884019e8bfbdb2e66d" }
+solana-trie = { git = "https://github.com/ComposableFi/emulated-light-client/", rev = "2e2d815e42ce82d9c0e948884019e8bfbdb2e66d" }
+trie-ids = { git = "https://github.com/ComposableFi/emulated-light-client/", rev = "2e2d815e42ce82d9c0e948884019e8bfbdb2e66d", features = ["borsh"] }
 cf-guest = { path = "../../light-clients/cf-guest", default-features = false }
-cf-guest-og = { git = "https://github.com/ComposableFi/emulated-light-client/", branch = "light-client-testing", package = "cf-guest" }
-guestchain = { git = "https://github.com/ComposableFi/emulated-light-client/", branch = "light-client-testing", default-features = false }
+cf-guest-og = { git = "https://github.com/ComposableFi/emulated-light-client/", rev = "2e2d815e42ce82d9c0e948884019e8bfbdb2e66d", package = "cf-guest" }
+guestchain = { git = "https://github.com/ComposableFi/emulated-light-client/", rev = "2e2d815e42ce82d9c0e948884019e8bfbdb2e66d", default-features = false }
 
 #Contract
-solana-ibc = { git = "https://github.com/ComposableFi/emulated-light-client/", branch = "light-client-testing", features = ["mocks", "no-entrypoint"]}
-solana-write-account = { git = "https://github.com/ComposableFi/emulated-light-client/", branch = "light-client-testing", features = ["library"] }
-solana-signature-verifier = { git = "https://github.com/ComposableFi/emulated-light-client/", branch = "light-client-testing" }
+solana-ibc = { git = "https://github.com/ComposableFi/emulated-light-client/", rev = "2e2d815e42ce82d9c0e948884019e8bfbdb2e66d", features = ["mocks", "no-entrypoint"]}
+solana-write-account = { git = "https://github.com/ComposableFi/emulated-light-client/", rev = "2e2d815e42ce82d9c0e948884019e8bfbdb2e66d", features = ["library"] }
+solana-signature-verifier = { git = "https://github.com/ComposableFi/emulated-light-client/", rev = "2e2d815e42ce82d9c0e948884019e8bfbdb2e66d" }
 
 tracing = "0.1.36"
 

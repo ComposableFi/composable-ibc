@@ -744,6 +744,7 @@ pub async fn find_suitable_proof_height_for_client(
 			return Some(temp_height)
 		}
 	} else {
+		log::info!("Inside timestamp to match");
 		let timestamp_to_match = timestamp_to_match.unwrap();
 		let mut start = start_height.revision_height;
 		let mut end = latest_client_height.revision_height;
@@ -756,7 +757,9 @@ pub async fn find_suitable_proof_height_for_client(
 			target: "hyperspace",
 			"Entered binary search for proof height on {} for client {} starting at {}", sink.name(), client_id, start_height
 		);
+		log::info!("end - start is {}", end - start);
 		while end - start > 1 {
+			log::info!("Inside while loop");
 			let mid = (end + start) / 2;
 			let temp_height = Height::new(start_height.revision_number, mid);
 			let consensus_state =
@@ -802,12 +805,13 @@ pub async fn find_suitable_proof_height_for_client(
 					.await
 					.ok()
 					.is_some();
+				log::info!("do we have client state {:?}", has_client_state);
 				if has_client_state {
 					return Some(start_height)
 				}
 			}
 		}
-
+		log::info!("THis is last known valid height {:?}", last_known_valid_height);
 		return last_known_valid_height
 	}
 	None

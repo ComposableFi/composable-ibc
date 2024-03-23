@@ -114,7 +114,8 @@ pub fn convert_old_msgs_to_new(messages: Vec<Ics26Envelope<LocalClientTypes>>) -
 						signer: Signer::from(e.signer.as_ref().to_string()),
 					})),
 				#[allow(deprecated)]
-				ibc::core::ics03_connection::msgs::ConnectionMsg::ConnectionOpenTry(e) =>
+				ibc::core::ics03_connection::msgs::ConnectionMsg::ConnectionOpenTry(e) => {
+					let encoded_cs = ibc_proto::google::protobuf::Any::from(e.client_state.as_ref().unwrap().clone());
 					MsgEnvelope::Connection(ConnectionMsg::OpenTry(MsgConnectionOpenTry {
 						counterparty: Counterparty {
 							client_id: ClientId::from_str(e.counterparty.client_id().as_str())
@@ -130,10 +131,10 @@ pub fn convert_old_msgs_to_new(messages: Vec<Ics26Envelope<LocalClientTypes>>) -
 						delay_period: e.delay_period,
 						signer: Signer::from(e.signer.as_ref().to_string()),
 						client_id_on_b: ClientId::from_str(e.client_id.as_str()).unwrap(),
-						client_state_of_b_on_a: convert_old_client_state_to_new(
-							e.client_state.clone().clone().unwrap(),
-						)
-						.into(),
+						client_state_of_b_on_a: Any {
+							type_url: WASM_CLIENT_STATE_TYPE_URL.to_string(),
+							value: encoded_cs.value,
+						},
 						versions_on_a: e
 							.counterparty_versions
 							.iter()
@@ -183,7 +184,8 @@ pub fn convert_old_msgs_to_new(messages: Vec<Ics26Envelope<LocalClientTypes>>) -
 							)
 						},
 						previous_connection_id: String::default(),
-					})),
+					}))
+				},
 				ibc::core::ics03_connection::msgs::ConnectionMsg::ConnectionOpenAck(e) => {
 					let encoded_cs = ibc_proto::google::protobuf::Any::from(e.client_state.as_ref().unwrap().clone());
 					log::info!("This is the proof height for consensus state {:?}", e.proofs.consensus_proof().unwrap().height());

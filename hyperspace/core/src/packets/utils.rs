@@ -54,7 +54,7 @@ pub async fn get_timeout_proof_height(
 	packet_creation_height: u64,
 ) -> Option<Height> {
 	let timeout_variant = Packet::timeout_variant(packet, &sink_timestamp, sink_height).unwrap();
-	log::trace!(target: "hyperspace", "get_timeout_proof_height: {}->{}, timeout_variant={:?}, source_height={}, sink_height={}, sink_timestamp={}, latest_client_height_on_source={}, packet_creation_height={}, packet={:?}",
+	log::info!(target: "hyperspace", "get_timeout_proof_height: {}->{}, timeout_variant={:?}, source_height={}, sink_height={}, sink_timestamp={}, latest_client_height_on_source={}, packet_creation_height={}, packet={:?}",
 		source.name(), sink.name(), timeout_variant, source_height, sink_height, sink_timestamp, latest_client_height_on_source, packet_creation_height, packet);
 
 	match timeout_variant {
@@ -93,6 +93,7 @@ pub async fn get_timeout_proof_height(
 			let period = Duration::from_nanos(period);
 			let start_height = height.revision_height +
 				calculate_block_delay(period, sink.expected_block_time()).saturating_sub(1);
+			log::info!("This is block delay {:?}", height.revision_height);
 			let start_height = Height::new(sink_height.revision_number, start_height);
 			find_suitable_proof_height_for_client(
 				sink,

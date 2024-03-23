@@ -261,7 +261,7 @@ async fn send_packet_and_assert_height_timeout<A, B>(
 		chain_b,
 		asset_a,
 		channel_id,
-		Some(Timeout::Offset { timestamp: Some(120 * 60), height: Some(20) }),
+		Some(Timeout::Offset { timestamp: Some(120 * 60), height: Some(10) }),
 	)
 	.await;
 
@@ -313,7 +313,7 @@ async fn send_packet_and_assert_timestamp_timeout<A, B>(
 		chain_b,
 		asset_a,
 		channel_id,
-		Some(Timeout::Offset { timestamp: Some(60 * 10), height: Some(400) }),
+		Some(Timeout::Offset { timestamp: Some(60 * 1), height: Some(400) }),
 	)
 	.await;
 

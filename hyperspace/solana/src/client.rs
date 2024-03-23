@@ -455,26 +455,30 @@ deserialize consensus state"
 				DeliverIxType::PacketTransfer { ref token, ref port_id, ref channel_id } => {
 					let hashed_denom =
 						CryptoHash::digest(&token.denom.base_denom.as_str().as_bytes());
-					let (escrow_account, token_mint) = if is_receiver_chain_source(
+					log::info!("PortId: {:?} and channel {:?} and token {:?}", port_id, channel_id, token);
+					let (escrow_account, token_mint) = if !is_receiver_chain_source(
 						port_id.clone(),
 						channel_id.clone(),
 						&token.denom,
 					) {
+						log::info!("Receiver chain source");
 						let escrow_seeds =
 							[port_id.as_bytes(), channel_id.as_bytes(), hashed_denom.as_ref()];
 						let escrow_account =
 							Pubkey::find_program_address(&escrow_seeds, &self.program_id).0;
 						let prefix = TracePrefix::new(port_id.clone(), channel_id.clone());
-						let mut trace_path = token.denom.trace_path.clone();
-						trace_path.remove_prefix(&prefix);
-						let token_mint = Pubkey::from_str(&trace_path.to_string()).unwrap();
+						let mut base_denom = token.denom.base_denom.clone();
+						// trace_path.remove_prefix(&prefix);
+						let token_mint = Pubkey::from_str(&base_denom.to_string()).unwrap();
 						(Some(escrow_account), token_mint)
 					} else {
+						log::info!("Not receiver chain source");
 						let token_mint_seeds = [hashed_denom.as_ref()];
 						let token_mint =
 							Pubkey::find_program_address(&token_mint_seeds, &self.program_id).0;
 						(None, token_mint)
 					};
+					log::info!("This is token mint while sending transfer {:?}", token_mint);
 					let mint_authority = self.get_mint_auth_key();
 					// Check if token exists
 					let token_mint_info = rpc.get_token_supply(&token_mint).await;
@@ -642,6 +646,7 @@ deserialize consensus state"
 			ibc_core_host_types::identifiers::ChannelId::new(msg.source_channel.sequence());
 		let port_id =
 			ibc_core_host_types::identifiers::PortId::from_str(msg.source_port.as_str()).unwrap();
+		// let trace_path = TracePrefix::new(port_id.clone(), channel_id.clone());
 		let prefixed_denom = ibc_app_transfer_types::PrefixedDenom {
 			// TODO(dhruv): implement conversion
 			trace_path: ibc_app_transfer_types::TracePath::default(),

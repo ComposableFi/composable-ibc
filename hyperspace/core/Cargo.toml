@@ -81,7 +81,7 @@ cosmos = { path = "../cosmos", package = "hyperspace-cosmos", features = [
     "testing",
 ] }
 solana = { path = "../solana", package = "hyperspace-solana" }
-trie-ids = { git = "https://github.com/ComposableFi/emulated-light-client/", branch = "light-client-testing", features = ["borsh"] }
+trie-ids = { git = "https://github.com/ComposableFi/emulated-light-client/", rev = "2e2d815e42ce82d9c0e948884019e8bfbdb2e66d", features = ["borsh"] }
 
 ibc-new-primitives = { git = "https://github.com/dhruvja/ibc-rs", rev = "6bb51e2d02c016d572974ec8f47633c1f85b6ba8", default-features = false, features = ["borsh", "serde"] , package="ibc-primitives" }
 ibc-core-host-types = { git = "https://github.com/dhruvja/ibc-rs", rev = "6bb51e2d02c016d572974ec8f47633c1f85b6ba8", default-features = false, features = ["borsh", "serde"]}

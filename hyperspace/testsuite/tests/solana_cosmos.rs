@@ -51,9 +51,9 @@ pub struct Args {
 
 impl Default for Args {
 	fn default() -> Self {
-		let relay = std::env::var("RELAY_HOST").unwrap_or_else(|_| "192.168.1.18".to_string());
-		let solana = std::env::var("SOLANA_HOST").unwrap_or_else(|_| "192.168.1.18".to_string());
-		let cosmos = std::env::var("COSMOS_HOST").unwrap_or_else(|_| "192.168.1.18".to_string());
+		let relay = std::env::var("RELAY_HOST").unwrap_or_else(|_| "192.168.0.120".to_string());
+		let solana = std::env::var("SOLANA_HOST").unwrap_or_else(|_| "192.168.0.120".to_string());
+		let cosmos = std::env::var("COSMOS_HOST").unwrap_or_else(|_| "192.168.0.120".to_string());
 		let wasm_path = std::env::var("WASM_PATH").unwrap_or_else(|_| {
 			"../../target/wasm32-unknown-unknown/release/ics07_guest_cw.wasm".to_string()
 		});
@@ -186,7 +186,7 @@ async fn setup_clients() -> (AnyChain, AnyChain) {
 
 // #[tokio::test]
 #[tokio::test(flavor = "multi_thread", worker_threads = 12)]
-#[ignore]
+// #[ignore]
 async fn solana_to_cosmos_ibc_messaging_full_integration_test() {
 	use ibc::core::ics24_host::identifier::{ChannelId, ConnectionId};
 	use std::str::FromStr;
@@ -222,17 +222,17 @@ async fn solana_to_cosmos_ibc_messaging_full_integration_test() {
 
 	// no timeouts + connection delay
 
-	ibc_messaging_with_connection_delay(
-		&mut chain_a,
-		&mut chain_b,
-		asset_id_a.clone(),
-		asset_id_b.clone(),
-		channel_a,
-		channel_b,
-	)
-	.await;
+	// ibc_messaging_with_connection_delay(
+	// 	&mut chain_a,
+	// 	&mut chain_b,
+	// 	asset_id_a.clone(),
+	// 	asset_id_b.clone(),
+	// 	channel_a,
+	// 	channel_b,
+	// )
+	// .await;
 
-	// // timeouts + connection delay
+	// timeouts + connection delay
 	// ibc_messaging_packet_height_timeout_with_connection_delay(
 	// 	&mut chain_a,
 	// 	&mut chain_b,
@@ -241,14 +241,14 @@ async fn solana_to_cosmos_ibc_messaging_full_integration_test() {
 	// 	channel_b,
 	// )
 	// .await;
-	// ibc_messaging_packet_timestamp_timeout_with_connection_delay(
-	// 	&mut chain_a,
-	// 	&mut chain_b,
-	// 	asset_id_a.clone(),
-	// 	channel_a,
-	// 	channel_b,
-	// )
-	// .await;
+	ibc_messaging_packet_timestamp_timeout_with_connection_delay(
+		&mut chain_b,
+		&mut chain_a,
+		asset_id_b.clone(),
+		channel_b,
+		channel_a,
+	)
+	.await;
 
 	// // channel closing semantics
 	// ibc_messaging_packet_timeout_on_channel_close(
@@ -266,7 +266,7 @@ async fn solana_to_cosmos_ibc_messaging_full_integration_test() {
 
 // #[tokio::test]
 #[tokio::test(flavor = "multi_thread", worker_threads = 5)]
-// #[ignore]
+#[ignore]
 async fn cosmos_to_solana_ibc_messaging_full_integration_test() {
 	logging::setup_logging();
 
