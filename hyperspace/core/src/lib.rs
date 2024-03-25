@@ -30,6 +30,7 @@ use events::{has_packet_events, parse_events};
 use futures::{future::ready, StreamExt, TryFutureExt};
 use ibc::{events::IbcEvent, Height};
 use ibc_proto::google::protobuf::Any;
+use itertools::Itertools;
 use metrics::handler::MetricsHandler;
 use primitives::{Chain, IbcProvider, UndeliveredType, UpdateType};
 use std::collections::HashSet;
@@ -218,7 +219,7 @@ async fn process_some_finality_event<A: Chain, B: Chain>(
 	log::trace!(target: "hyperspace", "Received updates count: {}", updates.len());
 	// query packets that can now be sent, at this sink height because of connection
 	// delay.
-	let (ready_packets, timeout_msgs) =
+	let (ready_packets, mut timeout_msgs) =
 		packets::query_ready_and_timed_out_packets(&*source, &*sink)
 			.await
 			.map_err(|e| anyhow!("Failed to parse events: {:?}", e))?;
@@ -247,11 +248,55 @@ async fn process_some_finality_event<A: Chain, B: Chain>(
 		timeout_msgs.len()
 	);
 
-	process_updates(source, sink, metrics, mode, updates, &mut msgs).await?;
+	process_updates(source, sink, metrics, mode, updates, &mut msgs, timeout_msgs.clone()).await?;
 
 	msgs.extend(ready_packets);
 
 	process_messages(sink, metrics, msgs).await?;
+
+	if sink.name() == "solana" {
+		let mut timeout_heights = Vec::new();
+		if timeout_msgs.len() > 0 {
+			for msg in timeout_msgs.iter() {
+				let my_message = ibc::core::ics26_routing::msgs::Ics26Envelope::<
+					primitives::mock::LocalClientTypes,
+				>::try_from(msg.clone())
+				.unwrap();
+				let timeout_msg = match my_message {
+					ibc::core::ics26_routing::msgs::Ics26Envelope::Ics4PacketMsg(packet_msg) =>
+						match packet_msg {
+							ibc::core::ics04_channel::msgs::PacketMsg::ToPacket(msg) => msg,
+							_ => continue,
+						},
+					_ => continue,
+				};
+				timeout_heights.push(timeout_msg.proofs.height().revision_height);
+			}
+			let (updates, heights) = sink.fetch_mandatory_updates(source).await.unwrap();
+			let updates_to_be_sent: Vec<Any> = heights
+				.iter()
+				.enumerate()
+				.filter_map(|(index, event)| {
+					let height = match event.clone() {
+						ibc::events::IbcEvent::NewBlock(ibc::core::ics02_client::events::NewBlock { height }) => height,
+						_ => panic!("Only expected new block event"),
+					};
+					if timeout_heights.contains(&height.revision_height) {
+						return Some(updates[index].clone())
+					}
+					None
+				})
+				.collect();
+			// Reverse the updates so that the latest update is sent at end
+			let mut reversed_updates = updates_to_be_sent.iter().rev().cloned().collect::<Vec<_>>();
+			reversed_updates.iter().for_each(|update| {
+				timeout_msgs.insert(0, update.clone()) 
+			});
+			// timeout_msgs = (reversed_updates.as_slice(), timeout_msgs.as_slice()).concat();
+			// timeout_msgs.append(&mut reversed_updates);
+		}
+	}
+
 	process_timeouts(source, metrics, timeout_msgs).await?;
 	Ok(())
 }
@@ -263,6 +308,7 @@ async fn process_updates<A: Chain, B: Chain>(
 	mode: Option<Mode>,
 	updates: Vec<(Any, Height, Vec<IbcEvent>, UpdateType)>,
 	msgs: &mut Vec<Any>,
+	timeout_msgs: Vec<Any>,
 ) -> anyhow::Result<()> {
 	// for timeouts we need both chains to be up to date
 	let sink_has_undelivered_acks = sink.has_undelivered_sequences(UndeliveredType::Recvs) ||
@@ -278,6 +324,30 @@ async fn process_updates<A: Chain, B: Chain>(
 		};
 
 	log::info!("Updates on {} are {}", source.name(), updates.len());
+
+	let mut timeout_heights = Vec::new();
+	if timeout_msgs.len() > 0 {
+		for msg in timeout_msgs.iter() {
+			let my_message = ibc::core::ics26_routing::msgs::Ics26Envelope::<
+				primitives::mock::LocalClientTypes,
+			>::try_from(msg.clone())
+			.unwrap();
+			let timeout_msg = match my_message {
+				ibc::core::ics26_routing::msgs::Ics26Envelope::Ics4PacketMsg(packet_msg) =>
+					match packet_msg {
+						ibc::core::ics04_channel::msgs::PacketMsg::ToPacket(msg) => msg,
+						_ => continue,
+					},
+				_ => continue,
+			};
+			timeout_heights.push(timeout_msg.proofs.height());
+		}
+	}
+	log::info!(
+		"Update heights {:?} and timeout heights {:?}",
+		updates.iter().map(|(_, height, ..)| height).collect::<Vec<_>>(),
+		timeout_heights
+	);
 
 	for (msg_update_client, height, events, update_type) in updates {
 		if let Some(metrics) = metrics.as_mut() {
@@ -325,7 +395,8 @@ async fn process_updates<A: Chain, B: Chain>(
 			// search, which won't work in this case
 			skip_optional_updates &&
 				update_type.is_optional() &&
-				!need_to_send_proofs_for_sequences,
+				!need_to_send_proofs_for_sequences &&
+				!timeout_heights.contains(&height),
 			has_packet_events(&event_types),
 			messages.is_empty(),
 		) {

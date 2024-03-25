@@ -171,11 +171,11 @@ async fn setup_clients() -> (AnyChain, AnyChain) {
 	let clients_on_a = chain_a_wrapped.query_clients().await.unwrap();
 	let clients_on_b = chain_b_wrapped.query_clients().await.unwrap();
 
-	// if !clients_on_a.is_empty() && !clients_on_b.is_empty() {
-	// 	chain_a_wrapped.set_client_id(clients_on_b[0].clone());
-	// 	chain_b_wrapped.set_client_id(clients_on_a[0].clone());
-	// 	return (chain_a_wrapped, chain_b_wrapped)
-	// }
+	if !clients_on_a.is_empty() && !clients_on_b.is_empty() {
+		chain_a_wrapped.set_client_id(clients_on_b[0].clone());
+		chain_b_wrapped.set_client_id(clients_on_a[0].clone());
+		return (chain_a_wrapped, chain_b_wrapped)
+	}
 
 	let (client_a, client_b) =
 		create_clients(&mut chain_a_wrapped, &mut chain_b_wrapped).await.unwrap();
@@ -196,15 +196,15 @@ async fn solana_to_cosmos_ibc_messaging_full_integration_test() {
 	let asset_id_b = AnyAssetId::Cosmos("stake".to_string());
 	let (mut chain_a, mut chain_b) = setup_clients().await;
 	let (handle, channel_a, channel_b, connection_id_a, connection_id_b) =
-		setup_connection_and_channel(&mut chain_a, &mut chain_b, Duration::from_secs(60 * 2)).await;
+		setup_connection_and_channel(&mut chain_a, &mut chain_b, Duration::from_secs(20)).await;
 
 	handle.abort();
 
 	// let connection_id_a = ConnectionId::from_str("connection-0").unwrap();
-	// let connection_id_b = ConnectionId::from_str("connection-30").unwrap();
+	// let connection_id_b = ConnectionId::from_str("connection-0").unwrap();
 
 	// let channel_a = ChannelId::from_str("channel-0").unwrap();
-	// let channel_b = ChannelId::from_str("channel-16").unwrap();
+	// let channel_b = ChannelId::from_str("channel-0").unwrap();
 
 	log::info!("Channel A: {:?}", channel_a);
 	log::info!("Channel B: {:?}", channel_b);
@@ -242,11 +242,11 @@ async fn solana_to_cosmos_ibc_messaging_full_integration_test() {
 	// )
 	// .await;
 	ibc_messaging_packet_timestamp_timeout_with_connection_delay(
-		&mut chain_b,
 		&mut chain_a,
-		asset_id_b.clone(),
-		channel_b,
+		&mut chain_b,
+		asset_id_a.clone(),
 		channel_a,
+		channel_b,
 	)
 	.await;
 

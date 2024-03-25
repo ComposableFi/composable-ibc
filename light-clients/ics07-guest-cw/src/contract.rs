@@ -120,13 +120,13 @@ fn process_message(
 				.client_state(&client_id)
 				.map_err(|e| ContractError::Tendermint(e.to_string()))?;
 			let msg = VerifyNonMembershipMsg::try_from(msg)?;
-			crate::helpers::verify_delay_passed(
-				ctx,
-				msg.height,
-				msg.delay_time_period,
-				msg.delay_block_period,
-			)
-			.map_err(|e| ContractError::Tendermint(e.to_string()))?;
+			// crate::helpers::verify_delay_passed(
+			// 	ctx,
+			// 	msg.height,
+			// 	msg.delay_time_period,
+			// 	msg.delay_block_period,
+			// )
+			// .map_err(|e| ContractError::Tendermint(e.to_string()))?;
 			let consensus_state = ctx
 				.consensus_state(&client_id, msg.height)
 				.map_err(|e| ContractError::Tendermint(e.to_string()))?;

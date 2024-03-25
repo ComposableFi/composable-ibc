@@ -41,7 +41,8 @@ use ibc::{
 	applications::transfer::{Amount, BaseDenom, PrefixedCoin, PrefixedDenom, TracePath},
 	core::{
 		ics02_client::{
-			events::UpdateClient, msgs::update_client::MsgUpdateAnyClient,
+			events::{NewBlock, UpdateClient},
+			msgs::update_client::MsgUpdateAnyClient,
 			trust_threshold::TrustThreshold,
 		},
 		ics23_commitment::specs::ProofSpecs,
@@ -128,11 +129,10 @@ impl IbcProvider for SolanaClient {
 		T: Chain,
 	{
 		log::info!("Came into solana lts events");
-		let (blockhash, height) = match finality_event {
+		let (finality_blockhash, finality_height) = match finality_event {
 			FinalityEvent::Guest { blockhash, block_height } => (blockhash, block_height),
 		};
-
-		log::info!("This is solaan height {:?}", height);
+		log::info!("This is solaan height {:?}", finality_height);
 		let client_id = self.client_id();
 		let latest_cp_height = counterparty.latest_height_and_timestamp().await?.0;
 		log::info!("this is the latest cp height {:?}", latest_cp_height);
@@ -195,26 +195,31 @@ impl IbcProvider for SolanaClient {
 						Error::Custom(String::from("Logs were skipped, so not available")).into()
 					),
 			};
-			let events = events::get_ibc_events_from_logs(logs);
+			let (events, proof_height) = events::get_ibc_events_from_logs(logs);
 			let converted_events = events
 				.iter()
 				.filter_map(|event| {
-					convert_new_event_to_old(event.clone(), Height::new(1, u64::from(height)))
+					convert_new_event_to_old(event.clone(), Height::new(1, u64::from(proof_height)))
 				})
 				.collect();
 			log::info!("These are events fetched {:?}", converted_events);
-			block_events.push((sig.slot, converted_events));
+			block_events.push((proof_height, converted_events));
 		}
+		let from = latest_cp_client_height;
+		let to = finality_height;
 
 		let chain_account = self.get_chain_storage().await;
-		let (signatures, block_header) =
-			events::get_signatures_for_blockhash(rpc_client, solana_ibc::ID, blockhash.clone())
-				.await
-				.unwrap();
-		log::info!("These are signatures {signatures:?}");
-		let updates: Vec<_> = block_events
+		let signatures =
+			events::get_signatures_upto_height(rpc_client, solana_ibc::ID, latest_cp_client_height)
+				.await;
+		let updates: Vec<_> = signatures
 			.iter()
-			.map(|event| {
+			.filter_map(|(sig, block_header)| {
+				let block_hash = block_header.calc_hash();
+				let block_height: u64 = block_header.block_height.into();
+				if block_height > finality_height {
+					return None;
+				}
 				let validator_pubkey =
 					Pubkey::from_str("oxyzEsUj9CV6HsqPCUZqVwrFJJvpd9iCBrPdzTBWLBb").unwrap();
 				let old_validator = chain_account.validator(validator_pubkey).unwrap().unwrap();
@@ -223,8 +228,8 @@ impl IbcProvider for SolanaClient {
 					NonZeroU128::new(2000).unwrap(),
 				);
 				let guest_header = cf_guest::Header {
-					genesis_hash: client_state.genesis_hash.clone(),
-					block_hash: blockhash.clone(),
+					genesis_hash: chain_account.genesis().unwrap().clone(),
+					block_hash,
 					block_header: block_header.clone(),
 					epoch_commitment: block_header.epoch_id.clone(),
 					epoch: Epoch::new_with(vec![new_validator], |total| {
@@ -235,8 +240,9 @@ impl IbcProvider for SolanaClient {
 						quorum.max(NonZeroU128::new(1000).unwrap()).min(total)
 					})
 					.unwrap(),
-					signatures: signatures.clone(),
+					signatures: sig.clone(),
 				};
+				log::info!("Height: {:?} signature {:?}", block_height, sig);
 				let msg = MsgUpdateAnyClient::<LocalClientTypes> {
 					client_id: self.client_id(),
 					client_message: AnyClientMessage::Guest(cf_guest::ClientMessage::Header(
@@ -244,25 +250,29 @@ impl IbcProvider for SolanaClient {
 					)),
 					signer: counterparty.account_id(),
 				};
+				let events: Vec<IbcEvent> = block_events
+					.iter()
+					.filter(|(height, _)| *height == block_height)
+					.map(|(_, events)| events.clone())
+					.flatten()
+					.collect();
 				let value = msg
 					.encode_vec()
 					.map_err(|e| {
 						Error::from(format!("Failed to encode MsgUpdateClient {msg:?}: {e:?}"))
 					})
 					.unwrap();
-				let mut msg_decoded =
-					MsgUpdateAnyClient::<LocalClientTypes>::decode_vec(&value).unwrap();
-				(
+				let events_len = events.len();
+				Some((
 					Any { type_url: msg.type_url(), value },
-					Height::new(1, latest_height.revision_height),
-					event.1.clone(),
-					if event.1.len() > 0 { UpdateType::Mandatory } else { UpdateType::Optional },
-				)
+					Height::new(1, block_height),
+					events,
+					if events_len > 0 { UpdateType::Mandatory } else { UpdateType::Optional },
+				))
 			})
 			.collect();
-
-		log::info!("These are latest event updates");
-		Ok(updates)
+		let reversed_updates = updates.into_iter().rev().collect();
+		Ok(reversed_updates)
 	}
 
 	async fn ibc_events(&self) -> Pin<Box<dyn Stream<Item = IbcEvent> + Send + 'static>> {
@@ -279,13 +289,14 @@ impl IbcProvider for SolanaClient {
 			loop {
 				match receiver.recv() {
 					Ok(logs) => {
-						let events = events::get_ibc_events_from_logs(logs.value.logs);
+						let (events, proof_height) =
+							events::get_ibc_events_from_logs(logs.value.logs);
 						// log::info!("These are events {:?} ", events);
 						// log::info!("Total {:?} events", events.len());
 						let mut broke = false;
 						events.iter().for_each(|event| {
 							log::info!("Came into ibc events");
-							let height = Height::new(1, 100);
+							let height = Height::new(1, proof_height);
 							let converted_event =
 								events::convert_new_event_to_old(event.clone(), height);
 							if let Some(event) = converted_event {
@@ -712,7 +723,22 @@ deserialize client state"
 			events::get_header_from_height(self.rpc_client(), self.program_id, at.revision_height)
 				.await
 				.expect(&format!("No block header found for height {:?}", at.revision_height));
-		Ok(borsh::to_vec(&(block_header, &proof)).unwrap())
+
+		let chain_account = self.get_chain_storage().await;
+		let block_header_og = chain_account.head().unwrap();
+		let result = proof.verify(&block_header_og.state_root, &trie_key, None);
+		let result_1 = proof.verify(&block_header.state_root, &trie_key, None);
+		log::info!(
+			"This is result of time out packet proof verify lts {:?}, at proof height {:?}",
+			result,
+			result_1,
+		);
+		log::info!(
+			"State root at lts {:?}, state root at proof height {:?}",
+			block_header_og.state_root,
+			block_header.state_root
+		);
+		Ok(borsh::to_vec(&(block_header_og.clone(), &proof)).unwrap())
 	}
 
 	async fn query_packet_commitment(
@@ -1082,7 +1108,7 @@ deserialize client state"
 					solana_transaction_status::option_serializer::OptionSerializer::Some(e) => e,
 					_ => Vec::new(),
 				};
-				let events = events::get_events_from_logs(logs.clone());
+				let (events, _proof_height) = events::get_events_from_logs(logs.clone());
 				let mut send_packet = None;
 				for event in events {
 					send_packet =
@@ -1206,7 +1232,7 @@ deserialize client state"
 					solana_transaction_status::option_serializer::OptionSerializer::Some(e) => e,
 					_ => Vec::new(),
 				};
-				let events = events::get_ibc_events_from_logs(logs);
+				let (events, _proof_height) = events::get_ibc_events_from_logs(logs);
 				let send_packet_event = events.iter().find(|event| {
 					matches!(event, ibc_core_handler_types::events::IbcEvent::ReceivePacket(_)) ||
 						matches!(
@@ -1432,7 +1458,8 @@ deserialize client state"
 
 	async fn query_timestamp_at(&self, block_number: u64) -> Result<u64, Self::Error> {
 		let rpc_client = self.rpc_client();
-		let header = events::get_header_from_height(rpc_client, self.program_id, block_number).await;
+		let header =
+			events::get_header_from_height(rpc_client, self.program_id, block_number).await;
 		if let Some(header) = header {
 			return Ok(header.timestamp_ns.into())
 		} else {
@@ -1598,7 +1625,7 @@ deserialize client state"
 			solana_transaction_status::option_serializer::OptionSerializer::Skip =>
 				return Err(Error::Custom(String::from("Logs were skipped, so not available"))),
 		};
-		let events = events::get_ibc_events_from_logs(logs);
+		let (events, _proof_height) = events::get_ibc_events_from_logs(logs);
 		let result: Vec<&ibc_core_client_types::events::CreateClient> = events
 			.iter()
 			.filter_map(|event| match event {
@@ -1634,7 +1661,7 @@ deserialize client state"
 			solana_transaction_status::option_serializer::OptionSerializer::Skip =>
 				return Err(Error::Custom(String::from("Logs were skipped, so not available"))),
 		};
-		let events = events::get_ibc_events_from_logs(logs);
+		let (events, _proof_height) = events::get_ibc_events_from_logs(logs);
 		let result: Vec<&ibc_core_connection_types::events::OpenInit> = events
 			.iter()
 			.filter_map(|event| match event {
@@ -1673,7 +1700,7 @@ deserialize client state"
 			solana_transaction_status::option_serializer::OptionSerializer::Skip =>
 				return Err(Error::Custom(String::from("Logs were skipped, so not available"))),
 		};
-		let events = events::get_ibc_events_from_logs(logs);
+		let (events, _proof_height) = events::get_ibc_events_from_logs(logs);
 		let result: Vec<&ibc_core_channel_types::events::OpenInit> = events
 			.iter()
 			.filter_map(|event| match event {
@@ -1727,9 +1754,83 @@ impl LightClientSync for SolanaClient {
 
 	async fn fetch_mandatory_updates<C: Chain>(
 		&self,
-		_counterparty: &C,
+		counterparty: &C,
 	) -> Result<(Vec<Any>, Vec<IbcEvent>), anyhow::Error> {
-		Ok((vec![], vec![]))
+		let latest_height = counterparty.latest_height_and_timestamp().await?.0;
+		let response = counterparty.query_client_state(latest_height, self.client_id()).await?;
+		let any_client_state = response.client_state.ok_or_else(|| {
+			Error::Custom("Received an empty client state from counterparty".to_string())
+		})?;
+		let AnyClientState::Guest(client_state) =
+			AnyClientState::decode_recursive(any_client_state.clone(), |c| {
+				matches!(c, AnyClientState::Guest(_))
+			})
+			.or_else(|| {
+				log::info!("This is wasm {:?}", any_client_state);
+				let wasm_client_state = AnyClientState::decode_recursive(any_client_state, |c| {
+					matches!(c, AnyClientState::Wasm(_))
+				})
+				.unwrap();
+				Some(wasm_client_state.unpack_recursive().clone())
+			})
+			.unwrap()
+		else {
+			unreachable!()
+		};
+		let height = client_state.latest_height.into();
+		let signatures =
+			events::get_signatures_upto_height(self.rpc_client(), solana_ibc::ID, height).await;
+		let chain_account = self.get_chain_storage().await;
+		let mut heights = Vec::new();
+		let updates: Vec<Any> = signatures
+			.iter()
+			.map(|(sig, block_header)| {
+				let validator_pubkey =
+					Pubkey::from_str("oxyzEsUj9CV6HsqPCUZqVwrFJJvpd9iCBrPdzTBWLBb").unwrap();
+				let old_validator = chain_account.validator(validator_pubkey).unwrap().unwrap();
+				let new_validator: Validator<pallet_ibc::light_clients::PubKey> = Validator::new(
+					PubKey::from_bytes(&old_validator.pubkey.to_vec()).unwrap(),
+					NonZeroU128::new(2000).unwrap(),
+				);
+				let block_hash = block_header.calc_hash();
+				let guest_header = cf_guest::Header {
+					genesis_hash: chain_account.genesis().unwrap().clone(),
+					block_hash,
+					block_header: block_header.clone(),
+					epoch_commitment: block_header.epoch_id.clone(),
+					epoch: Epoch::new_with(vec![new_validator], |total| {
+						let quorum = NonZeroU128::new(total.get() / 2 + 1).unwrap();
+						// min_quorum_stake may be greater than total_stake so we’re not
+						// using .clamp to make sure we never return value higher than
+						// total_stake.
+						quorum.max(NonZeroU128::new(1000).unwrap()).min(total)
+					})
+					.unwrap(),
+					signatures: sig.clone(),
+				};
+				log::info!("Height: {:?} signature {:?}", block_header.block_height, sig);
+				let msg = MsgUpdateAnyClient::<LocalClientTypes> {
+					client_id: self.client_id(),
+					client_message: AnyClientMessage::Guest(cf_guest::ClientMessage::Header(
+						guest_header,
+					)),
+					signer: counterparty.account_id(),
+				};
+				let value = msg
+					.encode_vec()
+					.map_err(|e| {
+						Error::from(format!("Failed to encode MsgUpdateClient {msg:?}: {e:?}"))
+					})
+					.unwrap();
+				heights.push(IbcEvent::NewBlock(NewBlock::new(Height::new(
+					1,
+					block_header.block_height.into(),
+				))));
+				Any { type_url: msg.type_url(), value }
+			})
+			.collect();
+
+		Ok((updates, heights))
 	}
 }
 
@@ -1766,7 +1867,8 @@ impl Chain for SolanaClient {
 			loop {
 				match receiver.recv() {
 					Ok(logs) => {
-						let events = events::get_events_from_logs(logs.clone().value.logs);
+						let (events, _proof_height) =
+							events::get_events_from_logs(logs.clone().value.logs);
 						let finality_events: Vec<&solana_ibc::events::BlockFinalised> = events
 							.iter()
 							.filter_map(|event| match event {

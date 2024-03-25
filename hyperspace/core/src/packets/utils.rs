@@ -246,6 +246,9 @@ pub async fn construct_timeout_message(
 	let key = get_key_path(path_type, &packet).into_bytes();
 
 	let proof_unreceived = sink.query_proof(proof_height, vec![key]).await?;
+	let mut proof_bytes = proof_unreceived.clone();
+	let (header, _): (guestchain::BlockHeader, sealable_trie::proof::Proof) =
+			borsh::BorshDeserialize::deserialize_reader(&mut proof_bytes.as_slice())?;
 	let proof_unreceived = CommitmentProofBytes::try_from(proof_unreceived)?;
 	let msg = if sink_channel_end.state == State::Closed {
 		let channel_key = get_key_path(KeyPathType::ChannelPath, &packet).into_bytes();
@@ -267,7 +270,8 @@ pub async fn construct_timeout_message(
 		let value = msg.encode_vec()?;
 		Any { value, type_url: msg.type_url() }
 	} else {
-		let actual_proof_height = sink.get_proof_height(proof_height).await;
+		// let actual_proof_height = sink.get_proof_height(proof_height).await;
+		let actual_proof_height = Height::new(1, header.block_height.into());
 		log::debug!(target: "hyperspace", "actual_proof_height={actual_proof_height}");
 		let msg = MsgTimeout {
 			packet,

@@ -50,7 +50,7 @@ impl TestProvider for SolanaClient {
 			loop {
 				match receiver.recv() {
 					Ok(logs) => {
-						let events = events::get_events_from_logs(logs.clone().value.logs);
+						let (events, _proof_height) = events::get_events_from_logs(logs.clone().value.logs);
 						let finality_events: Vec<&solana_ibc::events::BlockFinalised> = events
 							.iter()
 							.filter_map(|event| match event {

@@ -5,6 +5,7 @@ use anchor_client::{
 	solana_sdk::{commitment_config::CommitmentConfig, pubkey::Pubkey},
 };
 use guestchain::{BlockHeader, Signature as SignatureTrait};
+use itertools::Itertools;
 use lib::hash::CryptoHash;
 use serde::{Deserialize, Serialize};
 use solana_transaction_status::EncodedConfirmedTransactionWithStatusMeta;
@@ -376,20 +377,19 @@ pub fn convert_new_event_to_old(
 
 pub fn get_ibc_events_from_logs(
 	logs: Vec<String>,
-) -> Vec<ibc_core_handler_types::events::IbcEvent> {
-	let events = get_events_from_logs(logs);
+) -> (Vec<ibc_core_handler_types::events::IbcEvent>, u64) {
+	let (events, proof_height) = get_events_from_logs(logs);
 	let events: Vec<ibc_core_handler_types::events::IbcEvent> = events
 		.iter()
 		.filter_map(|event| match event {
 			solana_ibc::events::Event::IbcEvent(e) => Some(e.clone()),
-			_ => 
-				None,
+			_ => None,
 		})
 		.collect();
-	events
+	(events, proof_height)
 }
 
-pub fn get_events_from_logs(logs: Vec<String>) -> Vec<solana_ibc::events::Event<'static>> {
+pub fn get_events_from_logs(logs: Vec<String>) -> (Vec<solana_ibc::events::Event<'static>>, u64) {
 	let serialized_events: Vec<&str> = logs
 		.iter()
 		.filter_map(|log| {
@@ -400,6 +400,17 @@ pub fn get_events_from_logs(logs: Vec<String>) -> Vec<solana_ibc::events::Event<
 			}
 		})
 		.collect();
+	let height_str = logs
+		.iter()
+		.find_map(|log| {
+			if log.starts_with("Program log: Current Block height ") {
+				Some(log.strip_prefix("Program log: Current Block height ").unwrap())
+			} else {
+				None
+			}
+		})
+		.map_or("0", |height| height);
+	let height = height_str.parse::<u64>().unwrap();
 	let events: Vec<solana_ibc::events::Event> = serialized_events
 		.iter()
 		.map(|event| {
@@ -409,7 +420,7 @@ pub fn get_events_from_logs(logs: Vec<String>) -> Vec<solana_ibc::events::Event<
 			decoded_event
 		})
 		.collect();
-	events
+	(events, height + 1)
 }
 
 pub async fn get_signatures_for_blockhash(
@@ -427,7 +438,7 @@ pub async fn get_signatures_for_blockhash(
 			solana_transaction_status::option_serializer::OptionSerializer::Some(e) => e,
 			_ => Vec::new(),
 		};
-		let events = get_events_from_logs(logs);
+		let (events, _proof_height) = get_events_from_logs(logs);
 		// Find block signed events with blockhash
 		let block_header: Vec<Option<BlockHeader>> = events
 			.iter()
@@ -473,7 +484,7 @@ pub async fn get_header_from_height(
 			solana_transaction_status::option_serializer::OptionSerializer::Some(e) => e,
 			_ => Vec::new(),
 		};
-		let events = get_events_from_logs(logs);
+		let (events, _proof_height) = get_events_from_logs(logs);
 		// Find block signed events with blockhash
 		block_header = events.iter().find_map(|event| match event {
 			solana_ibc::events::Event::NewBlock(e) => {
@@ -497,6 +508,67 @@ pub async fn get_header_from_height(
 	block_header
 }
 
+pub async fn get_signatures_upto_height(
+	rpc: RpcClient,
+	program_id: Pubkey,
+	upto_height: u64,
+) -> Vec<(Vec<(u16, Signature)>, BlockHeader)> {
+	let transactions = get_previous_transactions(rpc, program_id).await;
+	let mut all_signatures = Vec::new();
+	let mut all_block_headers = Vec::new();
+	for tx in transactions.unwrap() {
+		let logs = match tx.result.transaction.meta.clone().unwrap().log_messages {
+			solana_transaction_status::option_serializer::OptionSerializer::Some(e) => e,
+			_ => Vec::new(),
+		};
+		let (events, _proof_height) = get_events_from_logs(logs);
+		let mut reached_height = false;
+		for event in events {
+			match event {
+				solana_ibc::events::Event::NewBlock(e) => {
+					println!(
+						"This is new block event when fetching for height {:?}",
+						e.block_header.0.block_height
+					);
+					let block_height = u64::from(e.block_header.0.block_height);
+					if block_height >= upto_height {
+						all_block_headers.push(e.block_header.0.clone());
+					} else {
+						log::info!("breaking out of upto height");
+						reached_height = true;
+					}
+				},
+				solana_ibc::events::Event::BlockSigned(e) => {
+					all_signatures.push(e);
+				},
+				_ => (),
+			}
+		}
+		if reached_height {
+			break
+		}
+	}
+	let block_headers = all_block_headers
+		.iter()
+		.map(|b| {
+			let mut index = -1;
+			let signatures_for_header: Vec<_> = all_signatures
+				.iter()
+				.filter_map(|s| {
+					if s.block_height == b.block_height {
+						index += 1;
+						Some((index as u16, Signature::from_bytes(&s.signature.to_vec()).unwrap()))
+					} else {
+						None
+					}
+				})
+				.collect();
+			(signatures_for_header, b.clone())
+		})
+		.collect();
+	block_headers
+}
+
 pub async fn get_previous_transactions(
 	rpc: RpcClient,
 	program_id: Pubkey,
@@ -504,7 +576,11 @@ pub async fn get_previous_transactions(
 	let transaction_signatures = rpc
 		.get_signatures_for_address_with_config(
 			&program_id,
-			GetConfirmedSignaturesForAddress2Config { limit: Some(200), commitment: Some(CommitmentConfig::confirmed()), ..Default::default() },
+			GetConfirmedSignaturesForAddress2Config {
+				limit: Some(200),
+				commitment: Some(CommitmentConfig::confirmed()),
+				..Default::default()
+			},
 		)
 		.await
 		.unwrap();

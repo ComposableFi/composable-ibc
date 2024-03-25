@@ -282,7 +282,7 @@ pub async fn query_ready_and_timed_out_packets(
 							&sink_channel_end,
 							packet,
 							next_sequence_recv.next_sequence_receive,
-							proof_height,
+							latest_sink_height_on_source,
 						)
 							.await?;
 						return Ok(Some(Left(msg)))
