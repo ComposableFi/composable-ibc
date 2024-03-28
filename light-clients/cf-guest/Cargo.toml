@@ -13,9 +13,9 @@ ed25519-consensus = { version = "2", default-features = false }
 serde = { version = "1.0", default-features = false, features = ["derive"] }
 
 # New IBC
-ibc-core-client-types = { git = "https://github.com/cosmos/ibc-rs", rev = "6dd3c6465e594d4c177f21724dd896a15e8f3634", default-features = false }
-ibc-core-handler-types = { git = "https://github.com/cosmos/ibc-rs", rev = "6dd3c6465e594d4c177f21724dd896a15e8f3634", default-features = false }
-ibc-core-host-types = { git = "https://github.com/cosmos/ibc-rs", rev = "6dd3c6465e594d4c177f21724dd896a15e8f3634", default-features = false, features = ["borsh", "serde"]}
+ibc-core-client-types = { git = "https://github.com/dhruvja/ibc-rs", rev = "6bb51e2d02c016d572974ec8f47633c1f85b6ba8", default-features = false }
+ibc-core-handler-types = { git = "https://github.com/dhruvja/ibc-rs", rev = "6bb51e2d02c016d572974ec8f47633c1f85b6ba8", default-features = false }
+ibc-core-host-types = { git = "https://github.com/dhruvja/ibc-rs", rev = "6bb51e2d02c016d572974ec8f47633c1f85b6ba8", default-features = false }
 
 # Old IBC
 ibc = { path = "../../ibc/modules", default-features = false }

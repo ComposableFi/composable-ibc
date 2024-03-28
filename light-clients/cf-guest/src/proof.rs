@@ -137,11 +137,11 @@ pub enum VerifyError {
 	/// Proof verification failed.
 	VerificationFailed,
 
-    /// Signature is malformed
-    MalformedSignature,
+	/// Signature is malformed
+	MalformedSignature,
 
-    /// Public key is malformed
-    MalformedPublicKey,
+	/// Public key is malformed
+	MalformedPublicKey,
 }
 
 impl From<borsh::maybestd::io::Error> for VerifyError {
