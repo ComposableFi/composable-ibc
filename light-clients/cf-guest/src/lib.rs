@@ -10,7 +10,7 @@ use ibc_proto::google::protobuf::Any;
 
 pub mod client;
 pub mod client_def;
-mod client_impls;
+//mod client_impls;
 mod consensus;
 pub mod error;
 mod header;
@@ -20,7 +20,7 @@ pub mod proof;
 pub mod proto;
 
 pub use client::ClientState;
-pub use client_impls::CommonContext;
+//pub use client_impls::CommonContext;
 pub use consensus::ConsensusState;
 pub use header::Header;
 pub use message::ClientMessage;
@@ -145,3 +145,129 @@ macro_rules! any_convert {
 }
 
 use any_convert;
+
+
+macro_rules! wrap {
+	($($Inner:ident)::* as $Outer:ident) => {
+		#[derive(Clone, derive_more::From, derive_more::Into)]
+		#[repr(transparent)]
+		pub struct $Outer(pub(crate) $($Inner)::*);
+	};
+
+	($($Inner:ident)::*<PK> as $Outer:ident) => {
+		#[derive(Clone, PartialEq, Eq, derive_more::From, derive_more::Into)]
+		#[repr(transparent)]
+		pub struct $Outer<PK: guestchain::PubKey>(
+			pub(crate) $($Inner)::*<PK>,
+		);
+	};
+
+	(impl Default for $Outer:ident) => {
+		impl Default for $Outer {
+			fn default() -> Self { Self(Default::default()) }
+		}
+	};
+
+	(impl Eq for $Outer:ident) => {
+		impl core::cmp::PartialEq for $Outer {
+			fn eq(&self, other: &Self) -> bool { self.0.eq(other.0) }
+		}
+		impl core::cmp::Eq for $Outer { }
+	};
+
+	(impl<PK> Default for $Outer:ident) => {
+		impl<PK: Default> Default for $Outer<PK> {
+			fn default() -> Self { Self(Default::default()) }
+		}
+	};
+
+	(impl display $Trait:ident for $Outer:ident) => {
+		impl core::fmt::$Trait for $Outer {
+			fn fmt(&self, fmtr: &mut core::fmt::Formatter) -> core::fmt::Result {
+				self.0.fmt(fmtr)
+			}
+		}
+	};
+
+	(impl<PK> display $Trait:ident for $Outer:ident) => {
+		impl<PK: guestchain::PubKey + core::fmt::$Trait> core::fmt::$Trait for $Outer<PK> {
+			fn fmt(&self, fmtr: &mut core::fmt::Formatter) -> core::fmt::Result {
+				self.0.fmt(fmtr)
+			}
+		}
+	};
+
+	(impl any for $Outer:ident) => {
+		impl From<$Outer> for ibc_proto::google::protobuf::Any {
+			fn from(msg: $Outer) -> Self {
+				Self::from(&msg)
+			}
+		}
+
+		impl From<&$Outer> for ibc_proto::google::protobuf::Any {
+			fn from(msg: &$Outer) -> Self {
+				let any = cf_guest_upstream::proto::Any::from(&msg.0);
+				Self {
+					type_url: any.type_url,
+					value: any.value
+				}
+			}
+		}
+
+		impl TryFrom<ibc_proto::google::protobuf::Any> for $Outer {
+			type Error = $crate::DecodeError;
+			fn try_from(any: ibc_proto::google::protobuf::Any) -> Result<Self, Self::Error> {
+				Self::try_from(&any)
+			}
+		}
+
+		impl TryFrom<&ibc_proto::google::protobuf::Any> for $Outer {
+			type Error = $crate::DecodeError;
+			fn try_from(any: &ibc_proto::google::protobuf::Any) -> Result<Self, Self::Error> {
+				let any = cf_guest_upstream::proto::Any {
+					type_url: any.type_url,
+					value: any.value
+				};
+				any.try_into().map(Self).map_err(Into::into)
+			}
+		}
+	};
+
+	(impl<PK> any for $Outer:ident) => {
+		impl<PK: guestchain::PubKey> From<$Outer<PK>> for ibc_proto::google::protobuf::Any {
+			fn from(msg: $Outer<PK>) -> Self {
+				Self::from(&msg)
+			}
+		}
+
+		impl<PK: guestchain::PubKey> From<&$Outer<PK>> for ibc_proto::google::protobuf::Any {
+			fn from(msg: &$Outer<PK>) -> Self {
+				let any = cf_guest_upstream::proto::Any::from(&msg.0);
+				Self {
+					type_url: any.type_url,
+					value: any.value
+				}
+			}
+		}
+
+		impl<PK: guestchain::PubKey> TryFrom<ibc_proto::google::protobuf::Any> for $Outer<PK> {
+			type Error = $crate::DecodeError;
+			fn try_from(any: ibc_proto::google::protobuf::Any) -> Result<Self, Self::Error> {
+				Self::try_from(&any)
+			}
+		}
+
+		impl<PK: guestchain::PubKey> TryFrom<&ibc_proto::google::protobuf::Any> for $Outer<PK> {
+			type Error = $crate::DecodeError;
+			fn try_from(any: &ibc_proto::google::protobuf::Any) -> Result<Self, Self::Error> {
+				let any = cf_guest_upstream::proto::Any {
+					type_url: any.type_url,
+					value: any.value
+				};
+				any.try_into().map(Self).map_err(Into::into)
+			}
+		}
+	};
+}
+
+use wrap;

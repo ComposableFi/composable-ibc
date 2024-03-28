@@ -55,7 +55,7 @@ where
 		client_state: Self::ClientState,
 		client_msg: Self::ClientMessage,
 	) -> Result<(), Ics02ClientError> {
-		client_state.verify_client_message(self, &client_id, client_msg)
+		client_state.0.do_verify_client_message(self, client_msg.0)
 	}
 
 	fn update_state<Ctx: ibc::core::ics26_routing::context::ReaderContext>(
@@ -68,11 +68,11 @@ where
 		(Self::ClientState, ibc::core::ics02_client::client_def::ConsensusUpdateResult<Ctx>),
 		Ics02ClientError,
 	> {
-    let header = match client_msg {
-			ClientMessage::Header(header) => header,
+		let header = match client_msg.0 {
+			cf_guest_upstream::ClientMessage::Header(header) => header,
 			_ => unreachable!("02-client will check for Header before calling update_state; qed"),
 		};
-		let header_consensus_state = ClientConsensusState::from(header.clone());
+		let header_consensus_state = ClientConsensusState::from(&header);
 		let cs = Ctx::AnyConsensusState::wrap(&header_consensus_state).ok_or_else(|| {
 			Error::UnknownConsensusStateType { description: "Ctx::AnyConsensusState".to_string() }
 		})?;

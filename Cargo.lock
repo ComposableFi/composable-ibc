@@ -1188,10 +1188,32 @@ dependencies = [
 
 [[package]]
 name = "cf-guest"
+version = "0.0.0"
+dependencies = [
+ "borsh",
+ "bytemuck",
+ "derive_more",
+ "guestchain",
+ "ibc-core-client-context",
+ "ibc-core-commitment-types",
+ "ibc-core-host",
+ "ibc-primitives 0.50.0",
+ "ibc-proto 0.41.0",
+ "lib",
+ "prost 0.12.3",
+ "prost-build 0.12.3",
+ "sealable-trie",
+ "stdx",
+ "trie-ids",
+]
+
+[[package]]
+name = "cf-guest"
 version = "0.0.1"
 dependencies = [
  "borsh",
  "bytemuck",
+ "cf-guest 0.0.0",
  "derive_more",
  "ed25519-consensus",
  "guestchain",
@@ -1205,6 +1227,7 @@ dependencies = [
  "lib",
  "memory",
  "prost 0.11.6",
+ "prost 0.12.3",
  "prost-build 0.11.6",
  "rand 0.8.5",
  "sealable-trie",
@@ -1220,7 +1243,7 @@ version = "0.1.0"
 dependencies = [
  "borsh",
  "byteorder",
- "cf-guest",
+ "cf-guest 0.0.1",
  "cosmwasm-schema",
  "cosmwasm-std",
  "cw-multi-test",
@@ -4290,7 +4313,6 @@ dependencies = [
 [[package]]
 name = "guestchain"
 version = "0.0.0"
-source = "git+https://github.com/ComposableFi/emulated-light-client/#f54a1fdc1adc7c44472110d4a47bfc6cab92c370"
 dependencies = [
  "borsh",
  "bytemuck",
@@ -6152,7 +6174,6 @@ checksum = "830d08ce1d1d941e6b30645f1a0eb5643013d835ce3779a5fc208261dbe10f55"
 [[package]]
 name = "lib"
 version = "0.0.0"
-source = "git+https://github.com/ComposableFi/emulated-light-client/#f54a1fdc1adc7c44472110d4a47bfc6cab92c370"
 dependencies = [
  "base64 0.21.0",
  "borsh",
@@ -6981,7 +7002,6 @@ dependencies = [
 [[package]]
 name = "memory"
 version = "0.0.0"
-source = "git+https://github.com/ComposableFi/emulated-light-client/#f54a1fdc1adc7c44472110d4a47bfc6cab92c370"
 dependencies = [
  "derive_more",
  "stdx",
@@ -13109,7 +13129,6 @@ dependencies = [
 [[package]]
 name = "sealable-trie"
 version = "0.0.0"
-source = "git+https://github.com/ComposableFi/emulated-light-client/#f54a1fdc1adc7c44472110d4a47bfc6cab92c370"
 dependencies = [
  "ascii",
  "base64 0.21.0",
@@ -14794,7 +14813,6 @@ dependencies = [
 [[package]]
 name = "stdx"
 version = "0.0.0"
-source = "git+https://github.com/ComposableFi/emulated-light-client/#f54a1fdc1adc7c44472110d4a47bfc6cab92c370"
 
 [[package]]
 name = "strsim"
@@ -15999,7 +16017,6 @@ dependencies = [
 [[package]]
 name = "trie-ids"
 version = "0.0.0"
-source = "git+https://github.com/ComposableFi/emulated-light-client/#f54a1fdc1adc7c44472110d4a47bfc6cab92c370"
 dependencies = [
  "ascii",
  "base64 0.21.0",
