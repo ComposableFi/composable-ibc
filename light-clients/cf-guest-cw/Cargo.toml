@@ -1,5 +1,5 @@
 [package]
-name = "ics07-guest-cw"
+name = "cf-guest-cw"
 version = "0.1.0"
 authors = ["Composable, Strangelove Developers"]
 edition = "2021"

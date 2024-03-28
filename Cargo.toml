@@ -28,7 +28,7 @@ members = [
     "light-clients/ics07-tendermint",
     "light-clients/ics07-tendermint-cw",
     "light-clients/cf-guest",
-    "light-clients/ics07-guest-cw",
+    "light-clients/cf-guest-cw",
     "light-clients/ics08-wasm",
     "light-clients/ics10-grandpa",
     "light-clients/ics10-grandpa-cw",
