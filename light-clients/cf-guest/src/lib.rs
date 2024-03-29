@@ -64,15 +64,13 @@ macro_rules! wrap {
 	($($Inner:ident)::* as $Outer:ident) => {
 		#[derive(Clone, derive_more::From, derive_more::Into)]
 		#[repr(transparent)]
-		pub struct $Outer(pub(crate) $($Inner)::*);
+		pub struct $Outer(pub $($Inner)::*);
 	};
 
 	($($Inner:ident)::*<PK> as $Outer:ident) => {
 		#[derive(Clone, PartialEq, Eq, derive_more::From, derive_more::Into)]
 		#[repr(transparent)]
-		pub struct $Outer<PK: guestchain::PubKey>(
-			pub(crate) $($Inner)::*<PK>,
-		);
+		pub struct $Outer<PK: guestchain::PubKey>(pub $($Inner)::*<PK>);
 	};
 
 	(impl Default for $Outer:ident) => {
@@ -142,6 +140,8 @@ macro_rules! wrap {
 					.map_err(Self::Error::from)
 			}
 		}
+
+		impl tendermint_proto::Protobuf<ibc_proto::google::protobuf::Any> for $Outer {}
 	};
 
 	(impl<PK> any for $Outer:ident) => {
@@ -173,6 +173,8 @@ macro_rules! wrap {
 					.map_err(Self::Error::from)
 			}
 		}
+
+		impl<PK: guestchain::PubKey> tendermint_proto::Protobuf<ibc_proto::google::protobuf::Any> for $Outer<PK> {}
 	};
 
 	(impl proto for $Type:ident) => {

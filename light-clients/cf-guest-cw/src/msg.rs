@@ -263,11 +263,11 @@ impl VerifyClientMessage {
 		let client_message = match raw {
 			ClientMessageRaw::Header(header) => {
 				let any = Any::decode(&mut header.data.as_slice())?;
-				ClientMessage::Header(Header::decode_vec(&any.value)?)
+				Header::decode_vec(&any.value)?.into()
 			},
 			ClientMessageRaw::Misbehaviour(misbehaviour) => {
 				let any = Any::decode(&mut misbehaviour.data.as_slice())?;
-				ClientMessage::Misbehaviour(Misbehaviour::decode_vec(&any.value)?)
+				Misbehaviour::decode_vec(&any.value)?.into()
 			},
 		};
 		Ok(client_message)
@@ -357,7 +357,7 @@ impl TryFrom<VerifyUpgradeAndUpdateStateMsgRaw> for VerifyUpgradeAndUpdateStateM
 		let any = Any::decode(&mut raw.upgrade_client_state.data.as_slice())?;
 		let upgrade_client_state: ClientState<crate::crypto::PubKey> =
 			ClientState::decode_vec(&any.value)?;
-		if upgrade_client_state.is_frozen {
+		if upgrade_client_state.0.is_frozen {
 			return ibc::prelude::Err(ContractError::Tendermint(
 				"Upgrade client state not zeroed".to_string(),
 			))

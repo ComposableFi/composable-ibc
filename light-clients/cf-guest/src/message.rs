@@ -1,7 +1,5 @@
 use guestchain::PubKey;
-use ibc_proto::google::protobuf::Any;
 use prost::Message as _;
-use tendermint_proto::Protobuf;
 
 use crate::proto;
 
@@ -20,4 +18,14 @@ where
 	}
 }
 
-impl<PK: PubKey> Protobuf<Any> for ClientMessage<PK> {}
+impl<PK: guestchain::PubKey> From<crate::Header<PK>> for ClientMessage<PK> {
+	fn from(msg: crate::Header<PK>) -> Self {
+		Self(cf_guest_upstream::ClientMessage::Header(msg.0))
+	}
+}
+
+impl<PK: guestchain::PubKey> From<crate::Misbehaviour<PK>> for ClientMessage<PK> {
+	fn from(msg: crate::Misbehaviour<PK>) -> Self {
+		Self(cf_guest_upstream::ClientMessage::Misbehaviour(msg.0.into()))
+	}
+}

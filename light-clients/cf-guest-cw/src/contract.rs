@@ -40,6 +40,7 @@ use ibc::core::{
 	ics23_commitment::commitment::CommitmentPrefix,
 	ics24_host::identifier::ClientId,
 };
+use ibc::core::ics02_client::client_state::ClientState as _;
 use ics08_wasm::SUBJECT_PREFIX;
 use std::str::FromStr;
 
@@ -56,7 +57,7 @@ pub fn instantiate(
 	let client_state = ctx
 		.client_state(&client_id)
 		.map_err(|e| ContractError::Tendermint(e.to_string()))?;
-	let latest_height = ibc::Height::new(0, client_state.latest_height.into());
+	let latest_height = client_state.latest_height();
 	ctx.store_update_height(client_id.clone(), latest_height, ctx.host_height())
 		.map_err(|e| ContractError::Tendermint(e.to_string()))?;
 	ctx.store_update_time(client_id, latest_height, ctx.host_timestamp())
@@ -198,7 +199,7 @@ fn process_message(
 									.map_err(|e| ContractError::Tendermint(e.to_string()))?;
 							},
 					}
-					if u64::from(cs.latest_height) > latest_revision_height {
+					if u64::from(cs.0.latest_height) > latest_revision_height {
 						ctx.store_client_state(client_id, cs)
 							.map_err(|e| ContractError::Tendermint(e.to_string()))?;
 					}
@@ -266,15 +267,14 @@ pub fn query(deps: Deps, env: Env, msg: QueryMsg) -> StdResult<Binary> {
 				return to_binary(&QueryResponse::status("Frozen".to_string()));
 			}
 
-			let height = client_state.latest_height;
-			let height = ibc::Height::new(0, height.into());
+			let height = client_state.latest_height();
 			let consensus_state = match get_consensus_state(deps, &client_id, height) {
 				Ok(state) => state,
 				Err(_) => return to_binary(&QueryResponse::status("Expired".to_string())),
 			};
 
-			let last_update = consensus_state.timestamp_ns.get();
-			let trusting_period = client_state.trusting_period_ns;
+			let last_update = consensus_state.0.timestamp_ns.get();
+			let trusting_period = client_state.0.trusting_period_ns;
 			let now = env.block.time.nanos();
 			if last_update + trusting_period < now {
 				return to_binary(&QueryResponse::status("Expired".to_string()))

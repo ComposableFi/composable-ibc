@@ -35,6 +35,7 @@ use ibc::{
 	Height,
 };
 use ibc_proto::google::protobuf::Any;
+use ibc::core::ics02_client::client_state::ClientState as _;
 
 use cf_guest::{client_def::GuestClient, ClientMessage, ClientState, ConsensusState};
 
@@ -290,7 +291,7 @@ impl<'a> Context<'a> {
 			})?;
 		wasm_client_state.data =
 			ibc_proto::google::protobuf::Any::from(&client_state).encode_to_vec();
-		wasm_client_state.latest_height = ibc::Height::new(0, client_state.latest_height.into());
+		wasm_client_state.latest_height = client_state.latest_height();
 		let vec1 = wasm_client_state.to_any().encode_to_vec();
 		Ok(vec1)
 	}
