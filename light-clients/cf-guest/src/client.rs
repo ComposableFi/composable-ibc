@@ -15,11 +15,12 @@ use ibc::{
 use lib::hash::CryptoHash;
 use serde::{Deserialize, Serialize};
 
-use crate::{client_def::GuestClient, proto, CLIENT_TYPE};
+use crate::{client_def::GuestClient, CLIENT_TYPE};
 
 super::wrap!(cf_guest_upstream::ClientState<PK> as ClientState);
 super::wrap!(impl<PK> display Debug for ClientState);
 super::wrap!(impl<PK> any for ClientState);
+super::wrap!(impl<PK> proto for ClientState);
 
 // impl<PK: guestchain::PubKey> Protobuf<crate::proto::ClientState> for ClientState<PK> {}
 
@@ -140,31 +141,5 @@ where
 
 	fn encode_to_vec(&self) -> Result<ibc::prelude::Vec<u8>, tendermint_proto::Error> {
 		Ok(self.0.encode())
-	}
-}
-
-impl<PK: guestchain::PubKey> From<ClientState<PK>> for proto::ClientState {
-	fn from(state: ClientState<PK>) -> Self {
-		Self::from(&state)
-	}
-}
-
-impl<PK: guestchain::PubKey> From<&ClientState<PK>> for proto::ClientState {
-	fn from(state: &ClientState<PK>) -> Self {
-		Self(cf_guest_upstream::proto::ClientState::from(&state.0))
-	}
-}
-
-impl<PK: guestchain::PubKey> TryFrom<proto::ClientState> for ClientState<PK> {
-	type Error = proto::BadMessage;
-	fn try_from(msg: proto::ClientState) -> Result<Self, Self::Error> {
-		Self::try_from(&msg)
-	}
-}
-
-impl<PK: guestchain::PubKey> TryFrom<&proto::ClientState> for ClientState<PK> {
-	type Error = proto::BadMessage;
-	fn try_from(msg: &proto::ClientState) -> Result<Self, Self::Error> {
-		Ok(Self(cf_guest_upstream::ClientState::try_from(msg.0)?))
 	}
 }

@@ -42,7 +42,7 @@ where
 	fn verify_client_message<Ctx: ibc::core::ics26_routing::context::ReaderContext>(
 		&self,
 		_ctx: &Ctx,
-		client_id: ibc::core::ics24_host::identifier::ClientId,
+		_client_id: ibc::core::ics24_host::identifier::ClientId,
 		client_state: Self::ClientState,
 		client_msg: Self::ClientMessage,
 	) -> Result<(), Ics02ClientError> {

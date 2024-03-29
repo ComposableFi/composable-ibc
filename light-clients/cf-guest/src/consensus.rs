@@ -9,6 +9,7 @@ super::wrap!(cf_guest_upstream::ConsensusState as ConsensusState);
 super::wrap!(impl Eq for ConsensusState);
 super::wrap!(impl display Debug for ConsensusState);
 super::wrap!(impl any for ConsensusState);
+super::wrap!(impl proto for ConsensusState);
 
 impl ConsensusState {
 	pub fn new(block_hash: &CryptoHash, timestamp_ns: NonZeroU64) -> Self {
@@ -54,31 +55,5 @@ impl<PK: guestchain::PubKey> From<cf_guest_upstream::Header<PK>> for ConsensusSt
 impl<PK: guestchain::PubKey> From<&cf_guest_upstream::Header<PK>> for ConsensusState {
 	fn from(header: &cf_guest_upstream::Header<PK>) -> Self {
 		Self(header.into())
-	}
-}
-
-impl From<ConsensusState> for proto::ConsensusState {
-	fn from(state: ConsensusState) -> Self {
-		Self(cf_guest_upstream::proto::ConsensusState::from(&state.0))
-	}
-}
-
-impl From<&ConsensusState> for proto::ConsensusState {
-	fn from(state: &ConsensusState) -> Self {
-		Self(cf_guest_upstream::proto::ConsensusState::from(&state.0))
-	}
-}
-
-impl TryFrom<proto::ConsensusState> for ConsensusState {
-	type Error = proto::BadMessage;
-	fn try_from(msg: proto::ConsensusState) -> Result<Self, Self::Error> {
-		Self::try_from(&msg)
-	}
-}
-
-impl TryFrom<&proto::ConsensusState> for ConsensusState {
-	type Error = proto::BadMessage;
-	fn try_from(msg: &proto::ConsensusState) -> Result<Self, Self::Error> {
-		Ok(Self(cf_guest_upstream::ConsensusState::try_from(msg.0)?))
 	}
 }

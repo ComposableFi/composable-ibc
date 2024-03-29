@@ -137,11 +137,9 @@ macro_rules! wrap {
 		impl TryFrom<&ibc_proto::google::protobuf::Any> for $Outer {
 			type Error = $crate::DecodeError;
 			fn try_from(any: &ibc_proto::google::protobuf::Any) -> Result<Self, Self::Error> {
-				let any = cf_guest_upstream::proto::Any {
-					type_url: any.type_url,
-					value: any.value
-				};
-				any.try_into().map(Self).map_err(Into::into)
+				cf_guest_upstream::proto::AnyConvert::try_from_any(&any.type_url, &any.value)
+					.map(Self)
+					.map_err(Self::Error::from)
 			}
 		}
 	};
@@ -155,11 +153,8 @@ macro_rules! wrap {
 
 		impl<PK: guestchain::PubKey> From<&$Outer<PK>> for ibc_proto::google::protobuf::Any {
 			fn from(msg: &$Outer<PK>) -> Self {
-				let any = cf_guest_upstream::proto::Any::from(&msg.0);
-				Self {
-					type_url: any.type_url,
-					value: any.value
-				}
+				let (url, value) = cf_guest_upstream::proto::AnyConvert::to_any(&msg.0);
+				Self { type_url: url.into(), value }
 			}
 		}
 
@@ -173,39 +168,65 @@ macro_rules! wrap {
 		impl<PK: guestchain::PubKey> TryFrom<&ibc_proto::google::protobuf::Any> for $Outer<PK> {
 			type Error = $crate::DecodeError;
 			fn try_from(any: &ibc_proto::google::protobuf::Any) -> Result<Self, Self::Error> {
-				let any = cf_guest_upstream::proto::Any {
-					type_url: any.type_url,
-					value: any.value
-				};
-				any.try_into().map(Self).map_err(Into::into)
+				cf_guest_upstream::proto::AnyConvert::try_from_any(&any.type_url, &any.value)
+					.map(Self)
+					.map_err(Self::Error::from)
+			}
+		}
+	};
+
+	(impl proto for $Type:ident) => {
+		impl From<$Type> for $crate::proto::$Type {
+			fn from(msg: $Type) -> Self {
+				Self(cf_guest_upstream::proto::$Type::from(&msg.0))
+			}
+		}
+
+		impl From<&$Type> for $crate::proto::$Type {
+			fn from(msg: &$Type) -> Self {
+				Self(cf_guest_upstream::proto::$Type::from(&msg.0))
+			}
+		}
+
+		impl TryFrom<$crate::proto::$Type> for $Type {
+			type Error = $crate::proto::BadMessage;
+			fn try_from(msg: $crate::proto::$Type) -> Result<Self, Self::Error> {
+				Self::try_from(&msg)
+			}
+		}
+
+		impl TryFrom<&$crate::proto::$Type> for $Type {
+			type Error = $crate::proto::BadMessage;
+			fn try_from(msg: &$crate::proto::$Type) -> Result<Self, Self::Error> {
+				Ok(Self(cf_guest_upstream::$Type::try_from(&msg.0)?))
 			}
 		}
 	};
 
 	(impl<PK> proto for $Type:ident) => {
-		impl<PK: guestchain::PubKey> From<$Type<PK>> for proto::$Type {
+		impl<PK: guestchain::PubKey> From<$Type<PK>> for $crate::proto::$Type {
 			fn from(msg: $Type<PK>) -> Self {
 				Self(cf_guest_upstream::proto::$Type::from(&msg.0))
 			}
 		}
 
-		impl<PK: guestchain::PubKey> From<&$Type<PK>> for proto::$Type {
+		impl<PK: guestchain::PubKey> From<&$Type<PK>> for $crate::proto::$Type {
 			fn from(msg: &$Type<PK>) -> Self {
 				Self(cf_guest_upstream::proto::$Type::from(&msg.0))
 			}
 		}
 
-		impl<PK: guestchain::PubKey> TryFrom<proto::$Type> for $Type<PK> {
-			type Error = proto::BadMessage;
-			fn try_from(msg: proto::$Type) -> Result<Self, Self::Error> {
+		impl<PK: guestchain::PubKey> TryFrom<$crate::proto::$Type> for $Type<PK> {
+			type Error = $crate::proto::BadMessage;
+			fn try_from(msg: $crate::proto::$Type) -> Result<Self, Self::Error> {
 				Self::try_from(&msg)
 			}
 		}
 
-		impl<PK: guestchain::PubKey> TryFrom<&proto::$Type> for $Type<PK> {
-			type Error = proto::BadMessage;
-			fn try_from(msg: &proto::$Type) -> Result<Self, Self::Error> {
-				Ok(Self(cf_guest_upstream::$Type::try_from(msg.0)?))
+		impl<PK: guestchain::PubKey> TryFrom<&$crate::proto::$Type> for $Type<PK> {
+			type Error = $crate::proto::BadMessage;
+			fn try_from(msg: &$crate::proto::$Type) -> Result<Self, Self::Error> {
+				Ok(Self(cf_guest_upstream::$Type::try_from(&msg.0)?))
 			}
 		}
 	};

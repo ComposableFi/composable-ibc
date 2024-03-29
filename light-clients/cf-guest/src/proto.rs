@@ -63,7 +63,7 @@ macro_rules! import_proto {
 		impl TryFrom<&ibc_proto::google::protobuf::Any> for $Msg {
 			type Error = DecodeError;
 			fn try_from(any: &ibc_proto::google::protobuf::Any) -> Result<Self, Self::Error> {
-				<cf_guest_upstream::proto::$Msg as cf_guest_upstream::proto::AnyConvert>::try_from_any(&any.type_url, &any.value)
+				cf_guest_upstream::proto::AnyConvert::try_from_any(&any.type_url, &any.value)
 					.map(Self)
 					.map_err(DecodeError::from)
 			}
