@@ -8,7 +8,7 @@ use ibc_core_host_types::path::{
 
 mod ibc {
 	pub use ibc::core::{
-        ics02_client::error::Error as ClientError,
+		ics02_client::error::Error as ClientError,
 		ics04_channel::packet::Sequence,
 		ics23_commitment::commitment::{CommitmentPrefix, CommitmentProofBytes, CommitmentRoot},
 		ics24_host::{
@@ -93,10 +93,9 @@ pub fn verify(
 		proof.as_bytes(),
 		root.as_bytes(),
 		convert_old_path_to_new(path),
-		value
+		value,
 	)
 }
-
 
 fn convert_old_path_to_new(path: ibc::path::Path) -> ibc_core_host_types::path::Path {
 	match path {
@@ -174,6 +173,6 @@ fn convert_old_path_to_new(path: ibc::path::Path) -> ibc_core_host_types::path::
 				sequence: u64::from(e.sequence.0).into(),
 			}),
 		::ibc::core::ics24_host::Path::Upgrade(_) => panic!("Not supported"),
-		::ibc::core::ics24_host::Path::Outside(e) =>  panic!("Not supported {:?}", e),
+		::ibc::core::ics24_host::Path::Outside(e) => panic!("Not supported {:?}", e),
 	}
 }

@@ -27,13 +27,12 @@ use crate::{
 use cosmwasm_std::{to_binary, Addr, CosmosMsg, StdResult, WasmMsg};
 use ibc::core::{
 	ics02_client::{
-		client_consensus::ConsensusState as _, context::ClientReader, error::Error as Ics02Error,
-		height::Height,
+		client_consensus::ConsensusState as _, client_state::ClientState as _,
+		context::ClientReader, error::Error as Ics02Error, height::Height,
 	},
 	ics23_commitment::{commitment::CommitmentProofBytes, merkle::MerkleProof},
 	ics24_host::identifier::ClientId,
 };
-use ibc::core::ics02_client::client_state::ClientState as _;
 use ibc_proto::{
 	google::protobuf::Any,
 	ibc::core::commitment::v1::{MerklePath, MerkleProof as RawMerkleProof},

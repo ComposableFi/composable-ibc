@@ -65,12 +65,24 @@ macro_rules! wrap {
 		#[derive(Clone, derive_more::From, derive_more::Into)]
 		#[repr(transparent)]
 		pub struct $Outer(pub $($Inner)::*);
+
+		impl core::fmt::Debug for $Outer {
+			fn fmt(&self, fmtr: &mut core::fmt::Formatter) -> core::fmt::Result {
+				self.0.fmt(fmtr)
+			}
+		}
 	};
 
 	($($Inner:ident)::*<PK> as $Outer:ident) => {
 		#[derive(Clone, PartialEq, Eq, derive_more::From, derive_more::Into)]
 		#[repr(transparent)]
 		pub struct $Outer<PK: guestchain::PubKey>(pub $($Inner)::*<PK>);
+
+		impl<PK: guestchain::PubKey + core::fmt::Debug> core::fmt::Debug for $Outer<PK> {
+			fn fmt(&self, fmtr: &mut core::fmt::Formatter) -> core::fmt::Result {
+				self.0.fmt(fmtr)
+			}
+		}
 	};
 
 	(impl Default for $Outer:ident) => {
@@ -89,22 +101,6 @@ macro_rules! wrap {
 	(impl<PK> Default for $Outer:ident) => {
 		impl<PK: Default> Default for $Outer<PK> {
 			fn default() -> Self { Self(Default::default()) }
-		}
-	};
-
-	(impl display $Trait:ident for $Outer:ident) => {
-		impl core::fmt::$Trait for $Outer {
-			fn fmt(&self, fmtr: &mut core::fmt::Formatter) -> core::fmt::Result {
-				self.0.fmt(fmtr)
-			}
-		}
-	};
-
-	(impl<PK> display $Trait:ident for $Outer:ident) => {
-		impl<PK: guestchain::PubKey + core::fmt::$Trait> core::fmt::$Trait for $Outer<PK> {
-			fn fmt(&self, fmtr: &mut core::fmt::Formatter) -> core::fmt::Result {
-				self.0.fmt(fmtr)
-			}
 		}
 	};
 
@@ -135,9 +131,7 @@ macro_rules! wrap {
 		impl TryFrom<&ibc_proto::google::protobuf::Any> for $Outer {
 			type Error = $crate::DecodeError;
 			fn try_from(any: &ibc_proto::google::protobuf::Any) -> Result<Self, Self::Error> {
-				cf_guest_upstream::proto::AnyConvert::try_from_any(&any.type_url, &any.value)
-					.map(Self)
-					.map_err(Self::Error::from)
+				Ok(Self(cf_guest_upstream::proto::AnyConvert::try_from_any(&any.type_url, &any.value)?))
 			}
 		}
 
@@ -153,8 +147,11 @@ macro_rules! wrap {
 
 		impl<PK: guestchain::PubKey> From<&$Outer<PK>> for ibc_proto::google::protobuf::Any {
 			fn from(msg: &$Outer<PK>) -> Self {
-				let (url, value) = cf_guest_upstream::proto::AnyConvert::to_any(&msg.0);
-				Self { type_url: url.into(), value }
+				let any = cf_guest_upstream::proto::Any::from(&msg.0);
+				Self {
+					type_url: any.type_url,
+					value: any.value
+				}
 			}
 		}
 
@@ -168,9 +165,7 @@ macro_rules! wrap {
 		impl<PK: guestchain::PubKey> TryFrom<&ibc_proto::google::protobuf::Any> for $Outer<PK> {
 			type Error = $crate::DecodeError;
 			fn try_from(any: &ibc_proto::google::protobuf::Any) -> Result<Self, Self::Error> {
-				cf_guest_upstream::proto::AnyConvert::try_from_any(&any.type_url, &any.value)
-					.map(Self)
-					.map_err(Self::Error::from)
+				Ok(Self(cf_guest_upstream::proto::AnyConvert::try_from_any(&any.type_url, &any.value)?))
 			}
 		}
 

@@ -18,7 +18,6 @@ use serde::{Deserialize, Serialize};
 use crate::{client_def::GuestClient, CLIENT_TYPE};
 
 super::wrap!(cf_guest_upstream::ClientState<PK> as ClientState);
-super::wrap!(impl<PK> display Debug for ClientState);
 super::wrap!(impl<PK> any for ClientState);
 super::wrap!(impl<PK> proto for ClientState);
 

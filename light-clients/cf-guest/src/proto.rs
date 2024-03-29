@@ -4,7 +4,7 @@ macro_rules! import_proto {
 	($Msg:ident) => {
 		$crate::wrap!(cf_guest_upstream::proto::$Msg as $Msg);
 		$crate::wrap!(impl Default for $Msg);
-		$crate::wrap!(impl display Debug for $Msg);
+		$crate::wrap!(impl any for $Msg);
 
 		impl prost::Message for $Msg {
 			fn encode_raw<B: prost::bytes::BufMut>(&self, buf: &mut B) {
@@ -37,35 +37,6 @@ macro_rules! import_proto {
 
 			fn clear(&mut self) {
 				prost_12::Message::clear(&mut self.0)
-			}
-		}
-
-		impl From<$Msg> for ibc_proto::google::protobuf::Any {
-			fn from(msg: $Msg) -> Self {
-				Self::from(&msg)
-			}
-		}
-
-		impl From<&$Msg> for ibc_proto::google::protobuf::Any {
-			fn from(msg: &$Msg) -> Self {
-				let (url, value) = cf_guest_upstream::proto::AnyConvert::to_any(&msg.0);
-				Self { type_url: url.into(), value }
-			}
-		}
-
-		impl TryFrom<ibc_proto::google::protobuf::Any> for $Msg {
-			type Error = DecodeError;
-			fn try_from(any: ibc_proto::google::protobuf::Any) -> Result<Self, Self::Error> {
-				Self::try_from(&any)
-			}
-		}
-
-		impl TryFrom<&ibc_proto::google::protobuf::Any> for $Msg {
-			type Error = DecodeError;
-			fn try_from(any: &ibc_proto::google::protobuf::Any) -> Result<Self, Self::Error> {
-				cf_guest_upstream::proto::AnyConvert::try_from_any(&any.type_url, &any.value)
-					.map(Self)
-					.map_err(DecodeError::from)
 			}
 		}
 	}

@@ -24,7 +24,7 @@ use ibc::{
 	core::{
 		ics02_client::{
 			client_consensus::ConsensusState as _,
-			client_state::ClientType,
+			client_state::{ClientState as _, ClientType},
 			context::{ClientKeeper, ClientReader, ClientTypes},
 			error::Error,
 		},
@@ -35,7 +35,6 @@ use ibc::{
 	Height,
 };
 use ibc_proto::google::protobuf::Any;
-use ibc::core::ics02_client::client_state::ClientState as _;
 
 use cf_guest::{client_def::GuestClient, ClientMessage, ClientState, ConsensusState};
 

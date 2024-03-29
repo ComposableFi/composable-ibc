@@ -1,4 +1,3 @@
 super::wrap!(cf_guest_upstream::Header<PK> as Header);
-super::wrap!(impl<PK> display Debug for Header);
 super::wrap!(impl<PK> any for Header);
 super::wrap!(impl<PK> proto for Header);

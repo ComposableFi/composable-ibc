@@ -4,7 +4,6 @@ use prost::Message as _;
 use crate::proto;
 
 super::wrap!(cf_guest_upstream::ClientMessage<PK> as ClientMessage);
-super::wrap!(impl<PK> display Debug for ClientMessage);
 super::wrap!(impl<PK> any for ClientMessage);
 super::wrap!(impl<PK> proto for ClientMessage);
 

@@ -40,7 +40,6 @@ use ibc::core::{
 	ics23_commitment::commitment::CommitmentPrefix,
 	ics24_host::identifier::ClientId,
 };
-use ibc::core::ics02_client::client_state::ClientState as _;
 use ics08_wasm::SUBJECT_PREFIX;
 use std::str::FromStr;
 
