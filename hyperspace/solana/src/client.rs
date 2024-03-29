@@ -456,18 +456,14 @@ deserialize consensus state"
 					let hashed_denom =
 						CryptoHash::digest(&token.denom.base_denom.as_str().as_bytes());
 					log::info!("PortId: {:?} and channel {:?} and token {:?}", port_id, channel_id, token);
-					let (escrow_account, token_mint) = if !is_receiver_chain_source(
-						port_id.clone(),
-						channel_id.clone(),
-						&token.denom,
-					) {
+					let base_denom = token.denom.base_denom.clone();
+					let (escrow_account, token_mint) = if Pubkey::from_str(&base_denom.to_string()).is_ok() {
 						log::info!("Receiver chain source");
 						let escrow_seeds =
 							[port_id.as_bytes(), channel_id.as_bytes(), hashed_denom.as_ref()];
 						let escrow_account =
 							Pubkey::find_program_address(&escrow_seeds, &self.program_id).0;
 						let prefix = TracePrefix::new(port_id.clone(), channel_id.clone());
-						let mut base_denom = token.denom.base_denom.clone();
 						// trace_path.remove_prefix(&prefix);
 						let token_mint = Pubkey::from_str(&base_denom.to_string()).unwrap();
 						(Some(escrow_account), token_mint)

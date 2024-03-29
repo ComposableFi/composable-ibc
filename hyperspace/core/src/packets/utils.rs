@@ -41,6 +41,7 @@ use pallet_ibc::light_clients::AnyClientState;
 use primitives::{find_suitable_proof_height_for_client, Chain};
 use std::{str::FromStr, time::Duration};
 use tendermint_proto::Protobuf;
+use lib::hash::CryptoHash;
 
 #[allow(clippy::too_many_arguments)]
 pub async fn get_timeout_proof_height(
@@ -246,15 +247,19 @@ pub async fn construct_timeout_message(
 	let key = get_key_path(path_type, &packet).into_bytes();
 
 	let proof_unreceived = sink.query_proof(proof_height, vec![key]).await?;
-	let mut proof_bytes = proof_unreceived.clone();
-	let (header, _): (guestchain::BlockHeader, sealable_trie::proof::Proof) =
-			borsh::BorshDeserialize::deserialize_reader(&mut proof_bytes.as_slice())?;
 	let proof_unreceived = CommitmentProofBytes::try_from(proof_unreceived)?;
 	let msg = if sink_channel_end.state == State::Closed {
 		let channel_key = get_key_path(KeyPathType::ChannelPath, &packet).into_bytes();
 		let proof_closed = sink.query_proof(proof_height, vec![channel_key]).await?;
 		let proof_closed = CommitmentProofBytes::try_from(proof_closed)?;
-		let actual_proof_height = sink.get_proof_height(proof_height).await;
+		let actual_proof_height = if sink.name() == "solana" {
+			let mut proof_bytes = proof_unreceived.clone();
+			let (header, _): (guestchain::BlockHeader, sealable_trie::proof::Proof) =
+				borsh::BorshDeserialize::deserialize_reader(&mut proof_bytes.as_bytes())?;
+			Height::new(1, header.block_height.into())
+		} else {
+			sink.get_proof_height(proof_height).await
+		};
 		let msg = MsgTimeoutOnClose {
 			packet,
 			next_sequence_recv: next_sequence_recv.into(),
@@ -270,8 +275,14 @@ pub async fn construct_timeout_message(
 		let value = msg.encode_vec()?;
 		Any { value, type_url: msg.type_url() }
 	} else {
-		// let actual_proof_height = sink.get_proof_height(proof_height).await;
-		let actual_proof_height = Height::new(1, header.block_height.into());
+		let actual_proof_height = if sink.name() == "solana" {
+			let mut proof_bytes = proof_unreceived.clone();
+			let (header, _): (guestchain::BlockHeader, sealable_trie::proof::Proof) =
+				borsh::BorshDeserialize::deserialize_reader(&mut proof_bytes.as_bytes())?;
+			Height::new(1, header.block_height.into())
+		} else {
+			sink.get_proof_height(proof_height).await
+		};
 		log::debug!(target: "hyperspace", "actual_proof_height={actual_proof_height}");
 		let msg = MsgTimeout {
 			packet,
@@ -294,7 +305,16 @@ pub async fn construct_recv_message(
 	let key = get_key_path(KeyPathType::CommitmentPath, &packet).into_bytes();
 	let proof = source.query_proof(proof_height, vec![key]).await?;
 	let commitment_proof = CommitmentProofBytes::try_from(proof)?;
-	let actual_proof_height = source.get_proof_height(proof_height).await;
+	let actual_proof_height = if source.name() == "solana" {
+		log::info!("Getting proof height from solana");
+		let mut proof_bytes = commitment_proof.clone();
+		let (header, _): (guestchain::BlockHeader, sealable_trie::proof::Proof) =
+			borsh::BorshDeserialize::deserialize_reader(&mut proof_bytes.as_bytes())?;
+		Height::new(1, header.block_height.into())
+	} else {
+		log::info!("Getting proof height from cosmos");
+		source.get_proof_height(proof_height).await
+	};
 	let msg = MsgRecvPacket {
 		packet,
 		proofs: Proofs::new(commitment_proof, None, None, None, actual_proof_height)?,
@@ -316,7 +336,18 @@ pub async fn construct_ack_message(
 	log::debug!(target: "hyperspace", "query proof for acks path: {:?}", key);
 	let proof = source.query_proof(proof_height, vec![key.into_bytes()]).await?;
 	let commitment_proof = CommitmentProofBytes::try_from(proof)?;
-	let actual_proof_height = source.get_proof_height(proof_height).await;
+	let actual_proof_height = if source.name() == "solana" {
+		log::info!("Getting proof height from solana");
+		let mut proof_bytes = commitment_proof.clone();
+		let (header, _): (guestchain::BlockHeader, sealable_trie::proof::Proof) =
+			borsh::BorshDeserialize::deserialize_reader(&mut proof_bytes.as_bytes())?;
+		Height::new(1, header.block_height.into())
+	} else {
+		log::info!("Getting proof height from cosmos");
+		source.get_proof_height(proof_height).await
+	};
+	
+	log::info!("This is ack {:?}", CryptoHash::digest(&ack));
 	let msg = MsgAcknowledgement {
 		packet,
 		proofs: Proofs::new(commitment_proof, None, None, None, actual_proof_height)?,

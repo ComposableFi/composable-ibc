@@ -248,13 +248,14 @@ async fn process_some_finality_event<A: Chain, B: Chain>(
 		timeout_msgs.len()
 	);
 
-	process_updates(source, sink, metrics, mode, updates, &mut msgs, timeout_msgs.clone()).await?;
+	process_updates(source, sink, metrics, mode, updates, &mut msgs, ready_packets.clone()).await?;
 
 	msgs.extend(ready_packets);
 
 	process_messages(sink, metrics, msgs).await?;
 
-	if sink.name() == "solana" {
+	if sink.name() == "solana" && timeout_msgs.len() > 0 {
+		log::info!("Inside timeout msgs fetching height");
 		let mut timeout_heights = Vec::new();
 		if timeout_msgs.len() > 0 {
 			for msg in timeout_msgs.iter() {
@@ -278,7 +279,9 @@ async fn process_some_finality_event<A: Chain, B: Chain>(
 				.enumerate()
 				.filter_map(|(index, event)| {
 					let height = match event.clone() {
-						ibc::events::IbcEvent::NewBlock(ibc::core::ics02_client::events::NewBlock { height }) => height,
+						ibc::events::IbcEvent::NewBlock(
+							ibc::core::ics02_client::events::NewBlock { height },
+						) => height,
 						_ => panic!("Only expected new block event"),
 					};
 					if timeout_heights.contains(&height.revision_height) {
@@ -289,9 +292,9 @@ async fn process_some_finality_event<A: Chain, B: Chain>(
 				.collect();
 			// Reverse the updates so that the latest update is sent at end
 			let mut reversed_updates = updates_to_be_sent.iter().rev().cloned().collect::<Vec<_>>();
-			reversed_updates.iter().for_each(|update| {
-				timeout_msgs.insert(0, update.clone()) 
-			});
+			reversed_updates
+				.iter()
+				.for_each(|update| timeout_msgs.insert(0, update.clone()));
 			// timeout_msgs = (reversed_updates.as_slice(), timeout_msgs.as_slice()).concat();
 			// timeout_msgs.append(&mut reversed_updates);
 		}
@@ -326,21 +329,57 @@ async fn process_updates<A: Chain, B: Chain>(
 	log::info!("Updates on {} are {}", source.name(), updates.len());
 
 	let mut timeout_heights = Vec::new();
-	if timeout_msgs.len() > 0 {
+	let mut updates_to_be_added = Vec::new();
+	if timeout_msgs.len() > 0 && source.name() == "solana" {
+		log::info!("Inside sending updates in fetching height");
 		for msg in timeout_msgs.iter() {
 			let my_message = ibc::core::ics26_routing::msgs::Ics26Envelope::<
 				primitives::mock::LocalClientTypes,
 			>::try_from(msg.clone())
 			.unwrap();
-			let timeout_msg = match my_message {
+			let height = match my_message {
 				ibc::core::ics26_routing::msgs::Ics26Envelope::Ics4PacketMsg(packet_msg) =>
 					match packet_msg {
-						ibc::core::ics04_channel::msgs::PacketMsg::ToPacket(msg) => msg,
+						ibc::core::ics04_channel::msgs::PacketMsg::ToPacket(msg) =>
+							msg.proofs.height(),
+						ibc::core::ics04_channel::msgs::PacketMsg::AckPacket(msg) =>
+							msg.proofs.height(),
+						ibc::core::ics04_channel::msgs::PacketMsg::RecvPacket(msg) =>
+							msg.proofs.height(),
+						ibc::core::ics04_channel::msgs::PacketMsg::ToClosePacket(msg) =>
+							msg.proofs.height(),
 						_ => continue,
 					},
 				_ => continue,
 			};
-			timeout_heights.push(timeout_msg.proofs.height());
+			timeout_heights.push(height);
+		}
+		let (mandatory_updates, heights) = source.fetch_mandatory_updates(sink).await.unwrap();
+		let latest_update_height = updates.last().unwrap().1.revision_height;
+		let height_is_greater = timeout_heights
+			.iter()
+			.any(|height| height.revision_height > latest_update_height);
+		if height_is_greater {
+			// log::info!("Height is greater than timeout height {:?}", );
+			log::info!("These are heights {:?}", heights);
+			let updates_to_be_sent: Vec<Any> = heights
+				.iter()
+				.enumerate()
+				.filter_map(|(index, event)| {
+					let height = match event.clone() {
+						ibc::events::IbcEvent::NewBlock(
+							ibc::core::ics02_client::events::NewBlock { height },
+						) => height,
+						_ => panic!("Only expected new block event"),
+					};
+					let temp_height = Height::new(1, height.revision_height);
+					if timeout_heights.contains(&temp_height) && height.revision_height > latest_update_height {
+						return Some(mandatory_updates[index].clone())
+					}
+					None
+				})
+				.collect();
+			updates_to_be_added = updates_to_be_sent;
 		}
 	}
 	log::info!(
@@ -407,11 +446,11 @@ async fn process_updates<A: Chain, B: Chain>(
 			},
 			(false, _, true) =>
 				if update_type.is_optional() && need_to_send_proofs_for_sequences {
-					log::info!("Sending an optional update because source ({}) chain has undelivered sequences", sink.name());
+					log::info!("Sending an optional update because source ({}) chain has undelivered sequences at height{}", sink.name(), height.revision_height);
 				} else {
-					log::info!("Sending mandatory client update message for {}", sink.name())
+					log::info!("Sending mandatory client update message for {} at height {}", sink.name(), height.revision_height)
 				},
-			_ => log::info!("Received finalized events from: {} {event_types:#?}", source.name()),
+			_ => log::info!("Received finalized events from: {} at height {} {event_types:#?}", source.name(), height.revision_height),
 		};
 		log::info!(
 			"pushed msg update client for {} with msg {} of len {}",
@@ -422,6 +461,7 @@ async fn process_updates<A: Chain, B: Chain>(
 		msgs.push(msg_update_client);
 		msgs.append(&mut messages);
 	}
+	msgs.append(&mut updates_to_be_added);
 	Ok(())
 }
 

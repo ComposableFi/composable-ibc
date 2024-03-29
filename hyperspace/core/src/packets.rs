@@ -282,7 +282,7 @@ pub async fn query_ready_and_timed_out_packets(
 							&sink_channel_end,
 							packet,
 							next_sequence_recv.next_sequence_receive,
-							latest_sink_height_on_source,
+							proof_height,
 						)
 							.await?;
 						return Ok(Some(Left(msg)))
@@ -413,9 +413,10 @@ pub async fn query_ready_and_timed_out_packets(
 		.take(max_packets_to_process)
 		.collect::<Vec<_>>();
 
+		log::info!("THese are acks {:?}", acks);
 		let acknowledgements =
 			source.query_received_packets(channel_id, port_id.clone(), acks).await?;
-		log::trace!(target: "hyperspace", "Got acknowledgements for channel {:?}: {:?}", channel_id, acknowledgements);
+		log::info!(target: "hyperspace", "Got acknowledgements for channel {:?}: {:?}", channel_id, acknowledgements);
 		let mut acknowledgements_join_set: JoinSet<Result<_, anyhow::Error>> = JoinSet::new();
 		sink.on_undelivered_sequences(!acknowledgements.is_empty(), UndeliveredType::Acks)
 			.await;
@@ -436,7 +437,7 @@ pub async fn query_ready_and_timed_out_packets(
 						ack
 					} else {
 						// Packet has no valid acknowledgement, skip
-						log::trace!(target: "hyperspace", "Skipping acknowledgement for packet {:?} as packet has no valid acknowledgement", packet);
+						log::info!(target: "hyperspace", "Skipping acknowledgement for packet {:?} as packet has no valid acknowledgement", packet);
 						return Ok(None)
 					};
 
@@ -445,15 +446,16 @@ pub async fn query_ready_and_timed_out_packets(
 					// creation height, we can't send it yet packet_info.height should represent the
 					// acknowledgement creation height on source chain
 					let ack_height = acknowledgement.height.ok_or_else(|| {
+						log::info!("No height found");
 						Error::Custom(format!("Packet height not found for packet {packet:?}"))
 					})?;
 					if ack_height > latest_source_height_on_sink.revision_height {
 						// Sink does not have client update required to prove acknowledgement packet message
-						log::trace!(target: "hyperspace", "Skipping acknowledgement for packet {:?} as sink does not have client update required to prove acknowledgement packet message", packet);
+						log::info!(target: "hyperspace", "Skipping acknowledgement for packet {:?} as sink does not have client update required to prove acknowledgement packet message", packet);
 						return Ok(None)
 					}
 
-					log::trace!(target: "hyperspace", "sink_height: {:?}, latest_source_height_on_sink: {:?}, acknowledgement.height: {}", sink_height, latest_source_height_on_sink, ack_height);
+					log::info!(target: "hyperspace", "sink_height: {:?}, latest_source_height_on_sink: {:?}, acknowledgement.height: {}", sink_height, latest_source_height_on_sink, ack_height);
 
 					let proof_height = if let Some(proof_height) = find_suitable_proof_height_for_client(
 						&**source,

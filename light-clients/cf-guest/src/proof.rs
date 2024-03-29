@@ -201,7 +201,7 @@ pub fn verify(
 		(header.state_root, proof)
 	};
 
-	let value = if let Some(value) = value {
+	let values = if let Some(value) = value {
 		Some(if let Some(seq_kind) = path.seq_kind {
 			debug_assert!(path.client_id.is_none());
 			// If path.seq_kind is set, `value` must be encoded
@@ -223,13 +223,14 @@ pub fn verify(
 				_ => unreachable!(),
 			};
 			CryptoHash(bytemuck::must_cast(hash))
+			// CryptoHash::try_from(value).unwrap()
 		} else if let Some(id) = path.client_id.as_ref() {
 			// If path includes client id, hash stored in the trie is calculated
 			// with the id mixed in.
 			super::digest_with_client_id(&ibc::ClientId::from_str(id.as_str()).unwrap(), value)
 		} else {
 			// Otherwise, simply hash the value.
-			if matches!(new_path, Path::Commitment(_)) {
+			if matches!(new_path, Path::Commitment(_)) || matches!(new_path, Path::Ack(_)) {
 				<CryptoHash>::try_from(value).unwrap()
 			} else {
 				CryptoHash::digest(value)
@@ -238,10 +239,12 @@ pub fn verify(
 	} else {
 		None
 	};
-
+	// if matches!(new_path, Path::Ack(_)) {
+	// 	panic!("These are before conversion {:?} after conversion {:?}", value, values);
+	// }
 	if !proof_bytes.is_empty() {
 		Err(VerifyError::ProofDecodingFailure("Spurious bytes".into()))
-	} else if proof.verify(&state_root, &path.key, value.as_ref()) {
+	} else if proof.verify(&state_root, &path.key, values.as_ref()) {
 		Ok(())
 	} else {
 		Err(VerifyError::VerificationFailed)

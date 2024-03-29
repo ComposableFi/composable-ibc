@@ -5319,6 +5319,7 @@ dependencies = [
  "ics10-grandpa",
  "ics11-beefy",
  "itertools 0.10.5",
+ "lib",
  "light-client-common",
  "log",
  "once_cell",

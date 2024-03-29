@@ -1,4 +1,3 @@
-use codec::{Decode, Encode};
 use ibc::core::ics26_routing::msgs::Ics26Envelope;
 use ibc_core_channel_types::{
 	channel::Order,
@@ -30,7 +29,6 @@ use ibc_proto_new::{google::protobuf::Any, ibc::core::connection::v1::Version};
 use ics08_wasm::client_state::WASM_CLIENT_STATE_TYPE_URL;
 use primitives::mock::LocalClientTypes;
 use std::str::FromStr;
-use tendermint_proto::Protobuf;
 
 use crate::{
 	client_state::convert_old_client_state_to_new,
@@ -521,6 +519,7 @@ pub fn convert_old_msgs_to_new(messages: Vec<Ics26Envelope<LocalClientTypes>>) -
 
 #[test]
 fn testing() {
+	use codec::Decode;
 	let data = vec![
 		10, 37, 47, 105, 98, 99, 46, 108, 105, 103, 104, 116, 99, 108, 105, 101, 110, 116, 115, 46,
 		119, 97, 115, 109, 46, 118, 49, 46, 67, 108, 105, 101, 110, 116, 83, 116, 97, 116, 101, 18,
@@ -533,5 +532,5 @@ fn testing() {
 		18, 32, 164, 76, 61, 62, 180, 193, 102, 227, 43, 192, 209, 38, 157, 235, 249, 246, 4, 222,
 		122, 174, 164, 82, 20, 20, 96, 34, 91, 173, 14, 136, 32, 213, 26, 4, 8, 1, 16, 17,
 	];
-	let decode_into_any = Any::decode(&mut data.as_slice()).unwrap();
+	let _decode_into_any = Any::decode(&mut data.as_slice()).unwrap();
 }

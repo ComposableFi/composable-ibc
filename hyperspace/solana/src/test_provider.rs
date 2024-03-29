@@ -1,8 +1,8 @@
-use crate::{client::SolanaClient, error::Error};
+use crate::{client::SolanaClient, error::Error, events};
 use anchor_client::{
 	solana_client::{
 		pubsub_client::PubsubClient,
-		rpc_config::{RpcBlockSubscribeConfig, RpcBlockSubscribeFilter},
+		rpc_config::{RpcTransactionLogsConfig, RpcTransactionLogsFilter},
 	},
 	solana_sdk::commitment_config::CommitmentConfig,
 };
@@ -14,8 +14,6 @@ use ibc::{
 };
 use primitives::TestProvider;
 use tokio::sync::mpsc::unbounded_channel;
-use crate::events;
-use anchor_client::solana_client::rpc_config::{RpcTransactionLogsConfig, RpcTransactionLogsFilter};
 
 #[async_trait::async_trait]
 impl TestProvider for SolanaClient {
@@ -50,7 +48,8 @@ impl TestProvider for SolanaClient {
 			loop {
 				match receiver.recv() {
 					Ok(logs) => {
-						let (events, _proof_height) = events::get_events_from_logs(logs.clone().value.logs);
+						let (events, _proof_height) =
+							events::get_events_from_logs(logs.clone().value.logs);
 						let finality_events: Vec<&solana_ibc::events::BlockFinalised> = events
 							.iter()
 							.filter_map(|event| match event {
@@ -63,7 +62,9 @@ impl TestProvider for SolanaClient {
 							let mut broke = false;
 							assert_eq!(finality_events.len(), 1);
 							let finality_event = finality_events[0].clone();
-							let _ = tx.send(u64::from(finality_event.block_height)).map_err(|_| broke = true);
+							let _ = tx
+								.send(u64::from(finality_event.block_height))
+								.map_err(|_| broke = true);
 							if broke {
 								break
 							}

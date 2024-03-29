@@ -5,11 +5,10 @@ use anchor_client::{
 	solana_sdk::{commitment_config::CommitmentConfig, pubkey::Pubkey},
 };
 use guestchain::{BlockHeader, Signature as SignatureTrait};
-use itertools::Itertools;
 use lib::hash::CryptoHash;
 use serde::{Deserialize, Serialize};
 use solana_transaction_status::EncodedConfirmedTransactionWithStatusMeta;
-use std::{str::FromStr, thread::sleep, time::Duration};
+use std::str::FromStr;
 
 use base64::Engine;
 use ibc::{
@@ -41,7 +40,7 @@ use ibc::{
 	timestamp::Timestamp,
 	Height,
 };
-use pallet_ibc::light_clients::{PubKey, Signature};
+use pallet_ibc::light_clients::Signature;
 
 pub fn convert_new_event_to_old(
 	event: ibc_core_handler_types::events::IbcEvent,
@@ -389,6 +388,72 @@ pub fn get_ibc_events_from_logs(
 	(events, proof_height)
 }
 
+pub async fn get_client_state_at_height(
+	rpc: RpcClient,
+	program_id: Pubkey,
+	upto_height: u64,
+) -> Option<solana_ibc::client_state::AnyClientState> {
+	let mut client_state = None;
+	let mut before_hash = None;
+	let mut current_height = upto_height;
+	while current_height >= upto_height && current_height > 0 {
+		let (transactions, last_searched_hash) =
+			get_previous_transactions(&rpc, program_id, before_hash).await;
+		before_hash = Some(
+			anchor_client::solana_sdk::signature::Signature::from_str(&last_searched_hash).unwrap(),
+		);
+		for tx in transactions {
+			let logs = match tx.result.transaction.meta.clone().unwrap().log_messages {
+				solana_transaction_status::option_serializer::OptionSerializer::Some(e) => e,
+				_ => Vec::new(),
+			};
+			// Filter with client state msg prepended
+			let client_state_logs: Vec<&str> = logs
+				.iter()
+				.filter_map(|log| {
+					if log.starts_with("Program log: This is updated client state ") {
+						Some(
+							log.strip_prefix("Program log: This is updated client state ").unwrap(),
+						)
+					} else {
+						None
+					}
+				})
+				.collect();
+			let height_str = logs
+				.iter()
+				.find_map(|log| {
+					if log.starts_with("Program log: Current Block height ") {
+						Some(log.strip_prefix("Program log: Current Block height ").unwrap())
+					} else {
+						None
+					}
+				})
+				.map_or("0", |height| height);
+			let height = height_str.parse::<u64>().unwrap();
+			current_height = height;
+			if height == 0 || client_state_logs.is_empty() {
+				continue
+			}
+			if height < upto_height {
+				break
+			}
+			// There can be only one client state event in a tx
+			let client_state_log = client_state_logs[0];
+			let bytes: Vec<u8> = client_state_log
+				.trim_matches(|c: char| c == '[' || c == ']') // Trim the square brackets
+				.split(", ") // Split the string into individual numbers
+				.map(|s| s.parse::<u8>().unwrap()) // Convert each number from &str to u8
+				.collect(); // Collect into a Vec<u8>
+			let any_client_state: solana_ibc::client_state::AnyClientState =
+				borsh::BorshDeserialize::try_from_slice(bytes.as_slice()).unwrap();
+			log::info!("This is any client state {:?}", any_client_state);
+			client_state = Some(any_client_state);
+		}
+	}
+	client_state
+}
+
 pub fn get_events_from_logs(logs: Vec<String>) -> (Vec<solana_ibc::events::Event<'static>>, u64) {
 	let serialized_events: Vec<&str> = logs
 		.iter()
@@ -420,20 +485,19 @@ pub fn get_events_from_logs(logs: Vec<String>) -> (Vec<solana_ibc::events::Event
 			decoded_event
 		})
 		.collect();
-	(events, height + 1)
+	(events, height)
 }
 
 pub async fn get_signatures_for_blockhash(
 	rpc: RpcClient,
 	program_id: Pubkey,
 	blockhash: CryptoHash,
-) -> Result<(Vec<(u16, Signature)>, BlockHeader), String> {
-	// sleep(Duration::from_secs(10));
-	let transactions = get_previous_transactions(rpc, program_id).await;
+) -> Result<(Vec<(Pubkey, Signature)>, BlockHeader), String> {
+	let (transactions, _) = get_previous_transactions(&rpc, program_id, None).await;
 
 	let mut signatures = Vec::new();
-	let mut index = 0;
-	for tx in transactions.unwrap() {
+	// let mut index = 0;
+	for tx in transactions {
 		let logs = match tx.result.transaction.meta.clone().unwrap().log_messages {
 			solana_transaction_status::option_serializer::OptionSerializer::Some(e) => e,
 			_ => Vec::new(),
@@ -457,7 +521,7 @@ pub async fn get_signatures_for_blockhash(
 					if e.block_hash == blockhash {
 						println!("This is block signed in side blockhash");
 						signatures
-							.push((0_u16, Signature::from_bytes(&e.signature.to_vec()).unwrap()))
+							.push((Pubkey::new_from_array(e.pubkey.clone().into()), Signature::from_bytes(&e.signature.to_vec()).unwrap()))
 					};
 					None
 				},
@@ -476,33 +540,39 @@ pub async fn get_header_from_height(
 	program_id: Pubkey,
 	height: u64,
 ) -> Option<BlockHeader> {
-	// sleep(Duration::from_secs(2));
-	let transactions = get_previous_transactions(rpc, program_id).await;
+	let mut before_hash = None;
 	let mut block_header = None;
-	for tx in transactions.unwrap() {
-		let logs = match tx.result.transaction.meta.clone().unwrap().log_messages {
-			solana_transaction_status::option_serializer::OptionSerializer::Some(e) => e,
-			_ => Vec::new(),
-		};
-		let (events, _proof_height) = get_events_from_logs(logs);
-		// Find block signed events with blockhash
-		block_header = events.iter().find_map(|event| match event {
-			solana_ibc::events::Event::NewBlock(e) => {
-				println!(
-					"This is new block event when fetching for height {:?}",
-					e.block_header.0.block_height
-				);
-				let block_height = u64::from(e.block_header.0.block_height);
-				if block_height == height {
-					println!("New block event where it is true for height {:?}", height);
-					return Some(e.block_header.0.clone())
-				}
-				None
-			},
-			_ => None,
-		});
-		if block_header.is_some() {
-			return block_header
+	while block_header.is_none() {
+		let (transactions, last_searched_hash) =
+			get_previous_transactions(&rpc, program_id, before_hash).await;
+		before_hash = Some(
+			anchor_client::solana_sdk::signature::Signature::from_str(&last_searched_hash).unwrap(),
+		);
+		for tx in transactions {
+			let logs = match tx.result.transaction.meta.clone().unwrap().log_messages {
+				solana_transaction_status::option_serializer::OptionSerializer::Some(e) => e,
+				_ => Vec::new(),
+			};
+			let (events, _proof_height) = get_events_from_logs(logs);
+			// Find block signed events with blockhash
+			block_header = events.iter().find_map(|event| match event {
+				solana_ibc::events::Event::NewBlock(e) => {
+					println!(
+						"This is new block event when fetching for height {:?}",
+						e.block_header.0.block_height
+					);
+					let block_height = u64::from(e.block_header.0.block_height);
+					if block_height == height {
+						println!("New block event where it is true for height {:?}", height);
+						return Some(e.block_header.0.clone())
+					}
+					None
+				},
+				_ => None,
+			});
+			if block_header.is_some() {
+				return block_header
+			}
 		}
 	}
 	block_header
@@ -512,98 +582,115 @@ pub async fn get_signatures_upto_height(
 	rpc: RpcClient,
 	program_id: Pubkey,
 	upto_height: u64,
-) -> Vec<(Vec<(u16, Signature)>, BlockHeader)> {
-	let transactions = get_previous_transactions(rpc, program_id).await;
+) -> Vec<(Vec<(Pubkey, Signature)>, BlockHeader)> {
+	let mut current_height = upto_height;
+	let mut before_hash = None;
 	let mut all_signatures = Vec::new();
 	let mut all_block_headers = Vec::new();
-	for tx in transactions.unwrap() {
-		let logs = match tx.result.transaction.meta.clone().unwrap().log_messages {
-			solana_transaction_status::option_serializer::OptionSerializer::Some(e) => e,
-			_ => Vec::new(),
-		};
-		let (events, _proof_height) = get_events_from_logs(logs);
-		let mut reached_height = false;
-		for event in events {
-			match event {
-				solana_ibc::events::Event::NewBlock(e) => {
-					println!(
-						"This is new block event when fetching for height {:?}",
-						e.block_header.0.block_height
-					);
-					let block_height = u64::from(e.block_header.0.block_height);
-					if block_height >= upto_height {
-						all_block_headers.push(e.block_header.0.clone());
-					} else {
-						log::info!("breaking out of upto height");
-						reached_height = true;
-					}
-				},
-				solana_ibc::events::Event::BlockSigned(e) => {
-					all_signatures.push(e);
-				},
-				_ => (),
+	log::info!("This is upto height {:?}", upto_height);
+	while current_height >= upto_height {
+		let (transactions, last_searched_hash) =
+			get_previous_transactions(&rpc, program_id, before_hash).await;
+		before_hash = Some(
+			anchor_client::solana_sdk::signature::Signature::from_str(&last_searched_hash).unwrap(),
+		);
+		for tx in transactions {
+			let logs = match tx.result.transaction.meta.clone().unwrap().log_messages {
+				solana_transaction_status::option_serializer::OptionSerializer::Some(e) => e,
+				_ => Vec::new(),
+			};
+			let (events, _proof_height) = get_events_from_logs(logs);
+			for event in events {
+				match event {
+					solana_ibc::events::Event::NewBlock(e) => {
+						println!(
+							"This is new block event when fetching for height {:?}",
+							e.block_header.0.block_height
+						);
+						let block_height = u64::from(e.block_header.0.block_height);
+						current_height = block_height;
+						if block_height >= upto_height {
+							all_block_headers.push(e.block_header.0.clone());
+						} else {
+							log::info!("breaking out of upto height");
+						}
+					},
+					solana_ibc::events::Event::BlockSigned(e) => {
+						all_signatures.push(e);
+					},
+					_ => (),
+				}
+			}
+			if current_height < upto_height {
+				break
 			}
 		}
-		if reached_height {
-			break
-		}
 	}
-	let block_headers = all_block_headers
+	all_block_headers
 		.iter()
-		.map(|b| {
-			let mut index = -1;
+		.filter_map(|b| {
 			let signatures_for_header: Vec<_> = all_signatures
 				.iter()
 				.filter_map(|s| {
 					if s.block_height == b.block_height {
-						index += 1;
-						Some((index as u16, Signature::from_bytes(&s.signature.to_vec()).unwrap()))
+						Some((
+							Pubkey::new_from_array(s.pubkey.clone().into()),
+							Signature::from_bytes(&s.signature.to_vec()).unwrap(),
+						))
 					} else {
 						None
 					}
 				})
 				.collect();
-			(signatures_for_header, b.clone())
+			if signatures_for_header.is_empty() {
+				return None
+			}
+			Some((signatures_for_header, b.clone()))
 		})
-		.collect();
-	block_headers
+		.collect()
 }
 
 pub async fn get_previous_transactions(
-	rpc: RpcClient,
+	rpc: &RpcClient,
 	program_id: Pubkey,
-) -> Result<Vec<Response>, reqwest::Error> {
+	before_hash: Option<anchor_client::solana_sdk::signature::Signature>,
+) -> (Vec<Response>, String) {
 	let transaction_signatures = rpc
 		.get_signatures_for_address_with_config(
 			&program_id,
 			GetConfirmedSignaturesForAddress2Config {
 				limit: Some(200),
+				before: before_hash,
 				commitment: Some(CommitmentConfig::confirmed()),
 				..Default::default()
 			},
 		)
 		.await
 		.unwrap();
+	let last_searched_hash = transaction_signatures
+		.last()
+		.map_or("".to_string(), |sig| sig.signature.clone());
 	let mut body = vec![];
 	for sig in transaction_signatures {
 		let signature = sig.signature.clone();
 		let payload = Payload {
 			jsonrpc: "2.0".to_string(),
-			id: 1,
+			id: 1 as u64,
 			method: "getTransaction".to_string(),
 			params: (signature, Param { commitment: "confirmed".to_string() }),
 		};
 		body.push(payload);
 	}
+	let url = rpc.url();
 	tokio::task::spawn_blocking(move || {
-		let transactions: std::result::Result<Vec<Response>, reqwest::Error> =
-			reqwest::blocking::Client::new()
-				.post(rpc.url())
-				.json(&body)
-				.send()
-				.unwrap()
-				.json();
-		transactions
+		let transactions: Vec<Response> = reqwest::blocking::Client::new()
+			.post(url)
+			.json(&body)
+			.send()
+			.unwrap()
+			.json()
+			.unwrap();
+		(transactions, last_searched_hash)
 	})
 	.await
 	.unwrap()
@@ -631,9 +718,27 @@ pub struct Response {
 
 #[test]
 pub fn testing_events() {
-	let events = vec!["Program data: ABQMAAAAaWJjX3RyYW5zZmVyBQAAAAYAAABzZW5kZXIsAAAAQXZ4SFNwbmZGSEJtZWpGbkJKbXI2RTlIbVIyaUY4WTU2SzRkVjR1WDdrNDQIAAAAcmVjZWl2ZXIvAAAAY2VudGF1cmkxaGo1ZnZlZXI1Y2p0bjR3ZDZ3c3R6dWdqZmR4emwweHB6eGx3Z3MGAAAAYW1vdW50CQAAADIwMDAwMDAwMAUAAABkZW5vbSwAAAAzM1dWU2VmOXphdzQ5S2JOZFBHVG1BQ1ZSbkFYek4zbzFmc3FiVXJMcDJtaAQAAABtZW1vAAAAAA==".to_string()];
-	let converted_events = get_events_from_logs(events.clone());
-	let ibc = get_ibc_events_from_logs(events);
-	println!("These are events {:?}", converted_events);
-	println!("These are events {:?}", ibc);
+	let events = vec!["Program logged: This is updated client state [0, 121, 0, 0, 0, 10, 6, 116, 101, 115, 116, 45, 49, 18, 4, 8, 1, 16, 3, 26, 4, 8, 128, 244, 3, 34, 4, 8, 128, 223, 110, 42, 4, 8, 224, 198, 91, 50, 0, 58, 4, 8, 1, 16, 91, 66, 25, 10, 9, 8, 1, 24, 1, 32, 1, 42, 1, 0, 18, 12, 10, 2, 0, 1, 16, 33, 24, 4, 32, 12, 48, 1, 66, 25, 10, 9, 8, 1, 24, 1, 32, 1, 42, 1, 0, 18, 12, 10, 2, 0, 1, 16, 32, 24, 1, 32, 1, 48, 1, 74, 7, 117, 112, 103, 114, 97, 100, 101, 74, 16, 117, 112, 103, 114, 97, 100, 101, 100, 73, 66, 67, 83, 116, 97, 116, 101]".to_string()];
+	let client_state_logs: Vec<&str> = events
+		.iter()
+		.filter_map(|log| {
+			if log.starts_with("Program logged: This is updated client state ") {
+				Some(log.strip_prefix("Program logged: This is updated client state ").unwrap())
+			} else {
+				None
+			}
+		})
+		.collect();
+	// There can be only one client state event in a tx
+	let client_state_log = client_state_logs[0];
+	// Remove the square brackets and whitespace, then split the string into an iterator of &str,
+	// each representing a byte. Then parse each &str to a u8 and collect into a Vec<u8>
+	let bytes: Vec<u8> = client_state_log
+		.trim_matches(|c: char| c == '[' || c == ']') // Trim the square brackets
+		.split(", ") // Split the string into individual numbers
+		.map(|s| s.parse::<u8>().unwrap()) // Convert each number from &str to u8
+		.collect(); // Collect into a Vec<u8>
+	let any_client_state: solana_ibc::client_state::AnyClientState =
+		borsh::BorshDeserialize::try_from_slice(bytes.as_slice()).unwrap();
+	println!("This is any client state {:?}", any_client_state);
 }
