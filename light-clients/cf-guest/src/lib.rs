@@ -14,7 +14,7 @@ pub mod error;
 mod header;
 mod message;
 mod misbehaviour;
-//pub mod proof;
+pub mod proof;
 pub mod proto;
 
 pub use client::ClientState;

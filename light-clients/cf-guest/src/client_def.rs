@@ -362,7 +362,7 @@ fn verify(
 	value: Option<Vec<u8>>,
 ) -> Result<(), Ics02ClientError> {
 	cf_guest_upstream::proof::verify(
-		&Default::default(),
+		&[],
 		proof.as_bytes(),
 		root.bytes.as_slice(),
 		path,
