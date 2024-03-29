@@ -1,10 +1,14 @@
 use core::time::Duration;
 
 use crate::error::Error;
-use alloc::{string::{String, ToString}, vec::Vec};
+use alloc::{
+	string::{String, ToString},
+	vec::Vec,
+};
 use ibc::{
 	core::{
-		ics02_client::{height::Height}, ics23_commitment::specs::ProofSpecs, ics24_host::identifier::ClientId
+		ics02_client::height::Height, ics23_commitment::specs::ProofSpecs,
+		ics24_host::identifier::ClientId,
 	},
 	timestamp::Timestamp,
 };
@@ -79,7 +83,7 @@ impl<PK: guestchain::PubKey> ClientState<PK> {
 		}
 
 		if self.0.is_frozen {
-			return Err(Error::ClientFrozen{ client_id: client_id.clone() })
+			return Err(Error::ClientFrozen { client_id: client_id.clone() })
 		}
 		Ok(())
 	}

@@ -20,18 +20,18 @@ impl ibc::core::ics02_client::client_consensus::ConsensusState for ConsensusStat
 	type Error = Infallible;
 
 	fn root(&self) -> &ibc::core::ics23_commitment::commitment::CommitmentRoot {
-		&self.0.block_hash
+		// SAFETY: Both types are wrappers around Vec<u8>.
+		unsafe { core::mem::transmute(&self.0.block_hash) }
 	}
 
 	fn timestamp(&self) -> ibc::timestamp::Timestamp {
-		ibc::timestamp::Timestamp::from_nanoseconds(self.timestamp_ns.get()).unwrap()
+		ibc::timestamp::Timestamp::from_nanoseconds(self.0.timestamp_ns.get()).unwrap()
 	}
 
 	fn encode_to_vec(&self) -> Result<ibc::prelude::Vec<u8>, tendermint_proto::Error> {
 		Ok(proto::ConsensusState::from(self).encode_to_vec())
 	}
 }
-
 
 impl<PK: guestchain::PubKey> From<crate::Header<PK>> for ConsensusState {
 	fn from(header: crate::Header<PK>) -> Self {
@@ -56,7 +56,6 @@ impl<PK: guestchain::PubKey> From<&cf_guest_upstream::Header<PK>> for ConsensusS
 		Self(header.into())
 	}
 }
-
 
 impl From<ConsensusState> for proto::ConsensusState {
 	fn from(state: ConsensusState) -> Self {

@@ -1,27 +1,23 @@
-use core::marker::PhantomData;
-use core::str::FromStr;
+use core::{marker::PhantomData, str::FromStr};
 
 use guestchain::Signature;
 
 use crate::alloc::string::ToString;
 use alloc::vec::Vec;
 use guestchain::{PubKey, Verifier};
-use ibc::{
-	core::{
-		ics02_client::{
-			client_consensus::ConsensusState, client_def::{ClientDef, ConsensusUpdateResult},
-			client_state::ClientState as OtherClientState, error::Error as Ics02ClientError,
-		},
-		ics26_routing::context::ReaderContext,
+use ibc::core::{
+	ics02_client::{
+		client_consensus::ConsensusState,
+		client_def::{ClientDef, ConsensusUpdateResult},
+		client_state::ClientState as OtherClientState,
+		error::Error as Ics02ClientError,
 	},
+	ics26_routing::context::ReaderContext,
 };
 use prost::Message;
 use tendermint_proto::Protobuf;
 
-use crate::{
-	error::Error, ClientMessage, ClientState,
-	ConsensusState as ClientConsensusState,
-};
+use crate::{error::Error, ClientMessage, ClientState, ConsensusState as ClientConsensusState};
 
 type Result<T = (), E = ibc::core::ics02_client::error::Error> = ::core::result::Result<T, E>;
 
@@ -50,7 +46,9 @@ where
 		client_state: Self::ClientState,
 		client_msg: Self::ClientMessage,
 	) -> Result<(), Ics02ClientError> {
-		client_state.0.do_verify_client_message(self, client_msg.0)
+		client_state
+			.0
+			.do_verify_client_message(self, client_msg.0)
 			.map_err(old_from_new_error)
 	}
 
@@ -162,9 +160,8 @@ where
 	) -> Result<(), Ics02ClientError> {
 		client_state.verify_height(client_id, height)?;
 
-		let path = ibc_core_host_types::path::ConnectionPath(
-			new_from_old_connection(connection_id)
-		);
+		let path =
+			ibc_core_host_types::path::ConnectionPath(new_from_old_connection(connection_id));
 		let value = expected_connection_end.encode_vec().map_err(Ics02ClientError::encode)?;
 		verify(proof, root, path.into(), Some(value))
 	}
@@ -205,9 +202,7 @@ where
 	) -> Result<(), Ics02ClientError> {
 		client_state.verify_height(client_id, height)?;
 
-		let path = ibc_core_host_types::path::ClientStatePath(
-			new_from_old_client(client_id)
-		);
+		let path = ibc_core_host_types::path::ClientStatePath(new_from_old_client(client_id));
 		let value = expected_client_state.encode_to_vec().map_err(Ics02ClientError::encode)?;
 		verify(proof, root, path.into(), Some(value)).map_err(|e| e.into())
 	}
@@ -353,7 +348,8 @@ impl<PK: PubKey> Verifier<PK> for GuestClient<PK> {
 			let sig = ed25519_consensus::Signature::try_from(&signature[..]).ok()?;
 			pubkey.verify(&sig, message).ok()?;
 			Some(())
-		})().is_some()
+		})()
+		.is_some()
 	}
 }
 
@@ -372,24 +368,30 @@ fn verify(
 		path,
 		value.as_deref(),
 	)
-	.map_err(|err| {
-		Ics02ClientError::implementation_specific(err.to_string())
-	})
+	.map_err(|err| Ics02ClientError::implementation_specific(err.to_string()))
 }
 
-fn new_from_old_client(client_id: &ibc::core::ics24_host::identifier::ClientId) -> ibc_core_host_types::identifiers::ClientId {
+fn new_from_old_client(
+	client_id: &ibc::core::ics24_host::identifier::ClientId,
+) -> ibc_core_host_types::identifiers::ClientId {
 	FromStr::from_str(client_id.as_str()).unwrap()
 }
 
-fn new_from_old_connection(connection_id: &ibc::core::ics24_host::identifier::ConnectionId) -> ibc_core_host_types::identifiers::ConnectionId {
+fn new_from_old_connection(
+	connection_id: &ibc::core::ics24_host::identifier::ConnectionId,
+) -> ibc_core_host_types::identifiers::ConnectionId {
 	FromStr::from_str(connection_id.as_str()).unwrap()
 }
 
-fn new_from_old_port(port_id: &ibc::core::ics24_host::identifier::PortId) -> ibc_core_host_types::identifiers::PortId {
+fn new_from_old_port(
+	port_id: &ibc::core::ics24_host::identifier::PortId,
+) -> ibc_core_host_types::identifiers::PortId {
 	FromStr::from_str(port_id.as_str()).unwrap()
 }
 
-fn new_from_old_channel(channel_id: &ibc::core::ics24_host::identifier::ChannelId) -> 			ibc_core_host_types::identifiers::ChannelId {
+fn new_from_old_channel(
+	channel_id: &ibc::core::ics24_host::identifier::ChannelId,
+) -> ibc_core_host_types::identifiers::ChannelId {
 	ibc_core_host_types::identifiers::ChannelId::new(channel_id.sequence())
 }
 

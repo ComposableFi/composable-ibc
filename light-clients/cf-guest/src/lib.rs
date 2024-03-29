@@ -6,8 +6,6 @@ extern crate std;
 
 use alloc::string::ToString;
 
-use ibc_proto::google::protobuf::Any;
-
 pub mod client;
 pub mod client_def;
 //mod client_impls;
@@ -62,91 +60,6 @@ pub fn digest_with_client_id(
 	lib::hash::CryptoHash::digestv(&[client_id.as_bytes(), b"\0", value])
 }
 
-/// Defines conversion implementation between `$Type` and Any message as well as
-/// `encode_to_vec` and `decode` methods.
-macro_rules! any_convert {
-    (
-        $Proto:ty,
-        $Type:ident $( <$T:ident: $bond:path = $concrete:path> )?,
-        $(obj: $obj:expr,)*
-        $(bad: $bad:expr,)*
-    ) => {
-        impl $(<$T: $bond>)* $Type $(<$T>)* {
-            /// Encodes the object into a vector as protocol buffer message.
-            pub fn encode_to_vec(&self) -> Result<alloc::vec::Vec<u8>, core::convert::Infallible> {
-                Ok(prost::Message::encode_to_vec(&$crate::proto::$Type::from(self)))
-            }
-
-            /// Decodes the object from a protocol buffer message.
-            pub fn decode(
-                buf: &[u8],
-            ) -> Result<Self, $crate::proto::DecodeError> {
-                <$crate::proto::$Type as prost::Message>::decode(buf)?
-                    .try_into()
-                    .map_err(Into::into)
-            }
-        }
-
-        impl $(<$T: $bond>)* From<$Type $(<$T>)*> for $crate::Any {
-            fn from(obj: $Type $(<$T>)*) -> $crate::Any {
-                $crate::proto::$Type::from(obj).into()
-            }
-        }
-
-        impl $(<$T: $bond>)* From<&$Type $(<$T>)*> for $crate::Any {
-            fn from(obj: &$Type $(<$T>)*) -> $crate::Any {
-                $crate::proto::$Type::from(obj).into()
-            }
-        }
-
-        impl $(<$T: $bond>)* TryFrom<$crate::Any> for $Type $(<$T>)* {
-            type Error = $crate::proto::DecodeError;
-            fn try_from(
-                any: $crate::Any,
-            ) -> Result<Self, Self::Error> {
-                $crate::proto::$Type::try_from(any)
-                    .and_then(|msg| Ok(msg.try_into()?))
-            }
-        }
-
-        impl $(<$T: $bond>)* TryFrom<&$crate::Any> for $Type $(<$T>)*
-        {
-            type Error = $crate::proto::DecodeError;
-            fn try_from(
-                any: &$crate::Any,
-            ) -> Result<Self, Self::Error> {
-                $crate::proto::$Type::try_from(any)
-                    .and_then(|msg| Ok(msg.try_into()?))
-            }
-        }
-
-        impl $(<$T: $bond>)* ibc::protobuf::Protobuf<$Proto>
-            for $Type $(<$T>)* { }
-
-        #[test]
-        fn test_any_conversion() {
-            #[allow(dead_code)]
-            type Type = $Type $( ::<$concrete> )*;
-
-            // Check conversion to and from proto
-            $(
-                let msg = proto::$Type::test();
-                let obj: Type = $obj;
-                assert_eq!(msg, proto::$Type::from(&obj));
-                assert_eq!(Ok(obj), $Type::try_from(&msg));
-            )*
-
-            // Check failure on invalid proto
-            $(
-                assert_eq!(Err(proto::BadMessage), Type::try_from($bad));
-            )*
-        }
-    };
-}
-
-use any_convert;
-
-
 macro_rules! wrap {
 	($($Inner:ident)::* as $Outer:ident) => {
 		#[derive(Clone, derive_more::From, derive_more::Into)]
@@ -170,7 +83,7 @@ macro_rules! wrap {
 
 	(impl Eq for $Outer:ident) => {
 		impl core::cmp::PartialEq for $Outer {
-			fn eq(&self, other: &Self) -> bool { self.0.eq(other.0) }
+			fn eq(&self, other: &Self) -> bool { self.0.eq(&other.0) }
 		}
 		impl core::cmp::Eq for $Outer { }
 	};
@@ -265,6 +178,34 @@ macro_rules! wrap {
 					value: any.value
 				};
 				any.try_into().map(Self).map_err(Into::into)
+			}
+		}
+	};
+
+	(impl<PK> proto for $Type:ident) => {
+		impl<PK: guestchain::PubKey> From<$Type<PK>> for proto::$Type {
+			fn from(msg: $Type<PK>) -> Self {
+				Self(cf_guest_upstream::proto::$Type::from(&msg.0))
+			}
+		}
+
+		impl<PK: guestchain::PubKey> From<&$Type<PK>> for proto::$Type {
+			fn from(msg: &$Type<PK>) -> Self {
+				Self(cf_guest_upstream::proto::$Type::from(&msg.0))
+			}
+		}
+
+		impl<PK: guestchain::PubKey> TryFrom<proto::$Type> for $Type<PK> {
+			type Error = proto::BadMessage;
+			fn try_from(msg: proto::$Type) -> Result<Self, Self::Error> {
+				Self::try_from(&msg)
+			}
+		}
+
+		impl<PK: guestchain::PubKey> TryFrom<&proto::$Type> for $Type<PK> {
+			type Error = proto::BadMessage;
+			fn try_from(msg: &proto::$Type) -> Result<Self, Self::Error> {
+				Ok(Self(cf_guest_upstream::$Type::try_from(msg.0)?))
 			}
 		}
 	};
