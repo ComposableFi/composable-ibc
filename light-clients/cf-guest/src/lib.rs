@@ -16,7 +16,7 @@ pub mod error;
 mod header;
 mod message;
 mod misbehaviour;
-pub mod proof;
+//pub mod proof;
 pub mod proto;
 
 pub use client::ClientState;
@@ -25,7 +25,7 @@ pub use consensus::ConsensusState;
 pub use header::Header;
 pub use message::ClientMessage;
 pub use misbehaviour::Misbehaviour;
-pub use proof::IbcProof;
+//pub use proof::IbcProof;
 
 use ibc::core::ics02_client::error::Error as ClientError;
 

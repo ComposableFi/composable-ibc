@@ -1,7 +1,9 @@
 use core::marker::PhantomData;
+use core::str::FromStr;
+
 use guestchain::Signature;
 
-use crate::{alloc::string::ToString, proof::VerifyError};
+use crate::alloc::string::ToString;
 use alloc::vec::Vec;
 use guestchain::{PubKey, Verifier};
 use ibc::{
@@ -10,13 +12,6 @@ use ibc::{
 			client_consensus::ConsensusState, client_def::{ClientDef, ConsensusUpdateResult},
 			client_state::ClientState as OtherClientState, error::Error as Ics02ClientError,
 		},
-		ics23_commitment::commitment::CommitmentPrefix,
-		ics24_host::{
-			path::{
-				self, AcksPath, ChannelEndsPath, ClientConsensusStatePath, ClientStatePath,
-				CommitmentsPath, ConnectionsPath, ReceiptsPath, SeqRecvsPath,
-			},
-		},
 		ics26_routing::context::ReaderContext,
 	},
 };
@@ -24,7 +19,7 @@ use prost::Message;
 use tendermint_proto::Protobuf;
 
 use crate::{
-	error::Error, proof::verify, ClientMessage, ClientState,
+	error::Error, ClientMessage, ClientState,
 	ConsensusState as ClientConsensusState,
 };
 
@@ -56,6 +51,7 @@ where
 		client_msg: Self::ClientMessage,
 	) -> Result<(), Ics02ClientError> {
 		client_state.0.do_verify_client_message(self, client_msg.0)
+			.map_err(old_from_new_error)
 	}
 
 	fn update_state<Ctx: ibc::core::ics26_routing::context::ReaderContext>(
@@ -143,14 +139,13 @@ where
 	) -> Result<(), Ics02ClientError> {
 		client_state.verify_height(client_id, height)?;
 
-		let connection_path = ClientConsensusStatePath {
-			client_id: client_id.clone(),
-			epoch: consensus_height.revision_number,
-			height: consensus_height.revision_height,
+		let path = ibc_core_host_types::path::ClientConsensusStatePath {
+			client_id: new_from_old_client(client_id),
+			revision_number: consensus_height.revision_number,
+			revision_height: consensus_height.revision_height,
 		};
-		let path = path::Path::ClientConsensusState(connection_path);
 		let value = expected_consensus_state.encode_to_vec().map_err(Ics02ClientError::encode)?;
-		verify(&CommitmentPrefix::default(), proof, root, path, Some(&value)).map_err(|e| e.into())
+		verify(proof, root, path.into(), Some(value))
 	}
 
 	fn verify_connection_state<Ctx: ibc::core::ics26_routing::context::ReaderContext>(
@@ -167,10 +162,11 @@ where
 	) -> Result<(), Ics02ClientError> {
 		client_state.verify_height(client_id, height)?;
 
-		let connection_path = ConnectionsPath(connection_id.clone());
-		let path = path::Path::Connections(connection_path);
+		let path = ibc_core_host_types::path::ConnectionPath(
+			new_from_old_connection(connection_id)
+		);
 		let value = expected_connection_end.encode_vec().map_err(Ics02ClientError::encode)?;
-		verify(&CommitmentPrefix::default(), proof, root, path, Some(&value)).map_err(|e| e.into())
+		verify(proof, root, path.into(), Some(value))
 	}
 
 	fn verify_channel_state<Ctx: ibc::core::ics26_routing::context::ReaderContext>(
@@ -188,10 +184,12 @@ where
 	) -> Result<(), Ics02ClientError> {
 		client_state.verify_height(client_id, height)?;
 
-		let channel_end_path = ChannelEndsPath(port_id.clone(), *channel_id);
-		let path = path::Path::ChannelEnds(channel_end_path);
+		let path = ibc_core_host_types::path::ChannelEndPath(
+			new_from_old_port(port_id),
+			new_from_old_channel(channel_id),
+		);
 		let value = expected_channel_end.encode_vec().map_err(Ics02ClientError::encode)?;
-		verify(&CommitmentPrefix::default(), proof, root, path, Some(&value)).map_err(|e| e.into())
+		verify(proof, root, path.into(), Some(value)).map_err(|e| e.into())
 	}
 
 	fn verify_client_full_state<Ctx: ibc::core::ics26_routing::context::ReaderContext>(
@@ -207,10 +205,11 @@ where
 	) -> Result<(), Ics02ClientError> {
 		client_state.verify_height(client_id, height)?;
 
-		let client_state_path = ClientStatePath(client_id.clone());
-		let path = path::Path::ClientState(client_state_path);
+		let path = ibc_core_host_types::path::ClientStatePath(
+			new_from_old_client(client_id)
+		);
 		let value = expected_client_state.encode_to_vec().map_err(Ics02ClientError::encode)?;
-		verify(&CommitmentPrefix::default(), proof, root, path, Some(&value)).map_err(|e| e.into())
+		verify(proof, root, path.into(), Some(value)).map_err(|e| e.into())
 	}
 
 	fn verify_packet_data<Ctx: ibc::core::ics26_routing::context::ReaderContext>(
@@ -230,11 +229,12 @@ where
 		client_state.verify_height(client_id, height)?;
 		verify_delay_passed::<Ctx, PK>(ctx, height, connection_end)?;
 
-		let commitment_path =
-			CommitmentsPath { port_id: port_id.clone(), channel_id: *channel_id, sequence };
-		let path = path::Path::Commitments(commitment_path);
-		verify(&CommitmentPrefix::default(), proof, root, path, Some(&commitment.into_vec()))
-			.map_err(|e| e.into())
+		let path = ibc_core_host_types::path::CommitmentPath {
+			port_id: new_from_old_port(port_id),
+			channel_id: new_from_old_channel(channel_id),
+			sequence: sequence.0.into(),
+		};
+		verify(proof, root, path.into(), Some(commitment.into_vec()))
 	}
 
 	fn verify_packet_acknowledgement<Ctx: ibc::core::ics26_routing::context::ReaderContext>(
@@ -255,10 +255,12 @@ where
 		client_state.verify_height(client_id, height)?;
 		verify_delay_passed::<Ctx, PK>(ctx, height, connection_end)?;
 
-		let ack_path = AcksPath { port_id: port_id.clone(), channel_id: *channel_id, sequence };
-		let path = path::Path::Acks(ack_path);
-		verify(&CommitmentPrefix::default(), proof, root, path, Some(&ack.into_vec()))
-			.map_err(|e| e.into())
+		let path = ibc_core_host_types::path::AckPath {
+			port_id: new_from_old_port(port_id),
+			channel_id: new_from_old_channel(channel_id),
+			sequence: sequence.0.into(),
+		};
+		verify(proof, root, path.into(), Some(ack.into_vec()))
 	}
 
 	fn verify_next_sequence_recv<Ctx: ibc::core::ics26_routing::context::ReaderContext>(
@@ -277,12 +279,13 @@ where
 		client_state.verify_height(client_id, height)?;
 		verify_delay_passed::<Ctx, PK>(ctx, height, connection_end)?;
 
+		let path = ibc_core_host_types::path::SeqRecvPath(
+			new_from_old_port(port_id),
+			new_from_old_channel(channel_id),
+		);
 		let mut seq_bytes = Vec::new();
 		u64::from(sequence).encode(&mut seq_bytes).expect("buffer size too small");
-		let seq_recv_path = SeqRecvsPath(port_id.clone(), channel_id.clone());
-		let path = path::Path::SeqRecvs(seq_recv_path);
-		verify(&CommitmentPrefix::default(), proof, root, path, Some(&seq_bytes))
-			.map_err(|e| e.into())
+		verify(proof, root, path.into(), Some(seq_bytes))
 	}
 
 	fn verify_packet_receipt_absence<Ctx: ibc::core::ics26_routing::context::ReaderContext>(
@@ -301,10 +304,12 @@ where
 		client_state.verify_height(client_id, height)?;
 		verify_delay_passed::<Ctx, PK>(ctx, height, connection_end)?;
 
-		let receipt_path =
-			ReceiptsPath { port_id: port_id.clone(), channel_id: *channel_id, sequence };
-		let path = path::Path::Receipts(receipt_path);
-		verify(&CommitmentPrefix::default(), proof, root, path, None).map_err(|e| e.into())
+		let path = ibc_core_host_types::path::ReceiptPath {
+			port_id: new_from_old_port(port_id),
+			channel_id: new_from_old_channel(channel_id),
+			sequence: sequence.0.into(),
+		};
+		verify(proof, root, path.into(), None)
 	}
 }
 
@@ -341,13 +346,54 @@ fn verify_delay_passed<Ctx: ReaderContext, PK: PubKey>(
 
 impl<PK: PubKey> Verifier<PK> for GuestClient<PK> {
 	fn verify(&self, message: &[u8], pubkey: &PK, signature: &PK::Signature) -> bool {
-		let pubkey_in_bytes = pubkey.to_vec();
-		let pubkey = ed25519_consensus::VerificationKey::try_from(&pubkey_in_bytes[..])
-			.map_err(|_| VerifyError::MalformedPublicKey)
-			.unwrap();
-		let sig = ed25519_consensus::Signature::try_from(&signature.to_vec()[..])
-			.map_err(|_| VerifyError::MalformedSignature)
-			.unwrap();
-		pubkey.verify(&sig, message).map_or(false, |_| true)
+		(|| {
+			let pubkey = pubkey.as_bytes();
+			let pubkey = ed25519_consensus::VerificationKey::try_from(&pubkey[..]).ok()?;
+			let signature = signature.as_bytes();
+			let sig = ed25519_consensus::Signature::try_from(&signature[..]).ok()?;
+			pubkey.verify(&sig, message).ok()?;
+			Some(())
+		})().is_some()
 	}
+}
+
+// Helper wrappers
+
+fn verify(
+	proof: &ibc::core::ics23_commitment::commitment::CommitmentProofBytes,
+	root: &ibc::core::ics23_commitment::commitment::CommitmentRoot,
+	path: ibc_core_host_types::path::Path,
+	value: Option<Vec<u8>>,
+) -> Result<(), Ics02ClientError> {
+	cf_guest_upstream::proof::verify(
+		&Default::default(),
+		proof.as_bytes(),
+		root.bytes.as_slice(),
+		path,
+		value.as_deref(),
+	)
+	.map_err(|err| {
+		Ics02ClientError::implementation_specific(err.to_string())
+	})
+}
+
+fn new_from_old_client(client_id: &ibc::core::ics24_host::identifier::ClientId) -> ibc_core_host_types::identifiers::ClientId {
+	FromStr::from_str(client_id.as_str()).unwrap()
+}
+
+fn new_from_old_connection(connection_id: &ibc::core::ics24_host::identifier::ConnectionId) -> ibc_core_host_types::identifiers::ConnectionId {
+	FromStr::from_str(connection_id.as_str()).unwrap()
+}
+
+fn new_from_old_port(port_id: &ibc::core::ics24_host::identifier::PortId) -> ibc_core_host_types::identifiers::PortId {
+	FromStr::from_str(port_id.as_str()).unwrap()
+}
+
+fn new_from_old_channel(channel_id: &ibc::core::ics24_host::identifier::ChannelId) -> 			ibc_core_host_types::identifiers::ChannelId {
+	ibc_core_host_types::identifiers::ChannelId::new(channel_id.sequence())
+}
+
+fn old_from_new_error(err: ibc_core_client_context::types::error::ClientError) -> Ics02ClientError {
+	// TODO(mina86): Create better mapping.
+	Ics02ClientError::implementation_specific(err.to_string())
 }
