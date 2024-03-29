@@ -4,7 +4,6 @@ use prost::Message as _;
 use crate::proto;
 
 super::wrap!(cf_guest_upstream::ClientMessage<PK> as ClientMessage);
-super::wrap!(impl<PK> any for ClientMessage);
 super::wrap!(impl<PK> proto for ClientMessage);
 
 impl<PK> ibc::core::ics02_client::client_message::ClientMessage for ClientMessage<PK>

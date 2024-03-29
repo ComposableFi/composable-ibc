@@ -71,40 +71,7 @@ macro_rules! wrap {
 				self.0.fmt(fmtr)
 			}
 		}
-	};
 
-	($($Inner:ident)::*<PK> as $Outer:ident) => {
-		#[derive(Clone, PartialEq, Eq, derive_more::From, derive_more::Into)]
-		#[repr(transparent)]
-		pub struct $Outer<PK: guestchain::PubKey>(pub $($Inner)::*<PK>);
-
-		impl<PK: guestchain::PubKey + core::fmt::Debug> core::fmt::Debug for $Outer<PK> {
-			fn fmt(&self, fmtr: &mut core::fmt::Formatter) -> core::fmt::Result {
-				self.0.fmt(fmtr)
-			}
-		}
-	};
-
-	(impl Default for $Outer:ident) => {
-		impl Default for $Outer {
-			fn default() -> Self { Self(Default::default()) }
-		}
-	};
-
-	(impl Eq for $Outer:ident) => {
-		impl core::cmp::PartialEq for $Outer {
-			fn eq(&self, other: &Self) -> bool { self.0.eq(&other.0) }
-		}
-		impl core::cmp::Eq for $Outer { }
-	};
-
-	(impl<PK> Default for $Outer:ident) => {
-		impl<PK: Default> Default for $Outer<PK> {
-			fn default() -> Self { Self(Default::default()) }
-		}
-	};
-
-	(impl any for $Outer:ident) => {
 		impl From<$Outer> for ibc_proto::google::protobuf::Any {
 			fn from(msg: $Outer) -> Self {
 				Self::from(&msg)
@@ -138,7 +105,17 @@ macro_rules! wrap {
 		impl tendermint_proto::Protobuf<ibc_proto::google::protobuf::Any> for $Outer {}
 	};
 
-	(impl<PK> any for $Outer:ident) => {
+	($($Inner:ident)::*<PK> as $Outer:ident) => {
+		#[derive(Clone, PartialEq, Eq, derive_more::From, derive_more::Into)]
+		#[repr(transparent)]
+		pub struct $Outer<PK: guestchain::PubKey>(pub $($Inner)::*<PK>);
+
+		impl<PK: guestchain::PubKey + core::fmt::Debug> core::fmt::Debug for $Outer<PK> {
+			fn fmt(&self, fmtr: &mut core::fmt::Formatter) -> core::fmt::Result {
+				self.0.fmt(fmtr)
+			}
+		}
+
 		impl<PK: guestchain::PubKey> From<$Outer<PK>> for ibc_proto::google::protobuf::Any {
 			fn from(msg: $Outer<PK>) -> Self {
 				Self::from(&msg)
@@ -170,6 +147,25 @@ macro_rules! wrap {
 		}
 
 		impl<PK: guestchain::PubKey> tendermint_proto::Protobuf<ibc_proto::google::protobuf::Any> for $Outer<PK> {}
+	};
+
+	(impl Default for $Outer:ident) => {
+		impl Default for $Outer {
+			fn default() -> Self { Self(Default::default()) }
+		}
+	};
+
+	(impl<PK> Default for $Outer:ident) => {
+		impl<PK: Default> Default for $Outer<PK> {
+			fn default() -> Self { Self(Default::default()) }
+		}
+	};
+
+	(impl Eq for $Outer:ident) => {
+		impl core::cmp::PartialEq for $Outer {
+			fn eq(&self, other: &Self) -> bool { self.0.eq(&other.0) }
+		}
+		impl core::cmp::Eq for $Outer { }
 	};
 
 	(impl proto for $Type:ident) => {

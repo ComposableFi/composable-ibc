@@ -4,7 +4,6 @@ macro_rules! import_proto {
 	($Msg:ident) => {
 		$crate::wrap!(cf_guest_upstream::proto::$Msg as $Msg);
 		$crate::wrap!(impl Default for $Msg);
-		$crate::wrap!(impl any for $Msg);
 
 		impl prost::Message for $Msg {
 			fn encode_raw<B: prost::bytes::BufMut>(&self, buf: &mut B) {

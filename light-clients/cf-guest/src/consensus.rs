@@ -7,7 +7,6 @@ use crate::proto;
 
 super::wrap!(cf_guest_upstream::ConsensusState as ConsensusState);
 super::wrap!(impl Eq for ConsensusState);
-super::wrap!(impl any for ConsensusState);
 super::wrap!(impl proto for ConsensusState);
 
 impl ConsensusState {
