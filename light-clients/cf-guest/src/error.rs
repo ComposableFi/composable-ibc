@@ -13,8 +13,15 @@
 // limitations under the License.
 
 use crate::CLIENT_TYPE;
-use alloc::{fmt, string::{String, ToString}};
-use ibc::{core::{ics02_client::error::Error as Ics02Error, ics24_host::identifier::ClientId}, timestamp::Timestamp, Height};
+use alloc::{
+	fmt,
+	string::{String, ToString},
+};
+use ibc::{
+	core::{ics02_client::error::Error as Ics02Error, ics24_host::identifier::ClientId},
+	timestamp::Timestamp,
+	Height,
+};
 
 #[derive(Clone, Debug)]
 pub enum Error {
@@ -24,7 +31,7 @@ pub enum Error {
 	NotEnoughBlocksElapsed { current_height: Height, earliest_height: u64 },
 	InsufficientHeight { latest_height: Height, target_height: Height },
 	ClientFrozen { client_id: ClientId },
-  UnknownConsensusStateType { description: String }
+	UnknownConsensusStateType { description: String },
 }
 
 impl fmt::Display for Error {

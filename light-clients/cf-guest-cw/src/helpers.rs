@@ -27,8 +27,8 @@ use crate::{
 use cosmwasm_std::{to_binary, Addr, CosmosMsg, StdResult, WasmMsg};
 use ibc::core::{
 	ics02_client::{
-		client_consensus::ConsensusState as _, context::ClientReader, error::Error as Ics02Error,
-		height::Height,
+		client_consensus::ConsensusState as _, client_state::ClientState as _,
+		context::ClientReader, error::Error as Ics02Error, height::Height,
 	},
 	ics23_commitment::{commitment::CommitmentProofBytes, merkle::MerkleProof},
 	ics24_host::identifier::ClientId,
@@ -123,12 +123,12 @@ pub fn prune_oldest_consensus_state(
 	current_time: u64,
 ) {
 	let mut processed_states = ProcessedStates::new(ctx.storage_mut());
-	let latest_height = ibc::Height::new(0, client_state.latest_height.into());
+	let latest_height = client_state.latest_height();
 	if let Some(earliest_height) = processed_states.get_earliest_height(latest_height) {
 		let processed_time =
 			processed_states.get_processed_time(earliest_height, &mut Vec::new()).unwrap();
 		let elapsed = current_time.saturating_sub(processed_time);
-		let expired = elapsed > client_state.trusting_period_ns;
+		let expired = elapsed > client_state.0.trusting_period_ns;
 		if expired {
 			processed_states.remove_states_at_height(earliest_height);
 			let mut consensus_states = ConsensusStates::new(ctx.storage_mut());
