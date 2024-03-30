@@ -104,6 +104,7 @@ const TRIE_SEED: &[u8] = b"trie";
 const CHAIN_SEED: &[u8] = b"chain";
 pub const NUMBER_OF_BLOCKS_TO_PROCESS_PER_ITER: u64 = 250;
 pub const WRITE_ACCOUNT_SEED: &[u8] = b"write";
+pub const SIGNATURE_ACCOUNT_SEED: &[u8] = b"signature";
 
 pub struct InnerAny {
 	pub type_url: String,

@@ -5,6 +5,7 @@ use anchor_client::{
 	solana_sdk::{
 		commitment_config::{CommitmentConfig, CommitmentLevel},
 		compute_budget::ComputeBudgetInstruction,
+		instruction::Instruction,
 		signature::Keypair,
 		signer::Signer as AnchorSigner,
 	},
@@ -43,8 +44,9 @@ use crate::{
 	error::Error,
 	utils::{new_ed25519_instruction_with_signature, non_absent_vote},
 };
-use solana_ibc::{chain::ChainData, ix_data_account, storage::PrivateStorage};
-use solana_ibc::events::BlockFinalised;
+use solana_ibc::{
+	chain::ChainData, events::BlockFinalised, ix_data_account, storage::PrivateStorage,
+};
 use tendermint_new::vote::{SignedVote, ValidatorIndex};
 
 pub enum DeliverIxType {
@@ -133,10 +135,7 @@ pub struct SolanaClientConfig {
 
 #[derive(Debug, Clone)]
 pub enum FinalityEvent {
-	Guest {
-		blockhash: CryptoHash,
-		block_height: u64,
-	}
+	Guest { blockhash: CryptoHash, block_height: u64 },
 }
 
 #[derive(Clone)]
@@ -388,6 +387,9 @@ deserialize consensus state"
 						pubkeys.push(validator.pub_key.to_bytes());
 						final_signatures.push(signed_vote.signature().clone().into_bytes());
 						messages.push(sign_bytes);
+						log::info!("Pubkeys {:?}", pubkeys);
+						log::info!("final_signatures {:?}", final_signatures);
+						log::info!("messages {:?}", messages);
 						// if validator
 						// 	.verify_signature::<V>(&sign_bytes, signed_vote.signature())
 						// 	.is_err()
@@ -403,16 +405,76 @@ deserialize consensus state"
 						// TODO: Break out of the loop when we have enough voting power.
 						// See https://github.com/informalsystems/tendermint-rs/issues/235
 					}
-					program
+					// Chunk the signatures
+					let total_signatures = final_signatures.len();
+					let chunk_size = 6;
+					let chunks = total_signatures / chunk_size + 1;
+					let signature_program_id =
+						Pubkey::from_str("4H4SKz4TbjYDDPXKew5CGUKGmmWSv3EfJKfixoA6Bxuo").unwrap();
+					let authority_bytes = authority.pubkey().to_bytes();
+					let signature_seeds = &[authority_bytes.as_ref()];
+					let (signatures_account_pda, bump) =
+						Pubkey::find_program_address(signature_seeds, &signature_program_id);
+					for chunk in 0..chunks {
+						let start = chunk * chunk_size;
+						let end = (start + chunk_size).min(total_signatures);
+
+						let accounts = vec![
+							AccountMeta {
+								pubkey: authority.pubkey(),
+								is_signer: true,
+								is_writable: true,
+							},
+							AccountMeta {
+								pubkey: signatures_account_pda,
+								is_signer: false,
+								is_writable: true,
+							},
+							AccountMeta {
+								pubkey: anchor_lang::solana_program::sysvar::instructions::ID,
+								is_signer: false,
+								is_writable: true,
+							},
+							AccountMeta {
+								pubkey: system_program::ID,
+								is_signer: false,
+								is_writable: true,
+							},
+						];
+						let mut data = vec![0, 0];
+						data.extend(&bump.to_le_bytes());
+						let instruction =
+							Instruction::new_with_bytes(signature_program_id, &data, accounts);
+						let sig = program
+							.request()
+							.instruction(new_ed25519_instruction_with_signature(
+								pubkeys[start..end].to_vec(),
+								final_signatures[start..end].to_vec(),
+								messages[start..end].to_vec(),
+							))
+							.instruction(instruction)
+							.send_with_spinner_and_config(RpcSendTransactionConfig {
+								skip_preflight: true,
+								..RpcSendTransactionConfig::default()
+							})
+							.await
+							.or_else(|e| {
+								println!("This is error {:?}", e);
+								status = false;
+								ibc::prelude::Err("Error".to_owned())
+							});
+						log::info!("This is signature for sending signature {:?}", sig);
+					}
+					let signature = program
 						.request()
 						.instruction(ComputeBudgetInstruction::set_compute_unit_limit(2_000_000u32))
 						.instruction(ComputeBudgetInstruction::request_heap_frame(128 * 1024))
 						.instruction(ComputeBudgetInstruction::set_compute_unit_price(500000))
-						.instruction(new_ed25519_instruction_with_signature(
-							pubkeys,
-							final_signatures,
-							messages,
-						))
+						// .instruction(new_ed25519_instruction_with_signature(
+						// 	pubkeys,
+						// 	final_signatures,
+						// 	messages,
+						// ))
 						.accounts(solana_ibc::accounts::Deliver {
 							sender: authority.pubkey(),
 							receiver: None,
@@ -429,7 +491,7 @@ deserialize consensus state"
 						})
 						.accounts(vec![
 							AccountMeta {
-								pubkey: anchor_lang::solana_program::sysvar::instructions::ID,
+								pubkey: signatures_account_pda,
 								is_signer: false,
 								is_writable: true,
 							},
@@ -450,30 +512,67 @@ deserialize consensus state"
 							println!("This is error {:?}", e);
 							status = false;
 							ibc::prelude::Err("Error".to_owned())
+						});
+					let accounts = vec![
+						AccountMeta {
+							pubkey: authority.pubkey(),
+							is_signer: true,
+							is_writable: true,
+						},
+						AccountMeta {
+							pubkey: signatures_account_pda,
+							is_signer: false,
+							is_writable: true,
+						},
+					];
+					let mut data = vec![1, 0];
+					data.extend(&bump.to_le_bytes());
+					let instruction =
+						Instruction::new_with_bytes(signature_program_id, &data, accounts);
+					let sig = program
+						.request()
+						.instruction(instruction)
+						.send_with_spinner_and_config(RpcSendTransactionConfig {
+							skip_preflight: true,
+							..RpcSendTransactionConfig::default()
 						})
+						.await
+						.or_else(|e| {
+							println!("This is error {:?}", e);
+							status = false;
+							ibc::prelude::Err("Error".to_owned())
+						});
+					log::info!("This is signature for freeing signature {:?}", sig);
+					signature
 				},
 				DeliverIxType::PacketTransfer { ref token, ref port_id, ref channel_id } => {
 					let hashed_denom =
 						CryptoHash::digest(&token.denom.base_denom.as_str().as_bytes());
-					log::info!("PortId: {:?} and channel {:?} and token {:?}", port_id, channel_id, token);
+					log::info!(
+						"PortId: {:?} and channel {:?} and token {:?}",
+						port_id,
+						channel_id,
+						token
+					);
 					let base_denom = token.denom.base_denom.clone();
-					let (escrow_account, token_mint) = if Pubkey::from_str(&base_denom.to_string()).is_ok() {
-						log::info!("Receiver chain source");
-						let escrow_seeds =
-							[port_id.as_bytes(), channel_id.as_bytes(), hashed_denom.as_ref()];
-						let escrow_account =
-							Pubkey::find_program_address(&escrow_seeds, &self.program_id).0;
-						let prefix = TracePrefix::new(port_id.clone(), channel_id.clone());
-						// trace_path.remove_prefix(&prefix);
-						let token_mint = Pubkey::from_str(&base_denom.to_string()).unwrap();
-						(Some(escrow_account), token_mint)
-					} else {
-						log::info!("Not receiver chain source");
-						let token_mint_seeds = [hashed_denom.as_ref()];
-						let token_mint =
-							Pubkey::find_program_address(&token_mint_seeds, &self.program_id).0;
-						(None, token_mint)
-					};
+					let (escrow_account, token_mint) =
+						if Pubkey::from_str(&base_denom.to_string()).is_ok() {
+							log::info!("Receiver chain source");
+							let escrow_seeds =
+								[port_id.as_bytes(), channel_id.as_bytes(), hashed_denom.as_ref()];
+							let escrow_account =
+								Pubkey::find_program_address(&escrow_seeds, &self.program_id).0;
+							let prefix = TracePrefix::new(port_id.clone(), channel_id.clone());
+							// trace_path.remove_prefix(&prefix);
+							let token_mint = Pubkey::from_str(&base_denom.to_string()).unwrap();
+							(Some(escrow_account), token_mint)
+						} else {
+							log::info!("Not receiver chain source");
+							let token_mint_seeds = [hashed_denom.as_ref()];
+							let token_mint =
+								Pubkey::find_program_address(&token_mint_seeds, &self.program_id).0;
+							(None, token_mint)
+						};
 					log::info!("This is token mint while sending transfer {:?}", token_mint);
 					let mint_authority = self.get_mint_auth_key();
 					// Check if token exists
@@ -665,7 +764,11 @@ deserialize consensus state"
 				// let prefix = TracePrefix::new(port_id.clone(), channel_id.clone());
 				let base_denom = token.denom.base_denom.clone();
 				// trace_path.remove_prefix(&prefix);
-				log::info!("This is base denom {:?} and trace path {:?}", base_denom, token.denom.trace_path);
+				log::info!(
+					"This is base denom {:?} and trace path {:?}",
+					base_denom,
+					token.denom.trace_path
+				);
 				let token_mint = Pubkey::from_str(&base_denom.to_string()).unwrap();
 				(Some(escrow_account), token_mint)
 			} else {
