@@ -1189,6 +1189,7 @@ dependencies = [
 [[package]]
 name = "cf-guest"
 version = "0.0.0"
+source = "git+https://github.com/ComposableFi/emulated-light-client/#c43914112d03b1a30219408f6b4e6b3d85560868"
 dependencies = [
  "borsh",
  "bytemuck",
@@ -4314,6 +4315,7 @@ dependencies = [
 [[package]]
 name = "guestchain"
 version = "0.0.0"
+source = "git+https://github.com/ComposableFi/emulated-light-client/#c43914112d03b1a30219408f6b4e6b3d85560868"
 dependencies = [
  "borsh",
  "bytemuck",
@@ -6175,6 +6177,7 @@ checksum = "830d08ce1d1d941e6b30645f1a0eb5643013d835ce3779a5fc208261dbe10f55"
 [[package]]
 name = "lib"
 version = "0.0.0"
+source = "git+https://github.com/ComposableFi/emulated-light-client/#c43914112d03b1a30219408f6b4e6b3d85560868"
 dependencies = [
  "base64 0.21.0",
  "borsh",
@@ -7003,6 +7006,7 @@ dependencies = [
 [[package]]
 name = "memory"
 version = "0.0.0"
+source = "git+https://github.com/ComposableFi/emulated-light-client/#c43914112d03b1a30219408f6b4e6b3d85560868"
 dependencies = [
  "derive_more",
  "stdx",
@@ -13130,6 +13134,7 @@ dependencies = [
 [[package]]
 name = "sealable-trie"
 version = "0.0.0"
+source = "git+https://github.com/ComposableFi/emulated-light-client/#c43914112d03b1a30219408f6b4e6b3d85560868"
 dependencies = [
  "ascii",
  "base64 0.21.0",
@@ -13502,7 +13507,7 @@ dependencies = [
  "bytes",
  "ics23 0.10.0",
  "proptest",
- "rand 0.4.6",
+ "rand 0.8.5",
  "sha2 0.10.8",
  "tendermint 0.28.0",
 ]
@@ -14814,6 +14819,7 @@ dependencies = [
 [[package]]
 name = "stdx"
 version = "0.0.0"
+source = "git+https://github.com/ComposableFi/emulated-light-client/#c43914112d03b1a30219408f6b4e6b3d85560868"
 
 [[package]]
 name = "strsim"
@@ -16018,6 +16024,7 @@ dependencies = [
 [[package]]
 name = "trie-ids"
 version = "0.0.0"
+source = "git+https://github.com/ComposableFi/emulated-light-client/#c43914112d03b1a30219408f6b4e6b3d85560868"
 dependencies = [
  "ascii",
  "base64 0.21.0",
@@ -16200,9 +16207,9 @@ version = "1.6.3"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "97fee6b57c6a41524a810daee9286c02d7752c4253064d0b05472833a438f675"
 dependencies = [
- "cfg-if 0.1.10",
+ "cfg-if 1.0.0",
  "digest 0.10.7",
- "rand 0.4.6",
+ "rand 0.8.5",
  "static_assertions",
 ]
 
