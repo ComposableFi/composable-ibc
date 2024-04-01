@@ -1224,6 +1224,7 @@ dependencies = [
  "ibc-core-handler-types",
  "ibc-core-host-types",
  "ibc-derive",
+ "ibc-primitives 0.50.0",
  "ibc-proto 0.18.0",
  "insta",
  "lib",

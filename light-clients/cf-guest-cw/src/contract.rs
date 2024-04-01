@@ -151,30 +151,30 @@ fn process_message(
 				.map_err(|e| ContractError::Tendermint(format!("{e:?}")))
 				.map(|_| to_binary(&ContractResult::success()))
 		},
-		// ExecuteMsg::CheckForMisbehaviour(msg) => {
-		// 	let client_state = ctx
-		// 		.client_state(&client_id)
-		// 		.map_err(|e| ContractError::Tendermint(e.to_string()))?;
-		// 	let msg = CheckForMisbehaviourMsg::try_from(msg)?;
-		// 	client
-		// 		.check_for_misbehaviour(ctx, client_id, client_state, msg.client_message)
-		// 		.map_err(|e| ContractError::Tendermint(e.to_string()))
-		// 		.map(|result| to_binary(&ContractResult::success().misbehaviour(result)))
-		// },
-		// ExecuteMsg::UpdateStateOnMisbehaviour(msg_raw) => {
-		// 	let client_state = ctx
-		// 		.client_state(&client_id)
-		// 		.map_err(|e| ContractError::Tendermint(e.to_string()))?;
-		// 	let msg = UpdateStateOnMisbehaviourMsg::try_from(msg_raw)?;
-		// 	client
-		// 		.update_state_on_misbehaviour(client_state, msg.client_message)
-		// 		.map_err(|e| ContractError::Tendermint(e.to_string()))
-		// 		.and_then(|cs| {
-		// 			ctx.store_client_state(client_id, cs)
-		// 				.map_err(|e| ContractError::Tendermint(e.to_string()))?;
-		// 			Ok(to_binary(&ContractResult::success()))
-		// 		})
-		// },
+		ExecuteMsg::CheckForMisbehaviour(msg) => {
+			let client_state = ctx
+				.client_state(&client_id)
+				.map_err(|e| ContractError::Tendermint(e.to_string()))?;
+			let msg = CheckForMisbehaviourMsg::try_from(msg)?;
+			client
+				.check_for_misbehaviour(ctx, client_id, client_state, msg.client_message)
+				.map_err(|e| ContractError::Tendermint(e.to_string()))
+				.map(|result| to_binary(&ContractResult::success().misbehaviour(result)))
+		},
+		ExecuteMsg::UpdateStateOnMisbehaviour(msg_raw) => {
+			let client_state = ctx
+				.client_state(&client_id)
+				.map_err(|e| ContractError::Tendermint(e.to_string()))?;
+			let msg = UpdateStateOnMisbehaviourMsg::try_from(msg_raw)?;
+			client
+				.update_state_on_misbehaviour(client_state, msg.client_message)
+				.map_err(|e| ContractError::Tendermint(e.to_string()))
+				.and_then(|cs| {
+					ctx.store_client_state(client_id, cs)
+						.map_err(|e| ContractError::Tendermint(e.to_string()))?;
+					Ok(to_binary(&ContractResult::success()))
+				})
+		},
 		ExecuteMsg::UpdateState(msg_raw) => {
 			let client_state = ctx
 				.client_state(&client_id)
