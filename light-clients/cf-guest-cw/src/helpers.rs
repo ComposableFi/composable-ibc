@@ -62,60 +62,143 @@ impl CwTemplateContract {
 	}
 }
 
-// pub fn check_substitute_and_update_state<PK: PubKey + 'static>(
-// 	ctx: &mut Context<PK>,
-// ) -> Result<(ClientState<PK>, ConsensusState), Ics02Error> {
-// 	let mut subject_client_state = ctx.client_state_prefixed(SUBJECT_PREFIX).map_err(|_| {
-// 		Ics02Error::implementation_specific("subject client state not found".to_string())
-// 	})?;
-// 	let substitute_client_state = ctx.client_state_prefixed(SUBSTITUTE_PREFIX).map_err(|_| {
-// 		Ics02Error::implementation_specific("substitute client state not found".to_string())
-// 	})?;
+pub fn check_substitute_and_update_state(
+	ctx: &mut Context,
+) -> Result<(ClientState<crate::crypto::PubKey>, ConsensusState), Ics02Error> {
+	let mut subject_client_state = ctx.client_state_prefixed(SUBJECT_PREFIX).map_err(|_| {
+		Ics02Error::implementation_specific("subject client state not found".to_string())
+	})?;
+	let substitute_client_state = ctx.client_state_prefixed(SUBSTITUTE_PREFIX).map_err(|_| {
+		Ics02Error::implementation_specific("substitute client state not found".to_string())
+	})?;
 
-// 	if subject_client_state.trust_level != substitute_client_state.trust_level ||
-// 		subject_client_state.unbonding_period != substitute_client_state.unbonding_period ||
-// 		subject_client_state.max_clock_drift != substitute_client_state.max_clock_drift ||
-// 		subject_client_state.proof_specs != substitute_client_state.proof_specs ||
-// 		subject_client_state.upgrade_path != substitute_client_state.upgrade_path
-// 	{
-// 		return Err(Ics02Error::implementation_specific("Clients do not match".to_string()))
-// 	}
+	if subject_client_state.0.genesis_hash != subject_client_state.0.genesis_hash {
+		return Err(Ics02Error::implementation_specific("Clients do not match".to_string()))
+	}
 
-// 	let height = substitute_client_state.latest_height();
-// 	let substitute_consensus_state =
-// 		ctx.consensus_state_prefixed(height, SUBSTITUTE_PREFIX).map_err(|_| {
-// 			Ics02Error::implementation_specific("substitute consensus state not found".to_string())
-// 		})?;
+	let height = substitute_client_state.latest_height();
+	let substitute_consensus_state =
+		ctx.consensus_state_prefixed(height, SUBSTITUTE_PREFIX).map_err(|_| {
+			Ics02Error::implementation_specific("substitute consensus state not found".to_string())
+		})?;
 
-// 	let mut process_states = ProcessedStates::new(ctx.storage_mut());
-// 	let substitute_processed_time = process_states
-// 		.get_processed_time(height, &mut SUBSTITUTE_PREFIX.to_vec())
-// 		.unwrap();
-// 	let substitute_processed_height = process_states
-// 		.get_processed_height(height, &mut SUBSTITUTE_PREFIX.to_vec())
-// 		.unwrap();
-// 	let substitute_iteration_key = process_states
-// 		.get_iteration_key(height, &mut SUBSTITUTE_PREFIX.to_vec())
-// 		.unwrap();
-// 	process_states.set_processed_time(
-// 		height,
-// 		substitute_processed_time,
-// 		&mut SUBJECT_PREFIX.to_vec(),
-// 	);
-// 	process_states.set_processed_height(
-// 		height,
-// 		substitute_processed_height,
-// 		&mut SUBJECT_PREFIX.to_vec(),
-// 	);
-// 	process_states.set_iteration_key(substitute_iteration_key, &mut SUBJECT_PREFIX.to_vec());
+	let mut process_states = ProcessedStates::new(ctx.storage_mut());
+	let substitute_processed_time = process_states
+		.get_processed_time(height, &mut SUBSTITUTE_PREFIX.to_vec())
+		.unwrap();
+	let substitute_processed_height = process_states
+		.get_processed_height(height, &mut SUBSTITUTE_PREFIX.to_vec())
+		.unwrap();
+	let substitute_iteration_key = process_states
+		.get_iteration_key(height, &mut SUBSTITUTE_PREFIX.to_vec())
+		.unwrap();
+	process_states.set_processed_time(
+		height,
+		substitute_processed_time,
+		&mut SUBJECT_PREFIX.to_vec(),
+	);
+	process_states.set_processed_height(
+		height,
+		substitute_processed_height,
+		&mut SUBJECT_PREFIX.to_vec(),
+	);
+	process_states.set_iteration_key(substitute_iteration_key, &mut SUBJECT_PREFIX.to_vec());
 
-// 	subject_client_state.latest_height = substitute_client_state.latest_height;
-// 	subject_client_state.chain_id = substitute_client_state.chain_id;
-// 	subject_client_state.trusting_period = substitute_client_state.trusting_period;
-// 	subject_client_state.frozen_height = substitute_client_state.frozen_height;
+	subject_client_state.0.latest_height = substitute_client_state.0.latest_height;
+	subject_client_state.0.trusting_period_ns = substitute_client_state.0.trusting_period_ns;
+	subject_client_state.0.epoch_commitment = substitute_client_state.0.epoch_commitment;
+	subject_client_state.0.prev_epoch_commitment = substitute_client_state.0.prev_epoch_commitment;
+	subject_client_state.0.is_frozen = substitute_client_state.0.is_frozen;
 
-// 	Ok((subject_client_state, substitute_consensus_state))
-// }
+	Ok((subject_client_state, substitute_consensus_state))
+}
+
+pub fn verify_upgrade_and_update_state(
+	ctx: &mut Context,
+	client_id: ClientId,
+	old_client_state: ClientState<crate::crypto::PubKey>,
+	upgrade_client_state: WasmClientState<FakeInner, FakeInner, FakeInner>,
+	upgrade_consensus_state: WasmConsensusState<FakeInner>,
+	proof_upgrade_client: CommitmentProofBytes,
+	proof_upgrade_consensus_state: CommitmentProofBytes,
+) -> Result<(ClientState<crate::crypto::PubKey>, ConsensusState), Ics02Error> {
+	if old_client_state.0.upgrade_path.is_empty() {
+		return Err(Ics02Error::implementation_specific("No upgrade path set".to_string()))
+	}
+
+	// let latest_height = old_client_state.latest_height;
+	// if upgrade_client_state.latest_height.lt(&latest_height) {
+	// 	return Err(Ics02Error::implementation_specific(
+	// 		"upgrade cs is less than current height".to_string(),
+	// 	))
+	// }
+
+	// let consensus_state = ctx.consensus_state(&client_id, latest_height)?;
+
+	// let mut upgrade_path = old_client_state.upgrade_path.clone();
+	// let last_key = upgrade_path.remove(upgrade_path.len() - 1);
+
+	// let mut client_path_vec = upgrade_path.clone();
+	// client_path_vec.append(&mut vec![format!(
+	// 	"{}/{}/{}",
+	// 	last_key.as_str(),
+	// 	latest_height.revision_height,
+	// 	"upgradedClient"
+	// )]);
+	// let client_path = MerklePath { key_path: client_path_vec };
+
+	// let mut cons_path_vec = upgrade_path.clone();
+	// cons_path_vec.append(&mut vec![format!(
+	// 	"{}/{}/{}",
+	// 	last_key, latest_height.revision_height, "upgradedConsState"
+	// )]);
+	// let cons_path = MerklePath { key_path: cons_path_vec };
+
+	// let client_merkle_proof: MerkleProof<H> = RawMerkleProof::try_from(proof_upgrade_client)
+	// 	.map_err(Ics02Error::invalid_commitment_proof)?
+	// 	.into();
+	// client_merkle_proof
+	// 	.verify_membership(
+	// 		&old_client_state.proof_specs,
+	// 		consensus_state.root().clone().into(),
+	// 		client_path,
+	// 		upgrade_client_state.to_any().encode_to_vec(),
+	// 		0,
+	// 	)
+	// 	.unwrap();
+
+	// let cons_merkle_proof: MerkleProof<H> = RawMerkleProof::try_from(proof_upgrade_consensus_state)
+	// 	.map_err(Ics02Error::invalid_commitment_proof)?
+	// 	.into();
+
+	// cons_merkle_proof
+	// 	.verify_membership(
+	// 		&old_client_state.proof_specs,
+	// 		consensus_state.root().clone().into(),
+	// 		cons_path,
+	// 		upgrade_consensus_state.to_any().encode_to_vec(),
+	// 		0,
+	// 	)
+	// 	.unwrap();
+
+	// let any = Any::decode(&mut upgrade_client_state.data.as_slice()).unwrap();
+	// let upgrade_client_state_inner = ClientState::<H>::decode_vec(&any.value).unwrap();
+	// let new_client_state = old_client_state.upgrade(
+	// 	upgrade_client_state_inner.latest_height,
+	// 	UpgradeOptions {
+	// 		unbonding_period: upgrade_client_state_inner.unbonding_period,
+	// 		proof_specs: upgrade_client_state_inner.proof_specs.clone(),
+	// 		upgrade_path: upgrade_client_state_inner.upgrade_path.clone(),
+	// 	},
+	// 	upgrade_client_state_inner.chain_id,
+	// );
+
+	// let any = Any::decode(&mut upgrade_consensus_state.data.as_slice()).unwrap();
+	// let upgrade_consensus_state_inner = ConsensusState::decode_vec(&any.value).unwrap();
+	// Ok((new_client_state, upgrade_consensus_state_inner))
+
+	todo!()
+}
 
 pub fn prune_oldest_consensus_state(
 	ctx: &mut Context,

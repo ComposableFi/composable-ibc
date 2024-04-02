@@ -16,7 +16,7 @@
 use crate::{
 	context::Context,
 	error::ContractError,
-	helpers::prune_oldest_consensus_state,
+	helpers,
 	ics23::ReadonlyProcessedStates,
 	msg::{
 		CheckForMisbehaviourMsg, ContractResult, ExecuteMsg, ExportMetadataMsg, InstantiateMsg,
@@ -181,7 +181,11 @@ fn process_message(
 				.map_err(|e| ContractError::Tendermint(e.to_string()))?;
 			let msg = UpdateStateMsg::try_from(msg_raw)?;
 			let latest_revision_height = client_state.latest_height().revision_height;
-			prune_oldest_consensus_state(ctx, &client_state, ctx.host_timestamp().nanoseconds());
+			helpers::prune_oldest_consensus_state(
+				ctx,
+				&client_state,
+				ctx.host_timestamp().nanoseconds(),
+			);
 			client
 				.update_state(ctx, client_id.clone(), client_state, msg.client_message)
 				.map_err(|e| ContractError::Tendermint(e.to_string()))
@@ -205,41 +209,42 @@ fn process_message(
 					Ok(to_binary(&ContractResult::success()))
 				})
 		},
-		// ExecuteMsg::CheckSubstituteAndUpdateState(_msg) =>
-		// 	check_substitute_and_update_state::<HostFunctions>(ctx)
-		// 		.map_err(|e| ContractError::Tendermint(e.to_string()))
-		// 		.and_then(|(cs, cu)| {
-		// 			let height = cs.latest_height();
-		// 			ctx.store_consensus_state_prefixed(height, cu, SUBJECT_PREFIX);
-		// 			ctx.store_client_state_prefixed(cs, SUBJECT_PREFIX)
-		// 				.map_err(|e| ContractError::Tendermint(e.to_string()))?;
-		// 			Ok(to_binary(&ContractResult::success()))
-		// 		}),
-		// ExecuteMsg::VerifyUpgradeAndUpdateState(msg) => {
-		// 	let old_client_state = ctx
-		// 		.client_state(&client_id)
-		// 		.map_err(|e| ContractError::Tendermint(e.to_string()))?;
-		// 	let msg: VerifyUpgradeAndUpdateStateMsg =
-		// 		VerifyUpgradeAndUpdateStateMsg::try_from(msg)?;
-		// 	verify_upgrade_and_update_state::<HostFunctions>(
-		// 		ctx,
-		// 		client_id.clone(),
-		// 		old_client_state,
-		// 		msg.upgrade_client_state,
-		// 		msg.upgrade_consensus_state,
-		// 		msg.proof_upgrade_client,
-		// 		msg.proof_upgrade_consensus_state,
-		// 	)
-		// 	.map_err(|e| ContractError::Tendermint(e.to_string()))
-		// 	.and_then(|(cs, cu)| {
-		// 		let height = cs.latest_height();
-		// 		ctx.store_consensus_state(client_id.clone(), height, cu)
-		// 			.map_err(|e| ContractError::Tendermint(e.to_string()))?;
-		// 		ctx.store_client_state(client_id, cs)
-		// 			.map_err(|e| ContractError::Tendermint(e.to_string()))?;
-		// 		Ok(to_binary(&ContractResult::success()))
-		// 	})
-		// },
+		ExecuteMsg::CheckSubstituteAndUpdateState(
+			crate::msg::CheckSubstituteAndUpdateStateMsg {},
+		) => helpers::check_substitute_and_update_state(ctx)
+			.map_err(|e| ContractError::Tendermint(e.to_string()))
+			.and_then(|(cs, cu)| {
+				let height = cs.latest_height();
+				ctx.store_consensus_state_prefixed(height, cu, SUBJECT_PREFIX);
+				ctx.store_client_state_prefixed(cs, SUBJECT_PREFIX)
+					.map_err(|e| ContractError::Tendermint(e.to_string()))?;
+				Ok(to_binary(&ContractResult::success()))
+			}),
+		ExecuteMsg::VerifyUpgradeAndUpdateState(msg) => {
+			let old_client_state = ctx
+				.client_state(&client_id)
+				.map_err(|e| ContractError::Tendermint(e.to_string()))?;
+			let msg: VerifyUpgradeAndUpdateStateMsg =
+				VerifyUpgradeAndUpdateStateMsg::try_from(msg)?;
+			helpers::verify_upgrade_and_update_state(
+				ctx,
+				client_id.clone(),
+				old_client_state,
+				msg.upgrade_client_state,
+				msg.upgrade_consensus_state,
+				msg.proof_upgrade_client,
+				msg.proof_upgrade_consensus_state,
+			)
+			.map_err(|e| ContractError::Tendermint(e.to_string()))
+			.and_then(|(cs, cu)| {
+				let height = cs.latest_height();
+				ctx.store_consensus_state(client_id.clone(), height, cu)
+					.map_err(|e| ContractError::Tendermint(e.to_string()))?;
+				ctx.store_client_state(client_id, cs)
+					.map_err(|e| ContractError::Tendermint(e.to_string()))?;
+				Ok(to_binary(&ContractResult::success()))
+			})
+		},
 		_ => unimplemented!("none of the other messages are implemented at the moment"),
 	};
 	Ok(result??)
