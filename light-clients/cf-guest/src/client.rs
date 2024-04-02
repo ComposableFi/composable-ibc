@@ -1,10 +1,9 @@
-use core::time::Duration;
-
-use crate::error::Error;
 use alloc::{
 	string::{String, ToString},
 	vec::Vec,
 };
+use core::time::Duration;
+
 use ibc::{
 	core::{
 		ics02_client::height::Height, ics23_commitment::specs::ProofSpecs,
@@ -15,7 +14,7 @@ use ibc::{
 use lib::hash::CryptoHash;
 use serde::{Deserialize, Serialize};
 
-use crate::{client_def::GuestClient, CLIENT_TYPE};
+use crate::{client_def::GuestClient, error::Error, CLIENT_TYPE};
 
 super::wrap!(cf_guest_upstream::ClientState<PK> as ClientState);
 super::wrap!(impl<PK> proto for ClientState);
@@ -89,11 +88,7 @@ impl<PK: guestchain::PubKey> ClientState<PK> {
 }
 
 #[derive(Clone, Debug, PartialEq, Eq, Serialize, Deserialize)]
-pub struct UpgradeOptions {
-	pub unbonding_period: Duration,
-	pub proof_specs: ProofSpecs,
-	pub upgrade_path: Vec<String>,
-}
+pub struct UpgradeOptions {}
 
 impl<PK> ibc::core::ics02_client::client_state::ClientState for ClientState<PK>
 where
@@ -125,12 +120,13 @@ where
 	}
 
 	fn upgrade(
-		self,
-		_upgrade_height: ibc::Height,
-		_upgrade_options: Self::UpgradeOptions,
+		mut self,
+		upgrade_height: ibc::Height,
+		upgrade_options: Self::UpgradeOptions,
 		_chain_id: ibc::core::ics24_host::identifier::ChainId,
 	) -> Self {
-		todo!()
+		self.0.latest_height = upgrade_height.revision_height.into();
+		self
 	}
 
 	fn expired(&self, elapsed: core::time::Duration) -> bool {
