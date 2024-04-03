@@ -8,7 +8,6 @@ use alloc::string::ToString;
 
 pub mod client;
 pub mod client_def;
-//mod client_impls;
 mod consensus;
 pub mod error;
 mod header;
@@ -18,12 +17,10 @@ pub mod proof;
 pub mod proto;
 
 pub use client::ClientState;
-//pub use client_impls::CommonContext;
 pub use consensus::ConsensusState;
 pub use header::Header;
 pub use message::ClientMessage;
 pub use misbehaviour::Misbehaviour;
-//pub use proof::IbcProof;
 
 use ibc::core::ics02_client::error::Error as ClientError;
 
