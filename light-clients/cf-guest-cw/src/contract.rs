@@ -53,14 +53,10 @@ pub fn instantiate(
 	let _client = GuestClient::<crate::crypto::PubKey>::default();
 	let mut ctx = Context::new(deps, env);
 	let client_id = ClientId::from_str("08-wasm-0").expect("client id is valid");
-	let client_state = ctx
-		.client_state(&client_id)
-		.map_err(|e| ContractError::Tendermint(e.to_string()))?;
+	let client_state = ctx.client_state(&client_id)?;
 	let latest_height = client_state.latest_height();
-	ctx.store_update_height(client_id.clone(), latest_height, ctx.host_height())
-		.map_err(|e| ContractError::Tendermint(e.to_string()))?;
-	ctx.store_update_time(client_id, latest_height, ctx.host_timestamp())
-		.map_err(|e| ContractError::Tendermint(e.to_string()))?;
+	ctx.store_update_height(client_id.clone(), latest_height, ctx.host_height())?;
+	ctx.store_update_time(client_id, latest_height, ctx.host_timestamp())?;
 
 	Ok(Response::default())
 }
@@ -90,20 +86,15 @@ fn process_message(
 	//log!(ctx, "process_message: {:?}", msg);
 	let result = match msg {
 		ExecuteMsg::VerifyMembership(msg) => {
-			let client_state = ctx
-				.client_state(&client_id)
-				.map_err(|e| ContractError::Tendermint(e.to_string()))?;
+			let client_state = ctx.client_state(&client_id)?;
 			let msg = VerifyMembershipMsg::try_from(msg)?;
 			crate::helpers::verify_delay_passed(
 				ctx,
 				msg.height,
 				msg.delay_time_period,
 				msg.delay_block_period,
-			)
-			.map_err(|e| ContractError::Tendermint(e.to_string()))?;
-			let consensus_state = ctx
-				.consensus_state(&client_id, msg.height)
-				.map_err(|e| ContractError::Tendermint(e.to_string()))?;
+			)?;
+			let consensus_state = ctx.consensus_state(&client_id, msg.height)?;
 			// TODO(blas)
 			verify(
 				&CommitmentPrefix::default(),
@@ -111,25 +102,19 @@ fn process_message(
 				&consensus_state.root(),
 				msg.path,
 				Some(msg.value.as_ref()),
-			)
-			.map_err(|e| ContractError::Tendermint(e.to_string()))?;
+			)?;
 			Ok(()).map(|_| to_binary(&ContractResult::success()))
 		},
 		ExecuteMsg::VerifyNonMembership(msg) => {
-			let client_state = ctx
-				.client_state(&client_id)
-				.map_err(|e| ContractError::Tendermint(e.to_string()))?;
+			let client_state = ctx.client_state(&client_id)?;
 			let msg = VerifyNonMembershipMsg::try_from(msg)?;
 			crate::helpers::verify_delay_passed(
 				ctx,
 				msg.height,
 				msg.delay_time_period,
 				msg.delay_block_period,
-			)
-			.map_err(|e| ContractError::Tendermint(e.to_string()))?;
-			let consensus_state = ctx
-				.consensus_state(&client_id, msg.height)
-				.map_err(|e| ContractError::Tendermint(e.to_string()))?;
+			)?;
+			let consensus_state = ctx.consensus_state(&client_id, msg.height)?;
 
 			verify(
 				&CommitmentPrefix::default(),
@@ -138,69 +123,57 @@ fn process_message(
 				msg.path,
 				None,
 			)
-			.map_err(|e| ContractError::Tendermint(e.to_string()))
+			.map_err(ContractError::from)
 			.map(|_| to_binary(&ContractResult::success()))
 		},
 		ExecuteMsg::VerifyClientMessage(msg) => {
-			let client_state = ctx
-				.client_state(&client_id)
-				.map_err(|e| ContractError::Tendermint(e.to_string()))?;
+			let client_state = ctx.client_state(&client_id)?;
 			let msg = VerifyClientMessage::try_from(msg)?;
 			client
 				.verify_client_message(ctx, client_id, client_state, msg.client_message)
-				.map_err(|e| ContractError::Tendermint(format!("{e:?}")))
+				.map_err(ContractError::from)
 				.map(|_| to_binary(&ContractResult::success()))
 		},
 		ExecuteMsg::CheckForMisbehaviour(msg) => {
-			let client_state = ctx
-				.client_state(&client_id)
-				.map_err(|e| ContractError::Tendermint(e.to_string()))?;
+			let client_state = ctx.client_state(&client_id)?;
 			let msg = CheckForMisbehaviourMsg::try_from(msg)?;
 			client
 				.check_for_misbehaviour(ctx, client_id, client_state, msg.client_message)
-				.map_err(|e| ContractError::Tendermint(e.to_string()))
+				.map_err(ContractError::from)
 				.map(|result| to_binary(&ContractResult::success().misbehaviour(result)))
 		},
 		ExecuteMsg::UpdateStateOnMisbehaviour(msg_raw) => {
-			let client_state = ctx
-				.client_state(&client_id)
-				.map_err(|e| ContractError::Tendermint(e.to_string()))?;
+			let client_state = ctx.client_state(&client_id)?;
 			let msg = UpdateStateOnMisbehaviourMsg::try_from(msg_raw)?;
 			client
 				.update_state_on_misbehaviour(client_state, msg.client_message)
-				.map_err(|e| ContractError::Tendermint(e.to_string()))
+				.map_err(ContractError::from)
 				.and_then(|cs| {
-					ctx.store_client_state(client_id, cs)
-						.map_err(|e| ContractError::Tendermint(e.to_string()))?;
+					ctx.store_client_state(client_id, cs)?;
 					Ok(to_binary(&ContractResult::success()))
 				})
 		},
 		ExecuteMsg::UpdateState(msg_raw) => {
-			let client_state = ctx
-				.client_state(&client_id)
-				.map_err(|e| ContractError::Tendermint(e.to_string()))?;
+			let client_state = ctx.client_state(&client_id)?;
 			let msg = UpdateStateMsg::try_from(msg_raw)?;
 			let latest_revision_height = client_state.latest_height().revision_height;
 			prune_oldest_consensus_state(ctx, &client_state, ctx.host_timestamp().nanoseconds());
 			client
 				.update_state(ctx, client_id.clone(), client_state, msg.client_message)
-				.map_err(|e| ContractError::Tendermint(e.to_string()))
+				.map_err(ContractError::from)
 				.and_then(|(cs, cu)| {
 					let height = cs.latest_height();
 					match cu {
 						ConsensusUpdateResult::Single(cs) => {
-							ctx.store_consensus_state(client_id.clone(), height, cs)
-								.map_err(|e| ContractError::Tendermint(e.to_string()))?;
+							ctx.store_consensus_state(client_id.clone(), height, cs)?;
 						},
 						ConsensusUpdateResult::Batch(css) =>
 							for (height, cs) in css {
-								ctx.store_consensus_state(client_id.clone(), height, cs)
-									.map_err(|e| ContractError::Tendermint(e.to_string()))?;
+								ctx.store_consensus_state(client_id.clone(), height, cs)?;
 							},
 					}
 					if u64::from(cs.0.latest_height) > latest_revision_height {
-						ctx.store_client_state(client_id, cs)
-							.map_err(|e| ContractError::Tendermint(e.to_string()))?;
+						ctx.store_client_state(client_id, cs)?;
 					}
 					Ok(to_binary(&ContractResult::success()))
 				})
@@ -212,13 +185,13 @@ fn process_message(
 		// 			let height = cs.latest_height();
 		// 			ctx.store_consensus_state_prefixed(height, cu, SUBJECT_PREFIX);
 		// 			ctx.store_client_state_prefixed(cs, SUBJECT_PREFIX)
-		// 				.map_err(|e| ContractError::Tendermint(e.to_string()))?;
+		// 				?;
 		// 			Ok(to_binary(&ContractResult::success()))
 		// 		}),
 		// ExecuteMsg::VerifyUpgradeAndUpdateState(msg) => {
 		// 	let old_client_state = ctx
 		// 		.client_state(&client_id)
-		// 		.map_err(|e| ContractError::Tendermint(e.to_string()))?;
+		// 		?;
 		// 	let msg: VerifyUpgradeAndUpdateStateMsg =
 		// 		VerifyUpgradeAndUpdateStateMsg::try_from(msg)?;
 		// 	verify_upgrade_and_update_state::<HostFunctions>(
@@ -234,9 +207,9 @@ fn process_message(
 		// 	.and_then(|(cs, cu)| {
 		// 		let height = cs.latest_height();
 		// 		ctx.store_consensus_state(client_id.clone(), height, cu)
-		// 			.map_err(|e| ContractError::Tendermint(e.to_string()))?;
+		// 			?;
 		// 		ctx.store_client_state(client_id, cs)
-		// 			.map_err(|e| ContractError::Tendermint(e.to_string()))?;
+		// 			?;
 		// 		Ok(to_binary(&ContractResult::success()))
 		// 	})
 		// },
