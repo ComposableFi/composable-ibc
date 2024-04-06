@@ -21,19 +21,19 @@ use std::error::Error;
 #[derive(From, Display, Debug)]
 pub enum ContractError {
 	Std(StdError),
-	#[display(fmt = "Unauthorized")]
+	#[display(fmt = " Unauthorized")]
 	Unauthorized {},
 	// Add any other custom errors you like here.
 	// Look at https://docs.rs/thiserror/1.0.21/thiserror/ for details.
-	#[display(fmt = "Storage error")]
+	#[display(fmt = "storage error")]
 	StorageError,
 	// TODO: use `ics07-tendermint`'s error type here
 	#[display(fmt = "Tendermint error: {_0}")]
 	#[from(ignore)]
 	Tendermint(String),
-	#[display(fmt = "Protobuf error: {_0}")]
+	#[display(fmt = " Protobuf error: {_0}")]
 	Protobuf(ibc::protobuf::Error),
-	#[display(fmt = "IBC validation error: {_0}")]
+	#[display(fmt = " IBC validation error: {_0}")]
 	Validation(ibc::core::ics24_host::error::ValidationError),
 	#[display(fmt = "IBC path error: {_0}")]
 	Path(ibc::core::ics24_host::path::PathError),

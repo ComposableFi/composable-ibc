@@ -67,11 +67,13 @@ where
 		tokio::select! {
 			// new finality event from chain A
 			result = chain_a_finality.next(), if !first_executed => {
+				log::info!("Got {} finality", chain_a.name());
 				first_executed = true;
 				process_finality_event(&mut chain_a, &mut chain_b, &mut chain_a_metrics, mode, result, &mut chain_a_finality, &mut chain_b_finality).await?;
 			}
 			// new finality event from chain B
 			result = chain_b_finality.next() => {
+				log::info!("Got {} finality", chain_b.name());
 				first_executed = false;
 				process_finality_event(&mut chain_b, &mut chain_a, &mut chain_b_metrics, mode, result, &mut chain_b_finality, &mut chain_a_finality).await?;
 			}
@@ -154,7 +156,7 @@ async fn process_finality_event<A: Chain, B: Chain>(
 	match result {
 		// stream closed
 		None => {
-			log::warn!("Stream closed for {}", source.name());
+			log::info!("Stream closed for {}", source.name());
 			*stream_source = loop {
 				match source.finality_notifications().await {
 					Ok(stream) => break RecentStream::new(stream),

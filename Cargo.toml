@@ -112,6 +112,12 @@ tendermint-light-client = { git = "https://github.com/informalsystems/tendermint
 tendermint-light-client-verifier = { git = "https://github.com/informalsystems/tendermint-rs", rev = "37822e540e272d2ca9e763769ad20c581203ff9a" }
 tendermint-proto = { git = "https://github.com/informalsystems/tendermint-rs", rev = "37822e540e272d2ca9e763769ad20c581203ff9a" }
 tendermint-testgen = { git = "https://github.com/informalsystems/tendermint-rs", rev = "37822e540e272d2ca9e763769ad20c581203ff9a" }
+
+# tendermint = { path = "../tendermint-rs/tendermint"   }
+# tendermint-light-client = { path = "../tendermint-rs/light-client"   }
+# tendermint-light-client-verifier = { path = "../tendermint-rs/light-client-verifier"  }
+# tendermint-proto = { path = "../tendermint-rs/proto"   }
+# tendermint-testgen = { path = "../tendermint-rs/testgen"  }
 # cfg-expr = { git = "https://github.com/EmbarkStudios/cfg-expr", tag="0.15.0" }
 
 

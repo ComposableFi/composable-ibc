@@ -47,6 +47,8 @@ hex = "0.4.3"
 rand = "0.8.5"
 toml = "0.7.4"
 
+anchor-lang = "0.29.0"
+
 [dev-dependencies]
 subxt = { git = "https://github.com/paritytech/subxt",  tag = "v0.29.0", features = ["substrate-compat"] }
 hyperspace-core = { path = "../core", features = ["testing"] }

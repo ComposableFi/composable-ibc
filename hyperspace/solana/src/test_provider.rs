@@ -37,10 +37,11 @@ impl TestProvider for SolanaClient {
 	async fn subscribe_blocks(&self) -> Pin<Box<dyn Stream<Item = u64> + Send + Sync>> {
 		let (tx, rx) = unbounded_channel();
 		let ws_url = self.ws_url.clone();
+		let program_id = self.solana_ibc_program_id;
 		tokio::task::spawn_blocking(move || {
 			let (_logs_subscription, receiver) = PubsubClient::logs_subscribe(
 				&ws_url,
-				RpcTransactionLogsFilter::Mentions(vec![solana_ibc::ID.to_string()]),
+				RpcTransactionLogsFilter::Mentions(vec![program_id.to_string()]),
 				RpcTransactionLogsConfig { commitment: Some(CommitmentConfig::confirmed()) },
 			)
 			.unwrap();

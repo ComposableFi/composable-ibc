@@ -30,10 +30,12 @@ use hyperspace_testsuite::{
 	setup_connection_and_channel,
 };
 use ibc::core::{
-	ics02_client::msgs::update_client::MsgUpdateAnyClient, ics24_host::identifier::PortId,
+	ics02_client::msgs::update_client::MsgUpdateAnyClient, ics24_host::identifier::{ClientId, PortId},
 };
 use ibc_proto::ibc::core::client::v1::MsgUpdateClient;
 use sp_core::hashing::sha2_256;
+use anchor_lang::prelude::*;
+use std::str::FromStr;
 
 #[derive(Debug, Clone)]
 pub struct Args {
@@ -51,24 +53,31 @@ pub struct Args {
 
 impl Default for Args {
 	fn default() -> Self {
-		let relay = std::env::var("RELAY_HOST").unwrap_or_else(|_| "192.168.120.42".to_string());
-		let solana = std::env::var("SOLANA_HOST").unwrap_or_else(|_| "192.168.120.42".to_string());
-		let cosmos = std::env::var("COSMOS_HOST").unwrap_or_else(|_| "192.168.120.42".to_string());
+		let relay = std::env::var("RELAY_HOST").unwrap_or_else(|_| "127.0.0.1".to_string());
+		let solana = std::env::var("SOLANA_HOST").unwrap_or_else(|_| "127.0.0.1".to_string());
+		let cosmos = std::env::var("COSMOS_HOST").unwrap_or_else(|_| "127.0.0.1".to_string());
 		let wasm_path = std::env::var("WASM_PATH").unwrap_or_else(|_| {
 			"../../target/wasm32-unknown-unknown/release/ics07_guest_cw.wasm".to_string()
 		});
 
 		Args {
-			// chain_a: format!("https://api.devnet.solana.com"),
+			// chain_a: format!("https://devnet.helius-rpc.com/?api-key=bc5c0cfc-46df-4781-978f-af6ca7a202c2"),
 			chain_a: format!("http://{solana}:8899"),
 			chain_b: format!("http://{cosmos}:26657"),
+			// chain_b: format!("http://34.34.178.141:26657"),
+			// chain_b: format!("https://rpc-testnet5.composable-cosmos.composablenodes.tech"),
 			relay_chain: format!("ws://{relay}:9944"),
 			para_id: 2000,
 			connection_prefix_a: "ibc".to_string(),
 			connection_prefix_b: "ibc".to_string(),
-			cosmos_grpc: format!("http://{cosmos}:9090"),
+			// cosmos_grpc: format!("http://34.34.182.7:9098"),
+			cosmos_grpc: format!("http://192.168.0.120:9090"),
+			// cosmos_grpc: format!("http://34.34.178.141:9999"),
 			cosmos_ws: format!("ws://{cosmos}:26657/websocket"),
+			// cosmos_ws: format!("ws://34.34.178.141:26657/websocket"),
+			// cosmos_ws: format!("wss://rpc-testnet5.composable-cosmos.composablenodes.tech/websocket"),
 			solana_ws: format!("ws://{solana}:8900"),
+			// solana_ws: format!("wss://devnet.helius-rpc.com/?api-key=bc5c0cfc-46df-4781-978f-af6ca7a202c2"),
 			wasm_path,
 		}
 	}
@@ -91,7 +100,7 @@ async fn setup_clients() -> (AnyChain, AnyChain) {
 		account_prefix: args.connection_prefix_a.clone(),
 		fee_denom: "stake".to_string(),
 		fee_amount: "4000".to_string(),
-		gas_limit: (i64::MAX - 1) as u64,
+		gas_limit: 100000000,
 		store_prefix: args.connection_prefix_a,
 		max_tx_size: 320000,
 		common_state_config: CommonClientConfig {
@@ -106,6 +115,13 @@ async fn setup_clients() -> (AnyChain, AnyChain) {
 			153, 230, 192, 225, 51, 119, 216, 14, 69, 225, 73, 7, 204, 144, 39, 213, 91, 255, 136,
 			38, 95, 131, 197, 4, 101, 186,
 		],
+		solana_ibc_program_id: Pubkey::from_str("9FeHRJLHJSEw4dYZrABHWTRKruFjxDmkLtPmhM5WFYL7")
+			.unwrap(),
+		write_program_id: Pubkey::from_str("FufGpHqMQgGVjtMH9AV8YMrJYq8zaK6USRsJkZP4yDjo").unwrap(),
+		signature_verifier_program_id: Pubkey::from_str(
+			"C6r1VEbn3mSpecgrZ7NdBvWUtYVJWrDPv4uU9Xs956gc",
+		)
+		.unwrap(),
 	};
 
 	let mut config_b = CosmosClientConfig {
@@ -113,18 +129,19 @@ async fn setup_clients() -> (AnyChain, AnyChain) {
         rpc_url: args.chain_b.clone().parse().unwrap(),
         grpc_url: args.cosmos_grpc.clone().parse().unwrap(),
         websocket_url: args.cosmos_ws.clone().parse().unwrap(),
-        chain_id: "test-1".to_string(),
+        chain_id: "centauri-1".to_string(),
         client_id: None,
         connection_id: None,
         account_prefix: "centauri".to_string(),
-        fee_denom: "stake".to_string(),
-        fee_amount: "92233720368547899".to_string(),
-        gas_limit: (i64::MAX - 1) as u64,
+        fee_denom: "ppica".to_string(),
+        fee_amount: "10000000".to_string(),
+        gas_limit: 100000000,
         store_prefix: args.connection_prefix_b,
         max_tx_size: 200000,
         mnemonic:
         // centauri1g5r2vmnp6lta9cpst4lzc4syy3kcj2ljte3tlh
-        "decorate bright ozone fork gallery riot bus exhaust worth way bone indoor calm squirrel merry zero scheme cotton until shop any excess stage laundry"
+        // "decorate bright ozone fork gallery riot bus exhaust worth way bone indoor calm squirrel merry zero scheme cotton until shop any excess stage laundry"
+				"peace cash suffer celery broken blade fame fiscal lesson fancy virus bless recipe inherit reason cart mask mask absurd venture culture problem reward crew"
             .to_string(),
         wasm_code_id: None,
         channel_whitelist: vec![],
@@ -145,21 +162,22 @@ async fn setup_clients() -> (AnyChain, AnyChain) {
 
 	println!("This is chain b prefix {:?}", chain_b.commitment_prefix.as_bytes());
 
-	let wasm_data = tokio::fs::read(&args.wasm_path).await.expect("Failed to read wasm file");
-	let code_id = match chain_b.upload_wasm(wasm_data.clone()).await {
-		Ok(code_id) => {
-			log::info!("wasm was uploaded");
-			code_id
-		},
-		Err(e) => {
-			let e_str = format!("{e:?}");
-			if !e_str.contains("wasm code already exists") {
-				panic!("Failed to upload wasm: {e_str}");
-			}
-			sha2_256(&wasm_data).to_vec()
-		},
-	};
-	let code_id_str = hex::encode(code_id);
+	// let wasm_data = tokio::fs::read(&args.wasm_path).await.expect("Failed to read wasm file");
+	// let code_id = match chain_b.upload_wasm(wasm_data.clone()).await {
+	// 	Ok(code_id) => {
+	// 		log::info!("wasm was uploaded");
+	// 		code_id
+	// 	},
+	// 	Err(e) => {
+	// 		let e_str = format!("{e:?}");
+	// 		if !e_str.contains("wasm code already exists") {
+	// 			panic!("Failed to upload wasm: {e_str}");
+	// 		}
+	// 		sha2_256(&wasm_data).to_vec()
+	// 	},
+	// };
+	// let code_id_str = hex::encode(code_id);
+	let code_id_str = String::from("66ce7420d21e2555b0e6ce952c0826590fb5f6508a9ac84a5c11178cec58a303");
 	log::info!("This is wasm checksum {:?}", code_id_str);
 	config_b.wasm_code_id = Some(code_id_str);
 
@@ -168,19 +186,21 @@ async fn setup_clients() -> (AnyChain, AnyChain) {
 
 	let AnyChain::Solana(chain_a) = &mut chain_a_wrapped else { unreachable!() };
 
-	let clients_on_a = chain_a_wrapped.query_clients().await.unwrap();
-	let clients_on_b = chain_b_wrapped.query_clients().await.unwrap();
+	// let clients_on_a = chain_a_wrapped.query_clients().await.unwrap();
+	// let clients_on_b = chain_b_wrapped.query_clients().await.unwrap();
 
-	if !clients_on_a.is_empty() && !clients_on_b.is_empty() {
-		chain_a_wrapped.set_client_id(clients_on_b[0].clone());
-		chain_b_wrapped.set_client_id(clients_on_a[0].clone());
-		return (chain_a_wrapped, chain_b_wrapped)
-	}
+	// if !clients_on_a.is_empty() && !clients_on_b.is_empty() {
+	// 	chain_a_wrapped.set_client_id(clients_on_b[0].clone());
+	// 	chain_b_wrapped.set_client_id(clients_on_a[0].clone());
+	// 	return (chain_a_wrapped, chain_b_wrapped)
+	// }
 
 	let (client_a, client_b) =
 		create_clients(&mut chain_a_wrapped, &mut chain_b_wrapped).await.unwrap();
 	chain_a_wrapped.set_client_id(client_a);
 	chain_b_wrapped.set_client_id(client_b);
+	// chain_b_wrapped.set_client_id(ClientId::new("07-tendermint", 0).unwrap());
+	// chain_a_wrapped.set_client_id(ClientId::new("08-wasm", 137).unwrap());
 	(chain_a_wrapped, chain_b_wrapped)
 }
 
@@ -193,7 +213,7 @@ async fn solana_to_cosmos_ibc_messaging_full_integration_test() {
 	logging::setup_logging();
 
 	let asset_id_a = AnyAssetId::Solana("33WVSef9zaw49KbNdPGTmACVRnAXzN3o1fsqbUrLp2mh".to_string());
-	let asset_id_b = AnyAssetId::Cosmos("stake".to_string());
+	let asset_id_b = AnyAssetId::Cosmos("ppica".to_string());
 	let (mut chain_a, mut chain_b) = setup_clients().await;
 	let (handle, channel_a, channel_b, connection_id_a, connection_id_b) =
 		setup_connection_and_channel(&mut chain_a, &mut chain_b, Duration::from_secs(20)).await;

@@ -1,7 +1,8 @@
 use anchor_client::solana_sdk::{
 	ed25519_instruction::SIGNATURE_OFFSETS_SERIALIZED_SIZE, instruction::Instruction,
 };
-use sigverify::ed25519_program::SignatureOffsets;
+use itertools::izip;
+use sigverify::ed25519_program::{new_instruction, Entry, SignatureOffsets};
 use tendermint_light_client_verifier_new::types::Commit;
 use tendermint_new::{
 	block::CommitSig,
@@ -90,4 +91,10 @@ pub fn new_ed25519_instruction_with_signature(
 		accounts: vec![],
 		data: instruction_data,
 	}
+}
+
+pub fn ed25519_signature_payload(
+	entries: Vec<Entry>,	
+) -> Option<Instruction> {
+	new_instruction(&entries)
 }

@@ -6,7 +6,7 @@ use anchor_client::{
 		commitment_config::{CommitmentConfig, CommitmentLevel},
 		compute_budget::ComputeBudgetInstruction,
 		instruction::Instruction,
-		signature::Keypair,
+		signature::{Keypair, Signature},
 		signer::Signer as AnchorSigner,
 	},
 	Client as AnchorClient, Cluster, Program,
@@ -26,12 +26,16 @@ use ibc_app_transfer_types::{
 	is_receiver_chain_source, is_sender_chain_source, Coin, PrefixedDenom, TracePrefix,
 };
 use ibc_core_host_types::identifiers::ClientId as ClientIdNew;
+use itertools::izip;
 use lib::hash::CryptoHash;
 use primitives::{CommonClientConfig, CommonClientState, IbcProvider};
 use serde::{Deserialize, Serialize};
+use sigverify::ed25519_program::{new_instruction, Entry};
+use solana_transaction_status::UiTransactionEncoding;
 use std::{
 	collections::HashSet,
 	ops::Deref,
+	rc::Rc,
 	result::Result,
 	sync::{Arc, Mutex},
 	thread::sleep,
@@ -49,6 +53,7 @@ use solana_ibc::{
 };
 use tendermint_new::vote::{SignedVote, ValidatorIndex};
 
+#[derive(Debug)]
 pub enum DeliverIxType {
 	UpdateClient {
 		client_message: ibc_proto_new::google::protobuf::Any,
@@ -85,7 +90,9 @@ pub struct SolanaClient {
 	/// Maximun transaction size
 	pub max_tx_size: usize,
 	pub commitment_level: CommitmentLevel,
-	pub program_id: Pubkey,
+	pub solana_ibc_program_id: Pubkey,
+	pub write_program_id: Pubkey,
+	pub signature_verifier_program_id: Pubkey,
 	pub common_state: CommonClientState,
 	pub client_type: ClientType,
 	pub last_searched_sig_for_send_packets: Arc<tokio::sync::Mutex<String>>,
@@ -131,6 +138,9 @@ pub struct SolanaClientConfig {
 	pub channel_whitelist: Vec<(ChannelId, PortId)>,
 	pub commitment_level: String,
 	pub private_key: Vec<u8>,
+	pub solana_ibc_program_id: Pubkey,
+	pub write_program_id: Pubkey,
+	pub signature_verifier_program_id: Pubkey,
 }
 
 #[derive(Debug, Clone)]
@@ -160,25 +170,27 @@ impl From<Vec<u8>> for KeyEntry {
 impl SolanaClient {
 	pub fn get_trie_key(&self) -> Pubkey {
 		let trie_seeds = &[TRIE_SEED];
-		let trie = Pubkey::find_program_address(trie_seeds, &self.program_id).0;
+		let trie = Pubkey::find_program_address(trie_seeds, &self.solana_ibc_program_id).0;
 		trie
 	}
 
 	pub fn get_ibc_storage_key(&self) -> Pubkey {
 		let storage_seeds = &[SOLANA_IBC_STORAGE_SEED];
-		let ibc_storage = Pubkey::find_program_address(storage_seeds, &self.program_id).0;
+		let ibc_storage =
+			Pubkey::find_program_address(storage_seeds, &self.solana_ibc_program_id).0;
 		ibc_storage
 	}
 
 	pub fn get_chain_key(&self) -> Pubkey {
 		let chain_seeds = &[CHAIN_SEED];
-		let chain = Pubkey::find_program_address(chain_seeds, &self.program_id).0;
+		let chain = Pubkey::find_program_address(chain_seeds, &self.solana_ibc_program_id).0;
 		chain
 	}
 
 	pub fn get_mint_auth_key(&self) -> Pubkey {
 		let mint_auth_seeds = &[solana_ibc::MINT_ESCROW_SEED];
-		let mint_auth = Pubkey::find_program_address(mint_auth_seeds, &self.program_id).0;
+		let mint_auth =
+			Pubkey::find_program_address(mint_auth_seeds, &self.solana_ibc_program_id).0;
 		mint_auth
 	}
 
@@ -228,7 +240,7 @@ impl SolanaClient {
 
 	pub fn program(&self) -> Program<Arc<Keypair>> {
 		let anchor_client = self.client();
-		anchor_client.program(self.program_id).unwrap()
+		anchor_client.program(self.solana_ibc_program_id).unwrap()
 	}
 
 	#[allow(dead_code)]
@@ -245,7 +257,9 @@ impl SolanaClient {
 			keybase: config.private_key.into(),
 			max_tx_size: config.max_tx_size,
 			commitment_level: CommitmentLevel::from_str(&config.commitment_level).unwrap(),
-			program_id: solana_ibc::ID,
+			solana_ibc_program_id: config.solana_ibc_program_id,
+			write_program_id: config.write_program_id,
+			signature_verifier_program_id: config.signature_verifier_program_id,
 			common_state: CommonClientState::default(),
 			client_type: "07-tendermint".to_string(),
 			last_searched_sig_for_send_packets: Arc::new(
@@ -266,6 +280,7 @@ impl SolanaClient {
 		chunk_account: Pubkey,
 		max_tries: u8,
 	) -> Result<<SolanaClient as IbcProvider>::TransactionId, Error> {
+		// log::info!("This is ix type {:?}", instruction_type);
 		let program = self.program();
 		let signer = self.keybase.keypair();
 		let authority = Arc::new(signer);
@@ -343,7 +358,7 @@ deserialize consensus state"
 					let signed_header = untrusted_state.signed_header;
 					let validator_set = trusted_state.next_validators;
 					let signatures = &signed_header.commit.signatures;
-					log::info!("These are signatures {:?}", signatures);
+					// log::info!("These are signatures {:?}", signatures);
 
 					let mut seen_validators = HashSet::new();
 
@@ -387,9 +402,7 @@ deserialize consensus state"
 						pubkeys.push(validator.pub_key.to_bytes());
 						final_signatures.push(signed_vote.signature().clone().into_bytes());
 						messages.push(sign_bytes);
-						log::info!("Pubkeys {:?}", pubkeys);
-						log::info!("final_signatures {:?}", final_signatures);
-						log::info!("messages {:?}", messages);
+
 						// if validator
 						// 	.verify_signature::<V>(&sign_bytes, signed_vote.signature())
 						// 	.is_err()
@@ -405,19 +418,23 @@ deserialize consensus state"
 						// TODO: Break out of the loop when we have enough voting power.
 						// See https://github.com/informalsystems/tendermint-rs/issues/235
 					}
+					// log::info!("Pubkeys {:?}", pubkeys);
+					// log::info!("final_signatures {:?}", final_signatures);
+					// log::info!("messages {:?}", messages);
 					// Chunk the signatures
 					let total_signatures = final_signatures.len();
-					let chunk_size = 6;
+					let chunk_size = 3;
 					let chunks = total_signatures / chunk_size + 1;
-					let signature_program_id =
-						Pubkey::from_str("4H4SKz4TbjYDDPXKew5CGUKGmmWSv3EfJKfixoA6Bxuo").unwrap();
 					let authority_bytes = authority.pubkey().to_bytes();
 					let signature_seeds = &[authority_bytes.as_ref()];
-					let (signatures_account_pda, bump) =
-						Pubkey::find_program_address(signature_seeds, &signature_program_id);
+					let (signatures_account_pda, bump) = Pubkey::find_program_address(
+						signature_seeds,
+						&self.signature_verifier_program_id,
+					);
 					for chunk in 0..chunks {
 						let start = chunk * chunk_size;
 						let end = (start + chunk_size).min(total_signatures);
+						println!("Start {} end {}", start, end);
 
 						let accounts = vec![
 							AccountMeta {
@@ -443,23 +460,34 @@ deserialize consensus state"
 						];
 						let mut data = vec![0, 0];
 						data.extend(&bump.to_le_bytes());
-						let instruction =
-							Instruction::new_with_bytes(signature_program_id, &data, accounts);
+						let instruction = Instruction::new_with_bytes(
+							self.signature_verifier_program_id,
+							&data,
+							accounts,
+						);
+						let mut entries = Vec::new();
+						let temp_pubkeys = pubkeys[start..end].to_vec();
+						let temp_signatures = final_signatures[start..end].to_vec();
+						let temp_messages = messages[start..end].to_vec();
+						for (pubkey, signature, message) in izip!(
+							&temp_pubkeys,
+							&temp_signatures,
+							&temp_messages,
+						) {
+							let pubkey = pubkey.as_slice().try_into().unwrap();
+							let signature = signature.as_slice().try_into().unwrap();
+							let message = message.as_slice().try_into().unwrap();
+							let entry: Entry = Entry { pubkey, signature, message };
+							entries.push(entry);
+						}
 						let sig = program
 							.request()
-							.instruction(new_ed25519_instruction_with_signature(
-								pubkeys[start..end].to_vec(),
-								final_signatures[start..end].to_vec(),
-								messages[start..end].to_vec(),
-							))
+							.instruction(new_instruction(entries.as_slice()).unwrap())
 							.instruction(instruction)
-							.send_with_spinner_and_config(RpcSendTransactionConfig {
-								skip_preflight: true,
-								..RpcSendTransactionConfig::default()
-							})
+							.send()
 							.await
 							.or_else(|e| {
-								println!("This is error {:?}", e);
+								println!("This is error for signature {:?}", e);
 								status = false;
 								ibc::prelude::Err("Error".to_owned())
 							});
@@ -477,17 +505,17 @@ deserialize consensus state"
 						// ))
 						.accounts(solana_ibc::accounts::Deliver {
 							sender: authority.pubkey(),
-							receiver: None,
+							receiver: Some(self.solana_ibc_program_id),
 							storage: solana_ibc_storage_key,
 							trie: trie_key,
 							chain: chain_key,
 							system_program: system_program::ID,
-							mint_authority: None,
-							token_mint: None,
-							escrow_account: None,
-							receiver_token_account: None,
-							associated_token_program: None,
-							token_program: None,
+							mint_authority: Some(self.solana_ibc_program_id),
+							token_mint: Some(self.solana_ibc_program_id),
+							escrow_account: Some(self.solana_ibc_program_id),
+							receiver_token_account: Some(self.solana_ibc_program_id),
+							associated_token_program: Some(self.solana_ibc_program_id),
+							token_program: Some(self.solana_ibc_program_id),
 						})
 						.accounts(vec![
 							AccountMeta {
@@ -503,10 +531,7 @@ deserialize consensus state"
 						])
 						.args(ix_data_account::Instruction)
 						.signer(&*authority)
-						.send_with_spinner_and_config(RpcSendTransactionConfig {
-							skip_preflight: true,
-							..RpcSendTransactionConfig::default()
-						})
+						.send()
 						.await
 						.or_else(|e| {
 							println!("This is error {:?}", e);
@@ -527,17 +552,13 @@ deserialize consensus state"
 					];
 					let mut data = vec![1, 0];
 					data.extend(&bump.to_le_bytes());
-					let instruction =
-						Instruction::new_with_bytes(signature_program_id, &data, accounts);
-					let sig = program
-						.request()
-						.instruction(instruction)
-						.send_with_spinner_and_config(RpcSendTransactionConfig {
-							skip_preflight: true,
-							..RpcSendTransactionConfig::default()
-						})
-						.await
-						.or_else(|e| {
+					let instruction = Instruction::new_with_bytes(
+						self.signature_verifier_program_id,
+						&data,
+						accounts,
+					);
+					let sig =
+						program.request().instruction(instruction).send().await.or_else(|e| {
 							println!("This is error {:?}", e);
 							status = false;
 							ibc::prelude::Err("Error".to_owned())
@@ -560,8 +581,11 @@ deserialize consensus state"
 							log::info!("Receiver chain source");
 							let escrow_seeds =
 								[port_id.as_bytes(), channel_id.as_bytes(), hashed_denom.as_ref()];
-							let escrow_account =
-								Pubkey::find_program_address(&escrow_seeds, &self.program_id).0;
+							let escrow_account = Pubkey::find_program_address(
+								&escrow_seeds,
+								&self.solana_ibc_program_id,
+							)
+							.0;
 							let prefix = TracePrefix::new(port_id.clone(), channel_id.clone());
 							// trace_path.remove_prefix(&prefix);
 							let token_mint = Pubkey::from_str(&base_denom.to_string()).unwrap();
@@ -569,9 +593,12 @@ deserialize consensus state"
 						} else {
 							log::info!("Not receiver chain source");
 							let token_mint_seeds = [hashed_denom.as_ref()];
-							let token_mint =
-								Pubkey::find_program_address(&token_mint_seeds, &self.program_id).0;
-							(None, token_mint)
+							let token_mint = Pubkey::find_program_address(
+								&token_mint_seeds,
+								&self.solana_ibc_program_id,
+							)
+							.0;
+							(Some(self.solana_ibc_program_id), token_mint)
 						};
 					log::info!("This is token mint while sending transfer {:?}", token_mint);
 					let mint_authority = self.get_mint_auth_key();
@@ -599,10 +626,7 @@ deserialize consensus state"
 								hashed_base_denom: hashed_denom.clone(),
 							})
 							.signer(&*authority)
-							.send_with_spinner_and_config(RpcSendTransactionConfig {
-								skip_preflight: true,
-								..RpcSendTransactionConfig::default()
-							})
+							.send()
 							.await
 							.or_else(|e| {
 								println!("This is error {:?}", e);
@@ -651,10 +675,7 @@ deserialize consensus state"
 						))
 						.args(ix_data_account::Instruction)
 						.signer(&*authority)
-						.send_with_spinner_and_config(RpcSendTransactionConfig {
-							skip_preflight: true,
-							..RpcSendTransactionConfig::default()
-						})
+						.send()
 						.await
 						.or_else(|e| {
 							println!("This is error {:?}", e);
@@ -670,26 +691,23 @@ deserialize consensus state"
 					.accounts(solana_ibc::ix_data_account::Accounts::new(
 						solana_ibc::accounts::Deliver {
 							sender: authority.pubkey(),
-							receiver: None,
+							receiver: Some(self.solana_ibc_program_id),
 							storage: solana_ibc_storage_key,
 							trie: trie_key,
 							chain: chain_key,
 							system_program: system_program::ID,
-							mint_authority: None,
-							token_mint: None,
-							escrow_account: None,
-							receiver_token_account: None,
-							associated_token_program: None,
-							token_program: None,
+							mint_authority: Some(self.solana_ibc_program_id),
+							token_mint: Some(self.solana_ibc_program_id),
+							escrow_account: Some(self.solana_ibc_program_id),
+							receiver_token_account: Some(self.solana_ibc_program_id),
+							associated_token_program: Some(self.solana_ibc_program_id),
+							token_program: Some(self.solana_ibc_program_id),
 						},
 						chunk_account,
 					))
 					.args(ix_data_account::Instruction)
 					.signer(&*authority)
-					.send_with_spinner_and_config(RpcSendTransactionConfig {
-						skip_preflight: true,
-						..RpcSendTransactionConfig::default()
-					})
+					.send()
 					.await
 					.or_else(|e| {
 						println!("This is error {:?}", e);
@@ -760,7 +778,7 @@ deserialize consensus state"
 				let escrow_seeds =
 					[port_id.as_bytes(), channel_id.as_bytes(), hashed_denom.as_ref()];
 				let escrow_account =
-					Pubkey::find_program_address(&escrow_seeds, &self.program_id).0;
+					Pubkey::find_program_address(&escrow_seeds, &self.solana_ibc_program_id).0;
 				// let prefix = TracePrefix::new(port_id.clone(), channel_id.clone());
 				let base_denom = token.denom.base_denom.clone();
 				// trace_path.remove_prefix(&prefix);
@@ -774,7 +792,7 @@ deserialize consensus state"
 			} else {
 				let token_mint_seeds = [hashed_denom.as_ref()];
 				let token_mint =
-					Pubkey::find_program_address(&token_mint_seeds, &self.program_id).0;
+					Pubkey::find_program_address(&token_mint_seeds, &self.solana_ibc_program_id).0;
 				(None, token_mint)
 			};
 
@@ -831,10 +849,7 @@ deserialize consensus state"
 			})
 			// .payer(Arc::new(keypair))
 			.signer(&*authority)
-			.send_with_spinner_and_config(RpcSendTransactionConfig {
-				skip_preflight: true,
-				..RpcSendTransactionConfig::default()
-			})
+			.send()
 			.await
 			.unwrap();
 		let rpc = program.async_rpc();
@@ -848,3 +863,31 @@ deserialize consensus state"
 		Ok(signature)
 	}
 }
+
+// #[test]
+// fn test_fetch() {
+// 	let tx_id =
+// 		"33s9BBJyp5jy9dnuwTa4uEiNvzygCrroVr1z8ZNRSG25LDcqAbdKMHXC9emx1Q1ktfgKUbKqFMiqfKioWFx8JesD"
+// 			.to_string();
+// 	let authority = Rc::new(
+// 		Keypair::from_bytes(&vec![
+// 			48, 123, 8, 80, 248, 0, 217, 142, 124, 193, 95, 24, 168, 139, 214, 136, 147, 210, 168,
+// 			135, 26, 36, 162, 89, 150, 185, 99, 191, 247, 135, 78, 111, 12, 8, 4, 81, 129, 165,
+// 			153, 230, 192, 225, 51, 119, 216, 14, 69, 225, 73, 7, 204, 144, 39, 213, 91, 255, 136,
+// 			38, 95, 131, 197, 4, 101, 186,
+// 		])
+// 		.unwrap(),
+// 	);
+// 	let client = AnchorClient::new_with_options(
+// 		Cluster::Devnet,
+// 		authority.clone(),
+// 		CommitmentConfig::processed(),
+// 	);
+// 	let program = client
+// 		.program(Pubkey::from_str("9FeHRJLHJSEw4dYZrABHWTRKruFjxDmkLtPmhM5WFYL7").unwrap())
+// 		.unwrap();
+// 	let signature = Signature::from_str(&tx_id).unwrap();
+// 	let sol_rpc_client = program.rpc();
+// 	let tx = sol_rpc_client.get_transaction(&signature, UiTransactionEncoding::Json).unwrap();
+// 	println!("This is tx {:?}", tx);
+// }

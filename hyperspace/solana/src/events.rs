@@ -520,8 +520,10 @@ pub async fn get_signatures_for_blockhash(
 					println!("This is block signed event {:?}", e.block_height);
 					if e.block_hash == blockhash {
 						println!("This is block signed in side blockhash");
-						signatures
-							.push((Pubkey::new_from_array(e.pubkey.clone().into()), Signature::from_bytes(&e.signature.to_vec()).unwrap()))
+						signatures.push((
+							Pubkey::new_from_array(e.pubkey.clone().into()),
+							Signature::from_bytes(&e.signature.to_vec()).unwrap(),
+						))
 					};
 					None
 				},
@@ -711,34 +713,69 @@ pub struct Param {
 
 #[derive(Debug, Serialize, Deserialize)]
 pub struct Response {
-	jsonrpc: String,
-	id: u64,
-	result: EncodedConfirmedTransactionWithStatusMeta,
+	pub jsonrpc: String,
+	pub id: u64,
+	pub result: EncodedConfirmedTransactionWithStatusMeta,
 }
 
 #[test]
 pub fn testing_events() {
-	let events = vec!["Program logged: This is updated client state [0, 121, 0, 0, 0, 10, 6, 116, 101, 115, 116, 45, 49, 18, 4, 8, 1, 16, 3, 26, 4, 8, 128, 244, 3, 34, 4, 8, 128, 223, 110, 42, 4, 8, 224, 198, 91, 50, 0, 58, 4, 8, 1, 16, 91, 66, 25, 10, 9, 8, 1, 24, 1, 32, 1, 42, 1, 0, 18, 12, 10, 2, 0, 1, 16, 33, 24, 4, 32, 12, 48, 1, 66, 25, 10, 9, 8, 1, 24, 1, 32, 1, 42, 1, 0, 18, 12, 10, 2, 0, 1, 16, 32, 24, 1, 32, 1, 48, 1, 74, 7, 117, 112, 103, 114, 97, 100, 101, 74, 16, 117, 112, 103, 114, 97, 100, 101, 100, 73, 66, 67, 83, 116, 97, 116, 101]".to_string()];
-	let client_state_logs: Vec<&str> = events
-		.iter()
-		.filter_map(|log| {
-			if log.starts_with("Program logged: This is updated client state ") {
-				Some(log.strip_prefix("Program logged: This is updated client state ").unwrap())
-			} else {
-				None
-			}
-		})
-		.collect();
-	// There can be only one client state event in a tx
-	let client_state_log = client_state_logs[0];
-	// Remove the square brackets and whitespace, then split the string into an iterator of &str,
-	// each representing a byte. Then parse each &str to a u8 and collect into a Vec<u8>
-	let bytes: Vec<u8> = client_state_log
-		.trim_matches(|c: char| c == '[' || c == ']') // Trim the square brackets
-		.split(", ") // Split the string into individual numbers
-		.map(|s| s.parse::<u8>().unwrap()) // Convert each number from &str to u8
-		.collect(); // Collect into a Vec<u8>
-	let any_client_state: solana_ibc::client_state::AnyClientState =
-		borsh::BorshDeserialize::try_from_slice(bytes.as_slice()).unwrap();
-	println!("This is any client state {:?}", any_client_state);
+	let events = vec![
+	"Program data: ABUC".to_string(),
+	"Program data: AA+kAAAAeyJhbW91bnQiOiIxNjAwMDA4Mzk5NDAxNjg3NjgwIiwiZGVub20iOiJwcGljYSIsInJlY2VpdmVyIjoib3h5ekVzVWo5Q1Y2SHNxUENVWnFWd3JGSkp2cGQ5aUNCclBkelRCV0xCYiIsInNlbmRlciI6ImNlbnRhdXJpMWYwcm1kZnVmM2s4c3FubXJmYTBwbHQzeGdtM2xmeDR2cXU0dHA2In0BAQAAAAAAAAAGCAAAAAAAAAAaVjgvdcMXAQAAAAAAAAAIAAAAdHJhbnNmZXIKAAAAY2hhbm5lbC0xNQgAAAB0cmFuc2ZlcgkAAABjaGFubmVsLTABDAAAAGNvbm5lY3Rpb24tMA==".to_string(),
+	"Program data: ABUC".to_string(),
+	"Program data: ABCkAAAAeyJhbW91bnQiOiIxNjAwMDA4Mzk5NDAxNjg3NjgwIiwiZGVub20iOiJwcGljYSIsInJlY2VpdmVyIjoib3h5ekVzVWo5Q1Y2SHNxUENVWnFWd3JGSkp2cGQ5aUNCclBkelRCV0xCYiIsInNlbmRlciI6ImNlbnRhdXJpMWYwcm1kZnVmM2s4c3FubXJmYTBwbHQzeGdtM2xmeDR2cXU0dHA2In0BAQAAAAAAAAAGCAAAAAAAAAAaVjgvdcMXAQAAAAAAAAAIAAAAdHJhbnNmZXIKAAAAY2hhbm5lbC0xNQgAAAB0cmFuc2ZlcgkAAABjaGFubmVsLTARAAAAeyJyZXN1bHQiOiJBUT09In0MAAAAY29ubmVjdGlvbi0w".to_string(),
+	"Program data: ABQSAAAAZGVub21pbmF0aW9uX3RyYWNlAQAAAAUAAABkZW5vbRgAAAB0cmFuc2Zlci9jaGFubmVsLTAvcHBpY2E=".to_string(),
+	"Program data: ABQVAAAAZnVuZ2libGVfdG9rZW5fcGFja2V0BwAAAAYAAABtb2R1bGUIAAAAdHJhbnNmZXIGAAAAc2VuZGVyLwAAAGNlbnRhdXJpMWYwcm1kZnVmM2s4c3FubXJmYTBwbHQzeGdtM2xmeDR2cXU0dHA2CAAAAHJlY2VpdmVyKwAAAG94eXpFc1VqOUNWNkhzcVBDVVpxVndyRkpKdnBkOWlDQnJQZHpUQldMQmIFAAAAZGVub20FAAAAcHBpY2EGAAAAYW1vdW50EwAAADE2MDAwMDgzOTk0MDE2ODc2ODAEAAAAbWVtbwAAAAAHAAAAc3VjY2VzcwQAAAB0cnVl".to_string(),
+	];
+	let (eves, height) = get_events_from_logs(events);
+	eves.iter().for_each(|event| println!("{:?}", event));
+	let seqs = vec![1];
+	let port_id = PortId::transfer();
+	let channel_id = ChannelId::new(15);
+	let recv_packet_events: Vec<_> = eves
+			.iter()
+			.filter_map(|tx| {
+				match tx {
+					solana_ibc::events::Event::IbcEvent(e) => match e {
+						ibc_core_handler_types::events::IbcEvent::WriteAcknowledgement(packet) =>
+							if packet.chan_id_on_a().as_str() == &channel_id.to_string() &&
+								packet.port_id_on_a().as_str() == port_id.as_str() &&
+								seqs.iter()
+									.find(|&&seq| packet.seq_on_a().value() == seq)
+									.is_some()
+							{
+								println!("We found packet");
+								Some(packet)
+							} else {
+								None
+							},
+						_ => None,
+					},
+					_ => None,
+				}
+			})
+			.collect();
+	// let client_state_logs: Vec<&str> = events
+	// 	.iter()
+	// 	.filter_map(|log| {
+	// 		if log.starts_with("Program logged: This is updated client state ") {
+	// 			Some(log.strip_prefix("Program logged: This is updated client state ").unwrap())
+	// 		} else {
+	// 			None
+	// 		}
+	// 	})
+	// 	.collect();
+	// // There can be only one client state event in a tx
+	// let client_state_log = client_state_logs[0];
+	// // Remove the square brackets and whitespace, then split the string into an iterator of &str,
+	// // each representing a byte. Then parse each &str to a u8 and collect into a Vec<u8>
+	// let bytes: Vec<u8> = client_state_log
+	// 	.trim_matches(|c: char| c == '[' || c == ']') // Trim the square brackets
+	// 	.split(", ") // Split the string into individual numbers
+	// 	.map(|s| s.parse::<u8>().unwrap()) // Convert each number from &str to u8
+	// 	.collect(); // Collect into a Vec<u8>
+	// let any_client_state: solana_ibc::client_state::AnyClientState =
+	// 	borsh::BorshDeserialize::try_from_slice(bytes.as_slice()).unwrap();
+	// println!("This is any client state {:?}", any_client_state);
 }

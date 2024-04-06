@@ -132,7 +132,7 @@ where
 	}
 
 	async fn submit(&self, messages: Vec<Any>) -> Result<Self::TransactionId, Error> {
-		// log::info!("This is the submitted message {:?}", messages[0].type_url);
+		log::info!("This is the submitted message {:?}", messages[0].type_url);
 		let hash = self.submit_call(messages).await?;
 		log::debug!(target: "hyperspace_cosmos", "Submitted. Tx hash: {}", hash);
 		Ok(Self::TransactionId { hash })
