@@ -1404,13 +1404,14 @@ where
 						}
 					}
 
-					// if is_filtered {
-					ev.set_height(ibc_height);
-					log::debug!(target: "hyperspace_cosmos", "Encountered event at {height}: {:?}", event.kind);
-					ibc_events.push(ev);
-					// } else {
-					// 	log::debug!(target: "hyperspace_cosmos", "Filtered out event: {:?}",
-					// event.kind); }
+					if is_filtered {
+						ev.set_height(ibc_height);
+						log::debug!(target: "hyperspace_cosmos", "Encountered event at {height}: {:?}", event.kind);
+						ibc_events.push(ev);
+					} else {
+						log::debug!(target: "hyperspace_cosmos", "Filtered out event: {:?}",
+					event.kind);
+					}
 				},
 				None => {
 					let ignored_events = [
