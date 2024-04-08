@@ -1360,15 +1360,20 @@ deserialize client state"
 	}
 
 	fn client_id(&self) -> ClientId {
-		self.client_id.clone().expect("No client ID found")
+		self.client_id
+			.lock()
+			.unwrap()
+			.as_ref()
+			.expect("Client Id should be defined")
+			.clone()
 	}
 
 	fn set_client_id(&mut self, client_id: ClientId) {
-		self.client_id = Some(client_id);
+		*self.client_id.lock().unwrap() = Some(client_id);
 	}
 
 	fn connection_id(&self) -> Option<ConnectionId> {
-		self.connection_id.clone()
+		self.connection_id.lock().unwrap().clone()
 	}
 
 	fn set_channel_whitelist(
@@ -1392,7 +1397,7 @@ deserialize client state"
 	}
 
 	fn set_connection_id(&mut self, connection_id: ConnectionId) {
-		self.connection_id = Some(connection_id)
+		*self.connection_id.lock().unwrap() = Some(connection_id)
 	}
 
 	fn client_type(&self) -> ibc::core::ics02_client::client_state::ClientType {

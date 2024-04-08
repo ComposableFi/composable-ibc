@@ -79,9 +79,9 @@ pub struct SolanaClient {
 	/// Solana chain Id
 	pub chain_id: String,
 	/// Light client id on counterparty chain
-	pub client_id: Option<ClientId>,
+	pub client_id: Arc<Mutex<Option<ClientId>>>,
 	/// Connection Id
-	pub connection_id: Option<ConnectionId>,
+	pub connection_id: Arc<Mutex<Option<ConnectionId>>>,
 	/// Account prefix
 	pub account_prefix: String,
 	pub fee_denom: String,
@@ -250,8 +250,8 @@ impl SolanaClient {
 			rpc_url: config.rpc_url.to_string(),
 			ws_url: config.ws_url.to_string(),
 			chain_id: config.chain_id,
-			client_id: config.client_id,
-			connection_id: config.connection_id,
+			client_id: Arc::new(Mutex::new(config.client_id)),
+			connection_id: Arc::new(Mutex::new(config.connection_id)),
 			account_prefix: config.account_prefix,
 			fee_denom: config.fee_denom,
 			keybase: config.private_key.into(),
