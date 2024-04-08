@@ -68,56 +68,56 @@ where
 	});
 	// check if an open transfer channel exists
 	let (latest_height, ..) = chain_a.latest_height_and_timestamp().await.unwrap();
-	let connections = chain_a
-		.query_connection_using_client(
-			latest_height.revision_height as u32,
-			chain_b.client_id().to_string(),
-		)
-		.await
-		.unwrap();
+	// let connections = chain_a
+	// 	.query_connection_using_client(
+	// 		latest_height.revision_height as u32,
+	// 		chain_b.client_id().to_string(),
+	// 	)
+	// 	.await
+	// 	.unwrap();
 
-	for connection in connections {
-		let connection_id = ConnectionId::from_str(&connection.id).unwrap();
-		let connection_end = chain_a
-			.query_connection_end(latest_height, connection_id.clone())
-			.await
-			.unwrap()
-			.connection
-			.unwrap();
+	// for connection in connections {
+	// 	let connection_id = ConnectionId::from_str(&connection.id).unwrap();
+	// 	let connection_end = chain_a
+	// 		.query_connection_end(latest_height, connection_id.clone())
+	// 		.await
+	// 		.unwrap()
+	// 		.connection
+	// 		.unwrap();
 
-		let delay_period = Duration::from_nanos(connection_end.delay_period);
-		if delay_period != connection_delay {
-			continue
-		}
+	// 	let delay_period = Duration::from_nanos(connection_end.delay_period);
+	// 	if delay_period != connection_delay {
+	// 		continue
+	// 	}
 
-		let channels = chain_a
-			.query_connection_channels(latest_height, &connection_id)
-			.await
-			.unwrap()
-			.channels;
+	// 	let channels = chain_a
+	// 		.query_connection_channels(latest_height, &connection_id)
+	// 		.await
+	// 		.unwrap()
+	// 		.channels;
 
-		for channel in channels {
-			let channel_id = ChannelId::from_str(&channel.channel_id).unwrap();
-			let channel_end = chain_a
-				.query_channel_end(latest_height, channel_id, PortId::transfer())
-				.await
-				.unwrap()
-				.channel
-				.unwrap();
-			let channel_end = ChannelEnd::try_from(channel_end).unwrap();
+	// 	for channel in channels {
+	// 		let channel_id = ChannelId::from_str(&channel.channel_id).unwrap();
+	// 		let channel_end = chain_a
+	// 			.query_channel_end(latest_height, channel_id, PortId::transfer())
+	// 			.await
+	// 			.unwrap()
+	// 			.channel
+	// 			.unwrap();
+	// 		let channel_end = ChannelEnd::try_from(channel_end).unwrap();
 
-			if channel_end.state == State::Open && channel.port_id == PortId::transfer().to_string()
-			{
-				return (
-					handle,
-					channel_id,
-					channel_end.counterparty().channel_id.unwrap().clone(),
-					channel_end.connection_hops[0].clone(),
-					connection_id,
-				)
-			}
-		}
-	}
+	// 		if channel_end.state == State::Open && channel.port_id == PortId::transfer().to_string()
+	// 		{
+	// 			return (
+	// 				handle,
+	// 				channel_id,
+	// 				channel_end.counterparty().channel_id.unwrap().clone(),
+	// 				channel_end.connection_hops[0].clone(),
+	// 				connection_id,
+	// 			)
+	// 		}
+	// 	}
+	// }
 
 	let (connection_id_a, connection_id_b) =
 		create_connection(chain_a, chain_b, connection_delay).await.unwrap();
