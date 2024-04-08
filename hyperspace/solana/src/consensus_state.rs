@@ -24,21 +24,23 @@ pub fn convert_new_consensus_state_to_old(
 					.unwrap(),
 			})
 		},
-		solana_ibc::consensus_state::AnyConsensusState::Mock(cs) =>
-			AnyConsensusState::Mock(ibc::mock::client_state::MockConsensusState {
-				header: MockHeader {
-					height: Height::new(
-						cs.header.height.revision_number(),
-						cs.header.height.revision_height(),
-					),
-					timestamp: ibc::timestamp::Timestamp::from_nanoseconds(
-						cs.header.timestamp.nanoseconds(),
-					)
-					.unwrap(),
-				},
-				root: CommitmentRoot { bytes: cs.root.into_vec() },
-			}),
+		// solana_ibc::consensus_state::AnyConsensusState::Mock(cs) =>
+		// 	AnyConsensusState::Mock(ibc::mock::client_state::MockConsensusState {
+		// 		header: MockHeader {
+		// 			height: Height::new(
+		// 				cs.header.height.revision_number(),
+		// 				cs.header.height.revision_height(),
+		// 			),
+		// 			timestamp: ibc::timestamp::Timestamp::from_nanoseconds(
+		// 				cs.header.timestamp.nanoseconds(),
+		// 			)
+		// 			.unwrap(),
+		// 		},
+		// 		root: CommitmentRoot { bytes: cs.root.into_vec() },
+		// 	}),
 		solana_ibc::consensus_state::AnyConsensusState::Guest(_) =>
+			panic!("Guest consensus not supported"),
+		solana_ibc::consensus_state::AnyConsensusState::Wasm(_) =>
 			panic!("Guest consensus not supported"),
 	}
 }

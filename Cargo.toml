@@ -74,7 +74,7 @@ ibc-core-connection-types = { git = "https://github.com/dhruvja/ibc-rs", rev = "
 ibc-core-host             = { git = "https://github.com/dhruvja/ibc-rs", rev = "6bb51e2d02c016d572974ec8f47633c1f85b6ba8" }
 ibc-core-host-types       = { git = "https://github.com/dhruvja/ibc-rs", rev = "6bb51e2d02c016d572974ec8f47633c1f85b6ba8" }
 ibc-primitives            = { git = "https://github.com/dhruvja/ibc-rs", rev = "6bb51e2d02c016d572974ec8f47633c1f85b6ba8" }
-ibc-testkit               = { git = "https://github.com/dhruvja/ibc-rs", rev = "6bb51e2d02c016d572974ec8f47633c1f85b6ba8" }
+# ibc-testkit               = { git = "https://github.com/dhruvja/ibc-rs", rev = "6bb51e2d02c016d572974ec8f47633c1f85b6ba8" }
 #ibc = { path = "../ibc-rs-mina/ibc" }
 #ibc-app-nft-transfer = { path = "../ibc-rs-mina/ibc-apps/ics721-nft-transfer" }
 #ibc-app-nft-transfer-types = { path = "../ibc-rs-mina/ibc-apps/ics721-nft-transfer/types" }
