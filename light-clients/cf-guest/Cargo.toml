@@ -13,9 +13,9 @@ ed25519-consensus = { version = "2", default-features = false }
 serde = { version = "1.0", default-features = false, features = ["derive"] }
 
 # New IBC
-ibc-core-client-types = { git = "https://github.com/dhruvja/ibc-rs", rev = "6bb51e2d02c016d572974ec8f47633c1f85b6ba8", default-features = false }
-ibc-core-handler-types = { git = "https://github.com/dhruvja/ibc-rs", rev = "6bb51e2d02c016d572974ec8f47633c1f85b6ba8", default-features = false }
-ibc-core-host-types = { git = "https://github.com/dhruvja/ibc-rs", rev = "6bb51e2d02c016d572974ec8f47633c1f85b6ba8", default-features = false, features = ["borsh", "serde"]}
+ibc-core-client-types = { git = "https://github.com/dhruvja/ibc-rs", rev = "66ed6ce2959d38043d4cb936a1044330146e3faa", default-features = false }
+ibc-core-handler-types = { git = "https://github.com/dhruvja/ibc-rs", rev = "66ed6ce2959d38043d4cb936a1044330146e3faa", default-features = false }
+ibc-core-host-types = { git = "https://github.com/dhruvja/ibc-rs", rev = "66ed6ce2959d38043d4cb936a1044330146e3faa", default-features = false, features = ["borsh", "serde"]}
 
 # Old IBC
 ibc = { path = "../../ibc/modules", default-features = false }
@@ -24,11 +24,11 @@ ibc-derive = { path = "../../ibc/derive", default-features = false }
 
 tendermint-proto = { git = "https://github.com/informalsystems/tendermint-rs", rev = "e81f7bf23d63ffbcd242381d1ce5e35da3515ff1", default-features = false }
 
-guestchain = { git = "https://github.com/ComposableFi/emulated-light-client/", rev = "2e2d815e42ce82d9c0e948884019e8bfbdb2e66d", default-features = false }
-lib = { git = "https://github.com/ComposableFi/emulated-light-client/", rev = "2e2d815e42ce82d9c0e948884019e8bfbdb2e66d", features = ["borsh"], default-features = false }
-trie-ids = { git = "https://github.com/ComposableFi/emulated-light-client/", rev = "2e2d815e42ce82d9c0e948884019e8bfbdb2e66d", default-features = false }
-sealable-trie = { git = "https://github.com/ComposableFi/emulated-light-client/", rev = "2e2d815e42ce82d9c0e948884019e8bfbdb2e66d", features = ["borsh"], default-features = false }
-stdx = { git = "https://github.com/ComposableFi/emulated-light-client/", rev = "2e2d815e42ce82d9c0e948884019e8bfbdb2e66d", default-features = false }
+guestchain = { git = "https://github.com/ComposableFi/emulated-light-client/", rev = "1731b463cf83b9204fca65360a0cc2e212e7f9bd", default-features = false }
+lib = { git = "https://github.com/ComposableFi/emulated-light-client/", rev = "1731b463cf83b9204fca65360a0cc2e212e7f9bd", features = ["borsh"], default-features = false }
+trie-ids = { git = "https://github.com/ComposableFi/emulated-light-client/", rev = "1731b463cf83b9204fca65360a0cc2e212e7f9bd", default-features = false }
+sealable-trie = { git = "https://github.com/ComposableFi/emulated-light-client/", rev = "1731b463cf83b9204fca65360a0cc2e212e7f9bd", features = ["borsh"], default-features = false }
+stdx = { git = "https://github.com/ComposableFi/emulated-light-client/", rev = "1731b463cf83b9204fca65360a0cc2e212e7f9bd", default-features = false }
 
 [build-dependencies]
 prost-build = { version = "0.11", default-features = false }
@@ -37,9 +37,9 @@ prost-build = { version = "0.11", default-features = false }
 insta = { version = "1.34.0" }
 rand = { version = "0.8.5" }
 
-guestchain = { git = "https://github.com/ComposableFi/emulated-light-client/", rev = "2e2d815e42ce82d9c0e948884019e8bfbdb2e66d", default-features = false, features = ["test_utils"] }
-lib = { git = "https://github.com/ComposableFi/emulated-light-client/", rev = "2e2d815e42ce82d9c0e948884019e8bfbdb2e66d", features = ["test_utils"] }
-memory = { git = "https://github.com/ComposableFi/emulated-light-client/", rev = "2e2d815e42ce82d9c0e948884019e8bfbdb2e66d", features = ["test_utils"] }
+guestchain = { git = "https://github.com/ComposableFi/emulated-light-client/", rev = "1731b463cf83b9204fca65360a0cc2e212e7f9bd", default-features = false, features = ["test_utils"] }
+lib = { git = "https://github.com/ComposableFi/emulated-light-client/", rev = "1731b463cf83b9204fca65360a0cc2e212e7f9bd", features = ["test_utils"] }
+memory = { git = "https://github.com/ComposableFi/emulated-light-client/", rev = "1731b463cf83b9204fca65360a0cc2e212e7f9bd", features = ["test_utils"] }
 
 [features]
 std = []

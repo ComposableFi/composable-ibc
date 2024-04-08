@@ -496,7 +496,7 @@ deserialize consensus state"
 					let signature = program
 						.request()
 						.instruction(ComputeBudgetInstruction::set_compute_unit_limit(2_000_000u32))
-						.instruction(ComputeBudgetInstruction::request_heap_frame(128 * 1024))
+						.instruction(ComputeBudgetInstruction::request_heap_frame(256 * 1024))
 						.instruction(ComputeBudgetInstruction::set_compute_unit_price(500000))
 						// .instruction(new_ed25519_instruction_with_signature(
 						// 	pubkeys,

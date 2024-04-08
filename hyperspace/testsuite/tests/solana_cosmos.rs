@@ -55,7 +55,7 @@ impl Default for Args {
 	fn default() -> Self {
 		let relay = std::env::var("RELAY_HOST").unwrap_or_else(|_| "127.0.0.1".to_string());
 		let solana = std::env::var("SOLANA_HOST").unwrap_or_else(|_| "127.0.0.1".to_string());
-		let cosmos = std::env::var("COSMOS_HOST").unwrap_or_else(|_| "127.0.0.1".to_string());
+		let cosmos = std::env::var("COSMOS_HOST").unwrap_or_else(|_| "10.132.0.6".to_string());
 		let wasm_path = std::env::var("WASM_PATH").unwrap_or_else(|_| {
 			"../../target/wasm32-unknown-unknown/release/ics07_guest_cw.wasm".to_string()
 		});
@@ -71,7 +71,7 @@ impl Default for Args {
 			connection_prefix_a: "ibc".to_string(),
 			connection_prefix_b: "ibc".to_string(),
 			// cosmos_grpc: format!("http://34.34.182.7:9098"),
-			cosmos_grpc: format!("http://192.168.0.120:9090"),
+			cosmos_grpc: format!("http://{cosmos}:9999"),
 			// cosmos_grpc: format!("http://34.34.178.141:9999"),
 			cosmos_ws: format!("ws://{cosmos}:26657/websocket"),
 			// cosmos_ws: format!("ws://34.34.178.141:26657/websocket"),
@@ -115,11 +115,11 @@ async fn setup_clients() -> (AnyChain, AnyChain) {
 			153, 230, 192, 225, 51, 119, 216, 14, 69, 225, 73, 7, 204, 144, 39, 213, 91, 255, 136,
 			38, 95, 131, 197, 4, 101, 186,
 		],
-		solana_ibc_program_id: Pubkey::from_str("9FeHRJLHJSEw4dYZrABHWTRKruFjxDmkLtPmhM5WFYL7")
+		solana_ibc_program_id: Pubkey::from_str("3MZrLWwMvD9mcMiNd7mnbrqmZDzjg29qmLo7FMTqr3qT")
 			.unwrap(),
-		write_program_id: Pubkey::from_str("FufGpHqMQgGVjtMH9AV8YMrJYq8zaK6USRsJkZP4yDjo").unwrap(),
+		write_program_id: Pubkey::from_str("FttaQtn8T8CnDCXd7JwxvkkKSYgVi7XwwyY7p2b6TCUt").unwrap(),
 		signature_verifier_program_id: Pubkey::from_str(
-			"C6r1VEbn3mSpecgrZ7NdBvWUtYVJWrDPv4uU9Xs956gc",
+			"2G9Wsz1LfzJ2gpVbeXuSciih2s3wKdj4fcTjeD1JJ3M1",
 		)
 		.unwrap(),
 	};
@@ -141,7 +141,8 @@ async fn setup_clients() -> (AnyChain, AnyChain) {
         mnemonic:
         // centauri1g5r2vmnp6lta9cpst4lzc4syy3kcj2ljte3tlh
         // "decorate bright ozone fork gallery riot bus exhaust worth way bone indoor calm squirrel merry zero scheme cotton until shop any excess stage laundry"
-				"peace cash suffer celery broken blade fame fiscal lesson fancy virus bless recipe inherit reason cart mask mask absurd venture culture problem reward crew"
+				// "peace cash suffer celery broken blade fame fiscal lesson fancy virus bless recipe inherit reason cart mask mask absurd venture culture problem reward crew"
+				"scissors enroll comfort wrist eight catch decide stage squirrel phrase close december staff baby stable mirror hand allow sort dish wrist gas quantum puppy"
             .to_string(),
         wasm_code_id: None,
         channel_whitelist: vec![],

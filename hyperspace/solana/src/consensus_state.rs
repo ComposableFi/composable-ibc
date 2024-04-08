@@ -66,24 +66,24 @@ pub fn convert_old_consensus_state_to_new(
 				.unwrap(),
 			)
 		},
-		AnyConsensusState::Mock(cs) => solana_ibc::consensus_state::AnyConsensusState::Mock(
-			ibc_testkit::testapp::ibc::clients::mock::consensus_state::MockConsensusState {
-				header: ibc_testkit::testapp::ibc::clients::mock::header::MockHeader {
-					height: ibc_core_client_types::Height::new(
-						cs.header.height().revision_number,
-						cs.header.height().revision_height,
-					)
-					.unwrap(),
-					timestamp: ibc_new_primitives::Timestamp::from_nanoseconds(
-						cs.header.timestamp.nanoseconds(),
-					)
-					.unwrap(),
-				},
-				root: ibc_core_commitment_types::commitment::CommitmentRoot::from_bytes(
-					cs.root.as_bytes(),
-				),
-			},
-		),
+		// AnyConsensusState::Mock(cs) => solana_ibc::consensus_state::AnyConsensusState::Mock(
+		// 	ibc_testkit::testapp::ibc::clients::mock::consensus_state::MockConsensusState {
+		// 		header: ibc_testkit::testapp::ibc::clients::mock::header::MockHeader {
+		// 			height: ibc_core_client_types::Height::new(
+		// 				cs.header.height().revision_number,
+		// 				cs.header.height().revision_height,
+		// 			)
+		// 			.unwrap(),
+		// 			timestamp: ibc_new_primitives::Timestamp::from_nanoseconds(
+		// 				cs.header.timestamp.nanoseconds(),
+		// 			)
+		// 			.unwrap(),
+		// 		},
+		// 		root: ibc_core_commitment_types::commitment::CommitmentRoot::from_bytes(
+		// 			cs.root.as_bytes(),
+		// 		),
+		// 	},
+		// ),
 		_ => panic!("Client state not supported"),
 	}
 }

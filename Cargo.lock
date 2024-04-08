@@ -1564,22 +1564,24 @@ dependencies = [
 [[package]]
 name = "cf-guest"
 version = "0.0.0"
-source = "git+https://github.com/ComposableFi/emulated-light-client/?rev=2e2d815e42ce82d9c0e948884019e8bfbdb2e66d#2e2d815e42ce82d9c0e948884019e8bfbdb2e66d"
+source = "git+https://github.com/ComposableFi/emulated-light-client/?rev=1731b463cf83b9204fca65360a0cc2e212e7f9bd#1731b463cf83b9204fca65360a0cc2e212e7f9bd"
 dependencies = [
  "borsh 0.10.3",
  "bytemuck",
  "derive_more",
  "guestchain",
+ "ibc-client-tendermint-types",
  "ibc-core-client-context",
  "ibc-core-commitment-types",
  "ibc-core-host",
  "ibc-primitives 0.50.0",
  "ibc-proto 0.41.0",
- "lib",
+ "lib 0.0.0 (git+https://github.com/ComposableFi/emulated-light-client/?rev=1731b463cf83b9204fca65360a0cc2e212e7f9bd)",
  "prost 0.12.3",
  "prost-build 0.12.3",
  "sealable-trie",
- "stdx",
+ "solana-program",
+ "stdx 0.0.0 (git+https://github.com/ComposableFi/emulated-light-client/?rev=1731b463cf83b9204fca65360a0cc2e212e7f9bd)",
  "trie-ids",
 ]
 
@@ -1599,14 +1601,14 @@ dependencies = [
  "ibc-derive 0.1.0",
  "ibc-proto 0.18.0",
  "insta",
- "lib",
+ "lib 0.0.0 (git+https://github.com/ComposableFi/emulated-light-client/?rev=1731b463cf83b9204fca65360a0cc2e212e7f9bd)",
  "memory",
  "prost 0.11.9",
  "prost-build 0.11.9",
  "rand 0.8.5",
  "sealable-trie",
  "serde",
- "stdx",
+ "stdx 0.0.0 (git+https://github.com/ComposableFi/emulated-light-client/?rev=1731b463cf83b9204fca65360a0cc2e212e7f9bd)",
  "tendermint-proto 0.28.0",
  "trie-ids",
 ]
@@ -4815,7 +4817,7 @@ dependencies = [
 [[package]]
 name = "guestchain"
 version = "0.0.0"
-source = "git+https://github.com/ComposableFi/emulated-light-client/?rev=2e2d815e42ce82d9c0e948884019e8bfbdb2e66d#2e2d815e42ce82d9c0e948884019e8bfbdb2e66d"
+source = "git+https://github.com/ComposableFi/emulated-light-client/?rev=1731b463cf83b9204fca65360a0cc2e212e7f9bd#1731b463cf83b9204fca65360a0cc2e212e7f9bd"
 dependencies = [
  "borsh 0.10.3",
  "bytemuck",
@@ -4825,11 +4827,11 @@ dependencies = [
  "ibc-core-host",
  "ibc-primitives 0.50.0",
  "ibc-proto 0.41.0",
- "lib",
+ "lib 0.0.0 (git+https://github.com/ComposableFi/emulated-light-client/?rev=1731b463cf83b9204fca65360a0cc2e212e7f9bd)",
  "prost 0.12.3",
  "prost-build 0.12.3",
  "sealable-trie",
- "stdx",
+ "stdx 0.0.0 (git+https://github.com/ComposableFi/emulated-light-client/?rev=1731b463cf83b9204fca65360a0cc2e212e7f9bd)",
  "strum 0.25.0",
  "trie-ids",
 ]
@@ -5319,7 +5321,7 @@ dependencies = [
  "ics10-grandpa",
  "ics11-beefy",
  "itertools 0.10.5",
- "lib",
+ "lib 0.0.0 (git+https://github.com/ComposableFi/emulated-light-client/?rev=1731b463cf83b9204fca65360a0cc2e212e7f9bd)",
  "light-client-common",
  "log",
  "once_cell",
@@ -5543,7 +5545,7 @@ dependencies = [
  "ics08-wasm",
  "itertools 0.10.5",
  "k256 0.11.6",
- "lib",
+ "lib 0.0.0 (git+https://github.com/ComposableFi/emulated-light-client/?rev=1731b463cf83b9204fca65360a0cc2e212e7f9bd)",
  "log",
  "memory",
  "pallet-ibc",
@@ -5563,7 +5565,7 @@ dependencies = [
  "solana-transaction-status",
  "solana-trie",
  "solana-write-account",
- "stdx",
+ "stdx 0.0.0 (git+https://github.com/ComposableFi/emulated-light-client/?rev=1731b463cf83b9204fca65360a0cc2e212e7f9bd)",
  "tendermint 0.28.0",
  "tendermint 0.34.0",
  "tendermint-light-client",
@@ -5686,7 +5688,7 @@ dependencies = [
 [[package]]
 name = "ibc"
 version = "0.50.0"
-source = "git+https://github.com/dhruvja/ibc-rs?rev=6bb51e2d02c016d572974ec8f47633c1f85b6ba8#6bb51e2d02c016d572974ec8f47633c1f85b6ba8"
+source = "git+https://github.com/dhruvja/ibc-rs?rev=66ed6ce2959d38043d4cb936a1044330146e3faa#66ed6ce2959d38043d4cb936a1044330146e3faa"
 dependencies = [
  "ibc-apps",
  "ibc-clients",
@@ -5699,7 +5701,7 @@ dependencies = [
 [[package]]
 name = "ibc-app-nft-transfer"
 version = "0.50.0"
-source = "git+https://github.com/dhruvja/ibc-rs?rev=6bb51e2d02c016d572974ec8f47633c1f85b6ba8#6bb51e2d02c016d572974ec8f47633c1f85b6ba8"
+source = "git+https://github.com/dhruvja/ibc-rs?rev=66ed6ce2959d38043d4cb936a1044330146e3faa#66ed6ce2959d38043d4cb936a1044330146e3faa"
 dependencies = [
  "ibc-app-nft-transfer-types",
  "ibc-core",
@@ -5709,7 +5711,7 @@ dependencies = [
 [[package]]
 name = "ibc-app-nft-transfer-types"
 version = "0.50.0"
-source = "git+https://github.com/dhruvja/ibc-rs?rev=6bb51e2d02c016d572974ec8f47633c1f85b6ba8#6bb51e2d02c016d572974ec8f47633c1f85b6ba8"
+source = "git+https://github.com/dhruvja/ibc-rs?rev=66ed6ce2959d38043d4cb936a1044330146e3faa#66ed6ce2959d38043d4cb936a1044330146e3faa"
 dependencies = [
  "base64 0.21.7",
  "borsh 0.10.3",
@@ -5729,7 +5731,7 @@ dependencies = [
 [[package]]
 name = "ibc-app-transfer"
 version = "0.50.0"
-source = "git+https://github.com/dhruvja/ibc-rs?rev=6bb51e2d02c016d572974ec8f47633c1f85b6ba8#6bb51e2d02c016d572974ec8f47633c1f85b6ba8"
+source = "git+https://github.com/dhruvja/ibc-rs?rev=66ed6ce2959d38043d4cb936a1044330146e3faa#66ed6ce2959d38043d4cb936a1044330146e3faa"
 dependencies = [
  "ibc-app-transfer-types",
  "ibc-core",
@@ -5739,7 +5741,7 @@ dependencies = [
 [[package]]
 name = "ibc-app-transfer-types"
 version = "0.50.0"
-source = "git+https://github.com/dhruvja/ibc-rs?rev=6bb51e2d02c016d572974ec8f47633c1f85b6ba8#6bb51e2d02c016d572974ec8f47633c1f85b6ba8"
+source = "git+https://github.com/dhruvja/ibc-rs?rev=66ed6ce2959d38043d4cb936a1044330146e3faa#66ed6ce2959d38043d4cb936a1044330146e3faa"
 dependencies = [
  "borsh 0.10.3",
  "derive_more",
@@ -5754,7 +5756,7 @@ dependencies = [
 [[package]]
 name = "ibc-apps"
 version = "0.50.0"
-source = "git+https://github.com/dhruvja/ibc-rs?rev=6bb51e2d02c016d572974ec8f47633c1f85b6ba8#6bb51e2d02c016d572974ec8f47633c1f85b6ba8"
+source = "git+https://github.com/dhruvja/ibc-rs?rev=66ed6ce2959d38043d4cb936a1044330146e3faa#66ed6ce2959d38043d4cb936a1044330146e3faa"
 dependencies = [
  "ibc-app-nft-transfer",
  "ibc-app-transfer",
@@ -5763,7 +5765,7 @@ dependencies = [
 [[package]]
 name = "ibc-client-tendermint"
 version = "0.50.0"
-source = "git+https://github.com/dhruvja/ibc-rs?rev=6bb51e2d02c016d572974ec8f47633c1f85b6ba8#6bb51e2d02c016d572974ec8f47633c1f85b6ba8"
+source = "git+https://github.com/dhruvja/ibc-rs?rev=66ed6ce2959d38043d4cb936a1044330146e3faa#66ed6ce2959d38043d4cb936a1044330146e3faa"
 dependencies = [
  "derive_more",
  "ibc-client-tendermint-types",
@@ -5773,6 +5775,7 @@ dependencies = [
  "ibc-core-host",
  "ibc-primitives 0.50.0",
  "serde",
+ "solana-program",
  "tendermint 0.34.0",
  "tendermint-light-client-verifier 0.34.0",
 ]
@@ -5780,7 +5783,7 @@ dependencies = [
 [[package]]
 name = "ibc-client-tendermint-types"
 version = "0.50.0"
-source = "git+https://github.com/dhruvja/ibc-rs?rev=6bb51e2d02c016d572974ec8f47633c1f85b6ba8#6bb51e2d02c016d572974ec8f47633c1f85b6ba8"
+source = "git+https://github.com/dhruvja/ibc-rs?rev=66ed6ce2959d38043d4cb936a1044330146e3faa#66ed6ce2959d38043d4cb936a1044330146e3faa"
 dependencies = [
  "borsh 0.10.3",
  "bytes",
@@ -5792,6 +5795,7 @@ dependencies = [
  "ibc-proto 0.41.0",
  "prost 0.12.3",
  "serde",
+ "solana-program",
  "tendermint 0.34.0",
  "tendermint-light-client-verifier 0.34.0",
  "tendermint-proto 0.34.0",
@@ -5800,7 +5804,7 @@ dependencies = [
 [[package]]
 name = "ibc-client-wasm-types"
 version = "0.50.0"
-source = "git+https://github.com/dhruvja/ibc-rs?rev=6bb51e2d02c016d572974ec8f47633c1f85b6ba8#6bb51e2d02c016d572974ec8f47633c1f85b6ba8"
+source = "git+https://github.com/dhruvja/ibc-rs?rev=66ed6ce2959d38043d4cb936a1044330146e3faa#66ed6ce2959d38043d4cb936a1044330146e3faa"
 dependencies = [
  "base64 0.21.7",
  "displaydoc",
@@ -5814,7 +5818,7 @@ dependencies = [
 [[package]]
 name = "ibc-clients"
 version = "0.50.0"
-source = "git+https://github.com/dhruvja/ibc-rs?rev=6bb51e2d02c016d572974ec8f47633c1f85b6ba8#6bb51e2d02c016d572974ec8f47633c1f85b6ba8"
+source = "git+https://github.com/dhruvja/ibc-rs?rev=66ed6ce2959d38043d4cb936a1044330146e3faa#66ed6ce2959d38043d4cb936a1044330146e3faa"
 dependencies = [
  "ibc-client-tendermint",
  "ibc-client-wasm-types",
@@ -5823,7 +5827,7 @@ dependencies = [
 [[package]]
 name = "ibc-core"
 version = "0.50.0"
-source = "git+https://github.com/dhruvja/ibc-rs?rev=6bb51e2d02c016d572974ec8f47633c1f85b6ba8#6bb51e2d02c016d572974ec8f47633c1f85b6ba8"
+source = "git+https://github.com/dhruvja/ibc-rs?rev=66ed6ce2959d38043d4cb936a1044330146e3faa#66ed6ce2959d38043d4cb936a1044330146e3faa"
 dependencies = [
  "ibc-core-channel",
  "ibc-core-client",
@@ -5839,7 +5843,7 @@ dependencies = [
 [[package]]
 name = "ibc-core-channel"
 version = "0.50.0"
-source = "git+https://github.com/dhruvja/ibc-rs?rev=6bb51e2d02c016d572974ec8f47633c1f85b6ba8#6bb51e2d02c016d572974ec8f47633c1f85b6ba8"
+source = "git+https://github.com/dhruvja/ibc-rs?rev=66ed6ce2959d38043d4cb936a1044330146e3faa#66ed6ce2959d38043d4cb936a1044330146e3faa"
 dependencies = [
  "ibc-core-channel-types",
  "ibc-core-client",
@@ -5854,7 +5858,7 @@ dependencies = [
 [[package]]
 name = "ibc-core-channel-types"
 version = "0.50.0"
-source = "git+https://github.com/dhruvja/ibc-rs?rev=6bb51e2d02c016d572974ec8f47633c1f85b6ba8#6bb51e2d02c016d572974ec8f47633c1f85b6ba8"
+source = "git+https://github.com/dhruvja/ibc-rs?rev=66ed6ce2959d38043d4cb936a1044330146e3faa#66ed6ce2959d38043d4cb936a1044330146e3faa"
 dependencies = [
  "borsh 0.10.3",
  "derive_more",
@@ -5877,23 +5881,27 @@ dependencies = [
 [[package]]
 name = "ibc-core-client"
 version = "0.50.0"
-source = "git+https://github.com/dhruvja/ibc-rs?rev=6bb51e2d02c016d572974ec8f47633c1f85b6ba8#6bb51e2d02c016d572974ec8f47633c1f85b6ba8"
+source = "git+https://github.com/dhruvja/ibc-rs?rev=66ed6ce2959d38043d4cb936a1044330146e3faa#66ed6ce2959d38043d4cb936a1044330146e3faa"
 dependencies = [
+ "ibc-client-tendermint-types",
  "ibc-core-client-context",
  "ibc-core-client-types",
  "ibc-core-commitment-types",
  "ibc-core-handler-types",
  "ibc-core-host",
  "ibc-primitives 0.50.0",
+ "lib 0.0.0 (git+http://github.com/composableFi/emulated-light-client)",
+ "solana-program",
 ]
 
 [[package]]
 name = "ibc-core-client-context"
 version = "0.50.0"
-source = "git+https://github.com/dhruvja/ibc-rs?rev=6bb51e2d02c016d572974ec8f47633c1f85b6ba8#6bb51e2d02c016d572974ec8f47633c1f85b6ba8"
+source = "git+https://github.com/dhruvja/ibc-rs?rev=66ed6ce2959d38043d4cb936a1044330146e3faa#66ed6ce2959d38043d4cb936a1044330146e3faa"
 dependencies = [
  "derive_more",
  "displaydoc",
+ "ibc-client-tendermint-types",
  "ibc-core-client-types",
  "ibc-core-commitment-types",
  "ibc-core-handler-types",
@@ -5906,7 +5914,7 @@ dependencies = [
 [[package]]
 name = "ibc-core-client-types"
 version = "0.50.0"
-source = "git+https://github.com/dhruvja/ibc-rs?rev=6bb51e2d02c016d572974ec8f47633c1f85b6ba8#6bb51e2d02c016d572974ec8f47633c1f85b6ba8"
+source = "git+https://github.com/dhruvja/ibc-rs?rev=66ed6ce2959d38043d4cb936a1044330146e3faa#66ed6ce2959d38043d4cb936a1044330146e3faa"
 dependencies = [
  "borsh 0.10.3",
  "derive_more",
@@ -5926,37 +5934,45 @@ dependencies = [
 [[package]]
 name = "ibc-core-commitment-types"
 version = "0.50.0"
-source = "git+https://github.com/dhruvja/ibc-rs?rev=6bb51e2d02c016d572974ec8f47633c1f85b6ba8#6bb51e2d02c016d572974ec8f47633c1f85b6ba8"
+source = "git+https://github.com/dhruvja/ibc-rs?rev=66ed6ce2959d38043d4cb936a1044330146e3faa#66ed6ce2959d38043d4cb936a1044330146e3faa"
 dependencies = [
+ "blake2",
+ "blake3",
  "borsh 0.10.3",
  "derive_more",
  "displaydoc",
  "ibc-primitives 0.50.0",
  "ibc-proto 0.41.0",
  "ics23 0.11.1",
+ "lib 0.0.0 (git+http://github.com/composableFi/emulated-light-client)",
  "parity-scale-codec",
+ "ripemd",
  "scale-info",
  "schemars",
  "serde",
+ "sha2 0.10.8",
+ "sha3 0.10.8",
+ "solana-program",
  "subtle-encoding",
 ]
 
 [[package]]
 name = "ibc-core-connection"
 version = "0.50.0"
-source = "git+https://github.com/dhruvja/ibc-rs?rev=6bb51e2d02c016d572974ec8f47633c1f85b6ba8#6bb51e2d02c016d572974ec8f47633c1f85b6ba8"
+source = "git+https://github.com/dhruvja/ibc-rs?rev=66ed6ce2959d38043d4cb936a1044330146e3faa#66ed6ce2959d38043d4cb936a1044330146e3faa"
 dependencies = [
  "ibc-core-client",
  "ibc-core-connection-types",
  "ibc-core-handler-types",
  "ibc-core-host",
  "ibc-primitives 0.50.0",
+ "solana-program",
 ]
 
 [[package]]
 name = "ibc-core-connection-types"
 version = "0.50.0"
-source = "git+https://github.com/dhruvja/ibc-rs?rev=6bb51e2d02c016d572974ec8f47633c1f85b6ba8#6bb51e2d02c016d572974ec8f47633c1f85b6ba8"
+source = "git+https://github.com/dhruvja/ibc-rs?rev=66ed6ce2959d38043d4cb936a1044330146e3faa#66ed6ce2959d38043d4cb936a1044330146e3faa"
 dependencies = [
  "borsh 0.10.3",
  "derive_more",
@@ -5977,8 +5993,9 @@ dependencies = [
 [[package]]
 name = "ibc-core-handler"
 version = "0.50.0"
-source = "git+https://github.com/dhruvja/ibc-rs?rev=6bb51e2d02c016d572974ec8f47633c1f85b6ba8#6bb51e2d02c016d572974ec8f47633c1f85b6ba8"
+source = "git+https://github.com/dhruvja/ibc-rs?rev=66ed6ce2959d38043d4cb936a1044330146e3faa#66ed6ce2959d38043d4cb936a1044330146e3faa"
 dependencies = [
+ "ibc-client-tendermint-types",
  "ibc-core-channel",
  "ibc-core-client",
  "ibc-core-commitment-types",
@@ -5987,12 +6004,13 @@ dependencies = [
  "ibc-core-host",
  "ibc-core-router",
  "ibc-primitives 0.50.0",
+ "solana-program",
 ]
 
 [[package]]
 name = "ibc-core-handler-types"
 version = "0.50.0"
-source = "git+https://github.com/dhruvja/ibc-rs?rev=6bb51e2d02c016d572974ec8f47633c1f85b6ba8#6bb51e2d02c016d572974ec8f47633c1f85b6ba8"
+source = "git+https://github.com/dhruvja/ibc-rs?rev=66ed6ce2959d38043d4cb936a1044330146e3faa#66ed6ce2959d38043d4cb936a1044330146e3faa"
 dependencies = [
  "borsh 0.10.3",
  "derive_more",
@@ -6016,7 +6034,7 @@ dependencies = [
 [[package]]
 name = "ibc-core-host"
 version = "0.50.0"
-source = "git+https://github.com/dhruvja/ibc-rs?rev=6bb51e2d02c016d572974ec8f47633c1f85b6ba8#6bb51e2d02c016d572974ec8f47633c1f85b6ba8"
+source = "git+https://github.com/dhruvja/ibc-rs?rev=66ed6ce2959d38043d4cb936a1044330146e3faa#66ed6ce2959d38043d4cb936a1044330146e3faa"
 dependencies = [
  "derive_more",
  "displaydoc",
@@ -6034,7 +6052,7 @@ dependencies = [
 [[package]]
 name = "ibc-core-host-cosmos"
 version = "0.50.0"
-source = "git+https://github.com/dhruvja/ibc-rs?rev=6bb51e2d02c016d572974ec8f47633c1f85b6ba8#6bb51e2d02c016d572974ec8f47633c1f85b6ba8"
+source = "git+https://github.com/dhruvja/ibc-rs?rev=66ed6ce2959d38043d4cb936a1044330146e3faa#66ed6ce2959d38043d4cb936a1044330146e3faa"
 dependencies = [
  "borsh 0.10.3",
  "derive_more",
@@ -6069,7 +6087,7 @@ dependencies = [
 [[package]]
 name = "ibc-core-host-types"
 version = "0.50.0"
-source = "git+https://github.com/dhruvja/ibc-rs?rev=6bb51e2d02c016d572974ec8f47633c1f85b6ba8#6bb51e2d02c016d572974ec8f47633c1f85b6ba8"
+source = "git+https://github.com/dhruvja/ibc-rs?rev=66ed6ce2959d38043d4cb936a1044330146e3faa#66ed6ce2959d38043d4cb936a1044330146e3faa"
 dependencies = [
  "borsh 0.10.3",
  "derive_more",
@@ -6084,7 +6102,7 @@ dependencies = [
 [[package]]
 name = "ibc-core-router"
 version = "0.50.0"
-source = "git+https://github.com/dhruvja/ibc-rs?rev=6bb51e2d02c016d572974ec8f47633c1f85b6ba8#6bb51e2d02c016d572974ec8f47633c1f85b6ba8"
+source = "git+https://github.com/dhruvja/ibc-rs?rev=66ed6ce2959d38043d4cb936a1044330146e3faa#66ed6ce2959d38043d4cb936a1044330146e3faa"
 dependencies = [
  "derive_more",
  "displaydoc",
@@ -6098,7 +6116,7 @@ dependencies = [
 [[package]]
 name = "ibc-core-router-types"
 version = "0.50.0"
-source = "git+https://github.com/dhruvja/ibc-rs?rev=6bb51e2d02c016d572974ec8f47633c1f85b6ba8#6bb51e2d02c016d572974ec8f47633c1f85b6ba8"
+source = "git+https://github.com/dhruvja/ibc-rs?rev=66ed6ce2959d38043d4cb936a1044330146e3faa#66ed6ce2959d38043d4cb936a1044330146e3faa"
 dependencies = [
  "borsh 0.10.3",
  "derive_more",
@@ -6128,7 +6146,7 @@ dependencies = [
 [[package]]
 name = "ibc-derive"
 version = "0.6.0"
-source = "git+https://github.com/dhruvja/ibc-rs?rev=6bb51e2d02c016d572974ec8f47633c1f85b6ba8#6bb51e2d02c016d572974ec8f47633c1f85b6ba8"
+source = "git+https://github.com/dhruvja/ibc-rs?rev=66ed6ce2959d38043d4cb936a1044330146e3faa#66ed6ce2959d38043d4cb936a1044330146e3faa"
 dependencies = [
  "proc-macro2",
  "quote",
@@ -6175,7 +6193,7 @@ dependencies = [
 [[package]]
 name = "ibc-primitives"
 version = "0.50.0"
-source = "git+https://github.com/dhruvja/ibc-rs?rev=6bb51e2d02c016d572974ec8f47633c1f85b6ba8#6bb51e2d02c016d572974ec8f47633c1f85b6ba8"
+source = "git+https://github.com/dhruvja/ibc-rs?rev=66ed6ce2959d38043d4cb936a1044330146e3faa#66ed6ce2959d38043d4cb936a1044330146e3faa"
 dependencies = [
  "borsh 0.10.3",
  "derive_more",
@@ -6290,11 +6308,12 @@ dependencies = [
 [[package]]
 name = "ibc-testkit"
 version = "0.50.0"
-source = "git+https://github.com/dhruvja/ibc-rs?rev=6bb51e2d02c016d572974ec8f47633c1f85b6ba8#6bb51e2d02c016d572974ec8f47633c1f85b6ba8"
+source = "git+https://github.com/dhruvja/ibc-rs?rev=66ed6ce2959d38043d4cb936a1044330146e3faa#66ed6ce2959d38043d4cb936a1044330146e3faa"
 dependencies = [
  "derive_more",
  "displaydoc",
  "ibc 0.50.0",
+ "ibc-client-tendermint-types",
  "ibc-proto 0.41.0",
  "parking_lot 0.12.1",
  "subtle-encoding",
@@ -7290,7 +7309,7 @@ checksum = "830d08ce1d1d941e6b30645f1a0eb5643013d835ce3779a5fc208261dbe10f55"
 [[package]]
 name = "lib"
 version = "0.0.0"
-source = "git+https://github.com/ComposableFi/emulated-light-client/?rev=2e2d815e42ce82d9c0e948884019e8bfbdb2e66d#2e2d815e42ce82d9c0e948884019e8bfbdb2e66d"
+source = "git+https://github.com/ComposableFi/emulated-light-client/?rev=1731b463cf83b9204fca65360a0cc2e212e7f9bd#1731b463cf83b9204fca65360a0cc2e212e7f9bd"
 dependencies = [
  "base64 0.21.7",
  "borsh 0.10.3",
@@ -7298,7 +7317,20 @@ dependencies = [
  "derive_more",
  "sha2 0.10.8",
  "solana-program",
- "stdx",
+ "stdx 0.0.0 (git+https://github.com/ComposableFi/emulated-light-client/?rev=1731b463cf83b9204fca65360a0cc2e212e7f9bd)",
+]
+
+[[package]]
+name = "lib"
+version = "0.0.0"
+source = "git+http://github.com/composableFi/emulated-light-client#a1d981cff8a7296a04ed2f3353d0479078d096fc"
+dependencies = [
+ "base64 0.21.7",
+ "bytemuck",
+ "derive_more",
+ "sha2 0.10.8",
+ "solana-program",
+ "stdx 0.0.0 (git+http://github.com/composableFi/emulated-light-client)",
 ]
 
 [[package]]
@@ -8153,10 +8185,10 @@ dependencies = [
 [[package]]
 name = "memory"
 version = "0.0.0"
-source = "git+https://github.com/ComposableFi/emulated-light-client/?rev=2e2d815e42ce82d9c0e948884019e8bfbdb2e66d#2e2d815e42ce82d9c0e948884019e8bfbdb2e66d"
+source = "git+https://github.com/ComposableFi/emulated-light-client/?rev=1731b463cf83b9204fca65360a0cc2e212e7f9bd#1731b463cf83b9204fca65360a0cc2e212e7f9bd"
 dependencies = [
  "derive_more",
- "stdx",
+ "stdx 0.0.0 (git+https://github.com/ComposableFi/emulated-light-client/?rev=1731b463cf83b9204fca65360a0cc2e212e7f9bd)",
 ]
 
 [[package]]
@@ -14609,17 +14641,17 @@ dependencies = [
 [[package]]
 name = "sealable-trie"
 version = "0.0.0"
-source = "git+https://github.com/ComposableFi/emulated-light-client/?rev=2e2d815e42ce82d9c0e948884019e8bfbdb2e66d#2e2d815e42ce82d9c0e948884019e8bfbdb2e66d"
+source = "git+https://github.com/ComposableFi/emulated-light-client/?rev=1731b463cf83b9204fca65360a0cc2e212e7f9bd#1731b463cf83b9204fca65360a0cc2e212e7f9bd"
 dependencies = [
  "ascii 1.1.0",
  "base64 0.21.7",
  "borsh 0.10.3",
  "bytemuck",
  "derive_more",
- "lib",
+ "lib 0.0.0 (git+https://github.com/ComposableFi/emulated-light-client/?rev=1731b463cf83b9204fca65360a0cc2e212e7f9bd)",
  "memory",
  "sha2 0.10.8",
- "stdx",
+ "stdx 0.0.0 (git+https://github.com/ComposableFi/emulated-light-client/?rev=1731b463cf83b9204fca65360a0cc2e212e7f9bd)",
  "strum 0.25.0",
 ]
 
@@ -15194,7 +15226,7 @@ dependencies = [
 [[package]]
 name = "solana-allocator"
 version = "0.0.0"
-source = "git+https://github.com/ComposableFi/emulated-light-client/?rev=2e2d815e42ce82d9c0e948884019e8bfbdb2e66d#2e2d815e42ce82d9c0e948884019e8bfbdb2e66d"
+source = "git+https://github.com/ComposableFi/emulated-light-client/?rev=1731b463cf83b9204fca65360a0cc2e212e7f9bd#1731b463cf83b9204fca65360a0cc2e212e7f9bd"
 dependencies = [
  "bytemuck",
  "solana-program",
@@ -15331,7 +15363,7 @@ dependencies = [
 [[package]]
 name = "solana-ibc"
 version = "0.1.0"
-source = "git+https://github.com/ComposableFi/emulated-light-client/?rev=2e2d815e42ce82d9c0e948884019e8bfbdb2e66d#2e2d815e42ce82d9c0e948884019e8bfbdb2e66d"
+source = "git+https://github.com/ComposableFi/emulated-light-client/?rev=1731b463cf83b9204fca65360a0cc2e212e7f9bd#1731b463cf83b9204fca65360a0cc2e212e7f9bd"
 dependencies = [
  "anchor-lang",
  "anchor-spl",
@@ -15340,25 +15372,32 @@ dependencies = [
  "cf-guest 0.0.0",
  "derive_more",
  "guestchain",
+ "hex-literal 0.4.1",
  "ibc 0.50.0",
- "ibc-testkit",
- "lib",
+ "ibc-client-tendermint-types",
+ "ibc-proto 0.41.0",
+ "itertools 0.10.5",
+ "lib 0.0.0 (git+https://github.com/ComposableFi/emulated-light-client/?rev=1731b463cf83b9204fca65360a0cc2e212e7f9bd)",
  "linear-map",
  "memory",
  "primitive-types",
+ "prost 0.12.3",
  "serde",
  "serde_json",
+ "sha2 0.10.8",
  "solana-allocator",
  "solana-signature-verifier",
  "solana-trie",
  "spl-associated-token-account",
  "spl-token",
- "stdx",
+ "stdx 0.0.0 (git+https://github.com/ComposableFi/emulated-light-client/?rev=1731b463cf83b9204fca65360a0cc2e212e7f9bd)",
  "strum 0.25.0",
  "tendermint 0.34.0",
  "tendermint-light-client-verifier 0.34.0",
+ "tendermint-proto 0.34.0",
  "trie-ids",
  "uint",
+ "wasm",
 ]
 
 [[package]]
@@ -15748,7 +15787,7 @@ checksum = "468aa43b7edb1f9b7b7b686d5c3aeb6630dc1708e86e31343499dd5c4d775183"
 [[package]]
 name = "solana-signature-verifier"
 version = "0.0.0"
-source = "git+https://github.com/ComposableFi/emulated-light-client/?rev=2e2d815e42ce82d9c0e948884019e8bfbdb2e66d#2e2d815e42ce82d9c0e948884019e8bfbdb2e66d"
+source = "git+https://github.com/ComposableFi/emulated-light-client/?rev=1731b463cf83b9204fca65360a0cc2e212e7f9bd#1731b463cf83b9204fca65360a0cc2e212e7f9bd"
 dependencies = [
  "base64 0.21.7",
  "borsh 0.10.3",
@@ -15756,9 +15795,9 @@ dependencies = [
  "bytemuck",
  "derive_more",
  "guestchain",
- "lib",
+ "lib 0.0.0 (git+https://github.com/ComposableFi/emulated-light-client/?rev=1731b463cf83b9204fca65360a0cc2e212e7f9bd)",
  "solana-program",
- "stdx",
+ "stdx 0.0.0 (git+https://github.com/ComposableFi/emulated-light-client/?rev=1731b463cf83b9204fca65360a0cc2e212e7f9bd)",
 ]
 
 [[package]]
@@ -15860,13 +15899,13 @@ dependencies = [
 [[package]]
 name = "solana-trie"
 version = "0.0.0"
-source = "git+https://github.com/ComposableFi/emulated-light-client/?rev=2e2d815e42ce82d9c0e948884019e8bfbdb2e66d#2e2d815e42ce82d9c0e948884019e8bfbdb2e66d"
+source = "git+https://github.com/ComposableFi/emulated-light-client/?rev=1731b463cf83b9204fca65360a0cc2e212e7f9bd#1731b463cf83b9204fca65360a0cc2e212e7f9bd"
 dependencies = [
- "lib",
+ "lib 0.0.0 (git+https://github.com/ComposableFi/emulated-light-client/?rev=1731b463cf83b9204fca65360a0cc2e212e7f9bd)",
  "memory",
  "sealable-trie",
  "solana-program",
- "stdx",
+ "stdx 0.0.0 (git+https://github.com/ComposableFi/emulated-light-client/?rev=1731b463cf83b9204fca65360a0cc2e212e7f9bd)",
 ]
 
 [[package]]
@@ -15925,10 +15964,10 @@ dependencies = [
 [[package]]
 name = "solana-write-account"
 version = "0.0.0"
-source = "git+https://github.com/ComposableFi/emulated-light-client/?rev=2e2d815e42ce82d9c0e948884019e8bfbdb2e66d#2e2d815e42ce82d9c0e948884019e8bfbdb2e66d"
+source = "git+https://github.com/ComposableFi/emulated-light-client/?rev=1731b463cf83b9204fca65360a0cc2e212e7f9bd#1731b463cf83b9204fca65360a0cc2e212e7f9bd"
 dependencies = [
  "solana-program",
- "stdx",
+ "stdx 0.0.0 (git+https://github.com/ComposableFi/emulated-light-client/?rev=1731b463cf83b9204fca65360a0cc2e212e7f9bd)",
 ]
 
 [[package]]
@@ -17428,7 +17467,12 @@ dependencies = [
 [[package]]
 name = "stdx"
 version = "0.0.0"
-source = "git+https://github.com/ComposableFi/emulated-light-client/?rev=2e2d815e42ce82d9c0e948884019e8bfbdb2e66d#2e2d815e42ce82d9c0e948884019e8bfbdb2e66d"
+source = "git+https://github.com/ComposableFi/emulated-light-client/?rev=1731b463cf83b9204fca65360a0cc2e212e7f9bd#1731b463cf83b9204fca65360a0cc2e212e7f9bd"
+
+[[package]]
+name = "stdx"
+version = "0.0.0"
+source = "git+http://github.com/composableFi/emulated-light-client#a1d981cff8a7296a04ed2f3353d0479078d096fc"
 
 [[package]]
 name = "strsim"
@@ -18701,7 +18745,7 @@ dependencies = [
 [[package]]
 name = "trie-ids"
 version = "0.0.0"
-source = "git+https://github.com/ComposableFi/emulated-light-client/?rev=2e2d815e42ce82d9c0e948884019e8bfbdb2e66d#2e2d815e42ce82d9c0e948884019e8bfbdb2e66d"
+source = "git+https://github.com/ComposableFi/emulated-light-client/?rev=1731b463cf83b9204fca65360a0cc2e212e7f9bd#1731b463cf83b9204fca65360a0cc2e212e7f9bd"
 dependencies = [
  "ascii 1.1.0",
  "base64 0.21.7",
@@ -19149,6 +19193,30 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "c1fbb4ef9bbca0c1170e0b00dd28abc9e3b68669821600cad1caaed606583c6d"
 dependencies = [
  "wasi 0.11.0+wasi-snapshot-preview1",
+]
+
+[[package]]
+name = "wasm"
+version = "0.0.0"
+source = "git+https://github.com/ComposableFi/emulated-light-client/?rev=1731b463cf83b9204fca65360a0cc2e212e7f9bd#1731b463cf83b9204fca65360a0cc2e212e7f9bd"
+dependencies = [
+ "borsh 0.10.3",
+ "bytemuck",
+ "derive_more",
+ "guestchain",
+ "ibc-core-client-context",
+ "ibc-core-client-types",
+ "ibc-core-commitment-types",
+ "ibc-core-host",
+ "ibc-primitives 0.50.0",
+ "ibc-proto 0.41.0",
+ "lib 0.0.0 (git+https://github.com/ComposableFi/emulated-light-client/?rev=1731b463cf83b9204fca65360a0cc2e212e7f9bd)",
+ "prost 0.12.3",
+ "prost-build 0.12.3",
+ "sealable-trie",
+ "solana-program",
+ "stdx 0.0.0 (git+https://github.com/ComposableFi/emulated-light-client/?rev=1731b463cf83b9204fca65360a0cc2e212e7f9bd)",
+ "trie-ids",
 ]
 
 [[package]]
@@ -20272,6 +20340,56 @@ dependencies = [
 name = "bip39"
 version = "2.0.0"
 source = "git+https://github.com/dhruvja/rust-bip39.git#e3e70f8e935e71a86d177a057cedaa8163af0046"
+
+[[patch.unused]]
+name = "ibc"
+version = "0.50.0"
+source = "git+https://github.com/dhruvja/ibc-rs?rev=6bb51e2d02c016d572974ec8f47633c1f85b6ba8#6bb51e2d02c016d572974ec8f47633c1f85b6ba8"
+
+[[patch.unused]]
+name = "ibc-core-channel-types"
+version = "0.50.0"
+source = "git+https://github.com/dhruvja/ibc-rs?rev=6bb51e2d02c016d572974ec8f47633c1f85b6ba8#6bb51e2d02c016d572974ec8f47633c1f85b6ba8"
+
+[[patch.unused]]
+name = "ibc-core-client-context"
+version = "0.50.0"
+source = "git+https://github.com/dhruvja/ibc-rs?rev=6bb51e2d02c016d572974ec8f47633c1f85b6ba8#6bb51e2d02c016d572974ec8f47633c1f85b6ba8"
+
+[[patch.unused]]
+name = "ibc-core-client-types"
+version = "0.50.0"
+source = "git+https://github.com/dhruvja/ibc-rs?rev=6bb51e2d02c016d572974ec8f47633c1f85b6ba8#6bb51e2d02c016d572974ec8f47633c1f85b6ba8"
+
+[[patch.unused]]
+name = "ibc-core-commitment-types"
+version = "0.50.0"
+source = "git+https://github.com/dhruvja/ibc-rs?rev=6bb51e2d02c016d572974ec8f47633c1f85b6ba8#6bb51e2d02c016d572974ec8f47633c1f85b6ba8"
+
+[[patch.unused]]
+name = "ibc-core-connection-types"
+version = "0.50.0"
+source = "git+https://github.com/dhruvja/ibc-rs?rev=6bb51e2d02c016d572974ec8f47633c1f85b6ba8#6bb51e2d02c016d572974ec8f47633c1f85b6ba8"
+
+[[patch.unused]]
+name = "ibc-core-host"
+version = "0.50.0"
+source = "git+https://github.com/dhruvja/ibc-rs?rev=6bb51e2d02c016d572974ec8f47633c1f85b6ba8#6bb51e2d02c016d572974ec8f47633c1f85b6ba8"
+
+[[patch.unused]]
+name = "ibc-core-host-types"
+version = "0.50.0"
+source = "git+https://github.com/dhruvja/ibc-rs?rev=6bb51e2d02c016d572974ec8f47633c1f85b6ba8#6bb51e2d02c016d572974ec8f47633c1f85b6ba8"
+
+[[patch.unused]]
+name = "ibc-primitives"
+version = "0.50.0"
+source = "git+https://github.com/dhruvja/ibc-rs?rev=6bb51e2d02c016d572974ec8f47633c1f85b6ba8#6bb51e2d02c016d572974ec8f47633c1f85b6ba8"
+
+[[patch.unused]]
+name = "ibc-testkit"
+version = "0.50.0"
+source = "git+https://github.com/dhruvja/ibc-rs?rev=6bb51e2d02c016d572974ec8f47633c1f85b6ba8#6bb51e2d02c016d572974ec8f47633c1f85b6ba8"
 
 [[patch.unused]]
 name = "tendermint-light-client"

@@ -44,7 +44,7 @@ ed25519-dalek = { version = "2.1.1", default-features = false, features = ["pkcs
 byteorder = { version = "1.3.2", default-features = false }
 digest = { version = "0.10.3", default-features = false }
 hex = "0.4.3"
-guestchain = { git = "https://github.com/ComposableFi/emulated-light-client/", rev = "2e2d815e42ce82d9c0e948884019e8bfbdb2e66d", default-features = false }
+guestchain = { git = "https://github.com/ComposableFi/emulated-light-client/", rev = "1731b463cf83b9204fca65360a0cc2e212e7f9bd", default-features = false }
 borsh = { version = "0.10.3", default-features = false }
 
 
