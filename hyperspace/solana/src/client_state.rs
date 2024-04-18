@@ -57,7 +57,6 @@ pub fn convert_new_client_state_to_old(
 		// 			Some(Height::new(height.revision_number(), height.revision_height()))
 		// 		}),
 		// 	}),
-		solana_ibc::client_state::AnyClientState::Guest(_) => unimplemented!(),
 		solana_ibc::client_state::AnyClientState::Wasm(_) => unimplemented!(),
 	}
 }
@@ -165,16 +164,6 @@ pub fn convert_old_client_state_to_new(
 						.unwrap(),
 					)
 				},
-				AnyClientState::Guest(e) =>
-					solana_ibc::client_state::AnyClientState::Guest(cf_guest_og::ClientState::<
-						sigverify::ed25519::PubKey,
-					>::new(
-						e.genesis_hash,
-						e.latest_height,
-						e.trusting_period_ns,
-						e.epoch_commitment,
-						e.is_frozen,
-					)),
 				_ => panic!("Invalid state {:?}", cs),
 			}
 		},

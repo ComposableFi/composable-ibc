@@ -38,8 +38,6 @@ pub fn convert_new_consensus_state_to_old(
 		// 		},
 		// 		root: CommitmentRoot { bytes: cs.root.into_vec() },
 		// 	}),
-		solana_ibc::consensus_state::AnyConsensusState::Guest(_) =>
-			panic!("Guest consensus not supported"),
 		solana_ibc::consensus_state::AnyConsensusState::Wasm(_) =>
 			panic!("Guest consensus not supported"),
 	}

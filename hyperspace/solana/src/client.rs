@@ -335,7 +335,7 @@ deserialize consensus state"
 						};
 
 						header
-							.check_trusted_next_validator_set(trusted_consensus_state.inner())
+							.check_trusted_next_validator_set::<tendermint::crypto::default::Sha256>(trusted_consensus_state.inner())
 							.unwrap();
 
 						TrustedBlockState {

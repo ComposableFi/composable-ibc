@@ -1,4 +1,5 @@
 use alloc::{borrow::ToOwned, boxed::Box, format, string::ToString, vec::Vec};
+use alloc::borrow::Cow;
 // use cf_guest::proto::{
 // 	ClientState::TYPE_URL as GUEST_CLIENT_STATE_TYPE_URL,
 // 	ConsensusState::TYPE_URL as GUEST_CONSENSUS_STATE_TYPE_URL,
@@ -94,6 +95,8 @@ impl guestchain::PubKey for PubKey {
 	fn from_bytes(bytes: &[u8]) -> Result<Self, guestchain::BadFormat> {
 		bytes.try_into().map(Self).map_err(|_| guestchain::BadFormat)
 	}
+
+	fn as_bytes(&self) -> Cow<'_, [u8]> { todo!() }
 }
 
 impl borsh::BorshSerialize for PubKey {
@@ -138,6 +141,8 @@ impl guestchain::Signature for Signature {
 			.map(Self)
 			.map_err(|_| guestchain::BadFormat)
 	}
+
+	fn as_bytes(&self) -> Cow<'_, [u8]> { todo!() }
 
 }
 

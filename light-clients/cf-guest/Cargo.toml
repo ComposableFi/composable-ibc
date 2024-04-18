@@ -13,9 +13,9 @@ ed25519-consensus = { version = "2", default-features = false }
 serde = { version = "1.0", default-features = false, features = ["derive"] }
 
 # New IBC
-ibc-core-client-types = { git = "https://github.com/dhruvja/ibc-rs", rev = "66ed6ce2959d38043d4cb936a1044330146e3faa", default-features = false }
-ibc-core-handler-types = { git = "https://github.com/dhruvja/ibc-rs", rev = "66ed6ce2959d38043d4cb936a1044330146e3faa", default-features = false }
-ibc-core-host-types = { git = "https://github.com/dhruvja/ibc-rs", rev = "66ed6ce2959d38043d4cb936a1044330146e3faa", default-features = false, features = ["borsh", "serde"]}
+ibc-core-client-types = { git = "https://github.com/mina86/ibc-rs", rev = "d8ac409f5b206c389568fb2e713d2666e4b9afde", default-features = false }
+ibc-core-handler-types = { git = "https://github.com/mina86/ibc-rs", rev = "d8ac409f5b206c389568fb2e713d2666e4b9afde", default-features = false }
+ibc-core-host-types = { git = "https://github.com/mina86/ibc-rs", rev = "d8ac409f5b206c389568fb2e713d2666e4b9afde", default-features = false, features = ["borsh", "serde"]}
 
 # Old IBC
 ibc = { path = "../../ibc/modules", default-features = false }
@@ -24,11 +24,11 @@ ibc-derive = { path = "../../ibc/derive", default-features = false }
 
 tendermint-proto = { git = "https://github.com/informalsystems/tendermint-rs", rev = "e81f7bf23d63ffbcd242381d1ce5e35da3515ff1", default-features = false }
 
-guestchain = { git = "https://github.com/ComposableFi/emulated-light-client/", branch = "light-client-testing", default-features = false }
-lib = { git = "https://github.com/ComposableFi/emulated-light-client/", branch = "light-client-testing", features = ["borsh"], default-features = false }
-trie-ids = { git = "https://github.com/ComposableFi/emulated-light-client/", branch = "light-client-testing", default-features = false }
-sealable-trie = { git = "https://github.com/ComposableFi/emulated-light-client/", branch = "light-client-testing", features = ["borsh"], default-features = false }
-stdx = { git = "https://github.com/ComposableFi/emulated-light-client/", branch = "light-client-testing", default-features = false }
+guestchain = { git = "https://github.com/ComposableFi/emulated-light-client/", branch = "update-rev", default-features = false }
+lib = { git = "https://github.com/ComposableFi/emulated-light-client/", branch = "update-rev", features = ["borsh"], default-features = false }
+trie-ids = { git = "https://github.com/ComposableFi/emulated-light-client/", branch = "update-rev", default-features = false }
+sealable-trie = { git = "https://github.com/ComposableFi/emulated-light-client/", branch = "update-rev", features = ["borsh"], default-features = false }
+stdx = { git = "https://github.com/ComposableFi/emulated-light-client/", branch = "update-rev", default-features = false }
 
 [build-dependencies]
 prost-build = { version = "0.11", default-features = false }
@@ -37,9 +37,9 @@ prost-build = { version = "0.11", default-features = false }
 insta = { version = "1.34.0" }
 rand = { version = "0.8.5" }
 
-guestchain = { git = "https://github.com/ComposableFi/emulated-light-client/", branch = "light-client-testing", default-features = false, features = ["test_utils"] }
-lib = { git = "https://github.com/ComposableFi/emulated-light-client/", branch = "light-client-testing", features = ["test_utils"] }
-memory = { git = "https://github.com/ComposableFi/emulated-light-client/", branch = "light-client-testing", features = ["test_utils"] }
+guestchain = { git = "https://github.com/ComposableFi/emulated-light-client/", branch = "update-rev", default-features = false, features = ["test_utils"] }
+lib = { git = "https://github.com/ComposableFi/emulated-light-client/", branch = "update-rev", features = ["test_utils"] }
+memory = { git = "https://github.com/ComposableFi/emulated-light-client/", branch = "update-rev", features = ["test_utils"] }
 
 [features]
 std = []

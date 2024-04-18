@@ -65,16 +65,16 @@ curve25519-dalek-new = { git = "https://github.com/dalek-cryptography/curve25519
 curve25519-dalek = { git = "https://github.com/solana-labs/curve25519-dalek.git", rev = "b500cdc2a920cd5bff9e2dd974d7b97349d61464" }
 anchor-client = { git = "https://github.com/dhruvja/anchor" }
 anchor-lang = { git = "https://github.com/dhruvja/anchor" }
-ibc                       = { git = "https://github.com/dhruvja/ibc-rs", rev = "66ed6ce2959d38043d4cb936a1044330146e3faa" }
-ibc-core-channel-types    = { git = "https://github.com/dhruvja/ibc-rs", rev = "66ed6ce2959d38043d4cb936a1044330146e3faa" }
-ibc-core-client-context   = { git = "https://github.com/dhruvja/ibc-rs", rev = "66ed6ce2959d38043d4cb936a1044330146e3faa" }
-ibc-core-client-types     = { git = "https://github.com/dhruvja/ibc-rs", rev = "66ed6ce2959d38043d4cb936a1044330146e3faa" }
-ibc-core-commitment-types = { git = "https://github.com/dhruvja/ibc-rs", rev = "66ed6ce2959d38043d4cb936a1044330146e3faa" }
-ibc-core-connection-types = { git = "https://github.com/dhruvja/ibc-rs", rev = "66ed6ce2959d38043d4cb936a1044330146e3faa" }
-ibc-core-host             = { git = "https://github.com/dhruvja/ibc-rs", rev = "66ed6ce2959d38043d4cb936a1044330146e3faa" }
-ibc-core-host-types       = { git = "https://github.com/dhruvja/ibc-rs", rev = "66ed6ce2959d38043d4cb936a1044330146e3faa" }
-ibc-primitives            = { git = "https://github.com/dhruvja/ibc-rs", rev = "66ed6ce2959d38043d4cb936a1044330146e3faa" }
-# ibc-testkit               = { git = "https://github.com/dhruvja/ibc-rs", rev = "66ed6ce2959d38043d4cb936a1044330146e3faa" }
+ibc                       = { git = "https://github.com/mina86/ibc-rs", rev = "d8ac409f5b206c389568fb2e713d2666e4b9afde" }
+ibc-core-channel-types    = { git = "https://github.com/mina86/ibc-rs", rev = "d8ac409f5b206c389568fb2e713d2666e4b9afde" }
+ibc-core-client-context   = { git = "https://github.com/mina86/ibc-rs", rev = "d8ac409f5b206c389568fb2e713d2666e4b9afde" }
+ibc-core-client-types     = { git = "https://github.com/mina86/ibc-rs", rev = "d8ac409f5b206c389568fb2e713d2666e4b9afde" }
+ibc-core-commitment-types = { git = "https://github.com/mina86/ibc-rs", rev = "d8ac409f5b206c389568fb2e713d2666e4b9afde" }
+ibc-core-connection-types = { git = "https://github.com/mina86/ibc-rs", rev = "d8ac409f5b206c389568fb2e713d2666e4b9afde" }
+ibc-core-host             = { git = "https://github.com/mina86/ibc-rs", rev = "d8ac409f5b206c389568fb2e713d2666e4b9afde" }
+ibc-core-host-types       = { git = "https://github.com/mina86/ibc-rs", rev = "d8ac409f5b206c389568fb2e713d2666e4b9afde" }
+ibc-primitives            = { git = "https://github.com/mina86/ibc-rs", rev = "d8ac409f5b206c389568fb2e713d2666e4b9afde" }
+# ibc-testkit               = { git = "https://github.com/mina86/ibc-rs", rev = "d8ac409f5b206c389568fb2e713d2666e4b9afde" }
 #ibc = { path = "../ibc-rs-mina/ibc" }
 #ibc-app-nft-transfer = { path = "../ibc-rs-mina/ibc-apps/ics721-nft-transfer" }
 #ibc-app-nft-transfer-types = { path = "../ibc-rs-mina/ibc-apps/ics721-nft-transfer/types" }

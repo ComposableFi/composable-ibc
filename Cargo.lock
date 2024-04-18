@@ -128,9 +128,9 @@ dependencies = [
 
 [[package]]
 name = "ahash"
-version = "0.8.6"
+version = "0.8.5"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "91429305e9f0a25f6205c5b8e0d2db09e0708a7a6df0f42212bb56c32c8ac97a"
+checksum = "cd7d5a2cecb58716e47d67d5703a249964b14c7be1ec3cad3affc295b2d1c35d"
 dependencies = [
  "cfg-if 1.0.0",
  "getrandom 0.2.14",
@@ -1564,25 +1564,25 @@ dependencies = [
 [[package]]
 name = "cf-guest"
 version = "0.0.0"
-source = "git+https://github.com/ComposableFi/emulated-light-client/?branch=light-client-testing#0e6aa5a5b632b89e77c7625d6e80de3338fec31b"
+source = "git+https://github.com/ComposableFi/emulated-light-client/?branch=update-rev#401100175da1a42d644d362f0a10d5eca27561a5"
 dependencies = [
  "borsh 0.10.3",
  "bytemuck",
  "derive_more",
- "guestchain",
- "ibc-client-tendermint-types",
- "ibc-core-client-context",
- "ibc-core-commitment-types",
- "ibc-core-host",
- "ibc-primitives 0.50.0",
+ "guestchain 0.0.0 (git+https://github.com/ComposableFi/emulated-light-client/?branch=update-rev)",
+ "ibc-client-tendermint-types 0.50.0 (git+https://github.com/mina86/ibc-rs?rev=d8ac409f5b206c389568fb2e713d2666e4b9afde)",
+ "ibc-core-client-context 0.50.0 (git+https://github.com/mina86/ibc-rs?rev=d8ac409f5b206c389568fb2e713d2666e4b9afde)",
+ "ibc-core-commitment-types 0.50.0 (git+https://github.com/mina86/ibc-rs?rev=d8ac409f5b206c389568fb2e713d2666e4b9afde)",
+ "ibc-core-host 0.50.0 (git+https://github.com/mina86/ibc-rs?rev=d8ac409f5b206c389568fb2e713d2666e4b9afde)",
+ "ibc-primitives 0.50.0 (git+https://github.com/mina86/ibc-rs?rev=d8ac409f5b206c389568fb2e713d2666e4b9afde)",
  "ibc-proto 0.41.0",
- "lib 0.0.0 (git+https://github.com/ComposableFi/emulated-light-client/?branch=light-client-testing)",
+ "lib 0.0.0 (git+https://github.com/ComposableFi/emulated-light-client/?branch=update-rev)",
  "prost 0.12.4",
  "prost-build 0.12.4",
- "sealable-trie",
- "solana-program",
- "stdx 0.0.0 (git+https://github.com/ComposableFi/emulated-light-client/?branch=light-client-testing)",
- "trie-ids",
+ "proto-utils",
+ "sealable-trie 0.0.0 (git+https://github.com/ComposableFi/emulated-light-client/?branch=update-rev)",
+ "stdx 0.0.0 (git+https://github.com/ComposableFi/emulated-light-client/?branch=update-rev)",
+ "trie-ids 0.0.0 (git+https://github.com/ComposableFi/emulated-light-client/?branch=update-rev)",
 ]
 
 [[package]]
@@ -1593,31 +1593,31 @@ dependencies = [
  "bytemuck",
  "derive_more",
  "ed25519-consensus",
- "guestchain",
+ "guestchain 0.0.0 (git+https://github.com/ComposableFi/emulated-light-client/?branch=update-rev)",
  "ibc 0.15.0",
- "ibc-core-client-types",
- "ibc-core-handler-types",
- "ibc-core-host-types",
+ "ibc-core-client-types 0.50.0 (git+https://github.com/mina86/ibc-rs?rev=d8ac409f5b206c389568fb2e713d2666e4b9afde)",
+ "ibc-core-handler-types 0.50.0 (git+https://github.com/mina86/ibc-rs?rev=d8ac409f5b206c389568fb2e713d2666e4b9afde)",
+ "ibc-core-host-types 0.50.0 (git+https://github.com/mina86/ibc-rs?rev=d8ac409f5b206c389568fb2e713d2666e4b9afde)",
  "ibc-derive 0.1.0",
  "ibc-proto 0.18.0",
  "insta",
- "lib 0.0.0 (git+https://github.com/ComposableFi/emulated-light-client/?branch=light-client-testing)",
- "memory",
+ "lib 0.0.0 (git+https://github.com/ComposableFi/emulated-light-client/?branch=update-rev)",
+ "memory 0.0.0 (git+https://github.com/ComposableFi/emulated-light-client/?branch=update-rev)",
  "prost 0.11.9",
  "prost-build 0.11.9",
  "rand 0.8.5",
- "sealable-trie",
+ "sealable-trie 0.0.0 (git+https://github.com/ComposableFi/emulated-light-client/?branch=update-rev)",
  "serde",
- "stdx 0.0.0 (git+https://github.com/ComposableFi/emulated-light-client/?branch=light-client-testing)",
+ "stdx 0.0.0 (git+https://github.com/ComposableFi/emulated-light-client/?branch=update-rev)",
  "tendermint-proto 0.28.0",
- "trie-ids",
+ "trie-ids 0.0.0 (git+https://github.com/ComposableFi/emulated-light-client/?branch=update-rev)",
 ]
 
 [[package]]
 name = "cf-guest-cw"
 version = "0.0.0"
 dependencies = [
- "ahash 0.8.6",
+ "ahash 0.8.5",
  "base64 0.22.0",
  "borsh 0.10.3",
  "cf-guest 0.0.1",
@@ -1625,7 +1625,7 @@ dependencies = [
  "cosmwasm-std",
  "derive_more",
  "ed25519-dalek 2.1.1",
- "guestchain",
+ "guestchain 0.0.0 (git+https://github.com/ComposableFi/emulated-light-client/?branch=update-rev)",
  "ibc 0.15.0",
  "ibc-proto 0.18.0",
  "ics08-wasm",
@@ -1989,6 +1989,26 @@ name = "const-oid"
 version = "0.9.6"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "c2459377285ad874054d797f3ccebf984978aa39129f6eafde5cdc8315b612f8"
+
+[[package]]
+name = "const_format"
+version = "0.2.32"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "e3a214c7af3d04997541b18d432afaff4c455e79e2029079647e72fc2bd27673"
+dependencies = [
+ "const_format_proc_macros",
+]
+
+[[package]]
+name = "const_format_proc_macros"
+version = "0.2.32"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "c7f6ff08fd20f4f299298a28e2dfa8a8ba1036e6cd2460ac1de7b425d76f2500"
+dependencies = [
+ "proc-macro2",
+ "quote",
+ "unicode-xid",
+]
 
 [[package]]
 name = "constant_time_eq"
@@ -4822,18 +4842,40 @@ dependencies = [
  "borsh 0.10.3",
  "bytemuck",
  "derive_more",
- "ibc-core-client-context",
- "ibc-core-commitment-types",
- "ibc-core-host",
- "ibc-primitives 0.50.0",
+ "ibc-core-client-context 0.50.0 (git+https://github.com/dhruvja/ibc-rs?rev=66ed6ce2959d38043d4cb936a1044330146e3faa)",
+ "ibc-core-commitment-types 0.50.0 (git+https://github.com/dhruvja/ibc-rs?rev=66ed6ce2959d38043d4cb936a1044330146e3faa)",
+ "ibc-core-host 0.50.0 (git+https://github.com/dhruvja/ibc-rs?rev=66ed6ce2959d38043d4cb936a1044330146e3faa)",
+ "ibc-primitives 0.50.0 (git+https://github.com/dhruvja/ibc-rs?rev=66ed6ce2959d38043d4cb936a1044330146e3faa)",
  "ibc-proto 0.41.0",
  "lib 0.0.0 (git+https://github.com/ComposableFi/emulated-light-client/?branch=light-client-testing)",
  "prost 0.12.4",
  "prost-build 0.12.4",
- "sealable-trie",
+ "sealable-trie 0.0.0 (git+https://github.com/ComposableFi/emulated-light-client/?branch=light-client-testing)",
  "stdx 0.0.0 (git+https://github.com/ComposableFi/emulated-light-client/?branch=light-client-testing)",
  "strum 0.25.0",
- "trie-ids",
+ "trie-ids 0.0.0 (git+https://github.com/ComposableFi/emulated-light-client/?branch=light-client-testing)",
+]
+
+[[package]]
+name = "guestchain"
+version = "0.0.0"
+source = "git+https://github.com/ComposableFi/emulated-light-client/?branch=update-rev#401100175da1a42d644d362f0a10d5eca27561a5"
+dependencies = [
+ "borsh 0.10.3",
+ "bytemuck",
+ "derive_more",
+ "ibc-core-client-context 0.50.0 (git+https://github.com/mina86/ibc-rs?rev=d8ac409f5b206c389568fb2e713d2666e4b9afde)",
+ "ibc-core-commitment-types 0.50.0 (git+https://github.com/mina86/ibc-rs?rev=d8ac409f5b206c389568fb2e713d2666e4b9afde)",
+ "ibc-core-host 0.50.0 (git+https://github.com/mina86/ibc-rs?rev=d8ac409f5b206c389568fb2e713d2666e4b9afde)",
+ "ibc-primitives 0.50.0 (git+https://github.com/mina86/ibc-rs?rev=d8ac409f5b206c389568fb2e713d2666e4b9afde)",
+ "ibc-proto 0.41.0",
+ "lib 0.0.0 (git+https://github.com/ComposableFi/emulated-light-client/?branch=update-rev)",
+ "prost 0.12.4",
+ "proto-utils",
+ "sealable-trie 0.0.0 (git+https://github.com/ComposableFi/emulated-light-client/?branch=update-rev)",
+ "stdx 0.0.0 (git+https://github.com/ComposableFi/emulated-light-client/?branch=update-rev)",
+ "strum 0.25.0",
+ "trie-ids 0.0.0 (git+https://github.com/ComposableFi/emulated-light-client/?branch=update-rev)",
 ]
 
 [[package]]
@@ -4943,7 +4985,7 @@ version = "0.13.2"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "43a3c133739dddd0d2990f9a4bdf8eb4b21ef50e4851ca85ab661199821d510e"
 dependencies = [
- "ahash 0.8.6",
+ "ahash 0.8.5",
 ]
 
 [[package]]
@@ -5285,7 +5327,7 @@ dependencies = [
  "frame-support",
  "frame-system",
  "futures",
- "guestchain",
+ "guestchain 0.0.0 (git+https://github.com/ComposableFi/emulated-light-client/?branch=update-rev)",
  "hex",
  "hyperspace-cosmos",
  "hyperspace-metrics",
@@ -5294,14 +5336,14 @@ dependencies = [
  "hyperspace-solana",
  "ibc 0.15.0",
  "ibc-app-transfer-types",
- "ibc-client-tendermint-types",
- "ibc-core-channel-types",
- "ibc-core-client-types",
- "ibc-core-commitment-types",
- "ibc-core-connection-types",
- "ibc-core-handler-types",
- "ibc-core-host-types",
- "ibc-primitives 0.50.0",
+ "ibc-client-tendermint-types 0.50.0 (git+https://github.com/mina86/ibc-rs?rev=d8ac409f5b206c389568fb2e713d2666e4b9afde)",
+ "ibc-core-channel-types 0.50.0 (git+https://github.com/mina86/ibc-rs?rev=d8ac409f5b206c389568fb2e713d2666e4b9afde)",
+ "ibc-core-client-types 0.50.0 (git+https://github.com/mina86/ibc-rs?rev=d8ac409f5b206c389568fb2e713d2666e4b9afde)",
+ "ibc-core-commitment-types 0.50.0 (git+https://github.com/mina86/ibc-rs?rev=d8ac409f5b206c389568fb2e713d2666e4b9afde)",
+ "ibc-core-connection-types 0.50.0 (git+https://github.com/mina86/ibc-rs?rev=d8ac409f5b206c389568fb2e713d2666e4b9afde)",
+ "ibc-core-handler-types 0.50.0 (git+https://github.com/mina86/ibc-rs?rev=d8ac409f5b206c389568fb2e713d2666e4b9afde)",
+ "ibc-core-host-types 0.50.0 (git+https://github.com/mina86/ibc-rs?rev=d8ac409f5b206c389568fb2e713d2666e4b9afde)",
+ "ibc-primitives 0.50.0 (git+https://github.com/mina86/ibc-rs?rev=d8ac409f5b206c389568fb2e713d2666e4b9afde)",
  "ibc-proto 0.18.0",
  "ibc-proto 0.41.0",
  "ibc-rpc",
@@ -5309,7 +5351,7 @@ dependencies = [
  "ics10-grandpa",
  "ics11-beefy",
  "itertools 0.10.5",
- "lib 0.0.0 (git+https://github.com/ComposableFi/emulated-light-client/?branch=light-client-testing)",
+ "lib 0.0.0 (git+https://github.com/ComposableFi/emulated-light-client/?branch=update-rev)",
  "light-client-common",
  "log",
  "once_cell",
@@ -5320,7 +5362,7 @@ dependencies = [
  "prost 0.11.9",
  "rand 0.8.5",
  "scale-encode 0.1.2",
- "sealable-trie",
+ "sealable-trie 0.0.0 (git+https://github.com/ComposableFi/emulated-light-client/?branch=update-rev)",
  "serde",
  "serde_json",
  "sp-consensus-beefy",
@@ -5336,7 +5378,7 @@ dependencies = [
  "thiserror",
  "tokio",
  "toml 0.7.8",
- "trie-ids",
+ "trie-ids 0.0.0 (git+https://github.com/ComposableFi/emulated-light-client/?branch=update-rev)",
 ]
 
 [[package]]
@@ -5510,31 +5552,32 @@ dependencies = [
  "digest 0.10.7",
  "ed25519-zebra",
  "futures",
- "guestchain",
+ "guestchain 0.0.0 (git+https://github.com/ComposableFi/emulated-light-client/?branch=update-rev)",
  "hex",
  "hyperspace-primitives",
  "ibc 0.15.0",
  "ibc-app-transfer-types",
- "ibc-client-tendermint-types",
+ "ibc-client-tendermint-types 0.50.0 (git+https://github.com/mina86/ibc-rs?rev=d8ac409f5b206c389568fb2e713d2666e4b9afde)",
  "ibc-client-wasm-types",
- "ibc-core-channel-types",
- "ibc-core-client-types",
- "ibc-core-commitment-types",
- "ibc-core-connection-types",
- "ibc-core-handler-types",
- "ibc-core-host-types",
+ "ibc-core-channel-types 0.50.0 (git+https://github.com/mina86/ibc-rs?rev=d8ac409f5b206c389568fb2e713d2666e4b9afde)",
+ "ibc-core-client-types 0.50.0 (git+https://github.com/mina86/ibc-rs?rev=d8ac409f5b206c389568fb2e713d2666e4b9afde)",
+ "ibc-core-commitment-types 0.50.0 (git+https://github.com/mina86/ibc-rs?rev=d8ac409f5b206c389568fb2e713d2666e4b9afde)",
+ "ibc-core-connection-types 0.50.0 (git+https://github.com/mina86/ibc-rs?rev=d8ac409f5b206c389568fb2e713d2666e4b9afde)",
+ "ibc-core-handler-types 0.50.0 (git+https://github.com/mina86/ibc-rs?rev=d8ac409f5b206c389568fb2e713d2666e4b9afde)",
+ "ibc-core-host-types 0.50.0 (git+https://github.com/mina86/ibc-rs?rev=d8ac409f5b206c389568fb2e713d2666e4b9afde)",
  "ibc-primitives 0.1.0",
- "ibc-primitives 0.50.0",
+ "ibc-primitives 0.50.0 (git+https://github.com/mina86/ibc-rs?rev=d8ac409f5b206c389568fb2e713d2666e4b9afde)",
  "ibc-proto 0.18.0",
  "ibc-proto 0.41.0",
  "ibc-rpc",
  "ics07-tendermint",
  "ics08-wasm",
+ "ics23 0.11.1",
  "itertools 0.10.5",
  "k256 0.11.6",
- "lib 0.0.0 (git+https://github.com/ComposableFi/emulated-light-client/?branch=light-client-testing)",
+ "lib 0.0.0 (git+https://github.com/ComposableFi/emulated-light-client/?branch=update-rev)",
  "log",
- "memory",
+ "memory 0.0.0 (git+https://github.com/ComposableFi/emulated-light-client/?branch=update-rev)",
  "pallet-ibc",
  "parity-scale-codec",
  "prost 0.11.9",
@@ -5543,7 +5586,7 @@ dependencies = [
  "reqwest",
  "ripemd",
  "rs_merkle",
- "sealable-trie",
+ "sealable-trie 0.0.0 (git+https://github.com/ComposableFi/emulated-light-client/?branch=update-rev)",
  "serde",
  "serde_json",
  "sha2 0.10.8",
@@ -5552,7 +5595,7 @@ dependencies = [
  "solana-transaction-status",
  "solana-trie",
  "solana-write-account",
- "stdx 0.0.0 (git+https://github.com/ComposableFi/emulated-light-client/?branch=light-client-testing)",
+ "stdx 0.0.0 (git+https://github.com/ComposableFi/emulated-light-client/?branch=update-rev)",
  "tendermint 0.28.0",
  "tendermint 0.34.0",
  "tendermint-light-client",
@@ -5566,7 +5609,7 @@ dependencies = [
  "tokio-stream",
  "tonic",
  "tracing",
- "trie-ids",
+ "trie-ids 0.0.0 (git+https://github.com/ComposableFi/emulated-light-client/?branch=update-rev)",
 ]
 
 [[package]]
@@ -5642,7 +5685,7 @@ dependencies = [
  "env_logger 0.9.3",
  "flex-error",
  "hex",
- "ibc-core-host-types",
+ "ibc-core-host-types 0.50.0 (git+https://github.com/mina86/ibc-rs?rev=d8ac409f5b206c389568fb2e713d2666e4b9afde)",
  "ibc-derive 0.1.0",
  "ibc-proto 0.18.0",
  "ics23 0.10.0",
@@ -5675,20 +5718,20 @@ dependencies = [
 [[package]]
 name = "ibc"
 version = "0.50.0"
-source = "git+https://github.com/dhruvja/ibc-rs?rev=66ed6ce2959d38043d4cb936a1044330146e3faa#66ed6ce2959d38043d4cb936a1044330146e3faa"
+source = "git+https://github.com/mina86/ibc-rs?rev=d8ac409f5b206c389568fb2e713d2666e4b9afde#d8ac409f5b206c389568fb2e713d2666e4b9afde"
 dependencies = [
  "ibc-apps",
  "ibc-clients",
  "ibc-core",
  "ibc-core-host-cosmos",
  "ibc-derive 0.6.0",
- "ibc-primitives 0.50.0",
+ "ibc-primitives 0.50.0 (git+https://github.com/mina86/ibc-rs?rev=d8ac409f5b206c389568fb2e713d2666e4b9afde)",
 ]
 
 [[package]]
 name = "ibc-app-transfer"
 version = "0.50.0"
-source = "git+https://github.com/dhruvja/ibc-rs?rev=66ed6ce2959d38043d4cb936a1044330146e3faa#66ed6ce2959d38043d4cb936a1044330146e3faa"
+source = "git+https://github.com/mina86/ibc-rs?rev=d8ac409f5b206c389568fb2e713d2666e4b9afde#d8ac409f5b206c389568fb2e713d2666e4b9afde"
 dependencies = [
  "ibc-app-transfer-types",
  "ibc-core",
@@ -5698,7 +5741,7 @@ dependencies = [
 [[package]]
 name = "ibc-app-transfer-types"
 version = "0.50.0"
-source = "git+https://github.com/dhruvja/ibc-rs?rev=66ed6ce2959d38043d4cb936a1044330146e3faa#66ed6ce2959d38043d4cb936a1044330146e3faa"
+source = "git+https://github.com/mina86/ibc-rs?rev=d8ac409f5b206c389568fb2e713d2666e4b9afde#d8ac409f5b206c389568fb2e713d2666e4b9afde"
 dependencies = [
  "borsh 0.10.3",
  "derive_more",
@@ -5713,7 +5756,7 @@ dependencies = [
 [[package]]
 name = "ibc-apps"
 version = "0.50.0"
-source = "git+https://github.com/dhruvja/ibc-rs?rev=66ed6ce2959d38043d4cb936a1044330146e3faa#66ed6ce2959d38043d4cb936a1044330146e3faa"
+source = "git+https://github.com/mina86/ibc-rs?rev=d8ac409f5b206c389568fb2e713d2666e4b9afde#d8ac409f5b206c389568fb2e713d2666e4b9afde"
 dependencies = [
  "ibc-app-transfer",
 ]
@@ -5721,17 +5764,16 @@ dependencies = [
 [[package]]
 name = "ibc-client-tendermint"
 version = "0.50.0"
-source = "git+https://github.com/dhruvja/ibc-rs?rev=66ed6ce2959d38043d4cb936a1044330146e3faa#66ed6ce2959d38043d4cb936a1044330146e3faa"
+source = "git+https://github.com/mina86/ibc-rs?rev=d8ac409f5b206c389568fb2e713d2666e4b9afde#d8ac409f5b206c389568fb2e713d2666e4b9afde"
 dependencies = [
  "derive_more",
- "ibc-client-tendermint-types",
+ "ibc-client-tendermint-types 0.50.0 (git+https://github.com/mina86/ibc-rs?rev=d8ac409f5b206c389568fb2e713d2666e4b9afde)",
  "ibc-core-client",
- "ibc-core-commitment-types",
- "ibc-core-handler-types",
- "ibc-core-host",
- "ibc-primitives 0.50.0",
+ "ibc-core-commitment-types 0.50.0 (git+https://github.com/mina86/ibc-rs?rev=d8ac409f5b206c389568fb2e713d2666e4b9afde)",
+ "ibc-core-handler-types 0.50.0 (git+https://github.com/mina86/ibc-rs?rev=d8ac409f5b206c389568fb2e713d2666e4b9afde)",
+ "ibc-core-host 0.50.0 (git+https://github.com/mina86/ibc-rs?rev=d8ac409f5b206c389568fb2e713d2666e4b9afde)",
+ "ibc-primitives 0.50.0 (git+https://github.com/mina86/ibc-rs?rev=d8ac409f5b206c389568fb2e713d2666e4b9afde)",
  "serde",
- "solana-program",
  "tendermint 0.34.0",
  "tendermint-light-client-verifier 0.34.0",
 ]
@@ -5741,17 +5783,34 @@ name = "ibc-client-tendermint-types"
 version = "0.50.0"
 source = "git+https://github.com/dhruvja/ibc-rs?rev=66ed6ce2959d38043d4cb936a1044330146e3faa#66ed6ce2959d38043d4cb936a1044330146e3faa"
 dependencies = [
- "borsh 0.10.3",
  "bytes",
  "displaydoc",
- "ibc-core-client-types",
- "ibc-core-commitment-types",
- "ibc-core-host-types",
- "ibc-primitives 0.50.0",
+ "ibc-core-client-types 0.50.0 (git+https://github.com/dhruvja/ibc-rs?rev=66ed6ce2959d38043d4cb936a1044330146e3faa)",
+ "ibc-core-commitment-types 0.50.0 (git+https://github.com/dhruvja/ibc-rs?rev=66ed6ce2959d38043d4cb936a1044330146e3faa)",
+ "ibc-core-host-types 0.50.0 (git+https://github.com/dhruvja/ibc-rs?rev=66ed6ce2959d38043d4cb936a1044330146e3faa)",
+ "ibc-primitives 0.50.0 (git+https://github.com/dhruvja/ibc-rs?rev=66ed6ce2959d38043d4cb936a1044330146e3faa)",
+ "ibc-proto 0.41.0",
+ "prost 0.12.4",
+ "solana-program",
+ "tendermint 0.34.0",
+ "tendermint-light-client-verifier 0.34.0",
+ "tendermint-proto 0.34.0",
+]
+
+[[package]]
+name = "ibc-client-tendermint-types"
+version = "0.50.0"
+source = "git+https://github.com/mina86/ibc-rs?rev=d8ac409f5b206c389568fb2e713d2666e4b9afde#d8ac409f5b206c389568fb2e713d2666e4b9afde"
+dependencies = [
+ "borsh 0.10.3",
+ "displaydoc",
+ "ibc-core-client-types 0.50.0 (git+https://github.com/mina86/ibc-rs?rev=d8ac409f5b206c389568fb2e713d2666e4b9afde)",
+ "ibc-core-commitment-types 0.50.0 (git+https://github.com/mina86/ibc-rs?rev=d8ac409f5b206c389568fb2e713d2666e4b9afde)",
+ "ibc-core-host-types 0.50.0 (git+https://github.com/mina86/ibc-rs?rev=d8ac409f5b206c389568fb2e713d2666e4b9afde)",
+ "ibc-primitives 0.50.0 (git+https://github.com/mina86/ibc-rs?rev=d8ac409f5b206c389568fb2e713d2666e4b9afde)",
  "ibc-proto 0.41.0",
  "prost 0.12.4",
  "serde",
- "solana-program",
  "tendermint 0.34.0",
  "tendermint-light-client-verifier 0.34.0",
  "tendermint-proto 0.34.0",
@@ -5760,13 +5819,13 @@ dependencies = [
 [[package]]
 name = "ibc-client-wasm-types"
 version = "0.50.0"
-source = "git+https://github.com/dhruvja/ibc-rs?rev=66ed6ce2959d38043d4cb936a1044330146e3faa#66ed6ce2959d38043d4cb936a1044330146e3faa"
+source = "git+https://github.com/mina86/ibc-rs?rev=d8ac409f5b206c389568fb2e713d2666e4b9afde#d8ac409f5b206c389568fb2e713d2666e4b9afde"
 dependencies = [
  "base64 0.21.7",
  "displaydoc",
  "ibc-core-client",
- "ibc-core-host-types",
- "ibc-primitives 0.50.0",
+ "ibc-core-host-types 0.50.0 (git+https://github.com/mina86/ibc-rs?rev=d8ac409f5b206c389568fb2e713d2666e4b9afde)",
+ "ibc-primitives 0.50.0 (git+https://github.com/mina86/ibc-rs?rev=d8ac409f5b206c389568fb2e713d2666e4b9afde)",
  "ibc-proto 0.41.0",
  "serde",
 ]
@@ -5774,7 +5833,7 @@ dependencies = [
 [[package]]
 name = "ibc-clients"
 version = "0.50.0"
-source = "git+https://github.com/dhruvja/ibc-rs?rev=66ed6ce2959d38043d4cb936a1044330146e3faa#66ed6ce2959d38043d4cb936a1044330146e3faa"
+source = "git+https://github.com/mina86/ibc-rs?rev=d8ac409f5b206c389568fb2e713d2666e4b9afde#d8ac409f5b206c389568fb2e713d2666e4b9afde"
 dependencies = [
  "ibc-client-tendermint",
  "ibc-client-wasm-types",
@@ -5783,32 +5842,32 @@ dependencies = [
 [[package]]
 name = "ibc-core"
 version = "0.50.0"
-source = "git+https://github.com/dhruvja/ibc-rs?rev=66ed6ce2959d38043d4cb936a1044330146e3faa#66ed6ce2959d38043d4cb936a1044330146e3faa"
+source = "git+https://github.com/mina86/ibc-rs?rev=d8ac409f5b206c389568fb2e713d2666e4b9afde#d8ac409f5b206c389568fb2e713d2666e4b9afde"
 dependencies = [
  "ibc-core-channel",
  "ibc-core-client",
- "ibc-core-commitment-types",
+ "ibc-core-commitment-types 0.50.0 (git+https://github.com/mina86/ibc-rs?rev=d8ac409f5b206c389568fb2e713d2666e4b9afde)",
  "ibc-core-connection",
  "ibc-core-handler",
- "ibc-core-host",
+ "ibc-core-host 0.50.0 (git+https://github.com/mina86/ibc-rs?rev=d8ac409f5b206c389568fb2e713d2666e4b9afde)",
  "ibc-core-router",
  "ibc-derive 0.6.0",
- "ibc-primitives 0.50.0",
+ "ibc-primitives 0.50.0 (git+https://github.com/mina86/ibc-rs?rev=d8ac409f5b206c389568fb2e713d2666e4b9afde)",
 ]
 
 [[package]]
 name = "ibc-core-channel"
 version = "0.50.0"
-source = "git+https://github.com/dhruvja/ibc-rs?rev=66ed6ce2959d38043d4cb936a1044330146e3faa#66ed6ce2959d38043d4cb936a1044330146e3faa"
+source = "git+https://github.com/mina86/ibc-rs?rev=d8ac409f5b206c389568fb2e713d2666e4b9afde#d8ac409f5b206c389568fb2e713d2666e4b9afde"
 dependencies = [
- "ibc-core-channel-types",
+ "ibc-core-channel-types 0.50.0 (git+https://github.com/mina86/ibc-rs?rev=d8ac409f5b206c389568fb2e713d2666e4b9afde)",
  "ibc-core-client",
- "ibc-core-commitment-types",
+ "ibc-core-commitment-types 0.50.0 (git+https://github.com/mina86/ibc-rs?rev=d8ac409f5b206c389568fb2e713d2666e4b9afde)",
  "ibc-core-connection",
- "ibc-core-handler-types",
- "ibc-core-host",
+ "ibc-core-handler-types 0.50.0 (git+https://github.com/mina86/ibc-rs?rev=d8ac409f5b206c389568fb2e713d2666e4b9afde)",
+ "ibc-core-host 0.50.0 (git+https://github.com/mina86/ibc-rs?rev=d8ac409f5b206c389568fb2e713d2666e4b9afde)",
  "ibc-core-router",
- "ibc-primitives 0.50.0",
+ "ibc-primitives 0.50.0 (git+https://github.com/mina86/ibc-rs?rev=d8ac409f5b206c389568fb2e713d2666e4b9afde)",
 ]
 
 [[package]]
@@ -5816,14 +5875,32 @@ name = "ibc-core-channel-types"
 version = "0.50.0"
 source = "git+https://github.com/dhruvja/ibc-rs?rev=66ed6ce2959d38043d4cb936a1044330146e3faa#66ed6ce2959d38043d4cb936a1044330146e3faa"
 dependencies = [
+ "derive_more",
+ "displaydoc",
+ "ibc-core-client-types 0.50.0 (git+https://github.com/dhruvja/ibc-rs?rev=66ed6ce2959d38043d4cb936a1044330146e3faa)",
+ "ibc-core-commitment-types 0.50.0 (git+https://github.com/dhruvja/ibc-rs?rev=66ed6ce2959d38043d4cb936a1044330146e3faa)",
+ "ibc-core-connection-types 0.50.0 (git+https://github.com/dhruvja/ibc-rs?rev=66ed6ce2959d38043d4cb936a1044330146e3faa)",
+ "ibc-core-host-types 0.50.0 (git+https://github.com/dhruvja/ibc-rs?rev=66ed6ce2959d38043d4cb936a1044330146e3faa)",
+ "ibc-primitives 0.50.0 (git+https://github.com/dhruvja/ibc-rs?rev=66ed6ce2959d38043d4cb936a1044330146e3faa)",
+ "ibc-proto 0.41.0",
+ "sha2 0.10.8",
+ "subtle-encoding",
+ "tendermint 0.34.0",
+]
+
+[[package]]
+name = "ibc-core-channel-types"
+version = "0.50.0"
+source = "git+https://github.com/mina86/ibc-rs?rev=d8ac409f5b206c389568fb2e713d2666e4b9afde#d8ac409f5b206c389568fb2e713d2666e4b9afde"
+dependencies = [
  "borsh 0.10.3",
  "derive_more",
  "displaydoc",
- "ibc-core-client-types",
- "ibc-core-commitment-types",
- "ibc-core-connection-types",
- "ibc-core-host-types",
- "ibc-primitives 0.50.0",
+ "ibc-core-client-types 0.50.0 (git+https://github.com/mina86/ibc-rs?rev=d8ac409f5b206c389568fb2e713d2666e4b9afde)",
+ "ibc-core-commitment-types 0.50.0 (git+https://github.com/mina86/ibc-rs?rev=d8ac409f5b206c389568fb2e713d2666e4b9afde)",
+ "ibc-core-connection-types 0.50.0 (git+https://github.com/mina86/ibc-rs?rev=d8ac409f5b206c389568fb2e713d2666e4b9afde)",
+ "ibc-core-host-types 0.50.0 (git+https://github.com/mina86/ibc-rs?rev=d8ac409f5b206c389568fb2e713d2666e4b9afde)",
+ "ibc-primitives 0.50.0 (git+https://github.com/mina86/ibc-rs?rev=d8ac409f5b206c389568fb2e713d2666e4b9afde)",
  "ibc-proto 0.41.0",
  "serde",
  "sha2 0.10.8",
@@ -5834,17 +5911,14 @@ dependencies = [
 [[package]]
 name = "ibc-core-client"
 version = "0.50.0"
-source = "git+https://github.com/dhruvja/ibc-rs?rev=66ed6ce2959d38043d4cb936a1044330146e3faa#66ed6ce2959d38043d4cb936a1044330146e3faa"
+source = "git+https://github.com/mina86/ibc-rs?rev=d8ac409f5b206c389568fb2e713d2666e4b9afde#d8ac409f5b206c389568fb2e713d2666e4b9afde"
 dependencies = [
- "ibc-client-tendermint-types",
- "ibc-core-client-context",
- "ibc-core-client-types",
- "ibc-core-commitment-types",
- "ibc-core-handler-types",
- "ibc-core-host",
- "ibc-primitives 0.50.0",
- "lib 0.0.0 (git+http://github.com/composableFi/emulated-light-client)",
- "solana-program",
+ "ibc-core-client-context 0.50.0 (git+https://github.com/mina86/ibc-rs?rev=d8ac409f5b206c389568fb2e713d2666e4b9afde)",
+ "ibc-core-client-types 0.50.0 (git+https://github.com/mina86/ibc-rs?rev=d8ac409f5b206c389568fb2e713d2666e4b9afde)",
+ "ibc-core-commitment-types 0.50.0 (git+https://github.com/mina86/ibc-rs?rev=d8ac409f5b206c389568fb2e713d2666e4b9afde)",
+ "ibc-core-handler-types 0.50.0 (git+https://github.com/mina86/ibc-rs?rev=d8ac409f5b206c389568fb2e713d2666e4b9afde)",
+ "ibc-core-host 0.50.0 (git+https://github.com/mina86/ibc-rs?rev=d8ac409f5b206c389568fb2e713d2666e4b9afde)",
+ "ibc-primitives 0.50.0 (git+https://github.com/mina86/ibc-rs?rev=d8ac409f5b206c389568fb2e713d2666e4b9afde)",
 ]
 
 [[package]]
@@ -5854,12 +5928,28 @@ source = "git+https://github.com/dhruvja/ibc-rs?rev=66ed6ce2959d38043d4cb936a104
 dependencies = [
  "derive_more",
  "displaydoc",
- "ibc-client-tendermint-types",
- "ibc-core-client-types",
- "ibc-core-commitment-types",
- "ibc-core-handler-types",
- "ibc-core-host-types",
- "ibc-primitives 0.50.0",
+ "ibc-client-tendermint-types 0.50.0 (git+https://github.com/dhruvja/ibc-rs?rev=66ed6ce2959d38043d4cb936a1044330146e3faa)",
+ "ibc-core-client-types 0.50.0 (git+https://github.com/dhruvja/ibc-rs?rev=66ed6ce2959d38043d4cb936a1044330146e3faa)",
+ "ibc-core-commitment-types 0.50.0 (git+https://github.com/dhruvja/ibc-rs?rev=66ed6ce2959d38043d4cb936a1044330146e3faa)",
+ "ibc-core-handler-types 0.50.0 (git+https://github.com/dhruvja/ibc-rs?rev=66ed6ce2959d38043d4cb936a1044330146e3faa)",
+ "ibc-core-host-types 0.50.0 (git+https://github.com/dhruvja/ibc-rs?rev=66ed6ce2959d38043d4cb936a1044330146e3faa)",
+ "ibc-primitives 0.50.0 (git+https://github.com/dhruvja/ibc-rs?rev=66ed6ce2959d38043d4cb936a1044330146e3faa)",
+ "subtle-encoding",
+ "tendermint 0.34.0",
+]
+
+[[package]]
+name = "ibc-core-client-context"
+version = "0.50.0"
+source = "git+https://github.com/mina86/ibc-rs?rev=d8ac409f5b206c389568fb2e713d2666e4b9afde#d8ac409f5b206c389568fb2e713d2666e4b9afde"
+dependencies = [
+ "derive_more",
+ "displaydoc",
+ "ibc-core-client-types 0.50.0 (git+https://github.com/mina86/ibc-rs?rev=d8ac409f5b206c389568fb2e713d2666e4b9afde)",
+ "ibc-core-commitment-types 0.50.0 (git+https://github.com/mina86/ibc-rs?rev=d8ac409f5b206c389568fb2e713d2666e4b9afde)",
+ "ibc-core-handler-types 0.50.0 (git+https://github.com/mina86/ibc-rs?rev=d8ac409f5b206c389568fb2e713d2666e4b9afde)",
+ "ibc-core-host-types 0.50.0 (git+https://github.com/mina86/ibc-rs?rev=d8ac409f5b206c389568fb2e713d2666e4b9afde)",
+ "ibc-primitives 0.50.0 (git+https://github.com/mina86/ibc-rs?rev=d8ac409f5b206c389568fb2e713d2666e4b9afde)",
  "subtle-encoding",
  "tendermint 0.34.0",
 ]
@@ -5869,12 +5959,27 @@ name = "ibc-core-client-types"
 version = "0.50.0"
 source = "git+https://github.com/dhruvja/ibc-rs?rev=66ed6ce2959d38043d4cb936a1044330146e3faa#66ed6ce2959d38043d4cb936a1044330146e3faa"
 dependencies = [
+ "derive_more",
+ "displaydoc",
+ "ibc-core-commitment-types 0.50.0 (git+https://github.com/dhruvja/ibc-rs?rev=66ed6ce2959d38043d4cb936a1044330146e3faa)",
+ "ibc-core-host-types 0.50.0 (git+https://github.com/dhruvja/ibc-rs?rev=66ed6ce2959d38043d4cb936a1044330146e3faa)",
+ "ibc-primitives 0.50.0 (git+https://github.com/dhruvja/ibc-rs?rev=66ed6ce2959d38043d4cb936a1044330146e3faa)",
+ "ibc-proto 0.41.0",
+ "subtle-encoding",
+ "tendermint 0.34.0",
+]
+
+[[package]]
+name = "ibc-core-client-types"
+version = "0.50.0"
+source = "git+https://github.com/mina86/ibc-rs?rev=d8ac409f5b206c389568fb2e713d2666e4b9afde#d8ac409f5b206c389568fb2e713d2666e4b9afde"
+dependencies = [
  "borsh 0.10.3",
  "derive_more",
  "displaydoc",
- "ibc-core-commitment-types",
- "ibc-core-host-types",
- "ibc-primitives 0.50.0",
+ "ibc-core-commitment-types 0.50.0 (git+https://github.com/mina86/ibc-rs?rev=d8ac409f5b206c389568fb2e713d2666e4b9afde)",
+ "ibc-core-host-types 0.50.0 (git+https://github.com/mina86/ibc-rs?rev=d8ac409f5b206c389568fb2e713d2666e4b9afde)",
+ "ibc-primitives 0.50.0 (git+https://github.com/mina86/ibc-rs?rev=d8ac409f5b206c389568fb2e713d2666e4b9afde)",
  "ibc-proto 0.41.0",
  "serde",
  "subtle-encoding",
@@ -5888,15 +5993,13 @@ source = "git+https://github.com/dhruvja/ibc-rs?rev=66ed6ce2959d38043d4cb936a104
 dependencies = [
  "blake2",
  "blake3",
- "borsh 0.10.3",
  "derive_more",
  "displaydoc",
- "ibc-primitives 0.50.0",
+ "ibc-primitives 0.50.0 (git+https://github.com/dhruvja/ibc-rs?rev=66ed6ce2959d38043d4cb936a1044330146e3faa)",
  "ibc-proto 0.41.0",
  "ics23 0.11.1",
- "lib 0.0.0 (git+http://github.com/composableFi/emulated-light-client)",
+ "lib 0.0.0 (git+https://github.com/ComposableFi/emulated-light-client/)",
  "ripemd",
- "serde",
  "sha2 0.10.8",
  "sha3 0.10.8",
  "solana-program",
@@ -5904,16 +6007,30 @@ dependencies = [
 ]
 
 [[package]]
+name = "ibc-core-commitment-types"
+version = "0.50.0"
+source = "git+https://github.com/mina86/ibc-rs?rev=d8ac409f5b206c389568fb2e713d2666e4b9afde#d8ac409f5b206c389568fb2e713d2666e4b9afde"
+dependencies = [
+ "borsh 0.10.3",
+ "derive_more",
+ "displaydoc",
+ "ibc-primitives 0.50.0 (git+https://github.com/mina86/ibc-rs?rev=d8ac409f5b206c389568fb2e713d2666e4b9afde)",
+ "ibc-proto 0.41.0",
+ "ics23 0.11.1",
+ "serde",
+ "subtle-encoding",
+]
+
+[[package]]
 name = "ibc-core-connection"
 version = "0.50.0"
-source = "git+https://github.com/dhruvja/ibc-rs?rev=66ed6ce2959d38043d4cb936a1044330146e3faa#66ed6ce2959d38043d4cb936a1044330146e3faa"
+source = "git+https://github.com/mina86/ibc-rs?rev=d8ac409f5b206c389568fb2e713d2666e4b9afde#d8ac409f5b206c389568fb2e713d2666e4b9afde"
 dependencies = [
  "ibc-core-client",
- "ibc-core-connection-types",
- "ibc-core-handler-types",
- "ibc-core-host",
- "ibc-primitives 0.50.0",
- "solana-program",
+ "ibc-core-connection-types 0.50.0 (git+https://github.com/mina86/ibc-rs?rev=d8ac409f5b206c389568fb2e713d2666e4b9afde)",
+ "ibc-core-handler-types 0.50.0 (git+https://github.com/mina86/ibc-rs?rev=d8ac409f5b206c389568fb2e713d2666e4b9afde)",
+ "ibc-core-host 0.50.0 (git+https://github.com/mina86/ibc-rs?rev=d8ac409f5b206c389568fb2e713d2666e4b9afde)",
+ "ibc-primitives 0.50.0 (git+https://github.com/mina86/ibc-rs?rev=d8ac409f5b206c389568fb2e713d2666e4b9afde)",
 ]
 
 [[package]]
@@ -5921,13 +6038,29 @@ name = "ibc-core-connection-types"
 version = "0.50.0"
 source = "git+https://github.com/dhruvja/ibc-rs?rev=66ed6ce2959d38043d4cb936a1044330146e3faa#66ed6ce2959d38043d4cb936a1044330146e3faa"
 dependencies = [
+ "derive_more",
+ "displaydoc",
+ "ibc-core-client-types 0.50.0 (git+https://github.com/dhruvja/ibc-rs?rev=66ed6ce2959d38043d4cb936a1044330146e3faa)",
+ "ibc-core-commitment-types 0.50.0 (git+https://github.com/dhruvja/ibc-rs?rev=66ed6ce2959d38043d4cb936a1044330146e3faa)",
+ "ibc-core-host-types 0.50.0 (git+https://github.com/dhruvja/ibc-rs?rev=66ed6ce2959d38043d4cb936a1044330146e3faa)",
+ "ibc-primitives 0.50.0 (git+https://github.com/dhruvja/ibc-rs?rev=66ed6ce2959d38043d4cb936a1044330146e3faa)",
+ "ibc-proto 0.41.0",
+ "subtle-encoding",
+ "tendermint 0.34.0",
+]
+
+[[package]]
+name = "ibc-core-connection-types"
+version = "0.50.0"
+source = "git+https://github.com/mina86/ibc-rs?rev=d8ac409f5b206c389568fb2e713d2666e4b9afde#d8ac409f5b206c389568fb2e713d2666e4b9afde"
+dependencies = [
  "borsh 0.10.3",
  "derive_more",
  "displaydoc",
- "ibc-core-client-types",
- "ibc-core-commitment-types",
- "ibc-core-host-types",
- "ibc-primitives 0.50.0",
+ "ibc-core-client-types 0.50.0 (git+https://github.com/mina86/ibc-rs?rev=d8ac409f5b206c389568fb2e713d2666e4b9afde)",
+ "ibc-core-commitment-types 0.50.0 (git+https://github.com/mina86/ibc-rs?rev=d8ac409f5b206c389568fb2e713d2666e4b9afde)",
+ "ibc-core-host-types 0.50.0 (git+https://github.com/mina86/ibc-rs?rev=d8ac409f5b206c389568fb2e713d2666e4b9afde)",
+ "ibc-primitives 0.50.0 (git+https://github.com/mina86/ibc-rs?rev=d8ac409f5b206c389568fb2e713d2666e4b9afde)",
  "ibc-proto 0.41.0",
  "serde",
  "subtle-encoding",
@@ -5937,18 +6070,16 @@ dependencies = [
 [[package]]
 name = "ibc-core-handler"
 version = "0.50.0"
-source = "git+https://github.com/dhruvja/ibc-rs?rev=66ed6ce2959d38043d4cb936a1044330146e3faa#66ed6ce2959d38043d4cb936a1044330146e3faa"
+source = "git+https://github.com/mina86/ibc-rs?rev=d8ac409f5b206c389568fb2e713d2666e4b9afde#d8ac409f5b206c389568fb2e713d2666e4b9afde"
 dependencies = [
- "ibc-client-tendermint-types",
  "ibc-core-channel",
  "ibc-core-client",
- "ibc-core-commitment-types",
+ "ibc-core-commitment-types 0.50.0 (git+https://github.com/mina86/ibc-rs?rev=d8ac409f5b206c389568fb2e713d2666e4b9afde)",
  "ibc-core-connection",
- "ibc-core-handler-types",
- "ibc-core-host",
+ "ibc-core-handler-types 0.50.0 (git+https://github.com/mina86/ibc-rs?rev=d8ac409f5b206c389568fb2e713d2666e4b9afde)",
+ "ibc-core-host 0.50.0 (git+https://github.com/mina86/ibc-rs?rev=d8ac409f5b206c389568fb2e713d2666e4b9afde)",
  "ibc-core-router",
- "ibc-primitives 0.50.0",
- "solana-program",
+ "ibc-primitives 0.50.0 (git+https://github.com/mina86/ibc-rs?rev=d8ac409f5b206c389568fb2e713d2666e4b9afde)",
 ]
 
 [[package]]
@@ -5956,16 +6087,35 @@ name = "ibc-core-handler-types"
 version = "0.50.0"
 source = "git+https://github.com/dhruvja/ibc-rs?rev=66ed6ce2959d38043d4cb936a1044330146e3faa#66ed6ce2959d38043d4cb936a1044330146e3faa"
 dependencies = [
+ "derive_more",
+ "displaydoc",
+ "ibc-core-channel-types 0.50.0 (git+https://github.com/dhruvja/ibc-rs?rev=66ed6ce2959d38043d4cb936a1044330146e3faa)",
+ "ibc-core-client-types 0.50.0 (git+https://github.com/dhruvja/ibc-rs?rev=66ed6ce2959d38043d4cb936a1044330146e3faa)",
+ "ibc-core-commitment-types 0.50.0 (git+https://github.com/dhruvja/ibc-rs?rev=66ed6ce2959d38043d4cb936a1044330146e3faa)",
+ "ibc-core-connection-types 0.50.0 (git+https://github.com/dhruvja/ibc-rs?rev=66ed6ce2959d38043d4cb936a1044330146e3faa)",
+ "ibc-core-host-types 0.50.0 (git+https://github.com/dhruvja/ibc-rs?rev=66ed6ce2959d38043d4cb936a1044330146e3faa)",
+ "ibc-core-router-types 0.50.0 (git+https://github.com/dhruvja/ibc-rs?rev=66ed6ce2959d38043d4cb936a1044330146e3faa)",
+ "ibc-primitives 0.50.0 (git+https://github.com/dhruvja/ibc-rs?rev=66ed6ce2959d38043d4cb936a1044330146e3faa)",
+ "ibc-proto 0.41.0",
+ "subtle-encoding",
+ "tendermint 0.34.0",
+]
+
+[[package]]
+name = "ibc-core-handler-types"
+version = "0.50.0"
+source = "git+https://github.com/mina86/ibc-rs?rev=d8ac409f5b206c389568fb2e713d2666e4b9afde#d8ac409f5b206c389568fb2e713d2666e4b9afde"
+dependencies = [
  "borsh 0.10.3",
  "derive_more",
  "displaydoc",
- "ibc-core-channel-types",
- "ibc-core-client-types",
- "ibc-core-commitment-types",
- "ibc-core-connection-types",
- "ibc-core-host-types",
- "ibc-core-router-types",
- "ibc-primitives 0.50.0",
+ "ibc-core-channel-types 0.50.0 (git+https://github.com/mina86/ibc-rs?rev=d8ac409f5b206c389568fb2e713d2666e4b9afde)",
+ "ibc-core-client-types 0.50.0 (git+https://github.com/mina86/ibc-rs?rev=d8ac409f5b206c389568fb2e713d2666e4b9afde)",
+ "ibc-core-commitment-types 0.50.0 (git+https://github.com/mina86/ibc-rs?rev=d8ac409f5b206c389568fb2e713d2666e4b9afde)",
+ "ibc-core-connection-types 0.50.0 (git+https://github.com/mina86/ibc-rs?rev=d8ac409f5b206c389568fb2e713d2666e4b9afde)",
+ "ibc-core-host-types 0.50.0 (git+https://github.com/mina86/ibc-rs?rev=d8ac409f5b206c389568fb2e713d2666e4b9afde)",
+ "ibc-core-router-types 0.50.0 (git+https://github.com/mina86/ibc-rs?rev=d8ac409f5b206c389568fb2e713d2666e4b9afde)",
+ "ibc-primitives 0.50.0 (git+https://github.com/mina86/ibc-rs?rev=d8ac409f5b206c389568fb2e713d2666e4b9afde)",
  "ibc-proto 0.41.0",
  "serde",
  "subtle-encoding",
@@ -5979,34 +6129,52 @@ source = "git+https://github.com/dhruvja/ibc-rs?rev=66ed6ce2959d38043d4cb936a104
 dependencies = [
  "derive_more",
  "displaydoc",
- "ibc-core-channel-types",
- "ibc-core-client-context",
- "ibc-core-client-types",
- "ibc-core-commitment-types",
- "ibc-core-connection-types",
- "ibc-core-handler-types",
- "ibc-core-host-types",
- "ibc-primitives 0.50.0",
+ "ibc-core-channel-types 0.50.0 (git+https://github.com/dhruvja/ibc-rs?rev=66ed6ce2959d38043d4cb936a1044330146e3faa)",
+ "ibc-core-client-context 0.50.0 (git+https://github.com/dhruvja/ibc-rs?rev=66ed6ce2959d38043d4cb936a1044330146e3faa)",
+ "ibc-core-client-types 0.50.0 (git+https://github.com/dhruvja/ibc-rs?rev=66ed6ce2959d38043d4cb936a1044330146e3faa)",
+ "ibc-core-commitment-types 0.50.0 (git+https://github.com/dhruvja/ibc-rs?rev=66ed6ce2959d38043d4cb936a1044330146e3faa)",
+ "ibc-core-connection-types 0.50.0 (git+https://github.com/dhruvja/ibc-rs?rev=66ed6ce2959d38043d4cb936a1044330146e3faa)",
+ "ibc-core-handler-types 0.50.0 (git+https://github.com/dhruvja/ibc-rs?rev=66ed6ce2959d38043d4cb936a1044330146e3faa)",
+ "ibc-core-host-types 0.50.0 (git+https://github.com/dhruvja/ibc-rs?rev=66ed6ce2959d38043d4cb936a1044330146e3faa)",
+ "ibc-primitives 0.50.0 (git+https://github.com/dhruvja/ibc-rs?rev=66ed6ce2959d38043d4cb936a1044330146e3faa)",
+ "subtle-encoding",
+]
+
+[[package]]
+name = "ibc-core-host"
+version = "0.50.0"
+source = "git+https://github.com/mina86/ibc-rs?rev=d8ac409f5b206c389568fb2e713d2666e4b9afde#d8ac409f5b206c389568fb2e713d2666e4b9afde"
+dependencies = [
+ "derive_more",
+ "displaydoc",
+ "ibc-core-channel-types 0.50.0 (git+https://github.com/mina86/ibc-rs?rev=d8ac409f5b206c389568fb2e713d2666e4b9afde)",
+ "ibc-core-client-context 0.50.0 (git+https://github.com/mina86/ibc-rs?rev=d8ac409f5b206c389568fb2e713d2666e4b9afde)",
+ "ibc-core-client-types 0.50.0 (git+https://github.com/mina86/ibc-rs?rev=d8ac409f5b206c389568fb2e713d2666e4b9afde)",
+ "ibc-core-commitment-types 0.50.0 (git+https://github.com/mina86/ibc-rs?rev=d8ac409f5b206c389568fb2e713d2666e4b9afde)",
+ "ibc-core-connection-types 0.50.0 (git+https://github.com/mina86/ibc-rs?rev=d8ac409f5b206c389568fb2e713d2666e4b9afde)",
+ "ibc-core-handler-types 0.50.0 (git+https://github.com/mina86/ibc-rs?rev=d8ac409f5b206c389568fb2e713d2666e4b9afde)",
+ "ibc-core-host-types 0.50.0 (git+https://github.com/mina86/ibc-rs?rev=d8ac409f5b206c389568fb2e713d2666e4b9afde)",
+ "ibc-primitives 0.50.0 (git+https://github.com/mina86/ibc-rs?rev=d8ac409f5b206c389568fb2e713d2666e4b9afde)",
  "subtle-encoding",
 ]
 
 [[package]]
 name = "ibc-core-host-cosmos"
 version = "0.50.0"
-source = "git+https://github.com/dhruvja/ibc-rs?rev=66ed6ce2959d38043d4cb936a1044330146e3faa#66ed6ce2959d38043d4cb936a1044330146e3faa"
+source = "git+https://github.com/mina86/ibc-rs?rev=d8ac409f5b206c389568fb2e713d2666e4b9afde#d8ac409f5b206c389568fb2e713d2666e4b9afde"
 dependencies = [
  "borsh 0.10.3",
  "derive_more",
  "displaydoc",
  "ibc-app-transfer-types",
  "ibc-client-tendermint",
- "ibc-core-client-context",
- "ibc-core-client-types",
- "ibc-core-commitment-types",
- "ibc-core-connection-types",
- "ibc-core-handler-types",
- "ibc-core-host-types",
- "ibc-primitives 0.50.0",
+ "ibc-core-client-context 0.50.0 (git+https://github.com/mina86/ibc-rs?rev=d8ac409f5b206c389568fb2e713d2666e4b9afde)",
+ "ibc-core-client-types 0.50.0 (git+https://github.com/mina86/ibc-rs?rev=d8ac409f5b206c389568fb2e713d2666e4b9afde)",
+ "ibc-core-commitment-types 0.50.0 (git+https://github.com/mina86/ibc-rs?rev=d8ac409f5b206c389568fb2e713d2666e4b9afde)",
+ "ibc-core-connection-types 0.50.0 (git+https://github.com/mina86/ibc-rs?rev=d8ac409f5b206c389568fb2e713d2666e4b9afde)",
+ "ibc-core-handler-types 0.50.0 (git+https://github.com/mina86/ibc-rs?rev=d8ac409f5b206c389568fb2e713d2666e4b9afde)",
+ "ibc-core-host-types 0.50.0 (git+https://github.com/mina86/ibc-rs?rev=d8ac409f5b206c389568fb2e713d2666e4b9afde)",
+ "ibc-primitives 0.50.0 (git+https://github.com/mina86/ibc-rs?rev=d8ac409f5b206c389568fb2e713d2666e4b9afde)",
  "ibc-proto 0.41.0",
  "serde",
  "sha2 0.10.8",
@@ -6019,24 +6187,34 @@ name = "ibc-core-host-types"
 version = "0.50.0"
 source = "git+https://github.com/dhruvja/ibc-rs?rev=66ed6ce2959d38043d4cb936a1044330146e3faa#66ed6ce2959d38043d4cb936a1044330146e3faa"
 dependencies = [
+ "derive_more",
+ "displaydoc",
+ "ibc-primitives 0.50.0 (git+https://github.com/dhruvja/ibc-rs?rev=66ed6ce2959d38043d4cb936a1044330146e3faa)",
+]
+
+[[package]]
+name = "ibc-core-host-types"
+version = "0.50.0"
+source = "git+https://github.com/mina86/ibc-rs?rev=d8ac409f5b206c389568fb2e713d2666e4b9afde#d8ac409f5b206c389568fb2e713d2666e4b9afde"
+dependencies = [
  "borsh 0.10.3",
  "derive_more",
  "displaydoc",
- "ibc-primitives 0.50.0",
+ "ibc-primitives 0.50.0 (git+https://github.com/mina86/ibc-rs?rev=d8ac409f5b206c389568fb2e713d2666e4b9afde)",
  "serde",
 ]
 
 [[package]]
 name = "ibc-core-router"
 version = "0.50.0"
-source = "git+https://github.com/dhruvja/ibc-rs?rev=66ed6ce2959d38043d4cb936a1044330146e3faa#66ed6ce2959d38043d4cb936a1044330146e3faa"
+source = "git+https://github.com/mina86/ibc-rs?rev=d8ac409f5b206c389568fb2e713d2666e4b9afde#d8ac409f5b206c389568fb2e713d2666e4b9afde"
 dependencies = [
  "derive_more",
  "displaydoc",
- "ibc-core-channel-types",
- "ibc-core-host-types",
- "ibc-core-router-types",
- "ibc-primitives 0.50.0",
+ "ibc-core-channel-types 0.50.0 (git+https://github.com/mina86/ibc-rs?rev=d8ac409f5b206c389568fb2e713d2666e4b9afde)",
+ "ibc-core-host-types 0.50.0 (git+https://github.com/mina86/ibc-rs?rev=d8ac409f5b206c389568fb2e713d2666e4b9afde)",
+ "ibc-core-router-types 0.50.0 (git+https://github.com/mina86/ibc-rs?rev=d8ac409f5b206c389568fb2e713d2666e4b9afde)",
+ "ibc-primitives 0.50.0 (git+https://github.com/mina86/ibc-rs?rev=d8ac409f5b206c389568fb2e713d2666e4b9afde)",
  "subtle-encoding",
 ]
 
@@ -6045,11 +6223,25 @@ name = "ibc-core-router-types"
 version = "0.50.0"
 source = "git+https://github.com/dhruvja/ibc-rs?rev=66ed6ce2959d38043d4cb936a1044330146e3faa#66ed6ce2959d38043d4cb936a1044330146e3faa"
 dependencies = [
+ "derive_more",
+ "displaydoc",
+ "ibc-core-host-types 0.50.0 (git+https://github.com/dhruvja/ibc-rs?rev=66ed6ce2959d38043d4cb936a1044330146e3faa)",
+ "ibc-primitives 0.50.0 (git+https://github.com/dhruvja/ibc-rs?rev=66ed6ce2959d38043d4cb936a1044330146e3faa)",
+ "ibc-proto 0.41.0",
+ "subtle-encoding",
+ "tendermint 0.34.0",
+]
+
+[[package]]
+name = "ibc-core-router-types"
+version = "0.50.0"
+source = "git+https://github.com/mina86/ibc-rs?rev=d8ac409f5b206c389568fb2e713d2666e4b9afde#d8ac409f5b206c389568fb2e713d2666e4b9afde"
+dependencies = [
  "borsh 0.10.3",
  "derive_more",
  "displaydoc",
- "ibc-core-host-types",
- "ibc-primitives 0.50.0",
+ "ibc-core-host-types 0.50.0 (git+https://github.com/mina86/ibc-rs?rev=d8ac409f5b206c389568fb2e713d2666e4b9afde)",
+ "ibc-primitives 0.50.0 (git+https://github.com/mina86/ibc-rs?rev=d8ac409f5b206c389568fb2e713d2666e4b9afde)",
  "ibc-proto 0.41.0",
  "serde",
  "subtle-encoding",
@@ -6070,7 +6262,7 @@ dependencies = [
 [[package]]
 name = "ibc-derive"
 version = "0.6.0"
-source = "git+https://github.com/dhruvja/ibc-rs?rev=66ed6ce2959d38043d4cb936a1044330146e3faa#66ed6ce2959d38043d4cb936a1044330146e3faa"
+source = "git+https://github.com/mina86/ibc-rs?rev=d8ac409f5b206c389568fb2e713d2666e4b9afde#d8ac409f5b206c389568fb2e713d2666e4b9afde"
 dependencies = [
  "proc-macro2",
  "quote",
@@ -6104,6 +6296,19 @@ dependencies = [
 name = "ibc-primitives"
 version = "0.50.0"
 source = "git+https://github.com/dhruvja/ibc-rs?rev=66ed6ce2959d38043d4cb936a1044330146e3faa#66ed6ce2959d38043d4cb936a1044330146e3faa"
+dependencies = [
+ "derive_more",
+ "displaydoc",
+ "ibc-proto 0.41.0",
+ "prost 0.12.4",
+ "tendermint 0.34.0",
+ "time",
+]
+
+[[package]]
+name = "ibc-primitives"
+version = "0.50.0"
+source = "git+https://github.com/mina86/ibc-rs?rev=d8ac409f5b206c389568fb2e713d2666e4b9afde#d8ac409f5b206c389568fb2e713d2666e4b9afde"
 dependencies = [
  "borsh 0.10.3",
  "derive_more",
@@ -6207,7 +6412,7 @@ dependencies = [
  "derive_more",
  "digest 0.10.7",
  "ed25519-dalek 2.1.1",
- "guestchain",
+ "guestchain 0.0.0 (git+https://github.com/ComposableFi/emulated-light-client/?branch=light-client-testing)",
  "hex",
  "hyperspace-primitives",
  "ibc 0.15.0",
@@ -7202,14 +7407,28 @@ dependencies = [
 [[package]]
 name = "lib"
 version = "0.0.0"
-source = "git+http://github.com/composableFi/emulated-light-client#032f3824955f8e718f6575624ec9f55a82eebc77"
+source = "git+https://github.com/ComposableFi/emulated-light-client/?branch=update-rev#401100175da1a42d644d362f0a10d5eca27561a5"
+dependencies = [
+ "base64 0.21.7",
+ "borsh 0.10.3",
+ "bytemuck",
+ "derive_more",
+ "sha2 0.10.8",
+ "solana-program",
+ "stdx 0.0.0 (git+https://github.com/ComposableFi/emulated-light-client/?branch=update-rev)",
+]
+
+[[package]]
+name = "lib"
+version = "0.0.0"
+source = "git+https://github.com/ComposableFi/emulated-light-client/#032f3824955f8e718f6575624ec9f55a82eebc77"
 dependencies = [
  "base64 0.21.7",
  "bytemuck",
  "derive_more",
  "sha2 0.10.8",
  "solana-program",
- "stdx 0.0.0 (git+http://github.com/composableFi/emulated-light-client)",
+ "stdx 0.0.0 (git+https://github.com/ComposableFi/emulated-light-client/)",
 ]
 
 [[package]]
@@ -8066,7 +8285,15 @@ version = "0.0.0"
 source = "git+https://github.com/ComposableFi/emulated-light-client/?branch=light-client-testing#0e6aa5a5b632b89e77c7625d6e80de3338fec31b"
 dependencies = [
  "derive_more",
- "stdx 0.0.0 (git+https://github.com/ComposableFi/emulated-light-client/?branch=light-client-testing)",
+]
+
+[[package]]
+name = "memory"
+version = "0.0.0"
+source = "git+https://github.com/ComposableFi/emulated-light-client/?branch=update-rev#401100175da1a42d644d362f0a10d5eca27561a5"
+dependencies = [
+ "derive_more",
+ "stdx 0.0.0 (git+https://github.com/ComposableFi/emulated-light-client/?branch=update-rev)",
 ]
 
 [[package]]
@@ -9337,7 +9564,7 @@ dependencies = [
  "frame-support",
  "frame-system",
  "grandpa-light-client-primitives",
- "guestchain",
+ "guestchain 0.0.0 (git+https://github.com/ComposableFi/emulated-light-client/?branch=update-rev)",
  "hex",
  "hex-literal 0.3.4",
  "ibc 0.15.0",
@@ -12151,6 +12378,18 @@ dependencies = [
 ]
 
 [[package]]
+name = "proto-utils"
+version = "0.0.0"
+source = "git+https://github.com/ComposableFi/emulated-light-client/?branch=update-rev#401100175da1a42d644d362f0a10d5eca27561a5"
+dependencies = [
+ "const_format",
+ "derive_more",
+ "ibc-core-client-context 0.50.0 (git+https://github.com/mina86/ibc-rs?rev=d8ac409f5b206c389568fb2e713d2666e4b9afde)",
+ "ibc-proto 0.41.0",
+ "prost 0.12.4",
+]
+
+[[package]]
 name = "psm"
 version = "0.1.21"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -12213,7 +12452,7 @@ version = "0.3.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "5253a3a0d56548d5b0be25414171dc780cc6870727746d05bd2bde352eee96c5"
 dependencies = [
- "ahash 0.8.6",
+ "ahash 0.8.5",
  "hashbrown 0.13.2",
  "parking_lot 0.12.1",
 ]
@@ -13511,7 +13750,7 @@ name = "sc-consensus-grandpa"
 version = "0.10.0-dev"
 source = "git+https://github.com/paritytech//substrate.git?branch=polkadot-v0.9.43#5e49f6e44820affccaf517fd22af564f4b495d40"
 dependencies = [
- "ahash 0.8.6",
+ "ahash 0.8.5",
  "array-bytes 4.2.0",
  "async-trait",
  "dyn-clone",
@@ -13770,7 +14009,7 @@ name = "sc-network-gossip"
 version = "0.10.0-dev"
 source = "git+https://github.com/paritytech//substrate.git?branch=polkadot-v0.9.43#5e49f6e44820affccaf517fd22af564f4b495d40"
 dependencies = [
- "ahash 0.8.6",
+ "ahash 0.8.5",
  "futures",
  "futures-timer",
  "libp2p",
@@ -14436,7 +14675,7 @@ version = "0.2.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "772575a524feeb803e5b0fcbc6dd9f367e579488197c94c6e4023aad2305774d"
 dependencies = [
- "ahash 0.8.6",
+ "ahash 0.8.5",
  "cfg-if 1.0.0",
  "hashbrown 0.13.2",
 ]
@@ -14539,9 +14778,26 @@ dependencies = [
  "bytemuck",
  "derive_more",
  "lib 0.0.0 (git+https://github.com/ComposableFi/emulated-light-client/?branch=light-client-testing)",
- "memory",
+ "memory 0.0.0 (git+https://github.com/ComposableFi/emulated-light-client/?branch=light-client-testing)",
  "sha2 0.10.8",
  "stdx 0.0.0 (git+https://github.com/ComposableFi/emulated-light-client/?branch=light-client-testing)",
+ "strum 0.25.0",
+]
+
+[[package]]
+name = "sealable-trie"
+version = "0.0.0"
+source = "git+https://github.com/ComposableFi/emulated-light-client/?branch=update-rev#401100175da1a42d644d362f0a10d5eca27561a5"
+dependencies = [
+ "ascii 1.1.0",
+ "base64 0.21.7",
+ "borsh 0.10.3",
+ "bytemuck",
+ "derive_more",
+ "lib 0.0.0 (git+https://github.com/ComposableFi/emulated-light-client/?branch=update-rev)",
+ "memory 0.0.0 (git+https://github.com/ComposableFi/emulated-light-client/?branch=update-rev)",
+ "sha2 0.10.8",
+ "stdx 0.0.0 (git+https://github.com/ComposableFi/emulated-light-client/?branch=update-rev)",
  "strum 0.25.0",
 ]
 
@@ -15090,9 +15346,9 @@ dependencies = [
 
 [[package]]
 name = "solana-account-decoder"
-version = "1.17.14"
+version = "1.17.31"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "21ed570fba6f909f69c888b48b39c7e61b454e3594e448d0dad9d973f27f5668"
+checksum = "c4e29f060cabd0e1bd90a63f8e1517ddd3365d3dc2eaa05f9a9fa542f4adeaaa"
 dependencies = [
  "Inflector",
  "base64 0.21.7",
@@ -15116,7 +15372,7 @@ dependencies = [
 [[package]]
 name = "solana-allocator"
 version = "0.0.0"
-source = "git+https://github.com/ComposableFi/emulated-light-client/?branch=light-client-testing#0e6aa5a5b632b89e77c7625d6e80de3338fec31b"
+source = "git+https://github.com/ComposableFi/emulated-light-client/?branch=update-rev#401100175da1a42d644d362f0a10d5eca27561a5"
 dependencies = [
  "bytemuck",
  "solana-program",
@@ -15124,9 +15380,9 @@ dependencies = [
 
 [[package]]
 name = "solana-clap-utils"
-version = "1.17.14"
+version = "1.17.31"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "b4729fec3c2ac37b7daaf24c1ef879bbedbff3495b1ac728d9b627282d878753"
+checksum = "62e5cdc0ae0c8ae79c39a4a362066d0d61764bc7ea7e033961fd7510fd24da2a"
 dependencies = [
  "chrono",
  "clap 2.34.0",
@@ -15141,9 +15397,9 @@ dependencies = [
 
 [[package]]
 name = "solana-client"
-version = "1.17.14"
+version = "1.17.31"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "2da13019a833940af2edebda969db4337ab11c6fb220eb0d4c02d79c83ae8034"
+checksum = "a1e2301c2af7e5a1dba0855f710329a2bb993829ed9fdf8f6207d02ee6fc54a4"
 dependencies = [
  "async-trait",
  "bincode",
@@ -15174,9 +15430,9 @@ dependencies = [
 
 [[package]]
 name = "solana-config-program"
-version = "1.17.14"
+version = "1.17.31"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "04b91ca968a63946e7513a1de20188e6e917f09136339ee3bec247aa0e985d36"
+checksum = "595118948b966b110aad3f9d8d8464958abe379ecfa7a813b4fc82659c8259bc"
 dependencies = [
  "bincode",
  "chrono",
@@ -15188,9 +15444,9 @@ dependencies = [
 
 [[package]]
 name = "solana-connection-cache"
-version = "1.17.14"
+version = "1.17.31"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "49a850c0122f094efb83df00ab080ab6ace0dcd8dbf91240f91832157ee6d460"
+checksum = "d363d6bb43e618b6010b47c2eb0579777ce4ed388ca15b84a610a738edf0b97e"
 dependencies = [
  "async-trait",
  "bincode",
@@ -15210,11 +15466,11 @@ dependencies = [
 
 [[package]]
 name = "solana-frozen-abi"
-version = "1.17.14"
+version = "1.17.31"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "8e2c5e5dde22cac045d29675b3fefa84817e1f63b0b911d094c599e80c0c07d9"
+checksum = "96734b05823c8b515f8e3cc02641a27aee2c9760b1a43c74cb20f2a1ab0ab76c"
 dependencies = [
- "ahash 0.8.6",
+ "ahash 0.8.5",
  "blake3",
  "block-buffer 0.10.4",
  "bs58 0.4.0",
@@ -15240,9 +15496,9 @@ dependencies = [
 
 [[package]]
 name = "solana-frozen-abi-macro"
-version = "1.17.14"
+version = "1.17.31"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "296e4cf0e2479e4c21afe4d17e32526f71f1bcd93b1c7c660900bc3e4233447a"
+checksum = "9a0f1291a464fd046135d019d57a81be165ee3d23aa7df880b47dac683a0582a"
 dependencies = [
  "proc-macro2",
  "quote",
@@ -15253,7 +15509,7 @@ dependencies = [
 [[package]]
 name = "solana-ibc"
 version = "0.1.0"
-source = "git+https://github.com/ComposableFi/emulated-light-client/?branch=light-client-testing#0e6aa5a5b632b89e77c7625d6e80de3338fec31b"
+source = "git+https://github.com/ComposableFi/emulated-light-client/?branch=update-rev#401100175da1a42d644d362f0a10d5eca27561a5"
 dependencies = [
  "anchor-lang",
  "anchor-spl",
@@ -15261,40 +15517,37 @@ dependencies = [
  "bytemuck",
  "cf-guest 0.0.0",
  "derive_more",
- "guestchain",
+ "guestchain 0.0.0 (git+https://github.com/ComposableFi/emulated-light-client/?branch=update-rev)",
  "hex-literal 0.4.1",
  "ibc 0.50.0",
- "ibc-client-tendermint-types",
+ "ibc-client-tendermint-types 0.50.0 (git+https://github.com/mina86/ibc-rs?rev=d8ac409f5b206c389568fb2e713d2666e4b9afde)",
  "ibc-proto 0.41.0",
- "itertools 0.10.5",
- "lib 0.0.0 (git+https://github.com/ComposableFi/emulated-light-client/?branch=light-client-testing)",
+ "lib 0.0.0 (git+https://github.com/ComposableFi/emulated-light-client/?branch=update-rev)",
  "linear-map",
- "memory",
+ "memory 0.0.0 (git+https://github.com/ComposableFi/emulated-light-client/?branch=update-rev)",
  "primitive-types",
  "prost 0.12.4",
  "serde",
  "serde_json",
- "sha2 0.10.8",
  "solana-allocator",
  "solana-signature-verifier",
  "solana-trie",
  "spl-associated-token-account",
  "spl-token",
- "stdx 0.0.0 (git+https://github.com/ComposableFi/emulated-light-client/?branch=light-client-testing)",
+ "stdx 0.0.0 (git+https://github.com/ComposableFi/emulated-light-client/?branch=update-rev)",
  "strum 0.25.0",
  "tendermint 0.34.0",
  "tendermint-light-client-verifier 0.34.0",
- "tendermint-proto 0.34.0",
- "trie-ids",
+ "trie-ids 0.0.0 (git+https://github.com/ComposableFi/emulated-light-client/?branch=update-rev)",
  "uint",
  "wasm",
 ]
 
 [[package]]
 name = "solana-logger"
-version = "1.17.14"
+version = "1.17.31"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "d37a1b1a383a01039afbc6447a1712fb2a1a73a5ba8916762e693e8e492fabf3"
+checksum = "c5977c8f24b83cf50e7139ffdb25d70bad6a177f18ccc79ca2293d6a987fa81c"
 dependencies = [
  "env_logger 0.9.3",
  "lazy_static",
@@ -15303,9 +15556,9 @@ dependencies = [
 
 [[package]]
 name = "solana-measure"
-version = "1.17.14"
+version = "1.17.31"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "19831a93d760205f5c3e20d05a37b0e533caa1889e48041648ad0859e68ec336"
+checksum = "7a39ef01b2c65552d05013b2642ffd73258f2c80e3a59e44c499762047df9456"
 dependencies = [
  "log",
  "solana-sdk",
@@ -15313,9 +15566,9 @@ dependencies = [
 
 [[package]]
 name = "solana-metrics"
-version = "1.17.14"
+version = "1.17.31"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "f63c23a8db755b2903262ad473e32cbf0093e2d3a0a7b8183d797a182c08326a"
+checksum = "9ad30ff3775412f2929d440446aef8b070676920bc5df495ea6398a8f28ce91f"
 dependencies = [
  "crossbeam-channel 0.5.12",
  "gethostname",
@@ -15328,9 +15581,9 @@ dependencies = [
 
 [[package]]
 name = "solana-net-utils"
-version = "1.17.14"
+version = "1.17.31"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "29ac1afc7feb590b45fd72bee0ca4c4f24b2386184d7e00d9f0d17913655bb4a"
+checksum = "6eafd5178a38a039e12c14780f1b6a74f1e672d62357343e0aee6d0fc7e5bd18"
 dependencies = [
  "bincode",
  "clap 3.2.25",
@@ -15350,11 +15603,11 @@ dependencies = [
 
 [[package]]
 name = "solana-perf"
-version = "1.17.14"
+version = "1.17.31"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "bfdf5a429e018e8ba693f4c43f833192db421fe97b88dfaf97041aa258e4b191"
+checksum = "10d6293cddcc98ae092d00f43f741405da30aa083acb96666606130810b064f3"
 dependencies = [
- "ahash 0.8.6",
+ "ahash 0.8.5",
  "bincode",
  "bv",
  "caps",
@@ -15379,9 +15632,9 @@ dependencies = [
 
 [[package]]
 name = "solana-program"
-version = "1.17.14"
+version = "1.17.31"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "8e3a3b9623f09e2c480b4e129c92d7a036f8614fd0fc7519791bd44e64061ce8"
+checksum = "6412447793f8a3ef7526655906728325093b472e481791ac5c584e8d272166dc"
 dependencies = [
  "ark-bn254",
  "ark-ec",
@@ -15433,9 +15686,9 @@ dependencies = [
 
 [[package]]
 name = "solana-program-runtime"
-version = "1.17.14"
+version = "1.17.31"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "9d5dbb56d36cc15b4cf5a71c0ce6262a263212f7a312b0dbc41b226654329c37"
+checksum = "1977e741a6793fca27413507457d797df0f41bc0ae634247d112bc77ab2b0325"
 dependencies = [
  "base64 0.21.7",
  "bincode",
@@ -15461,9 +15714,9 @@ dependencies = [
 
 [[package]]
 name = "solana-pubsub-client"
-version = "1.17.14"
+version = "1.17.31"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "2c22290c0d296a6a250a8d5b680797f12138a81af9c403a6ce62bd3ddad307e6"
+checksum = "1ad21dd5d6fe09116dbc29aec279b7cf08d250b564899dc87437bd780ed26290"
 dependencies = [
  "crossbeam-channel 0.5.12",
  "futures-util",
@@ -15486,9 +15739,9 @@ dependencies = [
 
 [[package]]
 name = "solana-quic-client"
-version = "1.17.14"
+version = "1.17.31"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "f924d8722f9e910d790678a79c2a0bfed786dffe1aefa5d769f8548679794263"
+checksum = "6201869768fe133ce9b8088e4f718f53ff164b8e5df3d0d46a6563a22545924f"
 dependencies = [
  "async-mutex",
  "async-trait",
@@ -15513,9 +15766,9 @@ dependencies = [
 
 [[package]]
 name = "solana-rayon-threadlimit"
-version = "1.17.14"
+version = "1.17.31"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "bc0a2e484e5b272690ac1431a6821f2b5180149d67c56934d9e007224ced15d0"
+checksum = "1f100d0c3214d67bb847a1eefc7079f6bb755534266423f4c994ad3b40c685ed"
 dependencies = [
  "lazy_static",
  "num_cpus",
@@ -15523,9 +15776,9 @@ dependencies = [
 
 [[package]]
 name = "solana-remote-wallet"
-version = "1.17.14"
+version = "1.17.31"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "fb9a96d1c001d07a0abb08e05b92ff6528b2d9239d03c57f99f738527839eb12"
+checksum = "3328c891079086b408a04e701470a346d517c9c51c0a96f2f166f616a3e1c3c8"
 dependencies = [
  "console",
  "dialoguer",
@@ -15542,9 +15795,9 @@ dependencies = [
 
 [[package]]
 name = "solana-rpc-client"
-version = "1.17.14"
+version = "1.17.31"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "91503edfdb2ba9c5e0127048e7795f22e050cf2bcee1259361af113d533b4b26"
+checksum = "bfacf1163a375d98c29779a03ba278b2ef43494f77e33826a33f9460563c0887"
 dependencies = [
  "async-trait",
  "base64 0.21.7",
@@ -15568,9 +15821,9 @@ dependencies = [
 
 [[package]]
 name = "solana-rpc-client-api"
-version = "1.17.14"
+version = "1.17.31"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "131662e5eea4fa5fc88b01f07d9e430315c0976be848ba3994244249c5fb033a"
+checksum = "7fab293a88113511e66607d76bd027edfe0b1372b467fd76bbb5af03448539a2"
 dependencies = [
  "base64 0.21.7",
  "bs58 0.4.0",
@@ -15590,9 +15843,9 @@ dependencies = [
 
 [[package]]
 name = "solana-rpc-client-nonce-utils"
-version = "1.17.14"
+version = "1.17.31"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "f67cdff955b9994ae240f6f287420c6727a581120c02ccc4f2fa535886732a1d"
+checksum = "1e43cb51374a6ec8fd401b3387334ef93e04f6d8ae87bbb29892aff42aeb1061"
 dependencies = [
  "clap 2.34.0",
  "solana-clap-utils",
@@ -15603,9 +15856,9 @@ dependencies = [
 
 [[package]]
 name = "solana-sdk"
-version = "1.17.14"
+version = "1.17.31"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "cb34583922c5e79004ad8d8d69f333d274d21b614f0e1a575f325fc29a104ec2"
+checksum = "de1ce8848de4198f9bc7e4574252be02b1ed86ecbc2fff506780d5f8d6e4c4a8"
 dependencies = [
  "assert_matches",
  "base64 0.21.7",
@@ -15657,9 +15910,9 @@ dependencies = [
 
 [[package]]
 name = "solana-sdk-macro"
-version = "1.17.14"
+version = "1.17.31"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "60f58786e949f43b8c9b826fdfa5ad8586634b077ab04f989fb8e30535786712"
+checksum = "bc5cc46bbda0a5472d8d0a4c846b22941436ac45c31456d3e885a387a5f264f7"
 dependencies = [
  "bs58 0.4.0",
  "proc-macro2",
@@ -15677,24 +15930,24 @@ checksum = "468aa43b7edb1f9b7b7b686d5c3aeb6630dc1708e86e31343499dd5c4d775183"
 [[package]]
 name = "solana-signature-verifier"
 version = "0.0.0"
-source = "git+https://github.com/ComposableFi/emulated-light-client/?branch=light-client-testing#0e6aa5a5b632b89e77c7625d6e80de3338fec31b"
+source = "git+https://github.com/ComposableFi/emulated-light-client/?branch=update-rev#401100175da1a42d644d362f0a10d5eca27561a5"
 dependencies = [
  "base64 0.21.7",
  "borsh 0.10.3",
  "bs58 0.5.1",
  "bytemuck",
  "derive_more",
- "guestchain",
- "lib 0.0.0 (git+https://github.com/ComposableFi/emulated-light-client/?branch=light-client-testing)",
+ "guestchain 0.0.0 (git+https://github.com/ComposableFi/emulated-light-client/?branch=update-rev)",
+ "lib 0.0.0 (git+https://github.com/ComposableFi/emulated-light-client/?branch=update-rev)",
  "solana-program",
- "stdx 0.0.0 (git+https://github.com/ComposableFi/emulated-light-client/?branch=light-client-testing)",
+ "stdx 0.0.0 (git+https://github.com/ComposableFi/emulated-light-client/?branch=update-rev)",
 ]
 
 [[package]]
 name = "solana-streamer"
-version = "1.17.14"
+version = "1.17.31"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "efe4c33e0f68ea7a3701650badf6753b85fef2100cac6bc187c8e443e61c53da"
+checksum = "46f02b475fc20c55ebbcfa5638ff93f9b780414cc6185e3a6d0992bca0ae81ee"
 dependencies = [
  "async-channel",
  "bytes",
@@ -15714,6 +15967,7 @@ dependencies = [
  "rand 0.8.5",
  "rcgen",
  "rustls 0.21.10",
+ "smallvec",
  "solana-metrics",
  "solana-perf",
  "solana-sdk",
@@ -15724,9 +15978,9 @@ dependencies = [
 
 [[package]]
 name = "solana-thin-client"
-version = "1.17.14"
+version = "1.17.31"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "54e782aabf9443a36d65e74d70ce732cc844707a5fec5a498bcbd81d3de7598c"
+checksum = "9b6ce2304764b8bb699db734fde9cd19ace038d3895d828a557ea0ec2a9e0ecd"
 dependencies = [
  "bincode",
  "log",
@@ -15739,9 +15993,9 @@ dependencies = [
 
 [[package]]
 name = "solana-tpu-client"
-version = "1.17.14"
+version = "1.17.31"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "980bee30cbfe3c51f973da7fdcccb9df2c2d9b9175c06066b293499e02108fd4"
+checksum = "aa3e2351625e26f55e5e08f8e5aadaa2380fd0649f25641d6ba3f3848dbe5c9a"
 dependencies = [
  "async-trait",
  "bincode",
@@ -15763,9 +16017,9 @@ dependencies = [
 
 [[package]]
 name = "solana-transaction-status"
-version = "1.17.14"
+version = "1.17.31"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "4c180013e406418d593ce7b51da7007a638ace18261de14901b090e53a1d7025"
+checksum = "0841bbd1845c87043e4184961e45cc7c08b36d96d0d146256b26ea5c74630a0f"
 dependencies = [
  "Inflector",
  "base64 0.21.7",
@@ -15789,20 +16043,21 @@ dependencies = [
 [[package]]
 name = "solana-trie"
 version = "0.0.0"
-source = "git+https://github.com/ComposableFi/emulated-light-client/?branch=light-client-testing#0e6aa5a5b632b89e77c7625d6e80de3338fec31b"
+source = "git+https://github.com/ComposableFi/emulated-light-client/?branch=update-rev#401100175da1a42d644d362f0a10d5eca27561a5"
 dependencies = [
- "lib 0.0.0 (git+https://github.com/ComposableFi/emulated-light-client/?branch=light-client-testing)",
- "memory",
- "sealable-trie",
+ "bytemuck",
+ "lib 0.0.0 (git+https://github.com/ComposableFi/emulated-light-client/?branch=update-rev)",
+ "memory 0.0.0 (git+https://github.com/ComposableFi/emulated-light-client/?branch=update-rev)",
+ "sealable-trie 0.0.0 (git+https://github.com/ComposableFi/emulated-light-client/?branch=update-rev)",
  "solana-program",
- "stdx 0.0.0 (git+https://github.com/ComposableFi/emulated-light-client/?branch=light-client-testing)",
+ "stdx 0.0.0 (git+https://github.com/ComposableFi/emulated-light-client/?branch=update-rev)",
 ]
 
 [[package]]
 name = "solana-udp-client"
-version = "1.17.14"
+version = "1.17.31"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "ab995970a424c89b7966a01aec90cdf1685c49aacf38a5f463200fc273a7d86b"
+checksum = "bae54a100f0b0b5be065f5d05f2259f6d4a7b39f5866d579927f3ca35a01773b"
 dependencies = [
  "async-trait",
  "solana-connection-cache",
@@ -15815,9 +16070,9 @@ dependencies = [
 
 [[package]]
 name = "solana-version"
-version = "1.17.14"
+version = "1.17.31"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "b32cc394aa7132ab7f270801b98bf47fa585ab93f1038e5be27e480d7b5b2dca"
+checksum = "5f69945e38d7440221e2fac0aaa57a9d72adb329b0de705ca5bd9ba981aedc16"
 dependencies = [
  "log",
  "rustc_version",
@@ -15831,9 +16086,9 @@ dependencies = [
 
 [[package]]
 name = "solana-vote-program"
-version = "1.17.14"
+version = "1.17.31"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "589cad4dccb4392e23f5ae4ccdd1f0aaa10f2823b264b27c4feb6382f40f4fd4"
+checksum = "e574aafc3c5adc7106ab4605d8ad378c9a12f2cf1dec2e8ba1aa6fd97a5d5490"
 dependencies = [
  "bincode",
  "log",
@@ -15854,17 +16109,17 @@ dependencies = [
 [[package]]
 name = "solana-write-account"
 version = "0.0.0"
-source = "git+https://github.com/ComposableFi/emulated-light-client/?branch=light-client-testing#0e6aa5a5b632b89e77c7625d6e80de3338fec31b"
+source = "git+https://github.com/ComposableFi/emulated-light-client/?branch=update-rev#401100175da1a42d644d362f0a10d5eca27561a5"
 dependencies = [
  "solana-program",
- "stdx 0.0.0 (git+https://github.com/ComposableFi/emulated-light-client/?branch=light-client-testing)",
+ "stdx 0.0.0 (git+https://github.com/ComposableFi/emulated-light-client/?branch=update-rev)",
 ]
 
 [[package]]
 name = "solana-zk-token-sdk"
-version = "1.17.14"
+version = "1.17.31"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "03d932d7b13a223a6c1068d7061df7e9d2de14bfc0a874350eef19d59086b04a"
+checksum = "597dddc8ab46852dea7fc3d22e031fa4ffdb1b2291ac24d960605424a510a5f5"
 dependencies = [
  "aes-gcm-siv",
  "base64 0.21.7",
@@ -16858,7 +17113,7 @@ name = "sp-trie"
 version = "7.0.0"
 source = "git+https://github.com/paritytech//substrate.git?branch=polkadot-v0.9.43#5e49f6e44820affccaf517fd22af564f4b495d40"
 dependencies = [
- "ahash 0.8.6",
+ "ahash 0.8.5",
  "hash-db",
  "hashbrown 0.13.2",
  "lazy_static",
@@ -16882,7 +17137,7 @@ version = "22.0.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "48e4eeb7ef23f79eba8609db79ef9cef242f994f1f87a3c0387b4b5f177fda74"
 dependencies = [
- "ahash 0.8.6",
+ "ahash 0.8.5",
  "hash-db",
  "hashbrown 0.13.2",
  "lazy_static",
@@ -17362,7 +17617,12 @@ source = "git+https://github.com/ComposableFi/emulated-light-client/?branch=ligh
 [[package]]
 name = "stdx"
 version = "0.0.0"
-source = "git+http://github.com/composableFi/emulated-light-client#032f3824955f8e718f6575624ec9f55a82eebc77"
+source = "git+https://github.com/ComposableFi/emulated-light-client/?branch=update-rev#401100175da1a42d644d362f0a10d5eca27561a5"
+
+[[package]]
+name = "stdx"
+version = "0.0.0"
+source = "git+https://github.com/ComposableFi/emulated-light-client/#032f3824955f8e718f6575624ec9f55a82eebc77"
 
 [[package]]
 name = "strsim"
@@ -18626,13 +18886,29 @@ source = "git+https://github.com/ComposableFi/emulated-light-client/?branch=ligh
 dependencies = [
  "ascii 1.1.0",
  "base64 0.21.7",
+ "bytemuck",
+ "derive_more",
+ "ibc-core-channel-types 0.50.0 (git+https://github.com/dhruvja/ibc-rs?rev=66ed6ce2959d38043d4cb936a1044330146e3faa)",
+ "ibc-core-client-types 0.50.0 (git+https://github.com/dhruvja/ibc-rs?rev=66ed6ce2959d38043d4cb936a1044330146e3faa)",
+ "ibc-core-connection-types 0.50.0 (git+https://github.com/dhruvja/ibc-rs?rev=66ed6ce2959d38043d4cb936a1044330146e3faa)",
+ "ibc-core-host-types 0.50.0 (git+https://github.com/dhruvja/ibc-rs?rev=66ed6ce2959d38043d4cb936a1044330146e3faa)",
+ "strum 0.25.0",
+]
+
+[[package]]
+name = "trie-ids"
+version = "0.0.0"
+source = "git+https://github.com/ComposableFi/emulated-light-client/?branch=update-rev#401100175da1a42d644d362f0a10d5eca27561a5"
+dependencies = [
+ "ascii 1.1.0",
+ "base64 0.21.7",
  "borsh 0.10.3",
  "bytemuck",
  "derive_more",
- "ibc-core-channel-types",
- "ibc-core-client-types",
- "ibc-core-connection-types",
- "ibc-core-host-types",
+ "ibc-core-channel-types 0.50.0 (git+https://github.com/mina86/ibc-rs?rev=d8ac409f5b206c389568fb2e713d2666e4b9afde)",
+ "ibc-core-client-types 0.50.0 (git+https://github.com/mina86/ibc-rs?rev=d8ac409f5b206c389568fb2e713d2666e4b9afde)",
+ "ibc-core-connection-types 0.50.0 (git+https://github.com/mina86/ibc-rs?rev=d8ac409f5b206c389568fb2e713d2666e4b9afde)",
+ "ibc-core-host-types 0.50.0 (git+https://github.com/mina86/ibc-rs?rev=d8ac409f5b206c389568fb2e713d2666e4b9afde)",
  "strum 0.25.0",
 ]
 
@@ -19055,25 +19331,17 @@ dependencies = [
 [[package]]
 name = "wasm"
 version = "0.0.0"
-source = "git+https://github.com/ComposableFi/emulated-light-client/?branch=light-client-testing#0e6aa5a5b632b89e77c7625d6e80de3338fec31b"
+source = "git+https://github.com/ComposableFi/emulated-light-client/?branch=update-rev#401100175da1a42d644d362f0a10d5eca27561a5"
 dependencies = [
- "borsh 0.10.3",
- "bytemuck",
+ "const_format",
  "derive_more",
- "guestchain",
- "ibc-core-client-context",
- "ibc-core-client-types",
- "ibc-core-commitment-types",
- "ibc-core-host",
- "ibc-primitives 0.50.0",
+ "ibc-core-client-context 0.50.0 (git+https://github.com/mina86/ibc-rs?rev=d8ac409f5b206c389568fb2e713d2666e4b9afde)",
+ "ibc-core-commitment-types 0.50.0 (git+https://github.com/mina86/ibc-rs?rev=d8ac409f5b206c389568fb2e713d2666e4b9afde)",
+ "ibc-primitives 0.50.0 (git+https://github.com/mina86/ibc-rs?rev=d8ac409f5b206c389568fb2e713d2666e4b9afde)",
  "ibc-proto 0.41.0",
- "lib 0.0.0 (git+https://github.com/ComposableFi/emulated-light-client/?branch=light-client-testing)",
+ "lib 0.0.0 (git+https://github.com/ComposableFi/emulated-light-client/?branch=update-rev)",
  "prost 0.12.4",
- "prost-build 0.12.4",
- "sealable-trie",
- "solana-program",
- "stdx 0.0.0 (git+https://github.com/ComposableFi/emulated-light-client/?branch=light-client-testing)",
- "trie-ids",
+ "proto-utils",
 ]
 
 [[package]]

@@ -26,14 +26,14 @@ optimize = """docker run --rm -v "$(pwd)":/code \
 cf-guest = { path = "../cf-guest", default-features = false }
 ics08-wasm = { path = "../ics08-wasm", default-features = false, features = ["cosmwasm"] }
 
-guestchain = { git = "https://github.com/ComposableFi/emulated-light-client/", branch = "light-client-testing", default-features = false }
+guestchain = { git = "https://github.com/ComposableFi/emulated-light-client/", branch = "update-rev", default-features = false }
 
 base64 = { version = "0.22", default-features = false, features = ["alloc"] }
 borsh = { version = "0.10.3", default-features = false }
 cosmwasm-schema = "1.5.3"
 cosmwasm-std = "1.5.3"
 derive_more = "0.99.17"
-ahash = { version = "=0.8.6", default-features = false }
+ahash = { version = "=0.8.5", default-features = false }
 ed25519-dalek = { version = "2.1.1", default-features = false, features = ["pkcs8"] }
 
 ibc = { path = "../../ibc/modules", default-features = false }
