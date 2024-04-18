@@ -24,11 +24,11 @@ ibc-derive = { path = "../../ibc/derive", default-features = false }
 
 tendermint-proto = { git = "https://github.com/informalsystems/tendermint-rs", rev = "e81f7bf23d63ffbcd242381d1ce5e35da3515ff1", default-features = false }
 
-guestchain = { git = "https://github.com/ComposableFi/emulated-light-client/", rev = "da12aa5660704f0bb79498c4613c79cb70488632", default-features = false }
-lib = { git = "https://github.com/ComposableFi/emulated-light-client/", rev = "da12aa5660704f0bb79498c4613c79cb70488632", features = ["borsh"], default-features = false }
-trie-ids = { git = "https://github.com/ComposableFi/emulated-light-client/", rev = "da12aa5660704f0bb79498c4613c79cb70488632", default-features = false }
-sealable-trie = { git = "https://github.com/ComposableFi/emulated-light-client/", rev = "da12aa5660704f0bb79498c4613c79cb70488632", features = ["borsh"], default-features = false }
-stdx = { git = "https://github.com/ComposableFi/emulated-light-client/", rev = "da12aa5660704f0bb79498c4613c79cb70488632", default-features = false }
+guestchain = { git = "https://github.com/ComposableFi/emulated-light-client/", branch = "light-client-testing", default-features = false }
+lib = { git = "https://github.com/ComposableFi/emulated-light-client/", branch = "light-client-testing", features = ["borsh"], default-features = false }
+trie-ids = { git = "https://github.com/ComposableFi/emulated-light-client/", branch = "light-client-testing", default-features = false }
+sealable-trie = { git = "https://github.com/ComposableFi/emulated-light-client/", branch = "light-client-testing", features = ["borsh"], default-features = false }
+stdx = { git = "https://github.com/ComposableFi/emulated-light-client/", branch = "light-client-testing", default-features = false }
 
 [build-dependencies]
 prost-build = { version = "0.11", default-features = false }
@@ -37,9 +37,9 @@ prost-build = { version = "0.11", default-features = false }
 insta = { version = "1.34.0" }
 rand = { version = "0.8.5" }
 
-guestchain = { git = "https://github.com/ComposableFi/emulated-light-client/", rev = "da12aa5660704f0bb79498c4613c79cb70488632", default-features = false, features = ["test_utils"] }
-lib = { git = "https://github.com/ComposableFi/emulated-light-client/", rev = "da12aa5660704f0bb79498c4613c79cb70488632", features = ["test_utils"] }
-memory = { git = "https://github.com/ComposableFi/emulated-light-client/", rev = "da12aa5660704f0bb79498c4613c79cb70488632", features = ["test_utils"] }
+guestchain = { git = "https://github.com/ComposableFi/emulated-light-client/", branch = "light-client-testing", default-features = false, features = ["test_utils"] }
+lib = { git = "https://github.com/ComposableFi/emulated-light-client/", branch = "light-client-testing", features = ["test_utils"] }
+memory = { git = "https://github.com/ComposableFi/emulated-light-client/", branch = "light-client-testing", features = ["test_utils"] }
 
 [features]
 std = []

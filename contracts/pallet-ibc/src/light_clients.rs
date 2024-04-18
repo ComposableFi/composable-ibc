@@ -138,6 +138,7 @@ impl guestchain::Signature for Signature {
 			.map(Self)
 			.map_err(|_| guestchain::BadFormat)
 	}
+
 }
 
 impl borsh::BorshSerialize for Signature {

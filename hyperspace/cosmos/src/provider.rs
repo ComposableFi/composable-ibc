@@ -1080,7 +1080,7 @@ where
 			self.chain_id.clone(),
 			TrustThreshold::default(),
 			Duration::from_secs(64000),
-			Duration::from_secs(1814400),
+			Duration::from_secs(86400),
 			Duration::new(1500000, 0),
 			latest_height_timestamp.0,
 			ProofSpecs::default(),
@@ -1381,6 +1381,10 @@ where
 		for event in events {
 			let mut channel_and_port_ids = self.channel_whitelist();
 			channel_and_port_ids.extend(counterparty.channel_whitelist());
+      // log::info!("host channel and port ids {:?} ", self.channel_whitelist());
+			// log::info!("counterparty channel and port ids {:?}, ", counterparty.channel_whitelist());
+			// log::info!("Host connection {:?} counterparty {:?}", self.connection_id(), counterparty.connection_id());
+			// log::info!("Host clientID {:?} counterparty {:?}", self.client_id(), counterparty.client_id());
 
 			let ibc_event = ibc_event_try_from_abci_event(&event, ibc_height).ok();
 			if matches!(ibc_event, ibc::prelude::Some(IbcEvent::OpenTryConnection(_))) {

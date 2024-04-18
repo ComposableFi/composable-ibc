@@ -679,7 +679,7 @@ pub async fn get_previous_transactions(
 			jsonrpc: "2.0".to_string(),
 			id: 1 as u64,
 			method: "getTransaction".to_string(),
-			params: (signature, Param { commitment: "confirmed".to_string() }),
+			params: (signature, Param { commitment: "confirmed".to_string(), maxSupportedTransactionVersion: 0 }),
 		};
 		body.push(payload);
 	}
@@ -709,6 +709,7 @@ pub struct Payload {
 #[derive(Debug, Serialize, Deserialize)]
 pub struct Param {
 	commitment: String,
+	maxSupportedTransactionVersion: u16,
 }
 
 #[derive(Debug, Serialize, Deserialize)]

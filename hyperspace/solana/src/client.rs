@@ -138,9 +138,9 @@ pub struct SolanaClientConfig {
 	pub channel_whitelist: Vec<(ChannelId, PortId)>,
 	pub commitment_level: String,
 	pub private_key: Vec<u8>,
-	pub solana_ibc_program_id: Pubkey,
-	pub write_program_id: Pubkey,
-	pub signature_verifier_program_id: Pubkey,
+	pub solana_ibc_program_id: String,
+	pub write_program_id: String,
+	pub signature_verifier_program_id: String,
 }
 
 #[derive(Debug, Clone)]
@@ -257,9 +257,9 @@ impl SolanaClient {
 			keybase: config.private_key.into(),
 			max_tx_size: config.max_tx_size,
 			commitment_level: CommitmentLevel::from_str(&config.commitment_level).unwrap(),
-			solana_ibc_program_id: config.solana_ibc_program_id,
-			write_program_id: config.write_program_id,
-			signature_verifier_program_id: config.signature_verifier_program_id,
+			solana_ibc_program_id: Pubkey::from_str(&config.solana_ibc_program_id).unwrap(),
+			write_program_id: Pubkey::from_str(&config.write_program_id).unwrap(),
+			signature_verifier_program_id: Pubkey::from_str(&config.signature_verifier_program_id).unwrap(),
 			common_state: CommonClientState::default(),
 			client_type: "07-tendermint".to_string(),
 			last_searched_sig_for_send_packets: Arc::new(

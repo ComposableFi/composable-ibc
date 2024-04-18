@@ -68,20 +68,20 @@ ibc-rpc = { path = "../../contracts/pallet-ibc/rpc" }
 pallet-ibc = { path = "../../contracts/pallet-ibc", features = ["testing"]}
 
 # Trie
-lib = { git = "https://github.com/ComposableFi/emulated-light-client/", rev = "da12aa5660704f0bb79498c4613c79cb70488632" }
-memory = { git = "https://github.com/ComposableFi/emulated-light-client/", rev = "da12aa5660704f0bb79498c4613c79cb70488632" }
-sealable-trie = { git = "https://github.com/ComposableFi/emulated-light-client/", rev = "da12aa5660704f0bb79498c4613c79cb70488632", features = ["borsh"] }
-stdx = { git = "https://github.com/ComposableFi/emulated-light-client/", rev = "da12aa5660704f0bb79498c4613c79cb70488632" }
-solana-trie = { git = "https://github.com/ComposableFi/emulated-light-client/", rev = "da12aa5660704f0bb79498c4613c79cb70488632" }
-trie-ids = { git = "https://github.com/ComposableFi/emulated-light-client/", rev = "da12aa5660704f0bb79498c4613c79cb70488632", features = ["borsh"] }
+lib = { git = "https://github.com/ComposableFi/emulated-light-client/", branch = "light-client-testing" }
+memory = { git = "https://github.com/ComposableFi/emulated-light-client/", branch = "light-client-testing" }
+sealable-trie = { git = "https://github.com/ComposableFi/emulated-light-client/", branch = "light-client-testing", features = ["borsh"] }
+stdx = { git = "https://github.com/ComposableFi/emulated-light-client/", branch = "light-client-testing" }
+solana-trie = { git = "https://github.com/ComposableFi/emulated-light-client/", branch = "light-client-testing" }
+trie-ids = { git = "https://github.com/ComposableFi/emulated-light-client/", branch = "light-client-testing", features = ["borsh"] }
 cf-guest = { path = "../../light-clients/cf-guest", default-features = false }
-cf-guest-og = { git = "https://github.com/ComposableFi/emulated-light-client/", rev = "da12aa5660704f0bb79498c4613c79cb70488632", package = "cf-guest" }
-guestchain = { git = "https://github.com/ComposableFi/emulated-light-client/", rev = "da12aa5660704f0bb79498c4613c79cb70488632", default-features = false }
+cf-guest-og = { git = "https://github.com/ComposableFi/emulated-light-client/", branch = "light-client-testing", package = "cf-guest" }
+guestchain = { git = "https://github.com/ComposableFi/emulated-light-client/", branch = "light-client-testing", default-features = false }
 
 #Contract
-solana-ibc = { git = "https://github.com/ComposableFi/emulated-light-client/", rev = "da12aa5660704f0bb79498c4613c79cb70488632", features = ["no-entrypoint"]}
-solana-write-account = { git = "https://github.com/ComposableFi/emulated-light-client/", rev = "da12aa5660704f0bb79498c4613c79cb70488632", features = ["library"] }
-solana-signature-verifier = { git = "https://github.com/ComposableFi/emulated-light-client/", rev = "da12aa5660704f0bb79498c4613c79cb70488632" }
+solana-ibc = { git = "https://github.com/ComposableFi/emulated-light-client/", branch = "light-client-testing", features = ["no-entrypoint"]}
+solana-write-account = { git = "https://github.com/ComposableFi/emulated-light-client/", branch = "light-client-testing", features = ["library"] }
+solana-signature-verifier = { git = "https://github.com/ComposableFi/emulated-light-client/", branch = "light-client-testing" }
 
 tracing = "0.1.36"
 
