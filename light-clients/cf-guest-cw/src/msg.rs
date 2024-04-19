@@ -358,9 +358,7 @@ impl TryFrom<VerifyUpgradeAndUpdateStateMsgRaw> for VerifyUpgradeAndUpdateStateM
 		let upgrade_client_state: ClientState<crate::crypto::PubKey> =
 			ClientState::decode_vec(&any.value)?;
 		if upgrade_client_state.0.is_frozen {
-			return ibc::prelude::Err(ContractError::Tendermint(
-				"Upgrade client state not zeroed".to_string(),
-			))
+			return Err(ContractError::Other("Upgrade client state not zeroed".into()))
 		}
 
 		Ok(VerifyUpgradeAndUpdateStateMsg {

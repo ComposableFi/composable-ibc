@@ -17,11 +17,7 @@ use alloc::{
 	fmt,
 	string::{String, ToString},
 };
-use ibc::{
-	core::{ics02_client::error::Error as Ics02Error, ics24_host::identifier::ClientId},
-	timestamp::Timestamp,
-	Height,
-};
+use ibc::{core::ics24_host::identifier::ClientId, timestamp::Timestamp, Height};
 
 #[derive(Clone, Debug)]
 pub enum Error {
@@ -35,13 +31,13 @@ pub enum Error {
 }
 
 impl fmt::Display for Error {
-	fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
-		write!(f, "{:?}", self)
+	fn fmt(&self, fmtr: &mut fmt::Formatter) -> fmt::Result {
+		fmt::Debug::fmt(self, fmtr)
 	}
 }
 
-impl From<Error> for Ics02Error {
-	fn from(e: Error) -> Self {
-		Ics02Error::client_error(CLIENT_TYPE.to_string(), e.to_string())
+impl From<Error> for ibc::core::ics02_client::error::Error {
+	fn from(err: Error) -> Self {
+		Self::client_error(CLIENT_TYPE.into(), err.to_string())
 	}
 }
