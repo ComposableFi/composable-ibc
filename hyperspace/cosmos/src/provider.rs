@@ -126,9 +126,16 @@ where
 			.client_state
 			.ok_or_else(|| Error::Custom("counterparty returned empty client state".to_string()))?;
 		let client_state =
-			ClientState::<HostFunctionsManager>::decode_vec(&client_state_response.value)
-				.map_err(|_| Error::Custom("failed to decode client state response".to_string()))?;
+			ics07_tendermint::client_state::ClientState::<LocalClientTypes>::decode_vec(
+				&client_state_response.value,
+			)
+			.map_err(|_| Error::Custom("failed to decode client state response".to_string()))?;
 		let latest_cp_client_height = client_state.latest_height().revision_height;
+		log::info!(
+			"This is solana (cp) height on cosmos {:?} {:?}",
+			client_state.latest_height(),
+			client_state.chain_id()
+		);
 		let latest_height = self.latest_height_and_timestamp().await?.0;
 		let latest_revision = latest_height.revision_number;
 
@@ -137,12 +144,13 @@ where
 			TmHeight::try_from(latest_cp_client_height + NUMBER_OF_BLOCKS_TO_PROCESS_PER_ITER)
 				.expect("should not overflow"),
 		);
-		log::info!(target: "hyperspace_cosmos", "Getting blocks {}..{}", from, to);
+		log::info!(target: "hyperspace_cosmos", "--------------------------Getting blocks {}..{}----------------------", from, to);
 
 		// query (exclusively) up to `to`, because the proof for the event at `to - 1` will be
 		// contained at `to` and will be fetched below by `msg_update_client_header`
 		let update_headers =
-			self.msg_update_client_header(from, to, client_state.latest_height).await?;
+			self.msg_update_client_header(from, to, client_state.latest_height()).await?;
+		// log::info!(target: "hyperspace_cosmos", "These are update headers {:?}", update_headers);
 		let mut block_events = Vec::new();
 		let mut join_set: JoinSet<Result<_, anyhow::Error>> = JoinSet::new();
 		let range = (from.value()..to.value()).collect::<Vec<_>>();
@@ -202,6 +210,7 @@ where
 				})?;
 				Any { value, type_url: msg.type_url() }
 			};
+			// println!("These are events caught query latest events {:?}", events);
 			updates.push((update_client_header, height, events, update_type));
 		}
 		Ok(updates)
@@ -212,6 +221,7 @@ where
 	async fn ibc_events(&self) -> Pin<Box<dyn Stream<Item = IbcEvent> + Send + 'static>> {
 		// Create websocket client. Like what `EventMonitor::subscribe()` does in `hermes`
 		let ws_client = self.rpc_client.clone();
+		log::info!("Inside cosmos ibc events");
 
 		let query_all = vec![
 			Query::from(EventType::NewBlock),
@@ -667,7 +677,7 @@ where
 		port_id: PortId,
 		seqs: Vec<u64>,
 	) -> Result<Vec<PacketInfo>, Self::Error> {
-		log::debug!(
+		log::info!(
 			target: "hyperspace_cosmos",
 			"query_send_packets: channel_id: {}, port_id: {}, seqs: {:?}", channel_id, port_id, seqs
 		);
@@ -1065,12 +1075,13 @@ where
 		&self,
 	) -> Result<(AnyClientState, AnyConsensusState), Self::Error> {
 		let latest_height_timestamp = self.latest_height_and_timestamp().await?;
+		println!("This is height on cosmos {:?}", latest_height_timestamp);
 		let client_state = ClientState::new(
 			self.chain_id.clone(),
 			TrustThreshold::default(),
 			Duration::from_secs(64000),
-			Duration::from_secs(1814400),
-			Duration::new(15, 0),
+			Duration::from_secs(86400),
+			Duration::new(1500000, 0),
 			latest_height_timestamp.0,
 			ProofSpecs::default(),
 			vec!["upgrade".to_string(), "upgradedIBCState".to_string()],
@@ -1082,6 +1093,9 @@ where
 			.await
 			.map_err(|e| Error::from(format!("Invalid light block {e}")))?;
 		let consensus_state = ConsensusState::from(light_block.signed_header.header);
+		println!("--------------------------------------------");
+		println!("This is consensus state timestamp {:?}", consensus_state.timestamp);
+		println!("--------------------------------------------");
 		Ok((
 			AnyClientState::Tendermint(client_state),
 			AnyConsensusState::Tendermint(consensus_state),
@@ -1293,6 +1307,7 @@ where
 
 	async fn upload_wasm(&self, wasm: Vec<u8>) -> Result<Vec<u8>, Self::Error> {
 		let msg = MsgPushNewWasmCode { signer: self.account_id(), code: wasm };
+		// log::info!("This is the msg {:?}", msg);
 		let hash = self.submit(vec![msg.into()]).await?;
 		let resp = self.wait_for_tx_result(hash).await?;
 		let height = Height::new(
@@ -1366,8 +1381,15 @@ where
 		for event in events {
 			let mut channel_and_port_ids = self.channel_whitelist();
 			channel_and_port_ids.extend(counterparty.channel_whitelist());
+      // log::info!("host channel and port ids {:?} ", self.channel_whitelist());
+			// log::info!("counterparty channel and port ids {:?}, ", counterparty.channel_whitelist());
+			// log::info!("Host connection {:?} counterparty {:?}", self.connection_id(), counterparty.connection_id());
+			// log::info!("Host clientID {:?} counterparty {:?}", self.client_id(), counterparty.client_id());
 
 			let ibc_event = ibc_event_try_from_abci_event(&event, ibc_height).ok();
+			if matches!(ibc_event, ibc::prelude::Some(IbcEvent::OpenTryConnection(_))) {
+				println!("-------------------------OpenTryConnection found --------------");
+			}
 			match ibc_event {
 				Some(mut ev) => {
 					let is_filtered = filter_events_by_ids(
@@ -1380,12 +1402,19 @@ where
 						&channel_and_port_ids,
 					);
 
+					if matches!(ev, IbcEvent::OpenTryConnection(_)) {
+						if is_filtered {
+							println!("This is is_filtered")
+						}
+					}
+
 					if is_filtered {
 						ev.set_height(ibc_height);
 						log::debug!(target: "hyperspace_cosmos", "Encountered event at {height}: {:?}", event.kind);
 						ibc_events.push(ev);
 					} else {
-						log::debug!(target: "hyperspace_cosmos", "Filtered out event: {:?}", event.kind);
+						log::debug!(target: "hyperspace_cosmos", "Filtered out event: {:?}",
+					event.kind);
 					}
 				},
 				None => {

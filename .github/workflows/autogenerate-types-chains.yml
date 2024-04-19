@@ -1,0 +1,50 @@
+name: "Autogenerate types after chain upgrades"
+
+on:
+  workflow_dispatch:
+    inputs:
+      chain:
+        description: "Chain to run the action for"
+        required: true
+        type: choice
+        options:
+          - composable
+          - picasso_kusama
+
+jobs:
+  generate-types-and-open-pr:
+    runs-on: ubuntu-latest
+
+    if: github.event_name == 'workflow_dispatch' 
+
+    steps:
+        - name: Checkout Repository
+          uses: actions/checkout@v2
+
+        - name: Set Git Identity
+          run: |
+            git config --global user.email "${GITHUB_ACTOR_EMAIL}"
+            git config --global user.name "${GITHUB_ACTOR}"  
+    
+        - name: Set Environment Variables
+          run: |
+            echo "CHAIN=${{ github.event.inputs.chain }}" >> $GITHUB_ENV
+            if [[ "${{ github.event.inputs.chain }}" == "composable" ]]; then
+            echo "RELAY_URL=wss://rpc-pruned7200-0.polkadot-mainnet.sre-scratchpad-349209.composablenodes.tech" >> $GITHUB_ENV
+            echo "PARA_URL=wss://rpc-pruned3600-0.composable-mainnet.sre-scratchpad-349209.composablenodes.tech" >> $GITHUB_ENV
+            fi
+            echo "RELAY_URL=wss://rpc-pruned7200-0.kusama-mainnet.sre-scratchpad-349209.composablenodes.tech:443" >> $GITHUB_ENV
+            echo "PARA_URL=wss://rpc-pruned3600-0.picasso-mainnet.sre-scratchpad-349209.composablenodes.tech:443" >> $GITHUB_ENV
+    
+        - name: Generate Types
+          run: |
+            cargo run -p codegen --bin codegen -- --path ./utils/subxt/generated/src/$CHAIN --relay-url $RELAY_URL --para-url $PARA_URL
+
+        - name: Create pull request
+          uses: peter-evans/create-pull-request@v6
+          with:
+            token: ${{ secrets.GITHUB_TOKEN }}
+            commit-message: "Auto-generate types for $CHAIN"
+            branch: ${{ github.actor }}-branch
+            base: master
+            title: "Autogen: types update"

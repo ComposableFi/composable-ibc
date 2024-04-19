@@ -33,6 +33,7 @@ derive_more = { version = "0.99.17", default-features = false, features = [
 	"from",
 	"display",
 ] }
+borsh = { version = "0.10.3", default-features = false }
 # substrate
 frame-support = { git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.43", default-features = false }
 frame-system = { git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.43", default-features = false }
@@ -48,6 +49,11 @@ ibc-proto = { path = "../../ibc/proto", default-features = false }
 tendermint = { git = "https://github.com/informalsystems/tendermint-rs", rev = "e81f7bf23d63ffbcd242381d1ce5e35da3515ff1", default-features = false }       # cannot be defined as optional in workspace
 tendermint-proto = { git = "https://github.com/informalsystems/tendermint-rs", rev = "e81f7bf23d63ffbcd242381d1ce5e35da3515ff1", default-features = false }
 ics23 = { git = "https://github.com/cosmos/ics23", rev = "74ce807b7be39a7e0afb4e2efb8e28a57965f57b", default-features = false }
+
+#guest-chain
+cf-guest = { path = "../../light-clients/cf-guest" }
+guestchain = { git = "https://github.com/ComposableFi/emulated-light-client/", rev = "aa2f9aa2c9a30505172be75d2714bb17eb4b1400",  default-features = false }
+ed25519-dalek = { version = "2.1.1", default-features = false, features = ["pkcs8"] }
 
 grandpa-client-primitives = { package = "grandpa-light-client-primitives", path = "../../algorithms/grandpa/primitives", default-features = false }
 beefy-client-primitives = { package = "beefy-light-client-primitives", path = "../../algorithms/beefy/primitives", default-features = false }
@@ -81,6 +87,7 @@ finality-grandpa = { version = "0.16.2", features = [
 [dependencies.ibc]
 path = "../../ibc/modules"
 default-features = false
+features = ["mocks"]
 
 [dependencies.ibc-derive]
 path = "../../ibc/derive"
@@ -122,7 +129,7 @@ features = ["mocks"]
 
 [features]
 default = ["std"]
-testing = []
+testing = ["ibc/mocks"]
 std = [
 	"codec/std",
 	"log/std",

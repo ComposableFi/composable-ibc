@@ -16,6 +16,7 @@
 use crate::send_packet_relay::packet_relay_status;
 use crate::Mode;
 use codec::Encode;
+use core::time::Duration;
 use ibc::{
 	core::{
 		ics02_client::client_state::ClientState as ClientStateT,
@@ -70,6 +71,7 @@ pub async fn parse_events(
 		match event {
 			IbcEvent::OpenInitConnection(open_init) => {
 				if let Some(connection_id) = open_init.connection_id() {
+					log::info!("I am in open init connection with open init {:?}", open_init);
 					let connection_id = connection_id.clone();
 					// Get connection end with proof
 					let connection_response = source
@@ -96,15 +98,17 @@ pub async fn parse_events(
 						.await?;
 
 					let proof_height = connection_response.proof_height.ok_or_else(|| Error::Custom("[get_messages_for_events - open_conn_init] Proof height not found in response".to_string()))?;
-					let proof_height =
-						Height::new(proof_height.revision_number, proof_height.revision_height);
+					let proof_height = Height::new(1, proof_height.revision_height);
+					// client_state.latest_height();
 					let client_state_proof =
 						CommitmentProofBytes::try_from(client_state_response.proof).ok();
-
 					let client_state = client_state_response
 						.client_state
+						.clone()
 						.map(AnyClientState::try_from)
 						.ok_or_else(|| Error::Custom("Client state is empty".to_string()))??;
+
+					log::info!("This is client state {:?} and in any {:?}", client_state, client_state_response.client_state);
 					let consensus_proof = source
 						.query_client_consensus(
 							open_init.height(),
@@ -116,6 +120,11 @@ pub async fn parse_events(
 						query_host_consensus_state_proof(sink, client_state.clone()).await?;
 
 					// Construct OpenTry
+					log::info!(
+						"This was the delay period {:?} in nanos: {:?}",
+						connection_end.delay_period(),
+						connection_end.delay_period().as_nanos()
+					);
 					let msg = MsgConnectionOpenTry::<LocalClientTypes> {
 						client_id: counterparty.client_id().clone(),
 						// client state proof is mandatory in conn_open_try
@@ -140,7 +149,11 @@ pub async fn parse_events(
 						signer: sink.account_id(),
 						host_consensus_state_proof,
 					};
-
+					log::info!(
+						"Constructed open try {:?} with client height {:?}",
+						proof_height,
+						client_state.latest_height()
+					);
 					let value = msg.encode_vec()?;
 					let msg = Any { value, type_url: msg.type_url() };
 					messages.push(msg)
@@ -148,11 +161,17 @@ pub async fn parse_events(
 			},
 			IbcEvent::OpenTryConnection(open_try) => {
 				if let Some(connection_id) = open_try.connection_id() {
+					log::info!(
+						"THis is open try {:?} and connection id {:?}",
+						open_try,
+						connection_id
+					);
 					let connection_id = connection_id.clone();
 					// Get connection end with proof
 					let connection_response = source
 						.query_connection_end(open_try.height(), connection_id.clone())
 						.await?;
+					log::info!("This is connection open ack from cosmos {:?}", connection_response);
 					let connection_end = ConnectionEnd::try_from(
 						connection_response.connection.ok_or_else(|| {
 							Error::Custom(format!(
@@ -161,6 +180,11 @@ pub async fn parse_events(
 							))
 						})?,
 					)?;
+					log::info!("This is the connection end in open ack {:?}", connection_end);
+					log::info!(
+						"Encoded connection end in open ack {:?}",
+						connection_end.encode_vec()?
+					);
 					let counterparty = connection_end.counterparty();
 
 					let connection_proof =
@@ -176,11 +200,20 @@ pub async fn parse_events(
 					let proof_height =
 						Height::new(proof_height.revision_number, proof_height.revision_height);
 					let client_state_proof =
-						CommitmentProofBytes::try_from(client_state_response.proof).ok();
-					let client_state = client_state_response
+						CommitmentProofBytes::try_from(client_state_response.clone().proof).ok();
+					log::info!(
+						"This is from cosmos {:?}",
+						client_state_response.clone().client_state
+					);
+					let client_state: AnyClientState = client_state_response
 						.client_state
 						.map(AnyClientState::try_from)
 						.ok_or_else(|| Error::Custom("Client state is empty".to_string()))??;
+					log::info!("THis is the client state of solana on cosmos {:?}", client_state);
+					log::info!(
+						"This is encoded client state in open ack {:?}",
+						client_state.encode_vec()
+					);
 					let consensus_proof = source
 						.query_client_consensus(
 							open_try.height(),
@@ -191,6 +224,9 @@ pub async fn parse_events(
 					let host_consensus_state_proof =
 						query_host_consensus_state_proof(sink, client_state.clone()).await?;
 					// Construct OpenAck
+					println!("-----------------");
+					println!("OpenAck consensus height {:?}", client_state.latest_height());
+					println!("-----------------");
 					let msg = MsgConnectionOpenAck::<LocalClientTypes> {
 						connection_id: counterparty
 							.connection_id()
@@ -254,6 +290,14 @@ pub async fn parse_events(
 					})?;
 					let proof_height =
 						Height::new(proof_height.revision_number, proof_height.revision_height);
+
+					println!("-----------------");
+					println!(
+						"Proof Height for OpenConfirm {:?} {:?}",
+						proof_height,
+						open_ack.height()
+					);
+					println!("-----------------");
 
 					// Construct OpenConfirm
 					let msg = MsgConnectionOpenConfirm {
@@ -442,8 +486,10 @@ pub async fn parse_events(
 			IbcEvent::SendPacket(send_packet) => {
 				#[cfg(feature = "testing")]
 				if !packet_relay_status() {
+					log::info!("Skipping packet relay status");
 					continue
 				}
+				log::info!("Found send packet {:?}", send_packet);
 				// can we send this packet?
 				// 1. query the connection and get the connection delay.
 				// 2. if none, send message immediately
@@ -473,7 +519,7 @@ pub async fn parse_events(
 					})?)?;
 				if !connection_end.delay_period().is_zero() {
 					// We can't send this packet immediately because of connection delays
-					log::debug!(
+					log::info!(
 						target: "hyperspace",
 						"Skipping packet relay because of connection delays {:?}",
 						connection_end.delay_period()
@@ -484,7 +530,7 @@ pub async fn parse_events(
 				let packet = send_packet.packet;
 
 				if packet.timeout_height.is_zero() && packet.timeout_timestamp.nanoseconds() == 0 {
-					log::warn!(
+					log::info!(
 						target: "hyperspace",
 						"Skipping packet relay because packet timeout is zero: {}",
 						packet.sequence
@@ -503,6 +549,7 @@ pub async fn parse_events(
 					.expect("Proof height should be present");
 				let proof_height =
 					Height::new(proof_height.revision_number, proof_height.revision_height);
+				log::info!("Proof height while sending receive packet {:?}", proof_height);
 				let msg = MsgRecvPacket {
 					packet: packet.clone(),
 					proofs: Proofs::new(commitment_proof, None, None, None, proof_height)?,
@@ -512,7 +559,7 @@ pub async fn parse_events(
 				let value = msg.encode_vec()?;
 				let msg = Any { value, type_url: msg.type_url() };
 				messages.push(msg);
-				log::debug!(target: "hyperspace", "Sending packet {:?}", packet);
+				log::info!(target: "hyperspace", "Sending packet {:?}", packet);
 			},
 			IbcEvent::WriteAcknowledgement(write_ack) => {
 				let port_id = &write_ack.packet.destination_port.clone();
@@ -539,8 +586,8 @@ pub async fn parse_events(
 						Error::Custom(format!("ConnectionEnd not found for {connection_id:?}"))
 					})?)?;
 				if !connection_end.delay_period().is_zero() {
-					log::debug!(target: "hyperspace", "Skipping write acknowledgement because of connection delay {:?}",
-						connection_end.delay_period());
+					log::debug!(target: "hyperspace", "Skipping write acknowledgement because of
+				connection delay {:?}", 		connection_end.delay_period());
 					// We can't send this packet immediately because of connection delays
 					continue
 				}
@@ -558,6 +605,7 @@ pub async fn parse_events(
 					.expect("Proof height should be present");
 				let proof_height =
 					Height::new(proof_height.revision_number, proof_height.revision_height);
+				log::info!("Proof height while sending acknowledgement {:?}", proof_height);
 				let msg = MsgAcknowledgement {
 					packet,
 					acknowledgement: acknowledgement.into(),

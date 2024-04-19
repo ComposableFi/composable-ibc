@@ -8,6 +8,7 @@ all-features = true
 
 [features]
 default = ["std", "rust-crypto"]
+dummy = ["default"]
 rust-crypto = ["sha2"]
 std = [
 	"bytes/std",

@@ -24,6 +24,8 @@ use super::validate::*;
 
 use crate::{core::ics24_host::error::ValidationError, prelude::*};
 
+mod compat;
+
 /// This type is subject to future changes.
 ///
 /// TODO: ChainId validation is not standardized yet.
@@ -353,6 +355,12 @@ impl ChannelId {
 	const fn prefix() -> &'static str {
 		"channel-"
 	}
+
+	fn from_id(id: &str) -> Option<Self> {
+		id.strip_prefix(Self::prefix())
+			.and_then(|seq| u64::from_str(seq).ok())
+			.map(Self)
+	}
 }
 
 /// This implementation provides a `to_string` method.
@@ -371,12 +379,8 @@ impl Debug for ChannelId {
 impl FromStr for ChannelId {
 	type Err = ValidationError;
 
-	fn from_str(s: &str) -> Result<Self, Self::Err> {
-		let s = s
-			.strip_prefix(Self::prefix())
-			.ok_or_else(ValidationError::channel_id_invalid_format)?;
-		let counter = u64::from_str(s).map_err(ValidationError::channel_id_parse_failure)?;
-		Ok(Self(counter))
+	fn from_str(id: &str) -> Result<Self, Self::Err> {
+		Self::from_id(id).ok_or_else(ValidationError::channel_id_invalid_format)
 	}
 }
 

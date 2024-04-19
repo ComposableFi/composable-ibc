@@ -1,0 +1,17 @@
+name = "centauri"
+rpc_url = "http://127.0.0.1:26657"
+grpc_url = "http://127.0.0.1:9090"
+websocket_url = "ws://127.0.0.1:26657/websocket"
+chain_id = "test-1"
+# client_id: None,
+# connection_id: None,
+account_prefix = "centauri"
+fee_denom = "stake"
+fee_amount = "4000"
+gas_limit: 9_223_372_036_854_775_807,
+store_prefix = "ibc"
+max_tx_size: 200000,
+mnemonic:
+	"decorate bright ozone fork gallery riot bus exhaust worth way bone indoor calm squirrel merry zero scheme cotton until shop any excess stage laundry"
+# wasm_code_id: None,
+channel_whitelist: [],
