@@ -37,11 +37,11 @@ use ibc::{
 	Height,
 };
 use ibc_proto::google::protobuf::Any;
+use lib::hash::CryptoHash;
 use pallet_ibc::light_clients::AnyClientState;
 use primitives::{find_suitable_proof_height_for_client, Chain};
 use std::{str::FromStr, time::Duration};
 use tendermint_proto::Protobuf;
-use lib::hash::CryptoHash;
 
 #[allow(clippy::too_many_arguments)]
 pub async fn get_timeout_proof_height(
@@ -346,7 +346,7 @@ pub async fn construct_ack_message(
 		log::info!("Getting proof height from cosmos");
 		source.get_proof_height(proof_height).await
 	};
-	
+
 	log::info!("This is ack {:?}", CryptoHash::digest(&ack));
 	let msg = MsgAcknowledgement {
 		packet,

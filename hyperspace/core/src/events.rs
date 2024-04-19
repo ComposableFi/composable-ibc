@@ -108,7 +108,11 @@ pub async fn parse_events(
 						.map(AnyClientState::try_from)
 						.ok_or_else(|| Error::Custom("Client state is empty".to_string()))??;
 
-					log::info!("This is client state {:?} and in any {:?}", client_state, client_state_response.client_state);
+					log::info!(
+						"This is client state {:?} and in any {:?}",
+						client_state,
+						client_state_response.client_state
+					);
 					let consensus_proof = source
 						.query_client_consensus(
 							open_init.height(),

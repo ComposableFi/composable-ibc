@@ -237,7 +237,7 @@ pub struct WasmMisbehaviour {
 pub struct WasmHeader {
 	#[schemars(with = "String")]
 	#[serde(with = "Base64", default)]
-	pub data: Bytes,	
+	pub data: Bytes,
 }
 
 #[cw_serde]
