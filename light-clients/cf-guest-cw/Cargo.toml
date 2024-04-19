@@ -26,7 +26,7 @@ optimize = """docker run --rm -v "$(pwd)":/code \
 cf-guest = { path = "../cf-guest", default-features = false }
 ics08-wasm = { path = "../ics08-wasm", default-features = false, features = ["cosmwasm"] }
 
-guestchain = { git = "https://github.com/ComposableFi/emulated-light-client/", branch = "update-rev", default-features = false }
+guestchain = { git = "https://github.com/ComposableFi/emulated-light-client/", default-features = false }
 
 base64 = { version = "0.22", default-features = false, features = ["alloc"] }
 borsh = { version = "0.10.3", default-features = false }
