@@ -69,9 +69,12 @@ use primitives::{
 	MisbehaviourHandler, UpdateType,
 };
 use serde::{Deserialize, Serialize};
+#[cfg(feature = "solana")]
+use solana::{SolanaClient, SolanaClientConfig};
 use std::{pin::Pin, time::Duration};
 use tendermint_proto::Protobuf;
 use thiserror::Error;
+use ibc::core::ics02_client::client_consensus::ConsensusState;
 
 #[derive(Serialize, Deserialize)]
 pub struct Config {
@@ -99,6 +102,8 @@ chains! {
 	PicassoKusama(ParachainClientConfig, ParachainClient<PicassoKusamaConfig>),
 	#[cfg(feature = "cosmos")]
 	Cosmos(CosmosClientConfig, CosmosClient<DefaultConfig>),
+	#[cfg(feature = "solana")]
+	Solana(SolanaClientConfig, SolanaClient),
 }
 
 fn wrap_any_msg_into_wasm(msg: Any, code_id: Bytes) -> Result<Any, anyhow::Error> {
@@ -118,13 +123,17 @@ fn wrap_any_msg_into_wasm(msg: Any, code_id: Bytes) -> Result<Any, anyhow::Error
 		CREATE_CLIENT_TYPE_URL => {
 			let mut msg_decoded =
 				MsgCreateAnyClient::<LocalClientTypes>::decode_vec(&msg.value).unwrap();
+			log::info!("THis is consensus state in wrap any message {:?}", msg_decoded.consensus_state.timestamp());
 			msg_decoded.consensus_state = AnyConsensusState::wasm(msg_decoded.consensus_state)?;
 			msg_decoded.client_state = AnyClientState::wasm(msg_decoded.client_state, code_id)?;
+			log::info!("THis is consensus state in wrap any message with wasm {:?}", msg_decoded.consensus_state.timestamp());
 			msg_decoded.to_any()
 		},
 		CONN_OPEN_TRY_TYPE_URL => {
+			log::info!("I am in connection open try");
 			let msg_decoded =
 				MsgConnectionOpenTry::<LocalClientTypes>::decode_vec(&msg.value).unwrap();
+			log::info!("This is msg decoded {:?} {:?}", msg_decoded, msg);
 			msg_decoded.to_any()
 		},
 		CONN_OPEN_ACK_TYPE_URL => {
@@ -137,6 +146,7 @@ fn wrap_any_msg_into_wasm(msg: Any, code_id: Bytes) -> Result<Any, anyhow::Error
 				MsgUpdateAnyClient::<LocalClientTypes>::decode_vec(&msg.value).unwrap();
 			msg_decoded.client_message = AnyClientMessage::wasm(msg_decoded.client_message)?;
 
+			log::info!("This is msg decoded {:?}", msg_decoded.clone().to_any());
 			msg_decoded.to_any()
 		},
 		_ => msg,

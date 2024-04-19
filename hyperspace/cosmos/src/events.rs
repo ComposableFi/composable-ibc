@@ -215,13 +215,13 @@ pub fn push_wasm_code_try_from_abci_event(
 	for tag in &abci_event.attributes {
 		let key = tag.key.as_str();
 		let value = tag.value.as_str();
-		if let client_events::WASM_CODE_ID_ATTRIBUTE_KEY = key {
+		if let client_events::WASM_CHECKSUM_ATTRIBUTE_KEY = key {
 			code_id = Some(hex::decode(value).map_err(IbcEventError::from_hex_error)?)
 		}
 	}
 
 	Ok(client_events::PushWasmCode(code_id.ok_or_else(|| {
-		IbcEventError::missing_key(client_events::WASM_CODE_ID_ATTRIBUTE_KEY.to_owned())
+		IbcEventError::missing_key(client_events::WASM_CHECKSUM_ATTRIBUTE_KEY.to_owned())
 	})?))
 }
 

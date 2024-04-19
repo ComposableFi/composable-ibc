@@ -34,8 +34,8 @@ pub const CLIENT_TYPE_ATTRIBUTE_KEY: &str = "client_type";
 /// The content of the `key` field for the attribute containing the height.
 pub const CONSENSUS_HEIGHT_ATTRIBUTE_KEY: &str = "consensus_height";
 
-/// The content of the `key` field for the attribute containing WASM code ID.
-pub const WASM_CODE_ID_ATTRIBUTE_KEY: &str = "wasm_code_id";
+/// The content of the `key` field for the attribute containing WASM checksum.
+pub const WASM_CHECKSUM_ATTRIBUTE_KEY: &str = "wasm_code_id";
 
 /// NewBlock event signals the committing & execution of a new block.
 // TODO - find a better place for NewBlock
