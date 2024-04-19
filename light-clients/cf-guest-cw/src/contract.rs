@@ -241,7 +241,7 @@ pub fn query(deps: Deps, env: Env, msg: QueryMsg) -> StdResult<Binary> {
 			};
 
 			if client_state.frozen_height().is_some() {
-				return to_binary(&QueryResponse::status("Frozen".to_string()));
+				return to_binary(&QueryResponse::status("Frozen".to_string()))
 			}
 
 			let height = client_state.latest_height();
