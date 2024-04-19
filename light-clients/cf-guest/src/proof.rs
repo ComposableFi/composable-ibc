@@ -88,13 +88,20 @@ pub fn verify(
 	path: ibc::path::Path,
 	value: Option<&[u8]>,
 ) -> Result<(), VerifyError> {
-	cf_guest_upstream::proof::verify(
-		prefix.as_bytes(),
-		proof.as_bytes(),
-		root.as_bytes(),
-		convert_old_path_to_new(path),
-		value,
-	)
+	verify_bytes(prefix.as_bytes(), proof.as_bytes(), root.as_bytes(), path, value)
+}
+
+/// Verifies a proof for given entry or lack of entry.
+///
+/// Like [`verify`] but takes slice arguments rather than IBC types.
+pub fn verify_bytes(
+	prefix: &[u8],
+	proof: &[u8],
+	root: &[u8],
+	path: ibc::path::Path,
+	value: Option<&[u8]>,
+) -> Result<(), VerifyError> {
+	cf_guest_upstream::proof::verify(prefix, proof, root, convert_old_path_to_new(path), value)
 }
 
 fn convert_old_path_to_new(path: ibc::path::Path) -> ibc_core_host_types::path::Path {
@@ -172,7 +179,17 @@ fn convert_old_path_to_new(path: ibc::path::Path) -> ibc_core_host_types::path::
 				),
 				sequence: u64::from(e.sequence.0).into(),
 			}),
-		::ibc::core::ics24_host::Path::Upgrade(_) => panic!("Not supported"),
+		::ibc::core::ics24_host::Path::Upgrade(path) => {
+			use ::ibc::core::ics24_host::ClientUpgradePath;
+			use ibc_core_host_types::path::UpgradeClientPath;
+			match path {
+				ClientUpgradePath::UpgradedClientState(height) =>
+					UpgradeClientPath::UpgradedClientState(height),
+				ClientUpgradePath::UpgradedClientConsensusState(height) =>
+					UpgradeClientPath::UpgradedClientConsensusState(height),
+			}
+			.into()
+		},
 		::ibc::core::ics24_host::Path::Outside(e) => panic!("Not supported {:?}", e),
 	}
 }

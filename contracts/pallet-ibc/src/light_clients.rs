@@ -1,4 +1,16 @@
-use alloc::{borrow::ToOwned, boxed::Box, format, string::ToString, vec::Vec};
+use alloc::{
+	borrow::{Cow, ToOwned},
+	boxed::Box,
+	format,
+	string::ToString,
+	vec::Vec,
+};
+// use cf_guest::proto::{
+// 	ClientState::TYPE_URL as GUEST_CLIENT_STATE_TYPE_URL,
+// 	ConsensusState::TYPE_URL as GUEST_CONSENSUS_STATE_TYPE_URL,
+// 	Header::TYPE_URL as GUEST_HEADER_TYPE_URL,
+// };
+use borsh::maybestd::io;
 use frame_support::{
 	pallet_prelude::{StorageValue, ValueQuery},
 	traits::StorageInstance,
@@ -57,12 +69,123 @@ use tendermint::{
 		Sha256 as TendermintSha256,
 	},
 	merkle::{Hash, MerkleHash, NonIncremental, HASH_SIZE},
-	PublicKey, Signature,
+	PublicKey, Signature as TmSignature,
 };
 use tendermint_proto::Protobuf;
 
+pub const GUEST_CLIENT_STATE_TYPE_URL: &str = "/lightclients.guest.v1.ClientState";
+pub const GUEST_CONSENSUS_STATE_TYPE_URL: &str = "/lightclients.guest.v1.ConsensusState";
+pub const GUEST_CLIENT_MESSAGE_TYPE_URL: &str = "/lightclients.guest.v1.ClientMessage";
+pub const GUEST_HEADER_TYPE_URL: &str = "/lightclients.guest.v1.Header";
+pub const GUEST_MISBEHAVIOUR_TYPE_URL: &str = "/lightclients.guest.v1.Misbehaviour";
+
 #[derive(Clone, Default, PartialEq, Debug, Eq)]
 pub struct HostFunctionsManager;
+
+/// Ed25519 public key (a.k.a. verifying key).
+#[derive(Clone, Debug, Eq, Hash, PartialEq)]
+#[repr(transparent)]
+pub struct PubKey(ed25519_dalek::VerifyingKey);
+
+impl guestchain::PubKey for PubKey {
+	type Signature = Signature;
+
+	fn to_vec(&self) -> Vec<u8> {
+		self.0.as_bytes().to_vec()
+	}
+	fn from_bytes(bytes: &[u8]) -> Result<Self, guestchain::BadFormat> {
+		bytes.try_into().map(Self).map_err(|_| guestchain::BadFormat)
+	}
+
+	fn as_bytes(&self) -> Cow<'_, [u8]> {
+		todo!()
+	}
+}
+
+impl borsh::BorshSerialize for PubKey {
+	fn serialize<W: io::Write>(&self, wr: &mut W) -> io::Result<()> {
+		wr.write_all(self.0.as_bytes())
+	}
+}
+
+impl borsh::BorshDeserialize for PubKey {
+	fn deserialize_reader<R: io::Read>(rd: &mut R) -> io::Result<Self> {
+		let mut bytes = ed25519_dalek::pkcs8::PublicKeyBytes([0; 32]);
+		rd.read_exact(&mut bytes.0[..])?;
+		ed25519_dalek::VerifyingKey::try_from(bytes)
+			.map(Self)
+			.map_err(|_| io::Error::new(io::ErrorKind::Other, "malformed Ed25519 public key"))
+	}
+}
+
+impl PartialOrd for PubKey {
+	fn partial_cmp(&self, rhs: &Self) -> Option<core::cmp::Ordering> {
+		Some(self.cmp(rhs))
+	}
+}
+
+impl Ord for PubKey {
+	fn cmp(&self, rhs: &Self) -> core::cmp::Ordering {
+		self.0.as_bytes().cmp(rhs.0.as_bytes())
+	}
+}
+
+/// Ed25519 signature.
+#[derive(Clone, PartialEq, Eq, Debug)]
+#[repr(transparent)]
+pub struct Signature(ed25519_dalek::Signature);
+
+impl guestchain::Signature for Signature {
+	fn to_vec(&self) -> Vec<u8> {
+		self.0.to_vec()
+	}
+	fn from_bytes(bytes: &[u8]) -> Result<Self, guestchain::BadFormat> {
+		ed25519_dalek::Signature::from_slice(bytes)
+			.map(Self)
+			.map_err(|_| guestchain::BadFormat)
+	}
+
+	fn as_bytes(&self) -> Cow<'_, [u8]> {
+		todo!()
+	}
+}
+
+impl borsh::BorshSerialize for Signature {
+	fn serialize<W: io::Write>(&self, wr: &mut W) -> io::Result<()> {
+		wr.write_all(self.0.r_bytes())?;
+		wr.write_all(self.0.s_bytes())?;
+		Ok(())
+	}
+}
+
+impl borsh::BorshDeserialize for Signature {
+	fn deserialize_reader<R: io::Read>(rd: &mut R) -> io::Result<Self> {
+		let mut buf = [0; 64];
+		rd.read_exact(&mut buf[..])?;
+		Ok(Self(ed25519_dalek::Signature::from_bytes(&buf)))
+	}
+}
+
+impl core::hash::Hash for Signature {
+	fn hash<H: core::hash::Hasher>(&self, hasher: &mut H) {
+		hasher.write(self.0.r_bytes());
+		hasher.write(self.0.s_bytes());
+	}
+}
+
+impl PartialOrd for Signature {
+	fn partial_cmp(&self, rhs: &Self) -> Option<core::cmp::Ordering> {
+		Some(self.cmp(rhs))
+	}
+}
+
+impl Ord for Signature {
+	fn cmp(&self, rhs: &Self) -> core::cmp::Ordering {
+		let lhs = (self.0.r_bytes(), self.0.s_bytes());
+		let rhs = (rhs.0.r_bytes(), rhs.0.s_bytes());
+		lhs.cmp(&rhs)
+	}
+}
 
 impl ics23::HostFunctionsProvider for HostFunctionsManager {
 	fn sha2_256(message: &[u8]) -> [u8; 32] {
@@ -110,7 +233,7 @@ impl Verifier for HostFunctionsManager {
 	fn verify(
 		pubkey: PublicKey,
 		msg: &[u8],
-		signature: &Signature,
+		signature: &TmSignature,
 	) -> Result<(), TendermintCryptoError> {
 		let signature = sp_core::ed25519::Signature::from_slice(signature.as_bytes())
 			.ok_or(TendermintCryptoError::MalformedSignature)?;
@@ -125,6 +248,7 @@ impl Verifier for HostFunctionsManager {
 impl ics07_tendermint::HostFunctionsProvider for HostFunctionsManager {}
 
 pub struct GrandpaHeaderHashesStorageInstance;
+
 impl StorageInstance for GrandpaHeaderHashesStorageInstance {
 	fn pallet_prefix() -> &'static str {
 		"ibc.lightclients.grandpa"
@@ -132,6 +256,7 @@ impl StorageInstance for GrandpaHeaderHashesStorageInstance {
 
 	const STORAGE_PREFIX: &'static str = "HeaderHashes";
 }
+
 pub type GrandpaHeaderHashesStorage = StorageValue<
 	GrandpaHeaderHashesStorageInstance,
 	BoundedVec<H256, ConstU32<GRANDPA_BLOCK_HASHES_CACHE_SIZE>>,
@@ -139,6 +264,7 @@ pub type GrandpaHeaderHashesStorage = StorageValue<
 >;
 
 pub struct GrandpaHeaderHashesSetStorageInstance;
+
 impl StorageInstance for GrandpaHeaderHashesSetStorageInstance {
 	fn pallet_prefix() -> &'static str {
 		"ibc.lightclients.grandpa"
@@ -146,6 +272,7 @@ impl StorageInstance for GrandpaHeaderHashesSetStorageInstance {
 
 	const STORAGE_PREFIX: &'static str = "HeaderHashesSet";
 }
+
 pub type GrandpaHeaderHashesSetStorage = StorageValue<
 	GrandpaHeaderHashesSetStorageInstance,
 	BoundedBTreeSet<H256, ConstU32<GRANDPA_BLOCK_HASHES_CACHE_SIZE>>,
@@ -218,7 +345,8 @@ pub enum AnyClient {
 	Beefy(ics11_beefy::client_def::BeefyClient<HostFunctionsManager>),
 	Tendermint(ics07_tendermint::client_def::TendermintClient<HostFunctionsManager>),
 	Wasm(ics08_wasm::client_def::WasmClient<AnyClient, AnyClientState, AnyConsensusState>),
-	#[cfg(test)]
+	Guest(cf_guest::client_def::GuestClient<PubKey>),
+	#[cfg(any(test, feature = "testing"))]
 	Mock(ibc::mock::client_def::MockClient),
 }
 
@@ -228,7 +356,8 @@ pub enum AnyUpgradeOptions {
 	Beefy(ics11_beefy::client_state::UpgradeOptions),
 	Tendermint(ics07_tendermint::client_state::UpgradeOptions),
 	Wasm(Box<Self>),
-	#[cfg(test)]
+	Guest(cf_guest::client::UpgradeOptions),
+	#[cfg(any(test, feature = "testing"))]
 	Mock(()),
 }
 
@@ -242,7 +371,9 @@ pub enum AnyClientState {
 	Tendermint(ics07_tendermint::client_state::ClientState<HostFunctionsManager>),
 	#[ibc(proto_url = "WASM_CLIENT_STATE_TYPE_URL")]
 	Wasm(ics08_wasm::client_state::ClientState<AnyClient, Self, AnyConsensusState>),
-	#[cfg(test)]
+	#[ibc(proto_url = "GUEST_CLIENT_STATE_TYPE_URL")]
+	Guest(cf_guest::ClientState<PubKey>),
+	#[cfg(any(test, feature = "testing"))]
 	#[ibc(proto_url = "MOCK_CLIENT_STATE_TYPE_URL")]
 	Mock(ibc::mock::client_state::MockClientState),
 }
@@ -280,6 +411,7 @@ impl AnyClientState {
 
 impl AnyClientState {
 	pub fn wasm(inner: Self, code_id: Bytes) -> Result<Self, tendermint_proto::Error> {
+		log::info!("This is height in any client state {:?}", inner.latest_height());
 		Ok(Self::Wasm(
 			ics08_wasm::client_state::ClientState::<AnyClient, Self, AnyConsensusState> {
 				data: inner.encode_to_vec()?,
@@ -289,6 +421,19 @@ impl AnyClientState {
 				_phantom: Default::default(),
 			},
 		))
+	}
+
+	pub fn latest_height(&self) -> ibc::Height {
+		match self {
+			AnyClientState::Grandpa(client_state) => client_state.latest_height(),
+			AnyClientState::Beefy(client_state) => client_state.latest_height(),
+			AnyClientState::Tendermint(client_state) => client_state.latest_height(),
+			AnyClientState::Wasm(client_state) => client_state.latest_height(),
+			AnyClientState::Guest(client_state) =>
+				ibc::Height::new(1, u64::from(client_state.latest_height)),
+			#[cfg(any(test, feature = "testing"))]
+			AnyClientState::Mock(client_state) => client_state.latest_height(),
+		}
 	}
 }
 
@@ -302,7 +447,9 @@ pub enum AnyConsensusState {
 	Tendermint(ics07_tendermint::consensus_state::ConsensusState),
 	#[ibc(proto_url = "WASM_CONSENSUS_STATE_TYPE_URL")]
 	Wasm(ics08_wasm::consensus_state::ConsensusState<Self>),
-	#[cfg(test)]
+	#[ibc(proto_url = "GUEST_CONSENSUS_STATE_TYPE_URL")]
+	Guest(cf_guest::ConsensusState),
+	#[cfg(any(test, feature = "testing"))]
 	#[ibc(proto_url = "MOCK_CONSENSUS_STATE_TYPE_URL")]
 	Mock(ibc::mock::client_state::MockConsensusState),
 }
@@ -328,7 +475,9 @@ pub enum AnyClientMessage {
 	Tendermint(ics07_tendermint::client_message::ClientMessage),
 	#[ibc(proto_url = "WASM_CLIENT_MESSAGE_TYPE_URL")]
 	Wasm(ics08_wasm::client_message::ClientMessage<Self>),
-	#[cfg(test)]
+	#[ibc(proto_url = "GUEST_CLIENT_MESSAGE_TYPE_URL")]
+	Guest(cf_guest::ClientMessage<PubKey>),
+	#[cfg(any(test, feature = "testing"))]
 	#[ibc(proto_url = "MOCK_CLIENT_MESSAGE_TYPE_URL")]
 	Mock(ibc::mock::header::MockClientMessage),
 }
@@ -354,7 +503,12 @@ impl AnyClientMessage {
 					h.inner.maybe_header_height(),
 				ics08_wasm::client_message::ClientMessage::Misbehaviour(_) => None,
 			},
-			#[cfg(test)]
+			Self::Guest(inner) => match inner {
+				cf_guest::ClientMessage::Header(h) =>
+					Some(Height::new(1, u64::from(h.block_header.block_height))),
+				cf_guest::ClientMessage::Misbehaviour(_) => None,
+			},
+			#[cfg(any(test, feature = "testing"))]
 			Self::Mock(inner) => match inner {
 				ibc::mock::header::MockClientMessage::Header(h) => Some(h.height()),
 				ibc::mock::header::MockClientMessage::Misbehaviour(_) => None,
@@ -363,15 +517,20 @@ impl AnyClientMessage {
 	}
 
 	pub fn wasm(inner: Self) -> Result<Self, tendermint_proto::Error> {
+		println!("I was called in wasm");
 		let maybe_height = inner.maybe_header_height();
+		println!("This is header height {:?}", maybe_height);
 		Ok(match maybe_height {
-			Some(height) => Self::Wasm(ics08_wasm::client_message::ClientMessage::Header(
-				ics08_wasm::client_message::Header {
-					data: inner.encode_to_vec()?,
-					height,
-					inner: Box::new(inner),
-				},
-			)),
+			Some(height) => {
+				println!("This is height in any client message {:?}", height);
+				Self::Wasm(ics08_wasm::client_message::ClientMessage::Header(
+					ics08_wasm::client_message::Header {
+						data: inner.encode_to_vec()?,
+						height,
+						inner: Box::new(inner),
+					},
+				))
+			},
 			None => Self::Wasm(ics08_wasm::client_message::ClientMessage::Misbehaviour(
 				ics08_wasm::client_message::Misbehaviour {
 					data: inner.encode_to_vec()?,
@@ -442,6 +601,18 @@ impl TryFrom<Any> for AnyClientMessage {
 					ics07_tendermint::client_message::Misbehaviour::decode_vec(&value.value)
 						.map_err(ics02_client::error::Error::decode_raw_header)?,
 				))),
+			GUEST_CLIENT_MESSAGE_TYPE_URL => Ok(Self::Guest(
+				cf_guest::ClientMessage::decode_vec(&value.value)
+					.map_err(ics02_client::error::Error::decode_raw_header)?,
+			)),
+			GUEST_HEADER_TYPE_URL => Ok(Self::Guest(cf_guest::ClientMessage::Header(
+				cf_guest::Header::decode_vec(&value.value)
+					.map_err(ics02_client::error::Error::decode_raw_header)?,
+			))),
+			GUEST_MISBEHAVIOUR_TYPE_URL => Ok(Self::Guest(cf_guest::ClientMessage::Misbehaviour(
+				cf_guest::Misbehaviour::decode_vec(&value.value)
+					.map_err(ics02_client::error::Error::decode_raw_header)?,
+			))),
 			WASM_CLIENT_MESSAGE_TYPE_URL => Ok(Self::Wasm(
 				ics08_wasm::client_message::ClientMessage::decode_vec(&value.value)
 					.map_err(ics02_client::error::Error::decode_raw_header)?,
@@ -492,17 +663,20 @@ impl From<AnyClientMessage> for Any {
 				type_url: TENDERMINT_CLIENT_MESSAGE_TYPE_URL.to_string(),
 				value: msg.encode_vec().expect("encode_vec failed"),
 			},
-
-			#[cfg(test)]
+			AnyClientMessage::Guest(msg) => Any {
+				type_url: GUEST_CLIENT_MESSAGE_TYPE_URL.to_string(),
+				value: msg.encode_vec().expect("encode_vec failed"),
+			},
+			#[cfg(any(test, feature = "testing"))]
 			AnyClientMessage::Mock(_msg) => panic!("MockHeader can't be serialized"),
 		}
 	}
 }
 
-#[cfg(test)]
+#[cfg(any(test, feature = "testing"))]
 pub use mocks::*;
 
-#[cfg(test)]
+#[cfg(any(test, feature = "testing"))]
 mod mocks {
 	pub const MOCK_CLIENT_STATE_TYPE_URL: &str = "/ibc.mock.ClientState";
 	pub const MOCK_CLIENT_MESSAGE_TYPE_URL: &str = "/ibc.mock.ClientMessage";

@@ -62,7 +62,8 @@ impl From<Vec<u8>> for CommitmentRoot {
 #[derive(Clone, Debug, PartialEq)]
 pub struct CommitmentPath;
 
-#[derive(Clone, PartialEq, Eq, Serialize)]
+#[derive(Clone, PartialEq, Eq, Serialize, derive_more::AsRef)]
+#[as_ref(forward)]
 #[serde(transparent)]
 pub struct CommitmentProofBytes {
 	#[serde(serialize_with = "crate::serializers::ser_hex_upper")]

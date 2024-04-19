@@ -25,13 +25,16 @@ use crate::{
 	msg::ExecuteMsg,
 };
 use cosmwasm_std::{to_binary, Addr, CosmosMsg, StdResult, WasmMsg};
-use ibc::core::{
-	ics02_client::{
-		client_consensus::ConsensusState as _, client_state::ClientState as _,
-		context::ClientReader, error::Error as Ics02Error, height::Height,
+use ibc::{
+	core::{
+		ics02_client::{
+			client_consensus::ConsensusState as _, client_state::ClientState as _,
+			context::ClientReader, error::Error as Ics02Error, height::Height,
+		},
+		ics23_commitment::{commitment::CommitmentProofBytes, merkle::MerkleProof},
+		ics24_host::identifier::ClientId,
 	},
-	ics23_commitment::{commitment::CommitmentProofBytes, merkle::MerkleProof},
-	ics24_host::identifier::ClientId,
+	protobuf::Protobuf,
 };
 use ibc_proto::{
 	google::protobuf::Any,
@@ -62,60 +65,131 @@ impl CwTemplateContract {
 	}
 }
 
-// pub fn check_substitute_and_update_state<PK: PubKey + 'static>(
-// 	ctx: &mut Context<PK>,
-// ) -> Result<(ClientState<PK>, ConsensusState), Ics02Error> {
-// 	let mut subject_client_state = ctx.client_state_prefixed(SUBJECT_PREFIX).map_err(|_| {
-// 		Ics02Error::implementation_specific("subject client state not found".to_string())
-// 	})?;
-// 	let substitute_client_state = ctx.client_state_prefixed(SUBSTITUTE_PREFIX).map_err(|_| {
-// 		Ics02Error::implementation_specific("substitute client state not found".to_string())
-// 	})?;
+pub fn check_substitute_and_update_state(
+	ctx: &mut Context,
+) -> Result<(ClientState<crate::crypto::PubKey>, ConsensusState), Ics02Error> {
+	let mut subject_client_state = ctx.client_state_prefixed(SUBJECT_PREFIX).map_err(|_| {
+		Ics02Error::implementation_specific("subject client state not found".to_string())
+	})?;
+	let substitute_client_state = ctx.client_state_prefixed(SUBSTITUTE_PREFIX).map_err(|_| {
+		Ics02Error::implementation_specific("substitute client state not found".to_string())
+	})?;
 
-// 	if subject_client_state.trust_level != substitute_client_state.trust_level ||
-// 		subject_client_state.unbonding_period != substitute_client_state.unbonding_period ||
-// 		subject_client_state.max_clock_drift != substitute_client_state.max_clock_drift ||
-// 		subject_client_state.proof_specs != substitute_client_state.proof_specs ||
-// 		subject_client_state.upgrade_path != substitute_client_state.upgrade_path
-// 	{
-// 		return Err(Ics02Error::implementation_specific("Clients do not match".to_string()))
-// 	}
+	if subject_client_state.0.genesis_hash != subject_client_state.0.genesis_hash {
+		return Err(Ics02Error::implementation_specific("Clients do not match".to_string()))
+	}
 
-// 	let height = substitute_client_state.latest_height();
-// 	let substitute_consensus_state =
-// 		ctx.consensus_state_prefixed(height, SUBSTITUTE_PREFIX).map_err(|_| {
-// 			Ics02Error::implementation_specific("substitute consensus state not found".to_string())
-// 		})?;
+	let height = substitute_client_state.latest_height();
+	let substitute_consensus_state =
+		ctx.consensus_state_prefixed(height, SUBSTITUTE_PREFIX).map_err(|_| {
+			Ics02Error::implementation_specific("substitute consensus state not found".to_string())
+		})?;
 
-// 	let mut process_states = ProcessedStates::new(ctx.storage_mut());
-// 	let substitute_processed_time = process_states
-// 		.get_processed_time(height, &mut SUBSTITUTE_PREFIX.to_vec())
-// 		.unwrap();
-// 	let substitute_processed_height = process_states
-// 		.get_processed_height(height, &mut SUBSTITUTE_PREFIX.to_vec())
-// 		.unwrap();
-// 	let substitute_iteration_key = process_states
-// 		.get_iteration_key(height, &mut SUBSTITUTE_PREFIX.to_vec())
-// 		.unwrap();
-// 	process_states.set_processed_time(
-// 		height,
-// 		substitute_processed_time,
-// 		&mut SUBJECT_PREFIX.to_vec(),
-// 	);
-// 	process_states.set_processed_height(
-// 		height,
-// 		substitute_processed_height,
-// 		&mut SUBJECT_PREFIX.to_vec(),
-// 	);
-// 	process_states.set_iteration_key(substitute_iteration_key, &mut SUBJECT_PREFIX.to_vec());
+	let mut process_states = ProcessedStates::new(ctx.storage_mut());
+	let substitute_processed_time = process_states
+		.get_processed_time(height, &mut SUBSTITUTE_PREFIX.to_vec())
+		.unwrap();
+	let substitute_processed_height = process_states
+		.get_processed_height(height, &mut SUBSTITUTE_PREFIX.to_vec())
+		.unwrap();
+	let substitute_iteration_key = process_states
+		.get_iteration_key(height, &mut SUBSTITUTE_PREFIX.to_vec())
+		.unwrap();
+	process_states.set_processed_time(
+		height,
+		substitute_processed_time,
+		&mut SUBJECT_PREFIX.to_vec(),
+	);
+	process_states.set_processed_height(
+		height,
+		substitute_processed_height,
+		&mut SUBJECT_PREFIX.to_vec(),
+	);
+	process_states.set_iteration_key(substitute_iteration_key, &mut SUBJECT_PREFIX.to_vec());
 
-// 	subject_client_state.latest_height = substitute_client_state.latest_height;
-// 	subject_client_state.chain_id = substitute_client_state.chain_id;
-// 	subject_client_state.trusting_period = substitute_client_state.trusting_period;
-// 	subject_client_state.frozen_height = substitute_client_state.frozen_height;
+	subject_client_state.0.latest_height = substitute_client_state.0.latest_height;
+	subject_client_state.0.trusting_period_ns = substitute_client_state.0.trusting_period_ns;
+	subject_client_state.0.epoch_commitment = substitute_client_state.0.epoch_commitment;
+	subject_client_state.0.prev_epoch_commitment = substitute_client_state.0.prev_epoch_commitment;
+	subject_client_state.0.is_frozen = substitute_client_state.0.is_frozen;
 
-// 	Ok((subject_client_state, substitute_consensus_state))
-// }
+	Ok((subject_client_state, substitute_consensus_state))
+}
+
+pub fn verify_upgrade_proof(
+	is_client: bool,
+	height: u64,
+	commitment_root: &[u8],
+	proof: CommitmentProofBytes,
+	state: Any,
+) -> Result<(), Ics02Error> {
+	use ibc::core::ics24_host::ClientUpgradePath;
+	let path = if is_client {
+		ClientUpgradePath::UpgradedClientState(height)
+	} else {
+		ClientUpgradePath::UpgradedClientConsensusState(height)
+	};
+	cf_guest::proof::verify_bytes(
+		&[],
+		proof.as_bytes(),
+		commitment_root,
+		path.into(),
+		Some(state.encode_to_vec().as_slice()),
+	)
+	.map_err(|err| {
+		Ics02Error::implementation_specific(format!("upgrade state verification failed: {err}"))
+	})
+}
+
+pub fn verify_upgrade_and_update_state(
+	ctx: &mut Context,
+	client_id: ClientId,
+	old_client_state: ClientState<crate::crypto::PubKey>,
+	upgrade_client_state: WasmClientState<FakeInner, FakeInner, FakeInner>,
+	upgrade_consensus_state: WasmConsensusState<FakeInner>,
+	proof_upgrade_client: CommitmentProofBytes,
+	proof_upgrade_consensus_state: CommitmentProofBytes,
+) -> Result<(ClientState<crate::crypto::PubKey>, ConsensusState), Ics02Error> {
+	let latest_height = old_client_state.latest_height();
+	if upgrade_client_state.latest_height.lt(&latest_height) {
+		return Err(Ics02Error::implementation_specific(
+			"upgrade cs is less than current height".to_string(),
+		))
+	}
+
+	let consensus_state = ctx.consensus_state(&client_id, latest_height)?;
+	let commitment_root = consensus_state.0.block_hash.as_bytes();
+	let latest_height = latest_height.revision_height;
+
+	verify_upgrade_proof(
+		true,
+		latest_height,
+		commitment_root,
+		proof_upgrade_client,
+		upgrade_client_state.to_any(),
+	)?;
+
+	verify_upgrade_proof(
+		false,
+		latest_height,
+		commitment_root,
+		proof_upgrade_consensus_state,
+		upgrade_consensus_state.to_any(),
+	)?;
+
+	let any = Any::decode(&mut upgrade_client_state.data.as_slice()).unwrap();
+	let upgrade_client_state_inner =
+		ClientState::<crate::crypto::PubKey>::decode_vec(&any.value).unwrap();
+	let new_client_state = old_client_state.upgrade(
+		upgrade_client_state_inner.latest_height(),
+		cf_guest::client::UpgradeOptions {},
+		upgrade_client_state_inner.chain_id(),
+	);
+
+	let any = Any::decode(&mut upgrade_consensus_state.data.as_slice()).unwrap();
+	let upgrade_consensus_state_inner = ConsensusState::decode_vec(&any.value).unwrap();
+	Ok((new_client_state, upgrade_consensus_state_inner))
+}
 
 pub fn prune_oldest_consensus_state(
 	ctx: &mut Context,

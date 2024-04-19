@@ -30,6 +30,7 @@ use events::{has_packet_events, parse_events};
 use futures::{future::ready, StreamExt, TryFutureExt};
 use ibc::{events::IbcEvent, Height};
 use ibc_proto::google::protobuf::Any;
+use itertools::Itertools;
 use metrics::handler::MetricsHandler;
 use primitives::{Chain, IbcProvider, UndeliveredType, UpdateType};
 use std::collections::HashSet;
@@ -66,11 +67,13 @@ where
 		tokio::select! {
 			// new finality event from chain A
 			result = chain_a_finality.next(), if !first_executed => {
+				log::info!("Got {} finality", chain_a.name());
 				first_executed = true;
 				process_finality_event(&mut chain_a, &mut chain_b, &mut chain_a_metrics, mode, result, &mut chain_a_finality, &mut chain_b_finality).await?;
 			}
 			// new finality event from chain B
 			result = chain_b_finality.next() => {
+				log::info!("Got {} finality", chain_b.name());
 				first_executed = false;
 				process_finality_event(&mut chain_b, &mut chain_a, &mut chain_b_metrics, mode, result, &mut chain_b_finality, &mut chain_a_finality).await?;
 			}
@@ -153,7 +156,7 @@ async fn process_finality_event<A: Chain, B: Chain>(
 	match result {
 		// stream closed
 		None => {
-			log::warn!("Stream closed for {}", source.name());
+			log::info!("Stream closed for {}", source.name());
 			*stream_source = loop {
 				match source.finality_notifications().await {
 					Ok(stream) => break RecentStream::new(stream),
@@ -218,7 +221,7 @@ async fn process_some_finality_event<A: Chain, B: Chain>(
 	log::trace!(target: "hyperspace", "Received updates count: {}", updates.len());
 	// query packets that can now be sent, at this sink height because of connection
 	// delay.
-	let (ready_packets, timeout_msgs) =
+	let (ready_packets, mut timeout_msgs) =
 		packets::query_ready_and_timed_out_packets(&*source, &*sink)
 			.await
 			.map_err(|e| anyhow!("Failed to parse events: {:?}", e))?;
@@ -247,11 +250,58 @@ async fn process_some_finality_event<A: Chain, B: Chain>(
 		timeout_msgs.len()
 	);
 
-	process_updates(source, sink, metrics, mode, updates, &mut msgs).await?;
+	process_updates(source, sink, metrics, mode, updates, &mut msgs, ready_packets.clone()).await?;
 
 	msgs.extend(ready_packets);
 
 	process_messages(sink, metrics, msgs).await?;
+
+	if sink.name() == "solana" && timeout_msgs.len() > 0 {
+		log::info!("Inside timeout msgs fetching height");
+		let mut timeout_heights = Vec::new();
+		if timeout_msgs.len() > 0 {
+			for msg in timeout_msgs.iter() {
+				let my_message = ibc::core::ics26_routing::msgs::Ics26Envelope::<
+					primitives::mock::LocalClientTypes,
+				>::try_from(msg.clone())
+				.unwrap();
+				let timeout_msg = match my_message {
+					ibc::core::ics26_routing::msgs::Ics26Envelope::Ics4PacketMsg(packet_msg) =>
+						match packet_msg {
+							ibc::core::ics04_channel::msgs::PacketMsg::ToPacket(msg) => msg,
+							_ => continue,
+						},
+					_ => continue,
+				};
+				timeout_heights.push(timeout_msg.proofs.height().revision_height);
+			}
+			let (updates, heights) = sink.fetch_mandatory_updates(source).await.unwrap();
+			let updates_to_be_sent: Vec<Any> = heights
+				.iter()
+				.enumerate()
+				.filter_map(|(index, event)| {
+					let height = match event.clone() {
+						ibc::events::IbcEvent::NewBlock(
+							ibc::core::ics02_client::events::NewBlock { height },
+						) => height,
+						_ => panic!("Only expected new block event"),
+					};
+					if timeout_heights.contains(&height.revision_height) {
+						return Some(updates[index].clone())
+					}
+					None
+				})
+				.collect();
+			// Reverse the updates so that the latest update is sent at end
+			let mut reversed_updates = updates_to_be_sent.iter().rev().cloned().collect::<Vec<_>>();
+			reversed_updates
+				.iter()
+				.for_each(|update| timeout_msgs.insert(0, update.clone()));
+			// timeout_msgs = (reversed_updates.as_slice(), timeout_msgs.as_slice()).concat();
+			// timeout_msgs.append(&mut reversed_updates);
+		}
+	}
+
 	process_timeouts(source, metrics, timeout_msgs).await?;
 	Ok(())
 }
@@ -263,6 +313,7 @@ async fn process_updates<A: Chain, B: Chain>(
 	mode: Option<Mode>,
 	updates: Vec<(Any, Height, Vec<IbcEvent>, UpdateType)>,
 	msgs: &mut Vec<Any>,
+	timeout_msgs: Vec<Any>,
 ) -> anyhow::Result<()> {
 	// for timeouts we need both chains to be up to date
 	let sink_has_undelivered_acks = sink.has_undelivered_sequences(UndeliveredType::Recvs) ||
@@ -277,6 +328,70 @@ async fn process_updates<A: Chain, B: Chain>(
 			HashSet::new()
 		};
 
+	log::info!("Updates on {} are {}", source.name(), updates.len());
+
+	let mut timeout_heights = Vec::new();
+	let mut updates_to_be_added = Vec::new();
+	if timeout_msgs.len() > 0 && source.name() == "solana" {
+		log::info!("Inside sending updates in fetching height");
+		for msg in timeout_msgs.iter() {
+			let my_message = ibc::core::ics26_routing::msgs::Ics26Envelope::<
+				primitives::mock::LocalClientTypes,
+			>::try_from(msg.clone())
+			.unwrap();
+			let height = match my_message {
+				ibc::core::ics26_routing::msgs::Ics26Envelope::Ics4PacketMsg(packet_msg) =>
+					match packet_msg {
+						ibc::core::ics04_channel::msgs::PacketMsg::ToPacket(msg) =>
+							msg.proofs.height(),
+						ibc::core::ics04_channel::msgs::PacketMsg::AckPacket(msg) =>
+							msg.proofs.height(),
+						ibc::core::ics04_channel::msgs::PacketMsg::RecvPacket(msg) =>
+							msg.proofs.height(),
+						ibc::core::ics04_channel::msgs::PacketMsg::ToClosePacket(msg) =>
+							msg.proofs.height(),
+						_ => continue,
+					},
+				_ => continue,
+			};
+			timeout_heights.push(height);
+		}
+		let (mandatory_updates, heights) = source.fetch_mandatory_updates(sink).await.unwrap();
+		let latest_update_height = updates.last().unwrap().1.revision_height;
+		let height_is_greater = timeout_heights
+			.iter()
+			.any(|height| height.revision_height > latest_update_height);
+		if height_is_greater {
+			// log::info!("Height is greater than timeout height {:?}", );
+			log::info!("These are heights {:?}", heights);
+			let updates_to_be_sent: Vec<Any> = heights
+				.iter()
+				.enumerate()
+				.filter_map(|(index, event)| {
+					let height = match event.clone() {
+						ibc::events::IbcEvent::NewBlock(
+							ibc::core::ics02_client::events::NewBlock { height },
+						) => height,
+						_ => panic!("Only expected new block event"),
+					};
+					let temp_height = Height::new(1, height.revision_height);
+					if timeout_heights.contains(&temp_height) &&
+						height.revision_height > latest_update_height
+					{
+						return Some(mandatory_updates[index].clone())
+					}
+					None
+				})
+				.collect();
+			updates_to_be_added = updates_to_be_sent;
+		}
+	}
+	log::info!(
+		"Update heights {:?} and timeout heights {:?}",
+		updates.iter().map(|(_, height, ..)| height).collect::<Vec<_>>(),
+		timeout_heights
+	);
+
 	for (msg_update_client, height, events, update_type) in updates {
 		if let Some(metrics) = metrics.as_mut() {
 			if let Err(e) = metrics.handle_events(events.as_slice()).await {
@@ -284,10 +399,19 @@ async fn process_updates<A: Chain, B: Chain>(
 			}
 		}
 
+		// println!("These are events {:?} from chain {:?}", events, source.name());
 		let event_types = events.iter().map(|ev| ev.event_type()).collect::<Vec<_>>();
 		let mut messages = parse_events(source, sink, events, mode)
 			.await
 			.map_err(|e| anyhow!("Failed to parse events: {:?}", e))?;
+
+		// if let Some(index) = messages
+		// 	.iter()
+		// 	.position(|value| value.type_url == "/ibc.core.connection.v1.MsgConnectionOpenTry")
+		// {
+		// 	log::info!("Remvoign open try");
+		// 	messages.swap_remove(index);
+		// }
 
 		log::trace!(
 			target: "hyperspace",
@@ -301,6 +425,10 @@ async fn process_updates<A: Chain, B: Chain>(
 		let common_state = source.common_state();
 		let skip_optional_updates = common_state.skip_optional_client_updates;
 
+		// println!("These are messages len {}", messages.len());
+		// println!("update type: {:?}, skip_optional_updates {:?}", update_type,
+		// skip_optional_updates);
+
 		// We want to send client update if packet messages exist but where not sent due
 		// to a connection delay even if client update message is optional
 		match (
@@ -310,7 +438,8 @@ async fn process_updates<A: Chain, B: Chain>(
 			// search, which won't work in this case
 			skip_optional_updates &&
 				update_type.is_optional() &&
-				!need_to_send_proofs_for_sequences,
+				!need_to_send_proofs_for_sequences &&
+				!timeout_heights.contains(&height),
 			has_packet_events(&event_types),
 			messages.is_empty(),
 		) {
@@ -321,15 +450,30 @@ async fn process_updates<A: Chain, B: Chain>(
 			},
 			(false, _, true) =>
 				if update_type.is_optional() && need_to_send_proofs_for_sequences {
-					log::info!("Sending an optional update because source ({}) chain has undelivered sequences", sink.name());
+					log::info!("Sending an optional update because source ({}) chain has undelivered sequences at height{}", sink.name(), height.revision_height);
 				} else {
-					log::info!("Sending mandatory client update message for {}", sink.name())
+					log::info!(
+						"Sending mandatory client update message for {} at height {}",
+						sink.name(),
+						height.revision_height
+					)
 				},
-			_ => log::info!("Received finalized events from: {} {event_types:#?}", source.name()),
+			_ => log::info!(
+				"Received finalized events from: {} at height {} {event_types:#?}",
+				source.name(),
+				height.revision_height
+			),
 		};
+		log::info!(
+			"pushed msg update client for {} with msg {} of len {}",
+			source.name(),
+			msg_update_client.type_url,
+			msg_update_client.value.len()
+		);
 		msgs.push(msg_update_client);
 		msgs.append(&mut messages);
 	}
+	msgs.append(&mut updates_to_be_added);
 	Ok(())
 }
 
@@ -342,12 +486,33 @@ async fn process_messages<B: Chain>(
 		if let Some(metrics) = metrics.as_ref() {
 			metrics.handle_messages(msgs.as_slice()).await;
 		}
-		let type_urls = msgs.iter().map(|msg| msg.type_url.as_str()).collect::<Vec<_>>();
+		let type_urls = msgs
+			.iter()
+			.filter_map(|msg| {
+				let type_url = msg.type_url.as_str();
+				if type_url == "" {
+					return None
+				};
+				Some(type_url)
+			})
+			.collect::<Vec<_>>();
 		log::info!("Submitting messages to {}: {type_urls:#?}", sink.name());
 
-		queue::flush_message_batch(msgs, metrics.as_ref(), &*sink)
-			.await
-			.map_err(|e| anyhow!("Failed to submit messages: {:?}", e))?;
+		let filtered_msgs: Vec<_> = msgs
+			.iter()
+			.filter_map(|msg| {
+				if msg.type_url == "" {
+					return None
+				}
+				Some(msg.clone())
+			})
+			.collect();
+
+		if !filtered_msgs.is_empty() {
+			queue::flush_message_batch(filtered_msgs, metrics.as_ref(), &*sink)
+				.await
+				.map_err(|e| anyhow!("Failed to submit messages: {:?}", e))?;
+		}
 		log::debug!(target: "hyperspace", "Successfully submitted messages to {}", sink.name());
 	}
 	Ok(())

@@ -23,11 +23,12 @@ use ibc::{
 				acknowledgement::MsgAcknowledgement, recv_packet::MsgRecvPacket,
 				timeout::MsgTimeout, timeout_on_close::MsgTimeoutOnClose,
 			},
-			packet::{Packet, TimeoutVariant},
+			packet::{Packet, Sequence, TimeoutVariant},
 		},
 		ics23_commitment::commitment::CommitmentProofBytes,
-		ics24_host::path::{
-			AcksPath, ChannelEndsPath, CommitmentsPath, ReceiptsPath, SeqRecvsPath,
+		ics24_host::{
+			identifier::{ChannelId, PortId},
+			path::{AcksPath, ChannelEndsPath, CommitmentsPath, ReceiptsPath, SeqRecvsPath},
 		},
 	},
 	proofs::Proofs,
@@ -36,9 +37,10 @@ use ibc::{
 	Height,
 };
 use ibc_proto::google::protobuf::Any;
+use lib::hash::CryptoHash;
 use pallet_ibc::light_clients::AnyClientState;
 use primitives::{find_suitable_proof_height_for_client, Chain};
-use std::time::Duration;
+use std::{str::FromStr, time::Duration};
 use tendermint_proto::Protobuf;
 
 #[allow(clippy::too_many_arguments)]
@@ -53,7 +55,7 @@ pub async fn get_timeout_proof_height(
 	packet_creation_height: u64,
 ) -> Option<Height> {
 	let timeout_variant = Packet::timeout_variant(packet, &sink_timestamp, sink_height).unwrap();
-	log::trace!(target: "hyperspace", "get_timeout_proof_height: {}->{}, timeout_variant={:?}, source_height={}, sink_height={}, sink_timestamp={}, latest_client_height_on_source={}, packet_creation_height={}, packet={:?}",
+	log::info!(target: "hyperspace", "get_timeout_proof_height: {}->{}, timeout_variant={:?}, source_height={}, sink_height={}, sink_timestamp={}, latest_client_height_on_source={}, packet_creation_height={}, packet={:?}",
 		source.name(), sink.name(), timeout_variant, source_height, sink_height, sink_timestamp, latest_client_height_on_source, packet_creation_height, packet);
 
 	match timeout_variant {
@@ -92,6 +94,7 @@ pub async fn get_timeout_proof_height(
 			let period = Duration::from_nanos(period);
 			let start_height = height.revision_height +
 				calculate_block_delay(period, sink.expected_block_time()).saturating_sub(1);
+			log::info!("This is block delay {:?}", height.revision_height);
 			let start_height = Height::new(sink_height.revision_number, start_height);
 			find_suitable_proof_height_for_client(
 				sink,
@@ -249,7 +252,14 @@ pub async fn construct_timeout_message(
 		let channel_key = get_key_path(KeyPathType::ChannelPath, &packet).into_bytes();
 		let proof_closed = sink.query_proof(proof_height, vec![channel_key]).await?;
 		let proof_closed = CommitmentProofBytes::try_from(proof_closed)?;
-		let actual_proof_height = sink.get_proof_height(proof_height).await;
+		let actual_proof_height = if sink.name() == "solana" {
+			let mut proof_bytes = proof_unreceived.clone();
+			let (header, _): (guestchain::BlockHeader, sealable_trie::proof::Proof) =
+				borsh::BorshDeserialize::deserialize_reader(&mut proof_bytes.as_bytes())?;
+			Height::new(1, header.block_height.into())
+		} else {
+			sink.get_proof_height(proof_height).await
+		};
 		let msg = MsgTimeoutOnClose {
 			packet,
 			next_sequence_recv: next_sequence_recv.into(),
@@ -265,7 +275,14 @@ pub async fn construct_timeout_message(
 		let value = msg.encode_vec()?;
 		Any { value, type_url: msg.type_url() }
 	} else {
-		let actual_proof_height = sink.get_proof_height(proof_height).await;
+		let actual_proof_height = if sink.name() == "solana" {
+			let mut proof_bytes = proof_unreceived.clone();
+			let (header, _): (guestchain::BlockHeader, sealable_trie::proof::Proof) =
+				borsh::BorshDeserialize::deserialize_reader(&mut proof_bytes.as_bytes())?;
+			Height::new(1, header.block_height.into())
+		} else {
+			sink.get_proof_height(proof_height).await
+		};
 		log::debug!(target: "hyperspace", "actual_proof_height={actual_proof_height}");
 		let msg = MsgTimeout {
 			packet,
@@ -288,7 +305,16 @@ pub async fn construct_recv_message(
 	let key = get_key_path(KeyPathType::CommitmentPath, &packet).into_bytes();
 	let proof = source.query_proof(proof_height, vec![key]).await?;
 	let commitment_proof = CommitmentProofBytes::try_from(proof)?;
-	let actual_proof_height = source.get_proof_height(proof_height).await;
+	let actual_proof_height = if source.name() == "solana" {
+		log::info!("Getting proof height from solana");
+		let mut proof_bytes = commitment_proof.clone();
+		let (header, _): (guestchain::BlockHeader, sealable_trie::proof::Proof) =
+			borsh::BorshDeserialize::deserialize_reader(&mut proof_bytes.as_bytes())?;
+		Height::new(1, header.block_height.into())
+	} else {
+		log::info!("Getting proof height from cosmos");
+		source.get_proof_height(proof_height).await
+	};
 	let msg = MsgRecvPacket {
 		packet,
 		proofs: Proofs::new(commitment_proof, None, None, None, actual_proof_height)?,
@@ -310,7 +336,18 @@ pub async fn construct_ack_message(
 	log::debug!(target: "hyperspace", "query proof for acks path: {:?}", key);
 	let proof = source.query_proof(proof_height, vec![key.into_bytes()]).await?;
 	let commitment_proof = CommitmentProofBytes::try_from(proof)?;
-	let actual_proof_height = source.get_proof_height(proof_height).await;
+	let actual_proof_height = if source.name() == "solana" {
+		log::info!("Getting proof height from solana");
+		let mut proof_bytes = commitment_proof.clone();
+		let (header, _): (guestchain::BlockHeader, sealable_trie::proof::Proof) =
+			borsh::BorshDeserialize::deserialize_reader(&mut proof_bytes.as_bytes())?;
+		Height::new(1, header.block_height.into())
+	} else {
+		log::info!("Getting proof height from cosmos");
+		source.get_proof_height(proof_height).await
+	};
+
+	log::info!("This is ack {:?}", CryptoHash::digest(&ack));
 	let msg = MsgAcknowledgement {
 		packet,
 		proofs: Proofs::new(commitment_proof, None, None, None, actual_proof_height)?,
@@ -372,4 +409,53 @@ pub fn get_key_path(key_path_type: KeyPathType, packet: &Packet) -> String {
 			)
 		},
 	}
+}
+
+#[test]
+pub fn test_path() {
+	use trie_ids::TrieKey;
+	let packet = Packet {
+		source_port: PortId::from_str("transfer").unwrap(),
+		source_channel: ChannelId::new(1),
+		destination_port: PortId::from_str("transfer").unwrap(),
+		destination_channel: ChannelId::new(1),
+		sequence: Sequence::from_str("1").unwrap(),
+		timeout_height: Height::new(0, 1),
+		timeout_timestamp: Timestamp::from_nanoseconds(1).unwrap(),
+		data: Vec::new(),
+	};
+	let key = get_key_path(KeyPathType::CommitmentPath, &packet);
+	println!("Old key path {:?} and bytes {:?}", key, key.as_bytes());
+	let new_port_id =
+		ibc_core_host_types::identifiers::PortId::from_str(packet.source_port.as_str()).unwrap();
+	let new_channel_id =
+		ibc_core_host_types::identifiers::ChannelId::new(packet.source_channel.sequence());
+	let new_seq = ibc_core_host_types::identifiers::Sequence::from(u64::from(packet.sequence));
+	let packet_commitment_path = ibc_core_host_types::path::CommitmentPath {
+		port_id: new_port_id,
+		channel_id: new_channel_id,
+		sequence: new_seq,
+	};
+	let packet_commitment_trie_key = TrieKey::try_from(&packet_commitment_path).unwrap();
+	println!("This is trie key {:?}", packet_commitment_trie_key);
+	// assert_eq!(
+	// 	get_key_path(KeyPathType::SeqRecv, &packet),
+	// 	"seqs/destination_port/destination_channel"
+	// );
+	// assert_eq!(
+	// 	get_key_path(KeyPathType::ReceiptPath, &packet),
+	// 	"receipts/destination_port/destination_channel/1"
+	// );
+	// assert_eq!(
+	// 	get_key_path(KeyPathType::CommitmentPath, &packet),
+	// 	"commitments/source_port/source_channel/1"
+	// );
+	// assert_eq!(
+	// 	get_key_path(KeyPathType::AcksPath, &packet),
+	// 	"acks/destination_port/destination_channel/1"
+	// );
+	// assert_eq!(
+	// 	get_key_path(KeyPathType::ChannelPath, &packet),
+	// 	"channels/destination_port/destination_channel"
+	// );
 }

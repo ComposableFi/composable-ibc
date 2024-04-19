@@ -653,7 +653,7 @@ pub async fn query_undelivered_acks(
 	let seqs = source
 		.query_packet_acknowledgements(source_height, channel_id, port_id.clone())
 		.await?;
-	log::trace!(
+	log::info!(
 		target: "hyperspace",
 		"Found {} packet acks from {} chain",
 		seqs.len(), source.name()
@@ -672,7 +672,7 @@ pub async fn query_undelivered_acks(
 			seqs,
 		)
 		.await?;
-	log::trace!(
+	log::info!(
 		target: "hyperspace",
 		"Found {} undelivered packet acks for {} chain",
 		undelivered_acks.len(), sink.name()
@@ -711,7 +711,7 @@ pub async fn find_suitable_proof_height_for_client(
 	timestamp_to_match: Option<Timestamp>,
 	latest_client_height: Height,
 ) -> Option<Height> {
-	log::trace!(
+	log::info!(
 		target: "hyperspace",
 		"Searching for suitable proof height for client {} ({}) starting at {}, {:?}, latest_client_height={}",
 		client_id, sink.name(), start_height, timestamp_to_match, latest_client_height
@@ -744,7 +744,21 @@ pub async fn find_suitable_proof_height_for_client(
 			return Some(temp_height)
 		}
 	} else {
+		log::info!("Inside timestamp to match");
 		let timestamp_to_match = timestamp_to_match.unwrap();
+		/*
+		We have start and end height. The proof height exists between these two heights.
+		start is latest client height of source on sink
+		end is latest height of source
+		These heights are the latest height of source on sink.
+
+		Success Scenario: Sink -> Solana, Source -> Cosmos (end-start > 0 and is able to find the height)
+		Failure Scenario: Sink -> Cosmos, Source -> Solana (end = start and is not able to find the height )
+
+		In the failure scenario, it fetches the proof height and append 1(Thats what cosmos does) to it and check if the client state exists.
+		And since it doesnt have the client state, it fails.
+
+		*/
 		let mut start = start_height.revision_height;
 		let mut end = latest_client_height.revision_height;
 		let mut last_known_valid_height = None;
@@ -756,7 +770,9 @@ pub async fn find_suitable_proof_height_for_client(
 			target: "hyperspace",
 			"Entered binary search for proof height on {} for client {} starting at {}", sink.name(), client_id, start_height
 		);
+		log::info!("end - start is {}", end - start);
 		while end - start > 1 {
+			log::info!("Inside while loop");
 			let mid = (end + start) / 2;
 			let temp_height = Height::new(start_height.revision_number, mid);
 			let consensus_state =
@@ -802,12 +818,13 @@ pub async fn find_suitable_proof_height_for_client(
 					.await
 					.ok()
 					.is_some();
+				log::info!("do we have client state {:?}", has_client_state);
 				if has_client_state {
 					return Some(start_height)
 				}
 			}
 		}
-
+		log::info!("THis is last known valid height {:?}", last_known_valid_height);
 		return last_known_valid_height
 	}
 	None

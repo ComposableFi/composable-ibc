@@ -69,7 +69,7 @@ pub struct Cmd {
 	port_id: Option<String>,
 	/// Connection delay period in seconds
 	#[clap(long)]
-	delay_period: Option<std::num::NonZeroU32>,
+	delay_period: Option<u16>,
 	/// Channel order
 	#[clap(long)]
 	order: Option<String>,
@@ -140,6 +140,8 @@ impl Cmd {
 		let config = self.parse_config().await?;
 		let chain_a = config.chain_a.into_client().await?;
 		let chain_b = config.chain_b.into_client().await?;
+		// log::info!("This is config A {:?}", chain_a);
+		// log::info!("This is config B {:?}", chain_b);
 
 		let registry =
 			Registry::new_custom(None, None).expect("this can only fail if the prefix is empty");
@@ -191,7 +193,7 @@ impl Cmd {
 	}
 
 	pub async fn create_connection(&self) -> Result<Config> {
-		let delay_period_seconds: NonZeroU64 = self
+		let delay_period_seconds: u16 = self
 			.delay_period
 			.expect("delay_period should be provided when creating a connection")
 			.into();

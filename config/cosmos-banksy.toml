@@ -1,0 +1,21 @@
+type = "cosmos"
+name ="centauri"
+rpc_url ="http://10.132.0.13:26657/"
+grpc_url ="http://10.132.0.13:9999/"
+websocket_url ="ws://10.132.0.13:26657/websocket"
+chain_id ="banksy-testnet-5"
+client_id ="07-tendermint-24"
+# connection_id ="connection-102"
+account_prefix ="centauri"
+fee_denom ="ppica"
+fee_amount ="10000000"
+gas_limit =100000000
+store_prefix ="ibc"
+max_tx_size =200000
+mnemonic ="peace cash suffer celery broken blade fame fiscal lesson fancy virus bless recipe inherit reason cart mask mask absurd venture culture problem reward crew"
+wasm_code_id ="66ce7420d21e2555b0e6ce952c0826590fb5f6508a9ac84a5c11178cec58a303"
+channel_whitelist =[]
+
+[common_state_config]
+skip_optional_client_updates =true
+max_packets_to_process =200

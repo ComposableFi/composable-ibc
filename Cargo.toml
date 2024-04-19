@@ -25,6 +25,8 @@ members = [
 
     # ibc light clients
     "light-clients/common",
+    "light-clients/cf-guest",
+    "light-clients/cf-guest-cw",
     "light-clients/ics07-tendermint",
     "light-clients/ics07-tendermint-cw",
     "light-clients/cf-guest",
@@ -34,6 +36,7 @@ members = [
     "light-clients/ics10-grandpa-cw",
     "light-clients/ics11-beefy",
     "light-clients/ics13-near",
+    "light-clients/icsxx-solana-cw",
 
     # hyperspace
     "hyperspace",
@@ -41,6 +44,7 @@ members = [
     "hyperspace/primitives",
     "hyperspace/parachain",
     "hyperspace/cosmos",
+    "hyperspace/solana",
     "hyperspace/testsuite",
     "hyperspace/metrics",
 
@@ -54,6 +58,68 @@ members = [
 
 [patch."https://github.com/paritytech/jsonrpsee"]
 jsonrpsee = { version = "0.16.3" }
+
+[patch.crates-io]
+aes-gcm-siv = { git = "https://github.com/RustCrypto/AEADs", rev = "6105d7a5591aefa646a95d12b5e8d3f55a9214ef" }
+curve25519-dalek-new = { git = "https://github.com/dalek-cryptography/curve25519-dalek", rev = "0cd099a9fb8ff9f6fedc8723d44dbb1c743e9d35", package = "curve25519-dalek" }
+curve25519-dalek = { git = "https://github.com/solana-labs/curve25519-dalek.git", rev = "b500cdc2a920cd5bff9e2dd974d7b97349d61464" }
+anchor-client = { git = "https://github.com/dhruvja/anchor" }
+anchor-lang = { git = "https://github.com/dhruvja/anchor" }
+ibc                       = { git = "https://github.com/mina86/ibc-rs", rev = "d8ac409f5b206c389568fb2e713d2666e4b9afde" }
+ibc-core-channel-types    = { git = "https://github.com/mina86/ibc-rs", rev = "d8ac409f5b206c389568fb2e713d2666e4b9afde" }
+ibc-core-client-context   = { git = "https://github.com/mina86/ibc-rs", rev = "d8ac409f5b206c389568fb2e713d2666e4b9afde" }
+ibc-core-client-types     = { git = "https://github.com/mina86/ibc-rs", rev = "d8ac409f5b206c389568fb2e713d2666e4b9afde" }
+ibc-core-commitment-types = { git = "https://github.com/mina86/ibc-rs", rev = "d8ac409f5b206c389568fb2e713d2666e4b9afde" }
+ibc-core-connection-types = { git = "https://github.com/mina86/ibc-rs", rev = "d8ac409f5b206c389568fb2e713d2666e4b9afde" }
+ibc-core-host             = { git = "https://github.com/mina86/ibc-rs", rev = "d8ac409f5b206c389568fb2e713d2666e4b9afde" }
+ibc-core-host-types       = { git = "https://github.com/mina86/ibc-rs", rev = "d8ac409f5b206c389568fb2e713d2666e4b9afde" }
+ibc-primitives            = { git = "https://github.com/mina86/ibc-rs", rev = "d8ac409f5b206c389568fb2e713d2666e4b9afde" }
+# ibc-testkit               = { git = "https://github.com/mina86/ibc-rs", rev = "d8ac409f5b206c389568fb2e713d2666e4b9afde" }
+#ibc = { path = "../ibc-rs-mina/ibc" }
+#ibc-app-nft-transfer = { path = "../ibc-rs-mina/ibc-apps/ics721-nft-transfer" }
+#ibc-app-nft-transfer-types = { path = "../ibc-rs-mina/ibc-apps/ics721-nft-transfer/types" }
+#ibc-app-transfer = { path = "../ibc-rs-mina/ibc-apps/ics20-transfer" }
+#ibc-app-transfer-types = { path = "../ibc-rs-mina/ibc-apps/ics20-transfer/types" }
+#ibc-apps = { path = "../ibc-rs-mina/ibc-apps" }
+#ibc-client-tendermint = { path = "../ibc-rs-mina/ibc-clients/ics07-tendermint" }
+#ibc-client-tendermint-types = { path = "../ibc-rs-mina/ibc-clients/ics07-tendermint/types" }
+#ibc-client-wasm-types = { path = "../ibc-rs-mina/ibc-clients/ics08-wasm/types" }
+#ibc-clients = { path = "../ibc-rs-mina/ibc-clients" }
+#ibc-core = { path = "../ibc-rs-mina/ibc-core" }
+#ibc-core-channel = { path = "../ibc-rs-mina/ibc-core/ics04-channel" }
+#ibc-core-channel-types = { path = "../ibc-rs-mina/ibc-core/ics04-channel/types" }
+#ibc-core-client = { path = "../ibc-rs-mina/ibc-core/ics02-client" }
+#ibc-core-client-context = { path = "../ibc-rs-mina/ibc-core/ics02-client/context" }
+#ibc-core-client-types = { path = "../ibc-rs-mina/ibc-core/ics02-client/types" }
+#ibc-core-commitment-types = { path = "../ibc-rs-mina/ibc-core/ics23-commitment/types" }
+#ibc-core-connection = { path = "../ibc-rs-mina/ibc-core/ics03-connection" }
+#ibc-core-connection-types = { path = "../ibc-rs-mina/ibc-core/ics03-connection/types" }
+#ibc-core-handler = { path = "../ibc-rs-mina/ibc-core/ics25-handler" }
+#ibc-core-handler-types = { path = "../ibc-rs-mina/ibc-core/ics25-handler/types" }
+#ibc-core-host = { path = "../ibc-rs-mina/ibc-core/ics24-host" }
+#ibc-core-host-cosmos = { path = "../ibc-rs-mina/ibc-core/ics24-host/cosmos" }
+#ibc-core-host-types = { path = "../ibc-rs-mina/ibc-core/ics24-host/types" }
+#ibc-core-router = { path = "../ibc-rs-mina/ibc-core/ics26-routing" }
+#ibc-core-router-types = { path = "../ibc-rs-mina/ibc-core/ics26-routing/types" }
+#ibc-data-types = { path = "../ibc-rs-mina" }
+#ibc-derive = { path = "../ibc-rs-mina/ibc-derive" }
+#ibc-primitives = { path = "../ibc-rs-mina/ibc-primitives" }
+#ibc-query = { path = "../ibc-rs-mina" }
+#ibc-testkit = { path = "../ibc-rs-mina/ibc-testkit" }
+bip39 = { git="https://github.com/dhruvja/rust-bip39.git" }
+tendermint = { git = "https://github.com/informalsystems/tendermint-rs", rev = "37822e540e272d2ca9e763769ad20c581203ff9a" }
+tendermint-light-client = { git = "https://github.com/informalsystems/tendermint-rs", rev = "37822e540e272d2ca9e763769ad20c581203ff9a" }
+tendermint-light-client-verifier = { git = "https://github.com/informalsystems/tendermint-rs", rev = "37822e540e272d2ca9e763769ad20c581203ff9a" }
+tendermint-proto = { git = "https://github.com/informalsystems/tendermint-rs", rev = "37822e540e272d2ca9e763769ad20c581203ff9a" }
+tendermint-testgen = { git = "https://github.com/informalsystems/tendermint-rs", rev = "37822e540e272d2ca9e763769ad20c581203ff9a" }
+
+# tendermint = { path = "../tendermint-rs/tendermint"   }
+# tendermint-light-client = { path = "../tendermint-rs/light-client"   }
+# tendermint-light-client-verifier = { path = "../tendermint-rs/light-client-verifier"  }
+# tendermint-proto = { path = "../tendermint-rs/proto"   }
+# tendermint-testgen = { path = "../tendermint-rs/testgen"  }
+# cfg-expr = { git = "https://github.com/EmbarkStudios/cfg-expr", tag="0.15.0" }
+
 
 [patch."https://github.com/paritytech/substrate"]
 sc-executor = { git = "https://github.com/paritytech//substrate.git", branch = "polkadot-v0.9.43" }
