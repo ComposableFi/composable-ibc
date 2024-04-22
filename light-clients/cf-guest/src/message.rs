@@ -27,14 +27,26 @@ where
 	}
 }
 
+impl<PK: guestchain::PubKey> From<cf_guest_upstream::Header<PK>> for ClientMessage<PK> {
+	fn from(hdr: cf_guest_upstream::Header<PK>) -> Self {
+		Self(cf_guest_upstream::ClientMessage::Header(hdr))
+	}
+}
+
 impl<PK: guestchain::PubKey> From<crate::Header<PK>> for ClientMessage<PK> {
-	fn from(msg: crate::Header<PK>) -> Self {
-		Self(cf_guest_upstream::ClientMessage::Header(msg.0))
+	fn from(hdr: crate::Header<PK>) -> Self {
+		Self(cf_guest_upstream::ClientMessage::Header(hdr.0))
+	}
+}
+
+impl<PK: guestchain::PubKey> From<cf_guest_upstream::Misbehaviour<PK>> for ClientMessage<PK> {
+	fn from(msg: cf_guest_upstream::Misbehaviour<PK>) -> Self {
+		Self(cf_guest_upstream::ClientMessage::Misbehaviour(msg))
 	}
 }
 
 impl<PK: guestchain::PubKey> From<crate::Misbehaviour<PK>> for ClientMessage<PK> {
 	fn from(msg: crate::Misbehaviour<PK>) -> Self {
-		Self(cf_guest_upstream::ClientMessage::Misbehaviour(msg.0.into()))
+		Self(cf_guest_upstream::ClientMessage::Misbehaviour(msg.0))
 	}
 }

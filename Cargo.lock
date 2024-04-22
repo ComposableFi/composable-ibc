@@ -1705,7 +1705,7 @@ dependencies = [
  "sealable-trie",
  "serde",
  "stdx",
- "tendermint-proto 0.34.1 (git+https://github.com/mina86/tendermint-rs?rev=45fbd500d731effb95a98257630feb46f6c41d06)",
+ "tendermint-proto 0.34.1",
  "trie-ids",
 ]
 
@@ -5735,10 +5735,10 @@ dependencies = [
  "solana-write-account",
  "stdx",
  "tendermint 0.28.0",
- "tendermint 0.34.1 (git+https://github.com/informalsystems/tendermint-rs?rev=37822e540e272d2ca9e763769ad20c581203ff9a)",
+ "tendermint 0.34.1",
  "tendermint-light-client",
  "tendermint-light-client-verifier 0.28.0",
- "tendermint-light-client-verifier 0.34.1 (git+https://github.com/informalsystems/tendermint-rs?rev=37822e540e272d2ca9e763769ad20c581203ff9a)",
+ "tendermint-light-client-verifier 0.34.1",
  "tendermint-proto 0.28.0",
  "tendermint-rpc",
  "thiserror",
@@ -5913,8 +5913,8 @@ dependencies = [
  "ibc-core-host",
  "ibc-primitives 0.50.0 (git+https://github.com/mina86/ibc-rs?rev=6015aea441d4660f7f7ecd89b5e770a993448089)",
  "serde",
- "tendermint 0.34.1 (git+https://github.com/mina86/tendermint-rs?rev=45fbd500d731effb95a98257630feb46f6c41d06)",
- "tendermint-light-client-verifier 0.34.1 (git+https://github.com/mina86/tendermint-rs?rev=45fbd500d731effb95a98257630feb46f6c41d06)",
+ "tendermint 0.34.1",
+ "tendermint-light-client-verifier 0.34.1",
 ]
 
 [[package]]
@@ -5931,9 +5931,9 @@ dependencies = [
  "ibc-proto 0.41.0",
  "prost 0.12.3",
  "serde",
- "tendermint 0.34.1 (git+https://github.com/mina86/tendermint-rs?rev=45fbd500d731effb95a98257630feb46f6c41d06)",
- "tendermint-light-client-verifier 0.34.1 (git+https://github.com/mina86/tendermint-rs?rev=45fbd500d731effb95a98257630feb46f6c41d06)",
- "tendermint-proto 0.34.1 (git+https://github.com/mina86/tendermint-rs?rev=45fbd500d731effb95a98257630feb46f6c41d06)",
+ "tendermint 0.34.1",
+ "tendermint-light-client-verifier 0.34.1",
+ "tendermint-proto 0.34.1",
 ]
 
 [[package]]
@@ -6007,7 +6007,7 @@ dependencies = [
  "serde",
  "sha2 0.10.8",
  "subtle-encoding",
- "tendermint 0.34.1 (git+https://github.com/mina86/tendermint-rs?rev=45fbd500d731effb95a98257630feb46f6c41d06)",
+ "tendermint 0.34.1",
 ]
 
 [[package]]
@@ -6038,7 +6038,7 @@ dependencies = [
  "ibc-core-host-types 0.50.0 (git+https://github.com/mina86/ibc-rs?rev=6015aea441d4660f7f7ecd89b5e770a993448089)",
  "ibc-primitives 0.50.0 (git+https://github.com/mina86/ibc-rs?rev=6015aea441d4660f7f7ecd89b5e770a993448089)",
  "subtle-encoding",
- "tendermint 0.34.1 (git+https://github.com/mina86/tendermint-rs?rev=45fbd500d731effb95a98257630feb46f6c41d06)",
+ "tendermint 0.34.1",
 ]
 
 [[package]]
@@ -6055,7 +6055,7 @@ dependencies = [
  "ibc-proto 0.41.0",
  "serde",
  "subtle-encoding",
- "tendermint 0.34.1 (git+https://github.com/mina86/tendermint-rs?rev=45fbd500d731effb95a98257630feb46f6c41d06)",
+ "tendermint 0.34.1",
 ]
 
 [[package]]
@@ -6100,7 +6100,7 @@ dependencies = [
  "ibc-proto 0.41.0",
  "serde",
  "subtle-encoding",
- "tendermint 0.34.1 (git+https://github.com/mina86/tendermint-rs?rev=45fbd500d731effb95a98257630feb46f6c41d06)",
+ "tendermint 0.34.1",
 ]
 
 [[package]]
@@ -6137,7 +6137,7 @@ dependencies = [
  "ibc-proto 0.41.0",
  "serde",
  "subtle-encoding",
- "tendermint 0.34.1 (git+https://github.com/mina86/tendermint-rs?rev=45fbd500d731effb95a98257630feb46f6c41d06)",
+ "tendermint 0.34.1",
 ]
 
 [[package]]
@@ -6179,7 +6179,7 @@ dependencies = [
  "serde",
  "sha2 0.10.8",
  "subtle-encoding",
- "tendermint 0.34.1 (git+https://github.com/mina86/tendermint-rs?rev=45fbd500d731effb95a98257630feb46f6c41d06)",
+ "tendermint 0.34.1",
 ]
 
 [[package]]
@@ -6231,7 +6231,7 @@ dependencies = [
  "ibc-proto 0.41.0",
  "serde",
  "subtle-encoding",
- "tendermint 0.34.1 (git+https://github.com/mina86/tendermint-rs?rev=45fbd500d731effb95a98257630feb46f6c41d06)",
+ "tendermint 0.34.1",
 ]
 
 [[package]]
@@ -6287,7 +6287,7 @@ dependencies = [
  "displaydoc",
  "ibc-proto 0.41.0",
  "prost 0.12.3",
- "tendermint 0.34.1 (git+https://github.com/mina86/tendermint-rs?rev=45fbd500d731effb95a98257630feb46f6c41d06)",
+ "tendermint 0.34.1",
  "time",
 ]
 
@@ -6302,7 +6302,7 @@ dependencies = [
  "ibc-proto 0.41.0",
  "prost 0.12.3",
  "serde",
- "tendermint 0.34.1 (git+https://github.com/mina86/tendermint-rs?rev=45fbd500d731effb95a98257630feb46f6c41d06)",
+ "tendermint 0.34.1",
  "time",
 ]
 
@@ -6334,7 +6334,7 @@ dependencies = [
  "prost 0.12.3",
  "serde",
  "subtle-encoding",
- "tendermint-proto 0.34.1 (git+https://github.com/mina86/tendermint-rs?rev=45fbd500d731effb95a98257630feb46f6c41d06)",
+ "tendermint-proto 0.34.1",
 ]
 
 [[package]]
@@ -15498,8 +15498,8 @@ dependencies = [
  "spl-token",
  "stdx",
  "strum 0.25.0",
- "tendermint 0.34.1 (git+https://github.com/mina86/tendermint-rs?rev=45fbd500d731effb95a98257630feb46f6c41d06)",
- "tendermint-light-client-verifier 0.34.1 (git+https://github.com/mina86/tendermint-rs?rev=45fbd500d731effb95a98257630feb46f6c41d06)",
+ "tendermint 0.34.1",
+ "tendermint-light-client-verifier 0.34.1",
  "trie-ids",
  "uint",
  "wasm",
@@ -18040,32 +18040,6 @@ dependencies = [
 [[package]]
 name = "tendermint"
 version = "0.34.1"
-source = "git+https://github.com/informalsystems/tendermint-rs?rev=37822e540e272d2ca9e763769ad20c581203ff9a#45fbd500d731effb95a98257630feb46f6c41d06"
-dependencies = [
- "bytes",
- "digest 0.10.7",
- "ed25519 2.2.2",
- "flex-error",
- "futures",
- "num-traits",
- "once_cell",
- "prost 0.12.3",
- "prost-types 0.12.3",
- "serde",
- "serde_bytes",
- "serde_json",
- "serde_repr",
- "signature 2.1.0",
- "subtle",
- "subtle-encoding",
- "tendermint-proto 0.34.1 (git+https://github.com/informalsystems/tendermint-rs?rev=37822e540e272d2ca9e763769ad20c581203ff9a)",
- "time",
- "zeroize",
-]
-
-[[package]]
-name = "tendermint"
-version = "0.34.1"
 source = "git+https://github.com/mina86/tendermint-rs?rev=45fbd500d731effb95a98257630feb46f6c41d06#45fbd500d731effb95a98257630feb46f6c41d06"
 dependencies = [
  "bytes",
@@ -18086,7 +18060,7 @@ dependencies = [
  "signature 2.1.0",
  "subtle",
  "subtle-encoding",
- "tendermint-proto 0.34.1 (git+https://github.com/mina86/tendermint-rs?rev=45fbd500d731effb95a98257630feb46f6c41d06)",
+ "tendermint-proto 0.34.1",
  "time",
  "zeroize",
 ]
@@ -18140,24 +18114,12 @@ dependencies = [
 [[package]]
 name = "tendermint-light-client-verifier"
 version = "0.34.1"
-source = "git+https://github.com/informalsystems/tendermint-rs?rev=37822e540e272d2ca9e763769ad20c581203ff9a#45fbd500d731effb95a98257630feb46f6c41d06"
-dependencies = [
- "derive_more",
- "flex-error",
- "serde",
- "tendermint 0.34.1 (git+https://github.com/informalsystems/tendermint-rs?rev=37822e540e272d2ca9e763769ad20c581203ff9a)",
- "time",
-]
-
-[[package]]
-name = "tendermint-light-client-verifier"
-version = "0.34.1"
 source = "git+https://github.com/mina86/tendermint-rs?rev=45fbd500d731effb95a98257630feb46f6c41d06#45fbd500d731effb95a98257630feb46f6c41d06"
 dependencies = [
  "derive_more",
  "flex-error",
  "serde",
- "tendermint 0.34.1 (git+https://github.com/mina86/tendermint-rs?rev=45fbd500d731effb95a98257630feb46f6c41d06)",
+ "tendermint 0.34.1",
  "time",
 ]
 
@@ -18172,21 +18134,6 @@ dependencies = [
  "num-traits",
  "prost 0.11.6",
  "prost-types 0.11.6",
- "serde",
- "serde_bytes",
- "subtle-encoding",
- "time",
-]
-
-[[package]]
-name = "tendermint-proto"
-version = "0.34.1"
-source = "git+https://github.com/informalsystems/tendermint-rs?rev=37822e540e272d2ca9e763769ad20c581203ff9a#45fbd500d731effb95a98257630feb46f6c41d06"
-dependencies = [
- "bytes",
- "flex-error",
- "prost 0.12.3",
- "prost-types 0.12.3",
  "serde",
  "serde_bytes",
  "subtle-encoding",
