@@ -14,44 +14,23 @@
 // limitations under the License.
 
 use cosmwasm_std::StdError;
+use std::error::Error;
 
-#[derive(Debug, derive_more::From, derive_more::Display)]
-pub enum Error {
+#[derive(derive_more::From, derive_more::Display, Debug)]
+pub enum ContractError {
 	Std(StdError),
-	Client(crate::ibc::ClientError),
-	// Wasm(crate::ibc::wasm::Error),
-	DecodeError(prost::DecodeError),
-	BadProto(ibc::protobuf::Error),
-	#[from(ignore)]
-	BadMessage,
-	#[from(ignore)]
-	BadType,
+
+	ProofVerification(cf_guest::proof::VerifyError),
+
+	Client(ibc::core::ics02_client::error::Error),
+	Path(ibc::core::ics24_host::path::PathError),
+	Proof(ibc::proofs::ProofError),
+	Commitment(ibc::core::ics23_commitment::error::Error),
+	Protobuf(ibc::protobuf::Error),
+
+	Prost(prost::DecodeError),
+
+	Other(String),
 }
 
-#[cfg(feature = "std")]
-impl std::error::Error for Error {}
-
-impl From<alloc::string::FromUtf8Error> for Error {
-	fn from(err: alloc::string::FromUtf8Error) -> Self {
-		Self::Std(StdError::InvalidUtf8 { msg: err.to_string() })
-	}
-}
-
-impl From<cf_guest::DecodeError> for Error {
-	fn from(err: cf_guest::DecodeError) -> Self {
-		match err {
-			cf_guest::DecodeError::BadMessage => Self::BadMessage,
-			cf_guest::DecodeError::BadType => Self::BadType,
-			cf_guest::DecodeError::BadProto(err) => err.into(),
-		}
-	}
-}
-
-impl From<Error> for StdError {
-	fn from(err: Error) -> Self {
-		match err {
-			Error::Std(err) => err,
-			_ => StdError::GenericErr { msg: err.to_string() },
-		}
-	}
-}
+impl Error for ContractError {}

@@ -1,17 +1,20 @@
 use guestchain::PubKey;
-use ibc_proto::google::protobuf::Any;
-use tendermint_proto::Protobuf;
+use prost::Message as _;
 
-use crate::{Header, Misbehaviour};
+use crate::proto;
 
-#[derive(Clone, PartialEq, Eq, Debug, derive_more::From, derive_more::TryInto)]
-// For the time being allow large enum variants.  Header is short of 400 bytes
-// and Misbehaviour is short of 700.  We may want to box the values if we run
-// into stack size issues.
-#[allow(clippy::large_enum_variant)]
-pub enum ClientMessage<PK: PubKey> {
-	Header(Header<PK>),
-	Misbehaviour(Misbehaviour<PK>),
+super::wrap!(cf_guest_upstream::ClientMessage<PK> as ClientMessage);
+super::wrap!(impl<PK> proto for ClientMessage);
+
+impl<PK: PubKey> ClientMessage<PK> {
+	pub fn maybe_header_height(&self) -> Option<ibc::Height> {
+		if let cf_guest_upstream::ClientMessage::Header(hdr) = &self.0 {
+			let height = hdr.block_header.block_height;
+			Some(ibc::Height::new(1, height.into()))
+		} else {
+			None
+		}
+	}
 }
 
 impl<PK> ibc::core::ics02_client::client_message::ClientMessage for ClientMessage<PK>
@@ -19,44 +22,31 @@ where
 	PK: PubKey + Send + Sync,
 	PK::Signature: Send + Sync,
 {
-	fn encode_to_vec(&self) -> Result<ibc::prelude::Vec<u8>, tendermint_proto::Error> {
-		self.encode_vec()
+	fn encode_to_vec(&self) -> Result<ibc::prelude::Vec<u8>, ibc::protobuf::Error> {
+		Ok(proto::ClientMessage::from(self).encode_to_vec())
 	}
 }
 
-impl<PK: PubKey> TryFrom<Any> for ClientMessage<PK> {
-	type Error = crate::proto::DecodeError;
-	fn try_from(any: Any) -> Result<Self, Self::Error> {
-		Self::try_from(&any)
+impl<PK: guestchain::PubKey> From<cf_guest_upstream::Header<PK>> for ClientMessage<PK> {
+	fn from(hdr: cf_guest_upstream::Header<PK>) -> Self {
+		Self(cf_guest_upstream::ClientMessage::Header(hdr))
 	}
 }
 
-impl<PK: PubKey> Protobuf<Any> for ClientMessage<PK> {}
-
-impl<PK: PubKey> TryFrom<&Any> for ClientMessage<PK> {
-	type Error = crate::proto::DecodeError;
-
-	fn try_from(any: &Any) -> Result<Self, Self::Error> {
-		match any.type_url.as_str() {
-			crate::proto::Header::TYPE_URL => Header::decode(&any.value).map(Self::Header),
-			crate::proto::Misbehaviour::TYPE_URL =>
-				Misbehaviour::decode(&any.value).map(Self::Misbehaviour),
-			_ => Err(crate::proto::DecodeError::BadType),
-		}
+impl<PK: guestchain::PubKey> From<crate::Header<PK>> for ClientMessage<PK> {
+	fn from(hdr: crate::Header<PK>) -> Self {
+		Self(cf_guest_upstream::ClientMessage::Header(hdr.0))
 	}
 }
 
-impl<PK: PubKey> From<ClientMessage<PK>> for Any {
-	fn from(msg: ClientMessage<PK>) -> Any {
-		Self::from(&msg)
+impl<PK: guestchain::PubKey> From<cf_guest_upstream::Misbehaviour<PK>> for ClientMessage<PK> {
+	fn from(msg: cf_guest_upstream::Misbehaviour<PK>) -> Self {
+		Self(cf_guest_upstream::ClientMessage::Misbehaviour(msg))
 	}
 }
 
-impl<PK: PubKey> From<&ClientMessage<PK>> for Any {
-	fn from(msg: &ClientMessage<PK>) -> Any {
-		match msg {
-			ClientMessage::Header(msg) => msg.into(),
-			ClientMessage::Misbehaviour(msg) => msg.into(),
-		}
+impl<PK: guestchain::PubKey> From<crate::Misbehaviour<PK>> for ClientMessage<PK> {
+	fn from(msg: crate::Misbehaviour<PK>) -> Self {
+		Self(cf_guest_upstream::ClientMessage::Misbehaviour(msg.0))
 	}
 }

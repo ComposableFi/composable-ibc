@@ -1,37 +1,30 @@
-use core::marker::PhantomData;
+use core::str::FromStr;
+
 use guestchain::Signature;
 
-use crate::{alloc::string::ToString, proof::VerifyError};
+use crate::alloc::string::ToString;
 use alloc::vec::Vec;
 use guestchain::{PubKey, Verifier};
 use ibc::{
 	core::{
 		ics02_client::{
-			client_consensus::ConsensusState, client_def::{ClientDef, ConsensusUpdateResult},
-			client_state::ClientState as OtherClientState, error::Error as Ics02ClientError,
-		},
-		ics23_commitment::commitment::CommitmentPrefix,
-		ics24_host::{
-			path::{
-				self, AcksPath, ChannelEndsPath, ClientConsensusStatePath, ClientStatePath,
-				CommitmentsPath, ConnectionsPath, ReceiptsPath, SeqRecvsPath,
-			},
+			client_consensus::ConsensusState,
+			client_def::{ClientDef, ConsensusUpdateResult},
+			client_state::ClientState as OtherClientState,
+			error::Error as Ics02ClientError,
 		},
 		ics26_routing::context::ReaderContext,
 	},
+	protobuf::Protobuf,
 };
 use prost::Message;
-use tendermint_proto::Protobuf;
 
-use crate::{
-	error::Error, proof::verify, ClientMessage, ClientState,
-	ConsensusState as ClientConsensusState,
-};
+use crate::{error::Error, ClientMessage, ClientState, ConsensusState as ClientConsensusState};
 
 type Result<T = (), E = ibc::core::ics02_client::error::Error> = ::core::result::Result<T, E>;
 
 #[derive(Clone, Debug, PartialEq, Eq)]
-pub struct GuestClient<PK>(PhantomData<PK>);
+pub struct GuestClient<PK>(core::marker::PhantomData<PK>);
 
 impl<PK: PubKey> Default for GuestClient<PK> {
 	fn default() -> Self {
@@ -48,17 +41,17 @@ where
 	type ClientState = ClientState<PK>;
 	type ConsensusState = ClientConsensusState;
 
-	fn verify_client_message<Ctx: ibc::core::ics26_routing::context::ReaderContext>(
+	fn verify_client_message<Ctx: ReaderContext>(
 		&self,
 		_ctx: &Ctx,
-		client_id: ibc::core::ics24_host::identifier::ClientId,
+		_client_id: ibc::core::ics24_host::identifier::ClientId,
 		client_state: Self::ClientState,
 		client_msg: Self::ClientMessage,
 	) -> Result<(), Ics02ClientError> {
-		client_state.verify_client_message(self, &client_id, client_msg)
+		client_state.0.do_verify_client_message(self, client_msg.0).map_err(convert)
 	}
 
-	fn update_state<Ctx: ibc::core::ics26_routing::context::ReaderContext>(
+	fn update_state<Ctx: ReaderContext>(
 		&self,
 		_ctx: &Ctx,
 		_client_id: ibc::core::ics24_host::identifier::ClientId,
@@ -68,11 +61,11 @@ where
 		(Self::ClientState, ibc::core::ics02_client::client_def::ConsensusUpdateResult<Ctx>),
 		Ics02ClientError,
 	> {
-    let header = match client_msg {
-			ClientMessage::Header(header) => header,
+		let header = match client_msg.0 {
+			cf_guest_upstream::ClientMessage::Header(header) => header,
 			_ => unreachable!("02-client will check for Header before calling update_state; qed"),
 		};
-		let header_consensus_state = ClientConsensusState::from(header.clone());
+		let header_consensus_state = ClientConsensusState::from(&header);
 		let cs = Ctx::AnyConsensusState::wrap(&header_consensus_state).ok_or_else(|| {
 			Error::UnknownConsensusStateType { description: "Ctx::AnyConsensusState".to_string() }
 		})?;
@@ -81,23 +74,28 @@ where
 
 	fn update_state_on_misbehaviour(
 		&self,
-		_client_state: Self::ClientState,
+		client_state: Self::ClientState,
 		_client_msg: Self::ClientMessage,
 	) -> Result<Self::ClientState, Ics02ClientError> {
-		todo!()
+		Ok(client_state.frozen())
 	}
 
-	fn check_for_misbehaviour<Ctx: ibc::core::ics26_routing::context::ReaderContext>(
+	fn check_for_misbehaviour<Ctx: ReaderContext>(
 		&self,
-		_ctx: &Ctx,
-		_client_id: ibc::core::ics24_host::identifier::ClientId,
-		_client_state: Self::ClientState,
-		_client_msg: Self::ClientMessage,
+		ctx: &Ctx,
+		client_id: ibc::core::ics24_host::identifier::ClientId,
+		client_state: Self::ClientState,
+		client_msg: Self::ClientMessage,
 	) -> Result<bool, Ics02ClientError> {
-		Ok(false)
+		let client_id = convert(client_id);
+		let ctx = CommonContext::new(ctx);
+		client_state
+			.0
+			.do_check_for_misbehaviour(ctx, &client_id, client_msg.0)
+			.map_err(convert)
 	}
 
-	fn verify_upgrade_and_update_state<Ctx: ibc::core::ics26_routing::context::ReaderContext>(
+	fn verify_upgrade_and_update_state<Ctx: ReaderContext>(
 		&self,
 		_ctx: &Ctx,
 		_client_id: ibc::core::ics24_host::identifier::ClientId,
@@ -114,7 +112,7 @@ where
 		Err(Ics02ClientError::implementation_specific("Not implemented".to_string()))
 	}
 
-	fn check_substitute_and_update_state<Ctx: ibc::core::ics26_routing::context::ReaderContext>(
+	fn check_substitute_and_update_state<Ctx: ReaderContext>(
 		&self,
 		_ctx: &Ctx,
 		_subject_client_id: ibc::core::ics24_host::identifier::ClientId,
@@ -129,7 +127,7 @@ where
 		Err(Ics02ClientError::implementation_specific("Not implemented".to_string()))
 	}
 
-	fn verify_client_consensus_state<Ctx: ibc::core::ics26_routing::context::ReaderContext>(
+	fn verify_client_consensus_state<Ctx: ReaderContext>(
 		&self,
 		_ctx: &Ctx,
 		client_state: &Self::ClientState,
@@ -143,17 +141,16 @@ where
 	) -> Result<(), Ics02ClientError> {
 		client_state.verify_height(client_id, height)?;
 
-		let connection_path = ClientConsensusStatePath {
-			client_id: client_id.clone(),
-			epoch: consensus_height.revision_number,
-			height: consensus_height.revision_height,
+		let path = ibc_core_host_types::path::ClientConsensusStatePath {
+			client_id: convert(client_id),
+			revision_number: consensus_height.revision_number,
+			revision_height: consensus_height.revision_height,
 		};
-		let path = path::Path::ClientConsensusState(connection_path);
 		let value = expected_consensus_state.encode_to_vec().map_err(Ics02ClientError::encode)?;
-		verify(&CommitmentPrefix::default(), proof, root, path, Some(&value)).map_err(|e| e.into())
+		verify(proof, root, path.into(), Some(value))
 	}
 
-	fn verify_connection_state<Ctx: ibc::core::ics26_routing::context::ReaderContext>(
+	fn verify_connection_state<Ctx: ReaderContext>(
 		&self,
 		_ctx: &Ctx,
 		client_id: &ibc::core::ics24_host::identifier::ClientId,
@@ -167,13 +164,12 @@ where
 	) -> Result<(), Ics02ClientError> {
 		client_state.verify_height(client_id, height)?;
 
-		let connection_path = ConnectionsPath(connection_id.clone());
-		let path = path::Path::Connections(connection_path);
+		let path = ibc_core_host_types::path::ConnectionPath(convert(connection_id));
 		let value = expected_connection_end.encode_vec().map_err(Ics02ClientError::encode)?;
-		verify(&CommitmentPrefix::default(), proof, root, path, Some(&value)).map_err(|e| e.into())
+		verify(proof, root, path.into(), Some(value))
 	}
 
-	fn verify_channel_state<Ctx: ibc::core::ics26_routing::context::ReaderContext>(
+	fn verify_channel_state<Ctx: ReaderContext>(
 		&self,
 		_ctx: &Ctx,
 		client_id: &ibc::core::ics24_host::identifier::ClientId,
@@ -188,13 +184,12 @@ where
 	) -> Result<(), Ics02ClientError> {
 		client_state.verify_height(client_id, height)?;
 
-		let channel_end_path = ChannelEndsPath(port_id.clone(), *channel_id);
-		let path = path::Path::ChannelEnds(channel_end_path);
+		let path = ibc_core_host_types::path::ChannelEndPath(convert(port_id), convert(channel_id));
 		let value = expected_channel_end.encode_vec().map_err(Ics02ClientError::encode)?;
-		verify(&CommitmentPrefix::default(), proof, root, path, Some(&value)).map_err(|e| e.into())
+		verify(proof, root, path.into(), Some(value)).map_err(|e| e.into())
 	}
 
-	fn verify_client_full_state<Ctx: ibc::core::ics26_routing::context::ReaderContext>(
+	fn verify_client_full_state<Ctx: ReaderContext>(
 		&self,
 		_ctx: &Ctx,
 		client_state: &Self::ClientState,
@@ -207,13 +202,12 @@ where
 	) -> Result<(), Ics02ClientError> {
 		client_state.verify_height(client_id, height)?;
 
-		let client_state_path = ClientStatePath(client_id.clone());
-		let path = path::Path::ClientState(client_state_path);
+		let path = ibc_core_host_types::path::ClientStatePath(convert(client_id));
 		let value = expected_client_state.encode_to_vec().map_err(Ics02ClientError::encode)?;
-		verify(&CommitmentPrefix::default(), proof, root, path, Some(&value)).map_err(|e| e.into())
+		verify(proof, root, path.into(), Some(value)).map_err(|e| e.into())
 	}
 
-	fn verify_packet_data<Ctx: ibc::core::ics26_routing::context::ReaderContext>(
+	fn verify_packet_data<Ctx: ReaderContext>(
 		&self,
 		ctx: &Ctx,
 		client_id: &ibc::core::ics24_host::identifier::ClientId,
@@ -230,14 +224,15 @@ where
 		client_state.verify_height(client_id, height)?;
 		verify_delay_passed::<Ctx, PK>(ctx, height, connection_end)?;
 
-		let commitment_path =
-			CommitmentsPath { port_id: port_id.clone(), channel_id: *channel_id, sequence };
-		let path = path::Path::Commitments(commitment_path);
-		verify(&CommitmentPrefix::default(), proof, root, path, Some(&commitment.into_vec()))
-			.map_err(|e| e.into())
+		let path = ibc_core_host_types::path::CommitmentPath {
+			port_id: convert(port_id),
+			channel_id: convert(channel_id),
+			sequence: sequence.0.into(),
+		};
+		verify(proof, root, path.into(), Some(commitment.into_vec()))
 	}
 
-	fn verify_packet_acknowledgement<Ctx: ibc::core::ics26_routing::context::ReaderContext>(
+	fn verify_packet_acknowledgement<Ctx: ReaderContext>(
 		&self,
 		ctx: &Ctx,
 		client_id: &ibc::core::ics24_host::identifier::ClientId,
@@ -255,13 +250,15 @@ where
 		client_state.verify_height(client_id, height)?;
 		verify_delay_passed::<Ctx, PK>(ctx, height, connection_end)?;
 
-		let ack_path = AcksPath { port_id: port_id.clone(), channel_id: *channel_id, sequence };
-		let path = path::Path::Acks(ack_path);
-		verify(&CommitmentPrefix::default(), proof, root, path, Some(&ack.into_vec()))
-			.map_err(|e| e.into())
+		let path = ibc_core_host_types::path::AckPath {
+			port_id: convert(port_id),
+			channel_id: convert(channel_id),
+			sequence: sequence.0.into(),
+		};
+		verify(proof, root, path.into(), Some(ack.into_vec()))
 	}
 
-	fn verify_next_sequence_recv<Ctx: ibc::core::ics26_routing::context::ReaderContext>(
+	fn verify_next_sequence_recv<Ctx: ReaderContext>(
 		&self,
 		ctx: &Ctx,
 		client_id: &ibc::core::ics24_host::identifier::ClientId,
@@ -277,15 +274,13 @@ where
 		client_state.verify_height(client_id, height)?;
 		verify_delay_passed::<Ctx, PK>(ctx, height, connection_end)?;
 
+		let path = ibc_core_host_types::path::SeqRecvPath(convert(port_id), convert(channel_id));
 		let mut seq_bytes = Vec::new();
 		u64::from(sequence).encode(&mut seq_bytes).expect("buffer size too small");
-		let seq_recv_path = SeqRecvsPath(port_id.clone(), channel_id.clone());
-		let path = path::Path::SeqRecvs(seq_recv_path);
-		verify(&CommitmentPrefix::default(), proof, root, path, Some(&seq_bytes))
-			.map_err(|e| e.into())
+		verify(proof, root, path.into(), Some(seq_bytes))
 	}
 
-	fn verify_packet_receipt_absence<Ctx: ibc::core::ics26_routing::context::ReaderContext>(
+	fn verify_packet_receipt_absence<Ctx: ReaderContext>(
 		&self,
 		ctx: &Ctx,
 		client_id: &ibc::core::ics24_host::identifier::ClientId,
@@ -301,10 +296,12 @@ where
 		client_state.verify_height(client_id, height)?;
 		verify_delay_passed::<Ctx, PK>(ctx, height, connection_end)?;
 
-		let receipt_path =
-			ReceiptsPath { port_id: port_id.clone(), channel_id: *channel_id, sequence };
-		let path = path::Path::Receipts(receipt_path);
-		verify(&CommitmentPrefix::default(), proof, root, path, None).map_err(|e| e.into())
+		let path = ibc_core_host_types::path::ReceiptPath {
+			port_id: convert(port_id),
+			channel_id: convert(channel_id),
+			sequence: sequence.0.into(),
+		};
+		verify(proof, root, path.into(), None)
 	}
 }
 
@@ -341,13 +338,224 @@ fn verify_delay_passed<Ctx: ReaderContext, PK: PubKey>(
 
 impl<PK: PubKey> Verifier<PK> for GuestClient<PK> {
 	fn verify(&self, message: &[u8], pubkey: &PK, signature: &PK::Signature) -> bool {
-		let pubkey_in_bytes = pubkey.to_vec();
-		let pubkey = ed25519_consensus::VerificationKey::try_from(&pubkey_in_bytes[..])
-			.map_err(|_| VerifyError::MalformedPublicKey)
-			.unwrap();
-		let sig = ed25519_consensus::Signature::try_from(&signature.to_vec()[..])
-			.map_err(|_| VerifyError::MalformedSignature)
-			.unwrap();
-		pubkey.verify(&sig, message).map_or(false, |_| true)
+		(|| {
+			let pubkey = pubkey.as_bytes();
+			let pubkey = ed25519_consensus::VerificationKey::try_from(&pubkey[..]).ok()?;
+			let signature = signature.as_bytes();
+			let sig = ed25519_consensus::Signature::try_from(&signature[..]).ok()?;
+			pubkey.verify(&sig, message).ok()?;
+			Some(())
+		})()
+		.is_some()
+	}
+}
+
+#[derive(bytemuck::TransparentWrapper)]
+#[repr(transparent)]
+#[transparent(Ctx)]
+struct CommonContext<Ctx, PK> {
+	ctx: Ctx,
+	_ph: core::marker::PhantomData<PK>,
+}
+
+impl<Ctx, PK> CommonContext<Ctx, PK> {
+	fn new(ctx: &Ctx) -> &Self {
+		bytemuck::TransparentWrapper::wrap_ref(ctx)
+	}
+}
+
+type NewResult<T = ()> = Result<T, ibc_core_client_types::error::ClientError>;
+
+impl<Ctx: ReaderContext, PK: PubKey> cf_guest_upstream::CommonContext<PK>
+	for CommonContext<Ctx, PK>
+{
+	type ConversionError = core::convert::Infallible;
+	type AnyClientState = ClientState<PK>;
+	type AnyConsensusState = ClientConsensusState;
+
+	fn host_metadata(
+		&self,
+	) -> NewResult<(ibc_primitives::Timestamp, ibc_core_client_types::Height)> {
+		unimplemented!("host_metadata")
+	}
+
+	fn set_client_state(
+		&mut self,
+		_client_id: &ibc_core_host_types::identifiers::ClientId,
+		_state: ClientState<PK>,
+	) -> NewResult<()> {
+		unimplemented!("set_client_state")
+	}
+
+	fn consensus_state(
+		&self,
+		_client_id: &ibc_core_host_types::identifiers::ClientId,
+		_height: ibc_core_client_types::Height,
+	) -> NewResult<Self::AnyConsensusState> {
+		unimplemented!("consensus_state")
+	}
+
+	fn consensus_state_neighbourhood(
+		&self,
+		client_id: &ibc_core_host_types::identifiers::ClientId,
+		height: ibc_core_client_types::Height,
+	) -> NewResult<cf_guest_upstream::Neighbourhood<Self::AnyConsensusState>> {
+		use cf_guest_upstream::Neighbourhood;
+
+		let res: Result<_, Ics02ClientError> = (|| {
+			let client_id = convert(client_id);
+			let height = convert(height);
+			Ok(if let Some(state) = self.ctx.maybe_consensus_state(&client_id, height)? {
+				Neighbourhood::This(state)
+			} else {
+				let prev = self.ctx.prev_consensus_state(&client_id, height)?;
+				let next = self.ctx.next_consensus_state(&client_id, height)?;
+				Neighbourhood::Neighbours(prev, next)
+			})
+		})();
+		match res {
+			Ok(res) => Ok(res.map(|state: Ctx::AnyConsensusState| {
+				// TODO(mina86): propagate error rather than unwrapping
+				let state: Self::AnyConsensusState = state.downcast().unwrap();
+				state
+			})),
+			Err(err) => Err(convert(err)),
+		}
+	}
+
+	fn store_consensus_state_and_metadata(
+		&mut self,
+		_client_id: &ibc_core_host_types::identifiers::ClientId,
+		_height: ibc_core_client_types::Height,
+		_consensus: Self::AnyConsensusState,
+		_host_timestamp: ibc_primitives::Timestamp,
+		_host_height: ibc_core_client_types::Height,
+	) -> NewResult {
+		unimplemented!("store_consensus_state_and_metadata")
+	}
+
+	fn delete_consensus_state_and_metadata(
+		&mut self,
+		_client_id: &ibc_core_host_types::identifiers::ClientId,
+		_height: ibc_core_client_types::Height,
+	) -> NewResult {
+		unimplemented!("delete_consensus_state_and_metadata")
+	}
+
+	fn sorted_consensus_state_heights(
+		&self,
+		_client_id: &ibc_core_host_types::identifiers::ClientId,
+	) -> NewResult<Vec<ibc_core_client_types::Height>> {
+		unimplemented!("sorted_consensus_state_heights")
+	}
+}
+
+// Helper wrappers
+
+fn verify(
+	proof: &ibc::core::ics23_commitment::commitment::CommitmentProofBytes,
+	root: &ibc::core::ics23_commitment::commitment::CommitmentRoot,
+	path: ibc_core_host_types::path::Path,
+	value: Option<Vec<u8>>,
+) -> Result<(), Ics02ClientError> {
+	cf_guest_upstream::proof::verify(
+		&[],
+		proof.as_bytes(),
+		root.bytes.as_slice(),
+		path,
+		value.as_deref(),
+	)
+	.map_err(|err| Ics02ClientError::implementation_specific(err.to_string()))
+}
+
+// Conversion between old and new.
+
+fn convert<F, T: ConvertFrom<F>>(value: F) -> T {
+	T::convert(value)
+}
+
+trait ConvertFrom<From>: Sized {
+	fn convert(value: From) -> Self;
+}
+
+macro_rules! conv {
+	($( $value:ident: $From:ty => $To:ty { $($body:tt)*} )*) => {
+		$(
+			impl ConvertFrom<$From> for $To {
+				fn convert($value: $From) -> Self {
+					Self::convert(&$value)
+				}
+			}
+
+			impl ConvertFrom<&$From> for $To {
+				fn convert($value: &$From) -> Self {
+					$($body)*
+				}
+			}
+		)*
+	}
+}
+
+conv! {
+	client_id: ibc::core::ics24_host::identifier::ClientId =>
+		ibc_core_host_types::identifiers::ClientId {
+			FromStr::from_str(client_id.as_str()).unwrap()
+		}
+	client_id: ibc_core_host_types::identifiers::ClientId => ibc::core::ics24_host::identifier::ClientId {
+			FromStr::from_str(client_id.as_str()).unwrap()
+		}
+
+	connection_id: ibc::core::ics24_host::identifier::ConnectionId =>
+		ibc_core_host_types::identifiers::ConnectionId {
+			FromStr::from_str(connection_id.as_str()).unwrap()
+		}
+
+	port_id: ibc::core::ics24_host::identifier::PortId =>
+		ibc_core_host_types::identifiers::PortId {
+			FromStr::from_str(port_id.as_str()).unwrap()
+		}
+
+	channel_id: ibc::core::ics24_host::identifier::ChannelId =>
+		ibc_core_host_types::identifiers::ChannelId {
+			ibc_core_host_types::identifiers::ChannelId::new(channel_id.sequence())
+		}
+
+
+	timestamp: ibc::timestamp::Timestamp => ibc_primitives::Timestamp {
+		Self::from_nanoseconds(timestamp.nanoseconds()).unwrap()
+	}
+
+	height: ibc::core::ics02_client::height::Height => ibc_core_client_types::Height {
+		Self::new(height.revision_number, height.revision_height).unwrap()
+	}
+
+	height: ibc_core_client_types::Height => ibc::core::ics02_client::height::Height {
+		Self::new(height.revision_number(), height.revision_height())
+	}
+
+
+	err: ibc_core_client_context::types::error::ClientError => Ics02ClientError {
+		// TODO(mina86): Create better mapping.
+		Self::implementation_specific(err.to_string())
+	}
+	err: Ics02ClientError => ibc_core_client_context::types::error::ClientError {
+		// TODO(mina86): Create better mapping.
+		Self::ClientSpecific {
+			description: err.to_string()
+		}
+	}
+}
+
+impl<FT, TT: ConvertFrom<FT>> ConvertFrom<Option<FT>> for Option<TT> {
+	fn convert(value: Option<FT>) -> Self {
+		value.map(convert)
+	}
+}
+
+impl<FT, FE, TT: ConvertFrom<FT>, TE: ConvertFrom<FE>> ConvertFrom<Result<FT, FE>>
+	for Result<TT, TE>
+{
+	fn convert(value: Result<FT, FE>) -> Self {
+		value.map(convert).map_err(convert)
 	}
 }

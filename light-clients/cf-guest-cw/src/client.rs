@@ -24,7 +24,7 @@ use ibc::{
 	core::{
 		ics02_client::{
 			client_consensus::ConsensusState as _,
-			client_state::ClientType,
+			client_state::{ClientState as _, ClientType},
 			context::{ClientKeeper, ClientReader, ClientTypes},
 			error::Error,
 		},
@@ -73,7 +73,10 @@ impl<'a> ClientReader for Context<'a> {
 		}
 	}
 
-	fn client_state(&self, client_id: &ClientId) -> Result<ClientState<crate::crypto::PubKey>, Error> {
+	fn client_state(
+		&self,
+		client_id: &ClientId,
+	) -> Result<ClientState<crate::crypto::PubKey>, Error> {
 		let client_states = ReadonlyClientStates::new(self.storage());
 		let data = client_states.get().ok_or_else(|| Error::client_not_found(client_id.clone()))?;
 		let state = Self::decode_client_state(&data)?;
@@ -139,7 +142,7 @@ impl<'a> ClientReader for Context<'a> {
 	}
 
 	fn host_height(&self) -> Height {
-		Height::new(1, self.env.block.height)
+		Height::new(0, self.env.block.height)
 	}
 
 	fn host_timestamp(&self) -> Timestamp {
@@ -256,8 +259,7 @@ impl<'a> Context<'a> {
 				))
 			})?;
 		let any = Any::decode(&*wasm_state.data).map_err(Error::decode)?;
-		let state =
-			ClientState::decode_vec(&any.value).map_err(Error::invalid_any_client_state)?;
+		let state = ClientState::decode_vec(&any.value).map_err(Error::invalid_any_client_state)?;
 		Ok(state)
 	}
 
@@ -286,8 +288,9 @@ impl<'a> Context<'a> {
 					"[client_state]: error decoding client state bytes to WasmConsensusState {e}"
 				))
 			})?;
-		wasm_client_state.data = ibc_proto::google::protobuf::Any::from(&client_state).encode_to_vec();
-		wasm_client_state.latest_height = ibc::Height::new(1, client_state.latest_height.into());
+		wasm_client_state.data =
+			ibc_proto::google::protobuf::Any::from(&client_state).encode_to_vec();
+		wasm_client_state.latest_height = client_state.latest_height();
 		let vec1 = wasm_client_state.to_any().encode_to_vec();
 		Ok(vec1)
 	}

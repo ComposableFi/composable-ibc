@@ -259,7 +259,8 @@ impl SolanaClient {
 			commitment_level: CommitmentLevel::from_str(&config.commitment_level).unwrap(),
 			solana_ibc_program_id: Pubkey::from_str(&config.solana_ibc_program_id).unwrap(),
 			write_program_id: Pubkey::from_str(&config.write_program_id).unwrap(),
-			signature_verifier_program_id: Pubkey::from_str(&config.signature_verifier_program_id).unwrap(),
+			signature_verifier_program_id: Pubkey::from_str(&config.signature_verifier_program_id)
+				.unwrap(),
 			common_state: CommonClientState::default(),
 			client_type: "07-tendermint".to_string(),
 			last_searched_sig_for_send_packets: Arc::new(
@@ -335,7 +336,9 @@ deserialize consensus state"
 						};
 
 						header
-							.check_trusted_next_validator_set::<tendermint::crypto::default::Sha256>(trusted_consensus_state.inner())
+							.check_trusted_next_validator_set::<tendermint::crypto::default::Sha256>(
+								trusted_consensus_state.inner(),
+							)
 							.unwrap();
 
 						TrustedBlockState {
@@ -469,11 +472,9 @@ deserialize consensus state"
 						let temp_pubkeys = pubkeys[start..end].to_vec();
 						let temp_signatures = final_signatures[start..end].to_vec();
 						let temp_messages = messages[start..end].to_vec();
-						for (pubkey, signature, message) in izip!(
-							&temp_pubkeys,
-							&temp_signatures,
-							&temp_messages,
-						) {
+						for (pubkey, signature, message) in
+							izip!(&temp_pubkeys, &temp_signatures, &temp_messages,)
+						{
 							let pubkey = pubkey.as_slice().try_into().unwrap();
 							let signature = signature.as_slice().try_into().unwrap();
 							let message = message.as_slice().try_into().unwrap();

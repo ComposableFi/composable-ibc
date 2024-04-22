@@ -13,18 +13,26 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-#![allow(dead_code)]
-
 extern crate alloc;
 extern crate core;
 
+mod channel;
+mod client;
+mod connection;
 mod context;
-mod contract;
-mod crypto;
+pub mod contract;
+pub mod crypto;
 mod error;
-mod fake_inner;
-mod ibc;
+pub mod helpers;
+pub mod ics23;
+mod macros;
 pub mod msg;
 pub mod state;
+mod types;
 
-use crate::{crypto::PubKey, error::Error};
+pub use crate::error::ContractError;
+
+pub const CLIENT_STATE: &[u8] = b"client_state";
+pub const STORAGE_PREFIX: &[u8] = b"";
+
+pub type Bytes = Vec<u8>;

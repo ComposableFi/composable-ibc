@@ -679,7 +679,10 @@ pub async fn get_previous_transactions(
 			jsonrpc: "2.0".to_string(),
 			id: 1 as u64,
 			method: "getTransaction".to_string(),
-			params: (signature, Param { commitment: "confirmed".to_string(), maxSupportedTransactionVersion: 0 }),
+			params: (
+				signature,
+				Param { commitment: "confirmed".to_string(), maxSupportedTransactionVersion: 0 },
+			),
 		};
 		body.push(payload);
 	}
@@ -735,28 +738,24 @@ pub fn testing_events() {
 	let port_id = PortId::transfer();
 	let channel_id = ChannelId::new(15);
 	let recv_packet_events: Vec<_> = eves
-			.iter()
-			.filter_map(|tx| {
-				match tx {
-					solana_ibc::events::Event::IbcEvent(e) => match e {
-						ibc_core_handler_types::events::IbcEvent::WriteAcknowledgement(packet) =>
-							if packet.chan_id_on_a().as_str() == &channel_id.to_string() &&
-								packet.port_id_on_a().as_str() == port_id.as_str() &&
-								seqs.iter()
-									.find(|&&seq| packet.seq_on_a().value() == seq)
-									.is_some()
-							{
-								println!("We found packet");
-								Some(packet)
-							} else {
-								None
-							},
-						_ => None,
+		.iter()
+		.filter_map(|tx| match tx {
+			solana_ibc::events::Event::IbcEvent(e) => match e {
+				ibc_core_handler_types::events::IbcEvent::WriteAcknowledgement(packet) =>
+					if packet.chan_id_on_a().as_str() == &channel_id.to_string() &&
+						packet.port_id_on_a().as_str() == port_id.as_str() &&
+						seqs.iter().find(|&&seq| packet.seq_on_a().value() == seq).is_some()
+					{
+						println!("We found packet");
+						Some(packet)
+					} else {
+						None
 					},
-					_ => None,
-				}
-			})
-			.collect();
+				_ => None,
+			},
+			_ => None,
+		})
+		.collect();
 	// let client_state_logs: Vec<&str> = events
 	// 	.iter()
 	// 	.filter_map(|log| {

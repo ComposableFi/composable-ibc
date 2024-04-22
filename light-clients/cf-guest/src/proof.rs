@@ -1,16 +1,10 @@
 use core::str::FromStr;
 
-use alloc::{
-	string::{String, ToString},
-	vec::Vec,
-};
-
 use guestchain::BlockHeader;
 use ibc_core_host_types::path::{
-	AckPath, ChannelEndPath, ClientConnectionPath, CommitmentPath, ConnectionPath, Path, PortPath,
+	AckPath, ChannelEndPath, ClientConnectionPath, CommitmentPath, ConnectionPath, PortPath,
 	ReceiptPath, SeqAckPath, SeqRecvPath, SeqSendPath,
 };
-use lib::hash::CryptoHash;
 
 mod ibc {
 	pub use ibc::core::{
@@ -25,34 +19,7 @@ mod ibc {
 	};
 }
 
-#[derive(Clone, Debug, PartialEq, Eq)]
-pub struct IbcProof {
-	/// Serialised proof.
-	pub proof: ibc::CommitmentProofBytes,
-	/// Commitment root.
-	pub root: ibc::CommitmentRoot,
-	/// Value stored at the path (if it exists).
-	pub value: Option<CryptoHash>,
-}
-
-impl IbcProof {
-	/// Returns commitment prefix to use during verification.
-	pub fn prefix(&self) -> ibc::CommitmentPrefix {
-		Default::default()
-	}
-}
-
-#[derive(Clone, Debug, PartialEq, Eq, derive_more::From)]
-pub enum GenerateError {
-	/// State root in block header and root of trie don’t match.
-	WrongState,
-
-	/// Error reading data from the trie.
-	BadTrie(sealable_trie::Error),
-
-	/// Invalid path.
-	BadPath(trie_ids::path_info::Error),
-}
+pub use cf_guest_upstream::proof::{GenerateError, IbcProof, VerifyError};
 
 /// Generates a proof for given path.
 ///
@@ -90,64 +57,8 @@ pub fn generate<A: sealable_trie::Allocator>(
 	trie: &sealable_trie::Trie<A>,
 	path: ibc::path::Path,
 ) -> Result<IbcProof, GenerateError> {
-	if trie.hash() != &block_header.state_root {
-		return Err(GenerateError::WrongState)
-	}
-	let root = block_header.calc_hash().to_vec().into();
-
-	let new_path = convert_old_path_to_new(path.clone());
-	let trie_ids::PathInfo { key, seq_kind, .. } = new_path.try_into()?;
-	let (value, proof) = trie.prove(&key)?;
-	let mut proof = borsh::to_vec(&(&block_header, &proof)).unwrap();
-
-	if let Some((value, seq_kind)) = value.as_ref().zip(seq_kind) {
-		proof.reserve(16);
-		for (idx, val) in value.as_array().chunks_exact(8).take(3).enumerate() {
-			if idx != seq_kind as usize {
-				proof.extend_from_slice(val);
-			}
-		}
-	}
-
-	Ok(IbcProof { proof: proof.try_into().unwrap(), root, value })
-}
-
-#[derive(Clone, Debug, PartialEq, Eq, derive_more::From, derive_more::Display)]
-pub enum VerifyError {
-	/// Invalid commitment prefix (expected empty).
-	BadPrefix,
-
-	/// Invalid commitment root (expected 32 bytes).
-	BadRoot,
-
-	/// Invalid path.
-	BadPath(trie_ids::path_info::Error),
-
-	/// Failed deserialising the proof.
-	ProofDecodingFailure(String),
-
-	/// Invalid sequence value.
-	///
-	/// When verifying `SeqSend`, `SeqRecv` and `SeqAck` paths, the `value` to
-	/// verify must be `google.protobuf.UInt64Value` holding the sequence
-	/// number.  This error indicates that decoding that protocol message
-	/// failed.
-	WrongSequenceNumber(prost::DecodeError),
-
-	/// Proof verification failed.
-	VerificationFailed,
-
-	/// Signature is malformed
-	MalformedSignature,
-
-	/// Public key is malformed
-	MalformedPublicKey,
-}
-
-impl From<borsh::maybestd::io::Error> for VerifyError {
-	fn from(err: borsh::maybestd::io::Error) -> Self {
-		Self::ProofDecodingFailure(err.to_string())
-	}
+	let path = convert_old_path_to_new(path);
+	cf_guest_upstream::proof::generate(block_header, trie, path)
 }
 
 /// Verifies a proof for given entry or lack of entry.
@@ -177,265 +88,20 @@ pub fn verify(
 	path: ibc::path::Path,
 	value: Option<&[u8]>,
 ) -> Result<(), VerifyError> {
-	if !prefix.as_bytes().is_empty() {
-		return Err(VerifyError::BadPrefix)
-	}
-	let root = <&CryptoHash>::try_from(root.as_bytes()).map_err(|_| VerifyError::BadRoot)?;
-	let new_path = convert_old_path_to_new(path.clone());
-	let path = trie_ids::PathInfo::try_from(new_path.clone())?;
-
-	// TODO(mina86): There’s currently no way to borrow contents of
-	// CommitmentProofBytes.  Since we don’t own proof, the only way to
-	// get access to the bytes is by cloning and converting to a vector.
-	// See also <https://github.com/cosmos/ibc-rs/pull/1008>.
-	let proof_bytes = Vec::from(proof.clone());
-	let mut proof_bytes = proof_bytes.as_slice();
-
-	let (state_root, proof) = {
-		let (header, proof): (BlockHeader, sealable_trie::proof::Proof) =
-			borsh::BorshDeserialize::deserialize_reader(&mut proof_bytes)?;
-		if root != &header.calc_hash() {
-			panic!("Proof doesnt seem to match");
-			return Err(VerifyError::VerificationFailed)
-		}
-		(header.state_root, proof)
-	};
-
-	let values = if let Some(value) = value {
-		Some(if let Some(seq_kind) = path.seq_kind {
-			debug_assert!(path.client_id.is_none());
-			// If path.seq_kind is set, `value` must be encoded
-			// `google.protobuf.UInt64Value` holding the sequence number.
-			let seq = <u64 as prost::Message>::decode(value)?.to_be_bytes();
-
-			// Proof is followed by two more sequence numbers this time in
-			// big-endian.  We’re keeping sequence numbers together and we
-			// need all of them to figure out the hash kept in the trie.
-			let (head, tail) = stdx::split_at::<16, u8>(proof_bytes)
-				.ok_or_else(|| VerifyError::ProofDecodingFailure("Missing sequences".into()))?;
-			let (a, b) = stdx::split_array_ref(head);
-			proof_bytes = tail;
-
-			let hash = match seq_kind as u8 {
-				0 => [seq, *a, *b, [0u8; 8]],
-				1 => [*a, seq, *b, [0u8; 8]],
-				2 => [*a, *b, seq, [0u8; 8]],
-				_ => unreachable!(),
-			};
-			CryptoHash(bytemuck::must_cast(hash))
-			// CryptoHash::try_from(value).unwrap()
-		} else if let Some(id) = path.client_id.as_ref() {
-			// If path includes client id, hash stored in the trie is calculated
-			// with the id mixed in.
-			super::digest_with_client_id(&ibc::ClientId::from_str(id.as_str()).unwrap(), value)
-		} else {
-			// Otherwise, simply hash the value.
-			if matches!(new_path, Path::Commitment(_)) || matches!(new_path, Path::Ack(_)) {
-				<CryptoHash>::try_from(value).unwrap()
-			} else {
-				CryptoHash::digest(value)
-			}
-		})
-	} else {
-		None
-	};
-	// if matches!(new_path, Path::Ack(_)) {
-	// 	panic!("These are before conversion {:?} after conversion {:?}", value, values);
-	// }
-	if !proof_bytes.is_empty() {
-		Err(VerifyError::ProofDecodingFailure("Spurious bytes".into()))
-	} else if proof.verify(&state_root, &path.key, values.as_ref()) {
-		Ok(())
-	} else {
-		Err(VerifyError::VerificationFailed)
-	}
+	verify_bytes(prefix.as_bytes(), proof.as_bytes(), root.as_bytes(), path, value)
 }
 
-#[test]
-fn test_proofs() {
-	use alloc::vec;
-	use core::str::FromStr;
-
-	use ibc::identifier;
-
-	struct Trie {
-		trie: sealable_trie::Trie<memory::test_utils::TestAllocator<[u8; 72]>>,
-		header: BlockHeader,
-	}
-
-	impl Trie {
-		fn set(&mut self, key: &[u8], value: CryptoHash) {
-			self.trie.set(key, &value).unwrap();
-			self.header.state_root = self.trie.hash().clone();
-		}
-
-		fn root(&self) -> ibc::CommitmentRoot {
-			self.trie.hash().to_vec().into()
-		}
-	}
-
-	fn assert_path_proof(path: ibc::path::Path, value: &[u8], stored_hash: &CryptoHash) {
-		let trie = sealable_trie::Trie::new(memory::test_utils::TestAllocator::new(100));
-		let mut trie = Trie {
-			header: BlockHeader::generate_genesis(
-				guestchain::BlockHeight::from(0),
-				guestchain::HostHeight::from(42),
-				core::num::NonZeroU64::new(24).unwrap(),
-				trie.hash().clone(),
-				CryptoHash::test(86),
-			),
-			trie,
-		};
-
-		// First try non-membership proof.
-		let proof = generate(&trie.header, &trie.trie, path.clone()).unwrap();
-		assert!(proof.value.is_none());
-		verify(&proof.prefix(), &proof.proof, &proof.root, path.clone(), None).unwrap();
-
-		// Verify non-membership fails if value is inserted.
-		let new_path = convert_old_path_to_new(path.clone());
-		let key = trie_ids::PathInfo::try_from(new_path).unwrap().key;
-		trie.set(&key, stored_hash.clone());
-
-		assert_eq!(
-			Err(VerifyError::VerificationFailed),
-			verify(&proof.prefix(), &proof.proof, &trie.root(), path.clone(), None)
-		);
-
-		// Generate membership proof.
-		let proof = generate(&trie.header, &trie.trie, path.clone()).unwrap();
-		assert_eq!(Some(stored_hash), proof.value.as_ref());
-		verify(&proof.prefix(), &proof.proof, &proof.root, path.clone(), Some(value)).unwrap();
-
-		// Check invalid membership proofs
-		assert_eq!(
-			Err(VerifyError::BadPrefix),
-			verify(
-				&vec![1u8, 2, 3].try_into().unwrap(),
-				&proof.proof,
-				&proof.root,
-				path.clone(),
-				Some(value),
-			)
-		);
-
-		assert_eq!(
-			Err(VerifyError::BadRoot),
-			verify(
-				&proof.prefix(),
-				&proof.proof,
-				&vec![1u8, 2, 3].try_into().unwrap(),
-				path.clone(),
-				Some(value),
-			)
-		);
-
-		assert_eq!(
-			Err(VerifyError::ProofDecodingFailure("Unexpected length of input".into())),
-			verify(
-				&proof.prefix(),
-				&vec![0u8, 1, 2, 3].try_into().unwrap(),
-				&proof.root,
-				path.clone(),
-				Some(value),
-			)
-		);
-
-		let mut proof_bytes = Vec::from(proof.proof.clone());
-		proof_bytes.push(0);
-		assert_eq!(
-			Err(VerifyError::ProofDecodingFailure("Spurious bytes".into())),
-			verify(
-				&proof.prefix(),
-				&proof_bytes.try_into().unwrap(),
-				&proof.root,
-				path.clone(),
-				Some(value),
-			)
-		);
-
-		assert_eq!(
-			Err(VerifyError::VerificationFailed),
-			verify(
-				&proof.prefix(),
-				&proof.proof,
-				&CryptoHash::test(11).to_vec().into(),
-				path.clone(),
-				Some(value),
-			)
-		);
-	}
-
-	let client_id = identifier::ClientId::from_str("foo-bar-1").unwrap();
-	let connection_id = identifier::ConnectionId::new(4);
-	let port_id = identifier::PortId::transfer();
-	let channel_id = identifier::ChannelId::new(5);
-	let sequence = ibc::Sequence::from(6);
-
-	let value = b"foo";
-	let value_hash = CryptoHash::digest(value);
-	let cv_hash = super::digest_with_client_id(&client_id, value);
-
-	let seq_value = prost::Message::encode_to_vec(&20u64);
-	let seq_hash = |idx: usize| {
-		let mut hash = [[0u8; 8]; 4];
-		hash[idx] = 20u64.to_be_bytes();
-		CryptoHash(bytemuck::must_cast(hash))
-	};
-
-	macro_rules! check {
-		($path:expr) => {
-			check!($path, value, &value_hash)
-		};
-		($path:expr; having client) => {
-			check!($path, value, &cv_hash)
-		};
-		($path:expr, $value:expr, $hash:expr) => {
-			assert_path_proof($path.into(), $value, $hash)
-		};
-	}
-
-	check!(ibc::path::ClientStatePath(client_id.clone()); having client);
-	check!(ibc::path::ClientConsensusStatePath {
-        client_id: client_id.clone(),
-        epoch: 2,
-        height: 3,
-    }; having client);
-
-	check!(ibc::path::ConnectionsPath(connection_id));
-	check!(ibc::path::ChannelEndsPath(port_id.clone(), channel_id.clone()));
-
-	check!(
-		ibc::path::SeqSendsPath(port_id.clone(), channel_id.clone()),
-		seq_value.as_slice(),
-		&seq_hash(0)
-	);
-	check!(
-		ibc::path::SeqRecvsPath(port_id.clone(), channel_id.clone()),
-		seq_value.as_slice(),
-		&seq_hash(1)
-	);
-	check!(
-		ibc::path::SeqAcksPath(port_id.clone(), channel_id.clone()),
-		seq_value.as_slice(),
-		&seq_hash(2)
-	);
-
-	check!(ibc::path::CommitmentsPath {
-		port_id: port_id.clone(),
-		channel_id: channel_id.clone(),
-		sequence,
-	});
-	check!(ibc::path::AcksPath {
-		port_id: port_id.clone(),
-		channel_id: channel_id.clone(),
-		sequence,
-	});
-	check!(ibc::path::ReceiptsPath {
-		port_id: port_id.clone(),
-		channel_id: channel_id.clone(),
-		sequence,
-	});
+/// Verifies a proof for given entry or lack of entry.
+///
+/// Like [`verify`] but takes slice arguments rather than IBC types.
+pub fn verify_bytes(
+	prefix: &[u8],
+	proof: &[u8],
+	root: &[u8],
+	path: ibc::path::Path,
+	value: Option<&[u8]>,
+) -> Result<(), VerifyError> {
+	cf_guest_upstream::proof::verify(prefix, proof, root, convert_old_path_to_new(path), value)
 }
 
 fn convert_old_path_to_new(path: ibc::path::Path) -> ibc_core_host_types::path::Path {
@@ -513,7 +179,17 @@ fn convert_old_path_to_new(path: ibc::path::Path) -> ibc_core_host_types::path::
 				),
 				sequence: u64::from(e.sequence.0).into(),
 			}),
-		::ibc::core::ics24_host::Path::Upgrade(_) => panic!("Not supported"),
+		::ibc::core::ics24_host::Path::Upgrade(path) => {
+			use ::ibc::core::ics24_host::ClientUpgradePath;
+			use ibc_core_host_types::path::UpgradeClientPath;
+			match path {
+				ClientUpgradePath::UpgradedClientState(height) =>
+					UpgradeClientPath::UpgradedClientState(height),
+				ClientUpgradePath::UpgradedClientConsensusState(height) =>
+					UpgradeClientPath::UpgradedClientConsensusState(height),
+			}
+			.into()
+		},
 		::ibc::core::ics24_host::Path::Outside(e) => panic!("Not supported {:?}", e),
 	}
 }

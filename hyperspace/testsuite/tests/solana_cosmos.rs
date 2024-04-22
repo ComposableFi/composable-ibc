@@ -12,6 +12,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
+use anchor_lang::prelude::*;
 use core::time::Duration;
 use futures::StreamExt;
 use hyperspace_core::{
@@ -30,11 +31,11 @@ use hyperspace_testsuite::{
 	setup_connection_and_channel,
 };
 use ibc::core::{
-	ics02_client::msgs::update_client::MsgUpdateAnyClient, ics24_host::identifier::{ClientId, PortId},
+	ics02_client::msgs::update_client::MsgUpdateAnyClient,
+	ics24_host::identifier::{ClientId, PortId},
 };
 use ibc_proto::ibc::core::client::v1::MsgUpdateClient;
 use sp_core::hashing::sha2_256;
-use anchor_lang::prelude::*;
 use std::str::FromStr;
 
 #[derive(Debug, Clone)]
@@ -79,11 +80,13 @@ impl Default for Args {
 			cosmos_grpc: format!("http://10.132.0.6:9999/"), // mainnet
 			// cosmos_ws: format!("ws://{cosmos}:26657/websocket"),
 			// cosmos_ws: format!("ws://34.34.178.141:26657/websocket"),
-			// cosmos_ws: format!("wss://rpc-testnet5.composable-cosmos.composablenodes.tech/websocket"),
+			// cosmos_ws:
+			// format!("wss://rpc-testnet5.composable-cosmos.composablenodes.tech/websocket"),
 			// cosmos_ws: format!("ws://10.132.0.13:26657/websocket"),
 			cosmos_ws: format!("ws://10.132.0.6:26657/websocket"), // mainnet
-		  solana_ws: format!("ws://{solana}:8900"),
-			// solana_ws: format!("wss://devnet.helius-rpc.com/?api-key=bc5c0cfc-46df-4781-978f-af6ca7a202c2"),
+			solana_ws: format!("ws://{solana}:8900"),
+			// solana_ws:
+			// format!("wss://devnet.helius-rpc.com/?api-key=bc5c0cfc-46df-4781-978f-af6ca7a202c2"),
 			wasm_path,
 		}
 	}
@@ -123,8 +126,7 @@ async fn setup_clients() -> (AnyChain, AnyChain) {
 		],
 		solana_ibc_program_id: "3MZrLWwMvD9mcMiNd7mnbrqmZDzjg29qmLo7FMTqr3qT".to_string(),
 		write_program_id: "FttaQtn8T8CnDCXd7JwxvkkKSYgVi7XwwyY7p2b6TCUt".to_string(),
-		signature_verifier_program_id: 
-			"2G9Wsz1LfzJ2gpVbeXuSciih2s3wKdj4fcTjeD1JJ3M1".to_string(),
+		signature_verifier_program_id: "2G9Wsz1LfzJ2gpVbeXuSciih2s3wKdj4fcTjeD1JJ3M1".to_string(),
 	};
 
 	let mut config_b = CosmosClientConfig {
@@ -182,7 +184,8 @@ async fn setup_clients() -> (AnyChain, AnyChain) {
 	// 	},
 	// };
 	// let code_id_str = hex::encode(code_id);
-	let code_id_str = String::from("66ce7420d21e2555b0e6ce952c0826590fb5f6508a9ac84a5c11178cec58a303");
+	let code_id_str =
+		String::from("66ce7420d21e2555b0e6ce952c0826590fb5f6508a9ac84a5c11178cec58a303");
 	log::info!("This is wasm checksum {:?}", code_id_str);
 	config_b.wasm_code_id = Some(code_id_str);
 

@@ -161,7 +161,7 @@ impl IbcProvider for SolanaClient {
 			unreachable!()
 		};
 		log::info!("This is client state {:?}", client_state);
-		let latest_cp_client_height = u64::from(client_state.latest_height);
+		let latest_cp_client_height = u64::from(client_state.0.latest_height);
 		let block_header = events::get_header_from_height(
 			self.rpc_client(),
 			self.solana_ibc_program_id,
@@ -232,7 +232,7 @@ impl IbcProvider for SolanaClient {
 				(index as u16, signature.clone())
 			})
 			.collect();
-		let guest_header = cf_guest::Header {
+		let guest_header = cf_guest_og::Header {
 			genesis_hash: chain_account.genesis().unwrap().clone(),
 			block_hash,
 			block_header: block_header.clone(),
@@ -255,7 +255,7 @@ impl IbcProvider for SolanaClient {
 		);
 		let msg = MsgUpdateAnyClient::<LocalClientTypes> {
 			client_id: self.client_id(),
-			client_message: AnyClientMessage::Guest(cf_guest::ClientMessage::Header(guest_header)),
+			client_message: AnyClientMessage::Guest(guest_header.into()),
 			signer: counterparty.account_id(),
 		};
 		let value = msg
@@ -1546,14 +1546,15 @@ deserialize client state"
 			header.block_height,
 			64000 * 10_u64.pow(9),
 			epoch.calc_commitment(),
+			None,
 			false,
 		);
 		log::info!("This is epoch id {:?}", header.epoch_id);
-		let consensus_state = cf_guest::ConsensusState {
+		let consensus_state = cf_guest_og::ConsensusState {
 			block_hash: blockhash.to_vec().into(),
 			timestamp_ns: header.timestamp_ns,
 		};
-		Ok((AnyClientState::Guest(client_state), AnyConsensusState::Guest(consensus_state)))
+		Ok((AnyClientState::Guest(client_state), AnyConsensusState::Guest(consensus_state.into())))
 	}
 
 	async fn query_client_id_from_tx_hash(
@@ -1730,7 +1731,7 @@ impl LightClientSync for SolanaClient {
 		else {
 			unreachable!()
 		};
-		let height = client_state.latest_height.into();
+		let height = client_state.0.latest_height.into();
 		let signatures = events::get_signatures_upto_height(
 			self.rpc_client(),
 			self.solana_ibc_program_id,
@@ -1759,7 +1760,7 @@ impl LightClientSync for SolanaClient {
 					})
 					.collect();
 				log::info!("Final validator in fetch mandatory updates {:?}", final_signatures);
-				let guest_header = cf_guest::Header {
+				let guest_header = cf_guest_og::Header {
 					genesis_hash: chain_account.genesis().unwrap().clone(),
 					block_hash: block_header.calc_hash(),
 					block_header: block_header.clone(),
@@ -1775,11 +1776,10 @@ impl LightClientSync for SolanaClient {
 					signatures: final_signatures,
 				};
 				log::info!("Height: {:?} signature {:?}", block_header.block_height, sig);
+
 				let msg = MsgUpdateAnyClient::<LocalClientTypes> {
 					client_id: self.client_id(),
-					client_message: AnyClientMessage::Guest(cf_guest::ClientMessage::Header(
-						guest_header,
-					)),
+					client_message: AnyClientMessage::Guest(guest_header.into()),
 					signer: counterparty.account_id(),
 				};
 				let value = msg

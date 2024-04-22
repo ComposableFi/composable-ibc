@@ -13,23 +13,27 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
+use crate::{ics23::FakeInner, Bytes, ContractError};
 use core::str::FromStr;
 use cosmwasm_schema::cw_serde;
-
 use ibc::{
-	core::{ics23_commitment::commitment::CommitmentProofBytes, ics24_host::Path},
+	core::{
+		ics23_commitment::commitment::{CommitmentPrefix, CommitmentProofBytes},
+		ics24_host::Path,
+	},
 	protobuf::Protobuf,
 	Height,
 };
 use ibc_proto::{google::protobuf::Any, ibc::core::client::v1::Height as HeightRaw};
+
+use cf_guest::{ClientMessage, ClientState, Header, Misbehaviour};
+
 use ics08_wasm::{
 	client_message::Header as WasmHeader, client_state::ClientState as WasmClientState,
 	consensus_state::ConsensusState as WasmConsensusState,
 };
 use prost::Message;
 use serde::{Deserializer, Serializer};
-
-use crate::{fake_inner::FakeInner, state, Error};
 
 struct Base64;
 
@@ -44,39 +48,55 @@ impl Base64 {
 }
 
 #[cw_serde]
+pub struct GenesisMetadata {
+	pub key: Vec<u8>,
+	pub value: Vec<u8>,
+}
+
+#[cw_serde]
 pub struct QueryResponse {
 	pub status: String,
+	#[serde(skip_serializing_if = "Option::is_none")]
+	pub genesis_metadata: Option<Vec<GenesisMetadata>>,
 }
 
 impl QueryResponse {
-	pub fn new(status: &str) -> Self {
-		Self { status: status.into() }
+	pub fn status(status: String) -> Self {
+		Self { status, genesis_metadata: None }
+	}
+
+	pub fn genesis_metadata(genesis_metadata: Option<Vec<GenesisMetadata>>) -> Self {
+		Self { status: "".to_string(), genesis_metadata }
 	}
 }
 
 #[cw_serde]
 pub struct ContractResult {
 	pub is_valid: bool,
+	pub error_msg: String,
+	#[serde(skip_serializing_if = "Option::is_none")]
+	pub data: Option<Vec<u8>>,
 	pub found_misbehaviour: bool,
 }
 
 impl ContractResult {
 	pub fn success() -> Self {
-		Self { is_valid: true, found_misbehaviour: false }
+		Self { is_valid: true, error_msg: "".to_string(), data: None, found_misbehaviour: false }
+	}
+
+	pub fn error(msg: String) -> Self {
+		Self { is_valid: false, error_msg: msg, data: None, found_misbehaviour: false }
 	}
 
 	pub fn misbehaviour(mut self, found: bool) -> Self {
 		self.found_misbehaviour = found;
 		self
 	}
-}
 
-#[cw_serde]
-pub struct ClientStateCallResponse {
-	pub client_state: WasmClientState<FakeInner, FakeInner, FakeInner>,
-	pub new_consensus_state: WasmConsensusState<FakeInner>,
-	pub new_client_state: WasmClientState<FakeInner, FakeInner, FakeInner>,
-	pub result: ContractResult,
+	pub fn data(mut self, data: Vec<u8>) -> Self {
+		self.data = Some(data);
+		self
+	}
 }
 
 #[cw_serde]
@@ -86,24 +106,19 @@ pub struct InstantiateMsg {}
 pub enum ExecuteMsg {
 	VerifyMembership(VerifyMembershipMsgRaw),
 	VerifyNonMembership(VerifyNonMembershipMsgRaw),
-	VerifyClientMessage(VerifyClientMessageMsgRaw),
+	VerifyClientMessage(VerifyClientMessageRaw),
 	CheckForMisbehaviour(CheckForMisbehaviourMsgRaw),
 	UpdateStateOnMisbehaviour(UpdateStateOnMisbehaviourMsgRaw),
 	UpdateState(UpdateStateMsgRaw),
-	CheckSubstituteAndUpdateState(CheckSubstituteAndUpdateStateMsgRaw),
+	CheckSubstituteAndUpdateState(CheckSubstituteAndUpdateStateMsg),
 	VerifyUpgradeAndUpdateState(VerifyUpgradeAndUpdateStateMsgRaw),
 }
 
 #[cw_serde]
-#[derive(cosmwasm_schema::QueryResponses)]
 pub enum QueryMsg {
-	#[returns(QueryResponse)]
 	ClientTypeMsg(ClientTypeMsg),
-	#[returns(QueryResponse)]
 	GetLatestHeightsMsg(GetLatestHeightsMsg),
-	#[returns(QueryResponse)]
 	ExportMetadata(ExportMetadataMsg),
-	#[returns(QueryResponse)]
 	Status(StatusMsg),
 }
 
@@ -128,60 +143,84 @@ pub struct MerklePath {
 pub struct VerifyMembershipMsgRaw {
 	#[schemars(with = "String")]
 	#[serde(with = "Base64", default)]
-	pub proof: Vec<u8>,
+	pub proof: Bytes,
 	pub path: MerklePath,
 	#[schemars(with = "String")]
 	#[serde(with = "Base64", default)]
-	pub value: Vec<u8>,
+	pub value: Bytes,
 	pub height: HeightRaw,
 	pub delay_block_period: u64,
 	pub delay_time_period: u64,
+}
+
+pub struct VerifyMembershipMsg {
+	pub prefix: CommitmentPrefix,
+	pub proof: CommitmentProofBytes,
+	pub path: Path,
+	pub value: Vec<u8>,
+	pub height: Height,
+	pub delay_block_period: u64,
+	pub delay_time_period: u64,
+}
+
+impl TryFrom<VerifyMembershipMsgRaw> for VerifyMembershipMsg {
+	type Error = ContractError;
+
+	fn try_from(mut raw: VerifyMembershipMsgRaw) -> Result<Self, Self::Error> {
+		let proof = CommitmentProofBytes::try_from(raw.proof)?;
+		let prefix = raw.path.key_path.remove(0).into_bytes();
+		let path_str = raw.path.key_path.join("");
+		let path = Path::from_str(&path_str)?;
+		let height = Height::from(raw.height);
+		Ok(Self {
+			proof,
+			path,
+			value: raw.value,
+			height,
+			prefix: CommitmentPrefix::try_from(prefix)?,
+			delay_block_period: raw.delay_block_period,
+			delay_time_period: raw.delay_time_period,
+		})
+	}
 }
 
 #[cw_serde]
 pub struct VerifyNonMembershipMsgRaw {
 	#[schemars(with = "String")]
 	#[serde(with = "Base64", default)]
-	pub proof: Vec<u8>,
+	pub proof: Bytes,
 	pub path: MerklePath,
 	pub height: HeightRaw,
+	pub delay_block_period: u64,
+	pub delay_time_period: u64,
 }
 
-pub(crate) struct VerifyStateProof {
+pub struct VerifyNonMembershipMsg {
+	pub prefix: CommitmentPrefix,
 	pub proof: CommitmentProofBytes,
 	pub path: Path,
-	pub value: Option<Vec<u8>>,
 	pub height: Height,
+	pub delay_block_period: u64,
+	pub delay_time_period: u64,
 }
 
-impl TryFrom<VerifyMembershipMsgRaw> for VerifyStateProof {
-	type Error = crate::Error;
+impl TryFrom<VerifyNonMembershipMsgRaw> for VerifyNonMembershipMsg {
+	type Error = ContractError;
 
-	fn try_from(raw: VerifyMembershipMsgRaw) -> Result<Self, Self::Error> {
-		Self::new(raw.proof, raw.path, Some(raw.value), raw.height)
-	}
-}
-
-impl TryFrom<VerifyNonMembershipMsgRaw> for VerifyStateProof {
-	type Error = crate::Error;
-
-	fn try_from(raw: VerifyNonMembershipMsgRaw) -> Result<Self, Self::Error> {
-		Self::new(raw.proof, raw.path, None, raw.height)
-	}
-}
-
-impl VerifyStateProof {
-	fn new(
-		proof: Vec<u8>,
-		path: MerklePath,
-		value: Option<Vec<u8>>,
-		height: HeightRaw,
-	) -> Result<Self, Error> {
-		let proof = CommitmentProofBytes::try_from(proof).map_err(|_| Error::BadMessage)?;
-		let path_str = path.key_path.join("");
-		let path = Path::from_str(&path_str).map_err(|_| Error::BadMessage)?;
-		let height = Height::from(height);
-		Ok(Self { proof, path, value, height })
+	fn try_from(mut raw: VerifyNonMembershipMsgRaw) -> Result<Self, Self::Error> {
+		let proof = CommitmentProofBytes::try_from(raw.proof)?;
+		let prefix = raw.path.key_path.remove(0).into_bytes();
+		let path_str = raw.path.key_path.join("");
+		let path = Path::from_str(&path_str)?;
+		let height = Height::from(raw.height);
+		Ok(Self {
+			proof,
+			path,
+			height,
+			prefix: CommitmentPrefix::try_from(prefix)?,
+			delay_block_period: raw.delay_block_period,
+			delay_time_period: raw.delay_time_period,
+		})
 	}
 }
 
@@ -189,7 +228,7 @@ impl VerifyStateProof {
 pub struct WasmMisbehaviour {
 	#[schemars(with = "String")]
 	#[serde(with = "Base64", default)]
-	pub data: Vec<u8>,
+	pub data: Bytes,
 }
 
 #[cw_serde]
@@ -199,35 +238,35 @@ pub enum ClientMessageRaw {
 }
 
 #[cw_serde]
-pub struct VerifyClientMessageMsgRaw {
+pub struct VerifyClientMessageRaw {
 	pub client_message: ClientMessageRaw,
 }
 
-pub struct VerifyClientMessageMsg {
-	pub client_message: state::ClientMessage,
+pub struct VerifyClientMessage {
+	pub client_message: ClientMessage<crate::crypto::PubKey>,
 }
 
-impl TryFrom<VerifyClientMessageMsgRaw> for VerifyClientMessageMsg {
-	type Error = Error;
+impl TryFrom<VerifyClientMessageRaw> for VerifyClientMessage {
+	type Error = ContractError;
 
-	fn try_from(raw: VerifyClientMessageMsgRaw) -> Result<Self, Self::Error> {
+	fn try_from(raw: VerifyClientMessageRaw) -> Result<Self, Self::Error> {
 		let client_message = Self::decode_client_message(raw.client_message)?;
 		Ok(Self { client_message })
 	}
 }
 
-impl VerifyClientMessageMsg {
-	fn decode_client_message(raw: ClientMessageRaw) -> Result<state::ClientMessage, Error> {
-		// let any = Any::decode(&mut data.as_slice()).unwrap();
-		// let state = state::ClientMessage::decode_vec(&any.value).unwrap();
+impl VerifyClientMessage {
+	fn decode_client_message(
+		raw: ClientMessageRaw,
+	) -> Result<ClientMessage<crate::crypto::PubKey>, ContractError> {
 		let client_message = match raw {
 			ClientMessageRaw::Header(header) => {
 				let any = Any::decode(&mut header.data.as_slice())?;
-				state::ClientMessage::decode_vec(&any.value)?
+				Header::decode_vec(&any.value)?.into()
 			},
 			ClientMessageRaw::Misbehaviour(misbehaviour) => {
 				let any = Any::decode(&mut misbehaviour.data.as_slice())?;
-				state::ClientMessage::decode_vec(&any.value)?
+				Misbehaviour::decode_vec(&any.value)?.into()
 			},
 		};
 		Ok(client_message)
@@ -240,14 +279,14 @@ pub struct CheckForMisbehaviourMsgRaw {
 }
 
 pub struct CheckForMisbehaviourMsg {
-	pub client_message: state::ClientMessage,
+	pub client_message: ClientMessage<crate::crypto::PubKey>,
 }
 
 impl TryFrom<CheckForMisbehaviourMsgRaw> for CheckForMisbehaviourMsg {
-	type Error = Error;
+	type Error = ContractError;
 
 	fn try_from(raw: CheckForMisbehaviourMsgRaw) -> Result<Self, Self::Error> {
-		let client_message = VerifyClientMessageMsg::decode_client_message(raw.client_message)?;
+		let client_message = VerifyClientMessage::decode_client_message(raw.client_message)?;
 		Ok(Self { client_message })
 	}
 }
@@ -258,14 +297,14 @@ pub struct UpdateStateOnMisbehaviourMsgRaw {
 }
 
 pub struct UpdateStateOnMisbehaviourMsg {
-	pub client_message: state::ClientMessage,
+	pub client_message: ClientMessage<crate::crypto::PubKey>,
 }
 
 impl TryFrom<UpdateStateOnMisbehaviourMsgRaw> for UpdateStateOnMisbehaviourMsg {
-	type Error = Error;
+	type Error = ContractError;
 
 	fn try_from(raw: UpdateStateOnMisbehaviourMsgRaw) -> Result<Self, Self::Error> {
-		let client_message = VerifyClientMessageMsg::decode_client_message(raw.client_message)?;
+		let client_message = VerifyClientMessage::decode_client_message(raw.client_message)?;
 		Ok(Self { client_message })
 	}
 }
@@ -276,32 +315,20 @@ pub struct UpdateStateMsgRaw {
 }
 
 pub struct UpdateStateMsg {
-	pub client_message: state::ClientMessage,
+	pub client_message: ClientMessage<crate::crypto::PubKey>,
 }
 
 impl TryFrom<UpdateStateMsgRaw> for UpdateStateMsg {
-	type Error = Error;
+	type Error = ContractError;
 
 	fn try_from(raw: UpdateStateMsgRaw) -> Result<Self, Self::Error> {
-		let client_message = VerifyClientMessageMsg::decode_client_message(raw.client_message)?;
+		let client_message = VerifyClientMessage::decode_client_message(raw.client_message)?;
 		Ok(Self { client_message })
 	}
 }
 
 #[cw_serde]
-pub struct CheckSubstituteAndUpdateStateMsgRaw {}
-
 pub struct CheckSubstituteAndUpdateStateMsg {}
-
-impl TryFrom<CheckSubstituteAndUpdateStateMsgRaw> for CheckSubstituteAndUpdateStateMsg {
-	type Error = Error;
-
-	fn try_from(
-		CheckSubstituteAndUpdateStateMsgRaw {}: CheckSubstituteAndUpdateStateMsgRaw,
-	) -> Result<Self, Self::Error> {
-		Ok(Self {})
-	}
-}
 
 #[cw_serde]
 pub struct VerifyUpgradeAndUpdateStateMsgRaw {
@@ -309,61 +336,37 @@ pub struct VerifyUpgradeAndUpdateStateMsgRaw {
 	pub upgrade_consensus_state: WasmConsensusState<FakeInner>,
 	#[schemars(with = "String")]
 	#[serde(with = "Base64", default)]
-	pub proof_upgrade_client: Vec<u8>,
+	pub proof_upgrade_client: Bytes,
 	#[schemars(with = "String")]
 	#[serde(with = "Base64", default)]
-	pub proof_upgrade_consensus_state: Vec<u8>,
+	pub proof_upgrade_consensus_state: Bytes,
 }
 
 pub struct VerifyUpgradeAndUpdateStateMsg {
-	pub upgrade_client_state: state::ClientState,
-	pub upgrade_consensus_state: state::ConsensusState,
-	pub proof_upgrade_client: Vec<u8>,
-	pub proof_upgrade_consensus_state: Vec<u8>,
+	pub upgrade_client_state: WasmClientState<FakeInner, FakeInner, FakeInner>,
+	pub upgrade_consensus_state: WasmConsensusState<FakeInner>,
+	pub proof_upgrade_client: CommitmentProofBytes,
+	pub proof_upgrade_consensus_state: CommitmentProofBytes,
 }
 
 impl TryFrom<VerifyUpgradeAndUpdateStateMsgRaw> for VerifyUpgradeAndUpdateStateMsg {
-	type Error = Error;
+	type Error = ContractError;
 
 	fn try_from(raw: VerifyUpgradeAndUpdateStateMsgRaw) -> Result<Self, Self::Error> {
 		let any = Any::decode(&mut raw.upgrade_client_state.data.as_slice())?;
-		let upgrade_client_state = state::ClientState::decode_vec(&any.value)?;
-		let any = Any::decode(&mut raw.upgrade_consensus_state.data.as_slice())?;
-		let upgrade_consensus_state = state::ConsensusState::decode_vec(&any.value)?;
+		let upgrade_client_state: ClientState<crate::crypto::PubKey> =
+			ClientState::decode_vec(&any.value)?;
+		if upgrade_client_state.0.is_frozen {
+			return Err(ContractError::Other("Upgrade client state not zeroed".into()))
+		}
+
 		Ok(VerifyUpgradeAndUpdateStateMsg {
-			upgrade_client_state,
-			upgrade_consensus_state,
-			proof_upgrade_client: raw.proof_upgrade_client,
-			proof_upgrade_consensus_state: raw.proof_upgrade_consensus_state,
+			upgrade_client_state: raw.upgrade_client_state,
+			upgrade_consensus_state: raw.upgrade_consensus_state,
+			proof_upgrade_client: CommitmentProofBytes::try_from(raw.proof_upgrade_client)?,
+			proof_upgrade_consensus_state: CommitmentProofBytes::try_from(
+				raw.proof_upgrade_consensus_state,
+			)?,
 		})
-	}
-}
-
-mod unit_test {
-	use ibc_proto::google::protobuf::Any;
-	use ics08_wasm::client_message::Header;
-
-	use crate::{fake_inner::FakeInner, state::{self, ConsensusState}};
-	use ::ibc::protobuf::Protobuf;
-	use prost::Message;
-
-	#[test]
-	pub fn test_decoding() {
-		let data = vec![
-			10, 103, 10, 55, 99, 111, 109, 112, 111, 115, 97, 98, 108, 101, 46, 102, 105, 110, 97,
-			110, 99, 101, 47, 108, 105, 103, 104, 116, 99, 108, 105, 101, 110, 116, 115, 46, 103,
-			117, 101, 115, 116, 46, 118, 49, 46, 67, 111, 110, 115, 101, 110, 115, 117, 115, 83,
-			116, 97, 116, 101, 18, 44, 10, 32, 116, 178, 154, 83, 135, 120, 95, 99, 184, 182, 87,
-			49, 240, 126, 146, 5, 170, 86, 186, 125, 181, 226, 217, 226, 189, 224, 18, 192, 136,
-			173, 242, 189, 16, 128, 244, 203, 147, 182, 138, 179, 222, 23, 16, 128, 244, 203, 147,
-			182, 138, 179, 222, 23,
-		];
-		let any = Any {
-			type_url: "/ibc.lightclients.wasm.v1.ConsensusState".to_string(),
-			value: data
-		};
-		let wasm_state =
-			ics08_wasm::consensus_state::ConsensusState::<FakeInner>::decode_vec(&any.value)
-				.unwrap();
 	}
 }

@@ -1,5 +1,10 @@
-use alloc::{borrow::ToOwned, boxed::Box, format, string::ToString, vec::Vec};
-use alloc::borrow::Cow;
+use alloc::{
+	borrow::{Cow, ToOwned},
+	boxed::Box,
+	format,
+	string::ToString,
+	vec::Vec,
+};
 // use cf_guest::proto::{
 // 	ClientState::TYPE_URL as GUEST_CLIENT_STATE_TYPE_URL,
 // 	ConsensusState::TYPE_URL as GUEST_CONSENSUS_STATE_TYPE_URL,
@@ -68,15 +73,11 @@ use tendermint::{
 };
 use tendermint_proto::Protobuf;
 
-pub const GUEST_CLIENT_STATE_TYPE_URL: &str =
-	"/lightclients.guest.v1.ClientState";
-pub const GUEST_CONSENSUS_STATE_TYPE_URL: &str =
-	"/lightclients.guest.v1.ConsensusState";
-pub const GUEST_CLIENT_MESSAGE_TYPE_URL: &str =
-	"/lightclients.guest.v1.ClientMessage";
+pub const GUEST_CLIENT_STATE_TYPE_URL: &str = "/lightclients.guest.v1.ClientState";
+pub const GUEST_CONSENSUS_STATE_TYPE_URL: &str = "/lightclients.guest.v1.ConsensusState";
+pub const GUEST_CLIENT_MESSAGE_TYPE_URL: &str = "/lightclients.guest.v1.ClientMessage";
 pub const GUEST_HEADER_TYPE_URL: &str = "/lightclients.guest.v1.Header";
-pub const GUEST_MISBEHAVIOUR_TYPE_URL: &str =
-	"/lightclients.guest.v1.Misbehaviour";
+pub const GUEST_MISBEHAVIOUR_TYPE_URL: &str = "/lightclients.guest.v1.Misbehaviour";
 
 #[derive(Clone, Default, PartialEq, Debug, Eq)]
 pub struct HostFunctionsManager;
@@ -96,7 +97,9 @@ impl guestchain::PubKey for PubKey {
 		bytes.try_into().map(Self).map_err(|_| guestchain::BadFormat)
 	}
 
-	fn as_bytes(&self) -> Cow<'_, [u8]> { todo!() }
+	fn as_bytes(&self) -> Cow<'_, [u8]> {
+		todo!()
+	}
 }
 
 impl borsh::BorshSerialize for PubKey {
@@ -142,8 +145,9 @@ impl guestchain::Signature for Signature {
 			.map_err(|_| guestchain::BadFormat)
 	}
 
-	fn as_bytes(&self) -> Cow<'_, [u8]> { todo!() }
-
+	fn as_bytes(&self) -> Cow<'_, [u8]> {
+		todo!()
+	}
 }
 
 impl borsh::BorshSerialize for Signature {
@@ -425,8 +429,7 @@ impl AnyClientState {
 			AnyClientState::Beefy(client_state) => client_state.latest_height(),
 			AnyClientState::Tendermint(client_state) => client_state.latest_height(),
 			AnyClientState::Wasm(client_state) => client_state.latest_height(),
-			AnyClientState::Guest(client_state) =>
-				ibc::Height::new(1, u64::from(client_state.latest_height)),
+			AnyClientState::Guest(client_state) => client_state.latest_height(),
 			#[cfg(any(test, feature = "testing"))]
 			AnyClientState::Mock(client_state) => client_state.latest_height(),
 		}
@@ -499,11 +502,7 @@ impl AnyClientMessage {
 					h.inner.maybe_header_height(),
 				ics08_wasm::client_message::ClientMessage::Misbehaviour(_) => None,
 			},
-			Self::Guest(inner) => match inner {
-				cf_guest::ClientMessage::Header(h) =>
-					Some(Height::new(1, u64::from(h.block_header.block_height))),
-				cf_guest::ClientMessage::Misbehaviour(_) => None,
-			},
+			Self::Guest(inner) => inner.maybe_header_height(),
 			#[cfg(any(test, feature = "testing"))]
 			Self::Mock(inner) => match inner {
 				ibc::mock::header::MockClientMessage::Header(h) => Some(h.height()),
@@ -601,11 +600,11 @@ impl TryFrom<Any> for AnyClientMessage {
 				cf_guest::ClientMessage::decode_vec(&value.value)
 					.map_err(ics02_client::error::Error::decode_raw_header)?,
 			)),
-			GUEST_HEADER_TYPE_URL => Ok(Self::Guest(cf_guest::ClientMessage::Header(
+			GUEST_HEADER_TYPE_URL => Ok(Self::Guest(cf_guest::ClientMessage::from(
 				cf_guest::Header::decode_vec(&value.value)
 					.map_err(ics02_client::error::Error::decode_raw_header)?,
 			))),
-			GUEST_MISBEHAVIOUR_TYPE_URL => Ok(Self::Guest(cf_guest::ClientMessage::Misbehaviour(
+			GUEST_MISBEHAVIOUR_TYPE_URL => Ok(Self::Guest(cf_guest::ClientMessage::from(
 				cf_guest::Misbehaviour::decode_vec(&value.value)
 					.map_err(ics02_client::error::Error::decode_raw_header)?,
 			))),

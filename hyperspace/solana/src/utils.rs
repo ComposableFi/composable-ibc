@@ -93,8 +93,6 @@ pub fn new_ed25519_instruction_with_signature(
 	}
 }
 
-pub fn ed25519_signature_payload(
-	entries: Vec<Entry>,	
-) -> Option<Instruction> {
+pub fn ed25519_signature_payload(entries: Vec<Entry>) -> Option<Instruction> {
 	new_instruction(&entries)
 }

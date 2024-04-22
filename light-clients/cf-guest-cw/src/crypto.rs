@@ -11,6 +11,11 @@ impl guestchain::PubKey for PubKey {
 	fn to_vec(&self) -> Vec<u8> {
 		self.0.as_bytes().to_vec()
 	}
+
+	fn as_bytes<'a>(&'a self) -> alloc::borrow::Cow<'a, [u8]> {
+		alloc::borrow::Cow::Borrowed(&self.0.as_bytes()[..])
+	}
+
 	fn from_bytes(bytes: &[u8]) -> Result<Self, guestchain::BadFormat> {
 		bytes.try_into().map(Self).map_err(|_| guestchain::BadFormat)
 	}
@@ -53,6 +58,11 @@ impl guestchain::Signature for Signature {
 	fn to_vec(&self) -> Vec<u8> {
 		self.0.to_vec()
 	}
+
+	fn as_bytes<'a>(&'a self) -> alloc::borrow::Cow<'a, [u8]> {
+		self.0.to_vec().into()
+	}
+
 	fn from_bytes(bytes: &[u8]) -> Result<Self, guestchain::BadFormat> {
 		ed25519_dalek::Signature::from_slice(bytes)
 			.map(Self)

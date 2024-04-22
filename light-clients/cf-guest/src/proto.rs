@@ -1,13 +1,52 @@
-use ibc_proto::google::protobuf::Any;
-use prost::Message as _;
+use alloc::string::ToString;
 
-mod pb {
-	include!(concat!(env!("OUT_DIR"), "/messages.rs"));
+macro_rules! import_proto {
+	($Msg:ident) => {
+		$crate::wrap!(cf_guest_upstream::proto::$Msg as $Msg);
+		$crate::wrap!(impl Default for $Msg);
+
+		impl prost::Message for $Msg {
+			fn encode_raw<B: prost::bytes::BufMut>(&self, buf: &mut B) {
+				prost_12::Message::encode_raw(&self.0, buf)
+			}
+
+			fn merge_field<B: prost::bytes::Buf>(
+				&mut self,
+				tag: u32,
+				wire_type: prost::encoding::WireType,
+				buf: &mut B,
+				_ctx: prost::encoding::DecodeContext,
+			) -> Result<(), prost::DecodeError> {
+				// SAFETY: The types are identical in prost 0.11 and prost.12.
+				let wire_type = unsafe {
+					core::mem::transmute(wire_type as u8)
+				};
+				prost_12::Message::merge_field(&mut self.0, tag, wire_type, buf, Default::default())
+					.map_err(|err| {
+						// SAFETY: The types are identical in prost 0.11 and prost.12.
+						unsafe {
+							core::mem::transmute(err)
+						}
+					})
+			}
+
+			fn encoded_len(&self) -> usize {
+				prost_12::Message::encoded_len(&self.0)
+			}
+
+			fn clear(&mut self) {
+				prost_12::Message::clear(&mut self.0)
+			}
+		}
+	}
 }
 
-pub use pb::lightclients::guest::v1::{
-	ClientMessage, ClientState, ConsensusState, Header, Misbehaviour, Signature,
-};
+import_proto!(ClientMessage);
+import_proto!(ClientState);
+import_proto!(ConsensusState);
+import_proto!(Header);
+import_proto!(Misbehaviour);
+import_proto!(Signature);
 
 /// Error during decoding of a protocol message.
 #[derive(Clone, PartialEq, Eq, derive_more::From)]
@@ -16,7 +55,7 @@ pub enum DecodeError {
 	///
 	/// This means that the supplied bytes weren’t a valid protocol buffer or
 	/// they didn’t correspond to the expected message.
-	BadProto(prost::DecodeError),
+	BadProto(alloc::string::String),
 
 	/// Protocol message represents invalid state; see [`BadMessage`].
 	#[from(ignore)]
@@ -28,6 +67,16 @@ pub enum DecodeError {
 	BadType,
 }
 
+impl From<cf_guest_upstream::DecodeError> for DecodeError {
+	fn from(err: cf_guest_upstream::DecodeError) -> Self {
+		match err {
+			cf_guest_upstream::DecodeError::BadProto(err) => Self::BadProto(err.to_string()),
+			cf_guest_upstream::DecodeError::BadMessage => Self::BadMessage,
+			cf_guest_upstream::DecodeError::BadType => Self::BadType,
+		}
+	}
+}
+
 /// Error during validation of a protocol message.
 ///
 /// Typing in protocol messages is less descriptive than in Rust.  It’s possible
@@ -35,6 +84,12 @@ pub enum DecodeError {
 /// a valid state.
 #[derive(Copy, Clone, Debug, PartialEq, Eq)]
 pub struct BadMessage;
+
+impl From<cf_guest_upstream::BadMessage> for BadMessage {
+	fn from(_: cf_guest_upstream::BadMessage) -> Self {
+		Self
+	}
+}
 
 impl From<BadMessage> for DecodeError {
 	fn from(_: BadMessage) -> Self {
@@ -66,123 +121,16 @@ impl core::fmt::Display for BadMessage {
 	}
 }
 
-macro_rules! impl_proto {
-	($Msg:ident; $test:ident; $test_object:expr) => {
-		impl pb::lightclients::guest::v1::$Msg {
-			/// Type URL of the type as used in Any protocol message.
-			///
-			/// This is the same value as returned by [`prost::Name::type_url`]
-			/// however it’s a `const` and is set at compile time.  (In current
-			/// Prost implementation, `type_url` method computes the URL at
-			/// run-time).
-
-			// "/ibc.lightclients.wasm.v1.ClientState"
-
-			pub const TYPE_URL: &'static str =
-				concat!("/lightclients.guest.v1.", stringify!($Msg));
-
-			/// An example test message.
-			#[cfg(test)]
-			pub fn test() -> Self {
-				$test_object
-			}
-		}
-
-		impl From<$Msg> for Any {
-			fn from(msg: $Msg) -> Self {
-				Self::from(&msg)
-			}
-		}
-
-		impl From<&$Msg> for Any {
-			fn from(msg: &$Msg) -> Self {
-				Self { type_url: $Msg::TYPE_URL.into(), value: msg.encode_to_vec() }
-			}
-		}
-
-		impl TryFrom<Any> for $Msg {
-			type Error = DecodeError;
-			fn try_from(any: Any) -> Result<Self, Self::Error> {
-				Self::try_from(&any)
-			}
-		}
-
-		impl TryFrom<&Any> for $Msg {
-			type Error = DecodeError;
-			fn try_from(any: &Any) -> Result<Self, Self::Error> {
-				if Self::TYPE_URL == any.type_url {
-					Ok($Msg::decode(any.value.as_slice())?)
-				} else {
-					Err(DecodeError::BadType)
-				}
-			}
-		}
-
-		#[test]
-		fn $test() {
-			use alloc::format;
-
-			// use prost::Name;
-
-			// // Make sure TYPE_URL we set by hand matches type_url which is
-			// // derived.
-			// assert_eq!($Msg::type_url(), $Msg::TYPE_URL);
-
-			// Check round-trip conversion through Any.
-			let state = $Msg::test();
-			let mut any = Any::try_from(&state).unwrap();
-			assert_eq!(Ok(state), $Msg::try_from(&any));
-
-			// Check type verifyication
-			any.type_url = "bogus".into();
-			assert_eq!(Err(DecodeError::BadType), $Msg::try_from(&any));
-
-			// Check ProtoBuf encoding.
-			if !cfg!(miri) {
-				insta::assert_debug_snapshot!(any.value);
-			}
-		}
-	};
+impl From<Header> for ClientMessage {
+	#[inline]
+	fn from(msg: Header) -> Self {
+		Self(cf_guest_upstream::proto::ClientMessage::from(msg.0))
+	}
 }
 
-impl_proto!(ClientState; test_client_state; Self {
-	genesis_hash: lib::hash::CryptoHash::test(24).to_vec(),
-	latest_height: 8,
-	epoch_commitment: lib::hash::CryptoHash::test(11).to_vec(),
-	is_frozen: false,
-	trusting_period_ns: 30 * 24 * 3600 * 1_000_000_000,
-});
-
-impl_proto!(ConsensusState; test_consensus_state; {
-	let block_hash = lib::hash::CryptoHash::test(42).to_vec();
-	Self { block_hash, timestamp_ns: 1 }
-});
-
-impl_proto!(Header; test_header; {
-	// TODO(mina86): Construct a proper signed header.
-	Self {
-		genesis_hash: alloc::vec![0; 32],
-		block_header: alloc::vec![1; 10],
-		epoch: alloc::vec![2; 10],
-		signatures: alloc::vec![],
+impl From<Misbehaviour> for ClientMessage {
+	#[inline]
+	fn from(msg: Misbehaviour) -> Self {
+		Self(cf_guest_upstream::proto::ClientMessage::from(msg.0))
 	}
-});
-
-impl_proto!(Signature; test_signature; Self {
-	index: 1,
-	signature: alloc::vec![0; 64],
-});
-
-impl_proto!(Misbehaviour; test_misbehaviour; Self {
-	header1: Some(Header::test()),
-	header2: Some(Header::test()),
-});
-
-impl_proto!(ClientMessage; test_client_message; Self{
-	message: Some(pb::lightclients::guest::v1::client_message::Message::Header(Header {
-		genesis_hash: alloc::vec![0; 32],
-		block_header: alloc::vec![1; 10],
-		epoch: alloc::vec![2; 10],
-		signatures: alloc::vec![],
-	}))
-});
+}

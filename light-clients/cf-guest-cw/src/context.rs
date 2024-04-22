@@ -13,197 +13,135 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-use core::str::FromStr;
+use crate::{
+	ics23::{
+		ClientStates, ConsensusStates, ReadonlyClientStates, ReadonlyConsensusStates,
+		ReadonlyProcessedStates,
+	},
+	ContractError,
+};
+use cf_guest::{ClientState, ConsensusState};
+use cosmwasm_std::{DepsMut, Env, Storage};
+use ibc::{
+	core::{ics02_client::error::Error, ics26_routing::context::ReaderContext},
+	Height,
+};
+use std::{fmt, fmt::Debug};
 
-use cf_guest::{error::Error, ClientState};
-use cosmwasm_std::{Api, Deps, DepsMut, Env, Storage};
-use ::ibc::core::ics24_host::identifier::ClientId;
-
-use crate::{ibc, state::{self, ConsensusState}};
-
-type Result<T, E = crate::Error> = core::result::Result<T, E>;
-
-/// Base context for handling CosmWasm operations.
-///
-/// It wraps together access to CosmWasm API and information about the request
-/// such as block height, current time and IBC client id corresponding to this
-/// contract.
-///
-/// The object dereferences into [`state::Metadata`] such that metadata fields
-/// are directly accessible through this object.
-#[derive(derive_more::Deref)]
-pub(crate) struct ContextBase<'a> {
-	#[deref]
-	pub metadata: state::Metadata,
-	pub client_id: ibc::ClientId,
-	pub api: &'a dyn Api,
+pub struct Context<'a> {
+	pub deps: DepsMut<'a>,
+	pub env: Env,
 }
 
-/// Mutable execution context for handling CosmWasm operations.
-///
-/// It wraps together access to CosmWasm APIs, storage and information about the
-/// request.  To construct a new context object use [`new`] function.
-#[derive(derive_more::Deref)]
-pub(crate) struct ContextMut<'a> {
-	#[deref]
-	base: ContextBase<'a>,
-	storage: &'a mut dyn Storage,
-}
-
-/// Constructs a new mutable execution context.
-pub(crate) fn new<'a>(deps: DepsMut<'a>, env: Env) -> ContextMut<'a> {
-	ContextMut { base: ContextBase::new(env, deps.api), storage: deps.storage }
-}
-
-/// Read-only execution context for handling CosmWasm operations.
-///
-/// It wraps together access to CosmWasm APIs, storage and information about the
-/// request.  To construct a new context object use [`new_ro`] function.
-///
-/// The object dereferences into [`ContextBase`] which holds data common between
-/// read-only and mutable execution contexts.
-#[derive(derive_more::Deref)]
-pub(crate) struct Context<'a> {
-	#[deref]
-	base: ContextBase<'a>,
-	storage: &'a dyn Storage,
-}
-
-/// Constructs a new read-only execution context.
-pub(crate) fn new_ro<'a>(deps: Deps<'a>, env: Env) -> Context<'a> {
-	Context { base: ContextBase::new(env, deps.api), storage: deps.storage }
-}
-
-impl<'a> ContextBase<'a> {
-	fn new(env: Env, api: &'a dyn Api) -> Self {
-		let metadata = state::Metadata {
-			host_timestamp_ns: env.block.time.nanos(),
-			host_height: env.block.height,
-		};
-		let address = env.contract.address.as_str();
-		let client_id = ibc::ClientId::from_str("08-wasm-0").unwrap();
-		Self { client_id, metadata, api }
-	}
-
-	pub fn log(&self, msg: impl alloc::string::ToString) {
-		self.api.debug(&msg.to_string())
+impl<'a> PartialEq for Context<'a> {
+	fn eq(&self, _other: &Self) -> bool {
+		true
 	}
 }
 
-/// Logs formatted text using CosmWasm API.
-///
-/// To log string literals prefer [`ContextBase::log`] method.
-macro_rules! log {
-	($self:expr, $($tt:tt)*) => {
-		$self.log(format_args!($($tt)*))
-	};
+impl<'a> Eq for Context<'a> {}
+
+impl<'a> Debug for Context<'a> {
+	fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+		write!(f, "Context {{ deps: DepsMut }}")
+	}
 }
 
-pub(crate) use log;
-
-// fn deserialize_client_state<H: Clone>(client_state: Vec<u8>) -> Result<ClientState<H>, Error> {
-// 	let any = Any::decode(&*client_state).map_err(Error::decode)?;
-// 	let wasm_state =
-// 		ics08_wasm::client_state::ClientState::<FakeInner, FakeInner, FakeInner>::decode_vec(
-// 			&any.value,
-// 		)
-// 		.map_err(|e| {
-// 			Error::implementation_specific(format!(
-// 				"[client_state]: error decoding client state bytes to WasmClientState {e}"
-// 			))
-// 		})?;
-// 	let any = Any::decode(&*wasm_state.data).map_err(Error::decode)?;
-// 	let state =
-// 		ClientState::<H>::decode_vec(&any.value).map_err(Error::invalid_any_client_state)?;
-// 	Ok(state)
-// }
-
-// 	/// Retrieves raw bytes from storage and deserializes them into [`ClientState`]
-// pub fn get_client_state<PK>(deps: Deps) -> Result<ClientState<PK>, Error> {
-// 	deps.storage
-// 		.get(&"clientState".to_string().into_bytes())
-// 		.ok_or_else(|| Error::UnknownConsensusStateType{ description: "lakdsfjlkadsf".to_string()})
-// 		.and_then(deserialize_client_state)
-// }
+impl<'a> Clone for Context<'a> {
+	fn clone(&self) -> Self {
+		panic!("Context is not cloneable")
+	}
+}
 
 impl<'a> Context<'a> {
-	/// Reads this light client’s client state from storage.
-	pub fn client_state(&self) -> Result<state::ClientState> {
-		req_client_state(&self.client_id, self.client_states().get())
+	pub fn new(deps: DepsMut<'a>, env: Env) -> Self {
+		Self { deps, env }
 	}
 
-
-	/// Returns object providing access to read client state from the
-	/// storage.
-	pub fn client_states(&self) -> &'a state::ClientStates {
-		state::ClientStates::new_ro(self.storage)
+	pub fn log(&self, msg: &str) {
+		self.deps.api.debug(msg)
 	}
 
-	/// Reads this light client’s consensus state at given height from
-	/// storage.
-	pub fn consensus_state(&self, height: ibc::Height) -> Result<state::ConsensusState> {
-		req_consensus_state(&self.client_id, height, self.consensus_states().get(height))
+	pub fn storage(&self) -> &dyn Storage {
+		self.deps.storage
 	}
 
-	/// Returns object providing access to read consensus states from the
-	/// storage.
-	pub fn consensus_states(&self) -> &'a state::ConsensusStates {
-		state::ConsensusStates::new_ro(self.storage)
+	pub fn storage_mut(&mut self) -> &mut dyn Storage {
+		self.deps.storage
 	}
 }
 
-impl<'a> ContextMut<'a> {
-	/// Reads this light client’s client state from storage.
-	pub fn client_state(&self) -> Result<state::ClientState> {
-		req_client_state(&self.client_id, self.client_states().get())
+impl<'a> Context<'a> {
+	pub fn processed_timestamp(&self, height: Height) -> Result<u64, Error> {
+		ReadonlyProcessedStates::new(self.storage())
+			.get_processed_time(height, &mut Vec::new())
+			.ok_or_else(|| {
+				Error::implementation_specific("problem getting processed timestamp".into())
+			})
 	}
 
-	/// Returns object providing access to read client state from the
-	/// storage.
-	pub fn client_states(&self) -> &state::ClientStates {
-		state::ClientStates::new_ro(self.storage)
+	pub fn processed_height(&self, height: Height) -> Result<u64, Error> {
+		ReadonlyProcessedStates::new(self.storage())
+			.get_processed_height(height, &mut Vec::new())
+			.ok_or_else(|| {
+				Error::implementation_specific("problem getting processed height".into())
+			})
 	}
 
-	/// Returns object providing access to read or write client state
-	/// from/to the storage.
-	pub fn client_states_mut(&mut self) -> &mut state::ClientStates {
-		state::ClientStates::new(self.storage)
+	pub fn consensus_state_prefixed(
+		&self,
+		height: Height,
+		prefix: &[u8],
+	) -> Result<ConsensusState, ContractError> {
+		let bytes = ReadonlyConsensusStates::new(self.storage())
+			.get_prefixed(height, prefix)
+			.ok_or_else(|| {
+				ContractError::Other(format!(
+					"no consensus state found for height {height} and prefix {prefix:?}",
+				))
+			})?;
+		Context::decode_consensus_state(&bytes)
+			.map_err(|e| ContractError::Other(format!("error decoding consensus state: {e:?}")))
 	}
 
-	/// Reads this light client’s consensus state at given height from
-	/// storage.
-	pub fn consensus_state(&self, height: ibc::Height) -> Result<state::ConsensusState> {
-		req_consensus_state(&self.client_id, height, self.consensus_states().get(height))
+	pub fn store_consensus_state_prefixed(
+		&mut self,
+		height: Height,
+		consensus_state: ConsensusState,
+		prefix: &[u8],
+	) {
+		let encoded = Context::encode_consensus_state(consensus_state);
+		let mut consensus_states = ConsensusStates::new(self.storage_mut());
+		consensus_states.insert_prefixed(height, encoded, prefix);
 	}
 
-	/// Returns object providing access to read consensus states from the
-	/// storage.
-	pub fn consensus_states(&self) -> &state::ConsensusStates {
-		state::ConsensusStates::new_ro(self.storage)
+	pub fn client_state_prefixed(
+		&self,
+		prefix: &[u8],
+	) -> Result<ClientState<crate::crypto::PubKey>, ContractError> {
+		let bytes =
+			ReadonlyClientStates::new(self.storage()).get_prefixed(prefix).ok_or_else(|| {
+				ContractError::Other(format!("no client state found for prefix {prefix:?}",))
+			})?;
+		Context::decode_client_state(&bytes)
+			.map_err(|e| ContractError::Other(format!("error decoding client state: {e:?}")))
 	}
 
-	/// Returns object providing access to read or write consensus states
-	/// from/to the storage.
-	pub fn consensus_states_mut(&mut self) -> &mut state::ConsensusStates {
-		state::ConsensusStates::new(self.storage)
+	pub fn store_client_state_prefixed(
+		&mut self,
+		client_state: ClientState<crate::crypto::PubKey>,
+		prefix: &[u8],
+	) -> Result<(), ContractError> {
+		let client_states = ReadonlyClientStates::new(self.storage());
+		let data = client_states
+			.get_prefixed(prefix)
+			.ok_or_else(|| ContractError::Other("no client state found for prefix".to_string()))?;
+		let encoded = Context::encode_client_state(client_state, data)
+			.map_err(|e| ContractError::Other(format!("error encoding client state: {e:?}")))?;
+		let mut client_states = ClientStates::new(self.storage_mut());
+		client_states.insert_prefixed(encoded, prefix);
+		Ok(())
 	}
 }
 
-/// Returns an error if client state is not present.
-fn req_client_state(
-	client_id: &ibc::ClientId,
-	state: Result<Option<state::ClientState>>,
-) -> Result<state::ClientState> {
-	let make_err = || ibc::ClientError::client_not_found(client_id.clone()).into();
-	state.and_then(|state| state.ok_or_else(make_err))
-}
-
-/// Returns an error if consensus state is not present.
-fn req_consensus_state(
-	client_id: &ibc::ClientId,
-	height: ibc::Height,
-	state: Result<Option<state::ConsensusState>>,
-) -> Result<state::ConsensusState> {
-	let make_err = || ibc::ClientError::consensus_state_not_found(client_id.clone(), height).into();
-	state.and_then(|state| state.ok_or_else(make_err))
-}
+impl<'a> ReaderContext for Context<'a> {}

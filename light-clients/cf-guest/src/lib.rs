@@ -6,11 +6,8 @@ extern crate std;
 
 use alloc::string::ToString;
 
-use ibc_proto::google::protobuf::Any;
-
 pub mod client;
 pub mod client_def;
-mod client_impls;
 mod consensus;
 pub mod error;
 mod header;
@@ -20,12 +17,10 @@ pub mod proof;
 pub mod proto;
 
 pub use client::ClientState;
-pub use client_impls::CommonContext;
 pub use consensus::ConsensusState;
 pub use header::Header;
 pub use message::ClientMessage;
 pub use misbehaviour::Misbehaviour;
-pub use proof::IbcProof;
 
 use ibc::core::ics02_client::error::Error as ClientError;
 
@@ -46,6 +41,14 @@ impl From<BadMessage> for ClientError {
 	}
 }
 
+/// Returns digest of the value.
+///
+/// This is used, among other places, as packet commitment.
+#[inline]
+pub fn digest(value: &[u8]) -> lib::hash::CryptoHash {
+	lib::hash::CryptoHash::digest(value)
+}
+
 /// Returns digest of the value with client id mixed in.
 ///
 /// We don’t store full client id in the trie key for paths which include
@@ -62,86 +65,169 @@ pub fn digest_with_client_id(
 	lib::hash::CryptoHash::digestv(&[client_id.as_bytes(), b"\0", value])
 }
 
-/// Defines conversion implementation between `$Type` and Any message as well as
-/// `encode_to_vec` and `decode` methods.
-macro_rules! any_convert {
-    (
-        $Proto:ty,
-        $Type:ident $( <$T:ident: $bond:path = $concrete:path> )?,
-        $(obj: $obj:expr,)*
-        $(bad: $bad:expr,)*
-    ) => {
-        impl $(<$T: $bond>)* $Type $(<$T>)* {
-            /// Encodes the object into a vector as protocol buffer message.
-            pub fn encode_to_vec(&self) -> Result<alloc::vec::Vec<u8>, core::convert::Infallible> {
-                Ok(prost::Message::encode_to_vec(&$crate::proto::$Type::from(self)))
-            }
+macro_rules! wrap {
+	($($Inner:ident)::* as $Outer:ident) => {
+		#[derive(Clone, derive_more::From, derive_more::Into)]
+		#[repr(transparent)]
+		pub struct $Outer(pub $($Inner)::*);
 
-            /// Decodes the object from a protocol buffer message.
-            pub fn decode(
-                buf: &[u8],
-            ) -> Result<Self, $crate::proto::DecodeError> {
-                <$crate::proto::$Type as prost::Message>::decode(buf)?
-                    .try_into()
-                    .map_err(Into::into)
-            }
-        }
+		impl core::fmt::Debug for $Outer {
+			fn fmt(&self, fmtr: &mut core::fmt::Formatter) -> core::fmt::Result {
+				self.0.fmt(fmtr)
+			}
+		}
 
-        impl $(<$T: $bond>)* From<$Type $(<$T>)*> for $crate::Any {
-            fn from(obj: $Type $(<$T>)*) -> $crate::Any {
-                $crate::proto::$Type::from(obj).into()
-            }
-        }
+		impl From<$Outer> for ibc_proto::google::protobuf::Any {
+			fn from(msg: $Outer) -> Self {
+				Self::from(&msg)
+			}
+		}
 
-        impl $(<$T: $bond>)* From<&$Type $(<$T>)*> for $crate::Any {
-            fn from(obj: &$Type $(<$T>)*) -> $crate::Any {
-                $crate::proto::$Type::from(obj).into()
-            }
-        }
+		impl From<&$Outer> for ibc_proto::google::protobuf::Any {
+			fn from(msg: &$Outer) -> Self {
+				let any = cf_guest_upstream::proto::Any::from(&msg.0);
+				Self {
+					type_url: any.type_url,
+					value: any.value
+				}
+			}
+		}
 
-        impl $(<$T: $bond>)* TryFrom<$crate::Any> for $Type $(<$T>)* {
-            type Error = $crate::proto::DecodeError;
-            fn try_from(
-                any: $crate::Any,
-            ) -> Result<Self, Self::Error> {
-                $crate::proto::$Type::try_from(any)
-                    .and_then(|msg| Ok(msg.try_into()?))
-            }
-        }
+		impl TryFrom<ibc_proto::google::protobuf::Any> for $Outer {
+			type Error = $crate::DecodeError;
+			fn try_from(any: ibc_proto::google::protobuf::Any) -> Result<Self, Self::Error> {
+				Self::try_from(&any)
+			}
+		}
 
-        impl $(<$T: $bond>)* TryFrom<&$crate::Any> for $Type $(<$T>)*
-        {
-            type Error = $crate::proto::DecodeError;
-            fn try_from(
-                any: &$crate::Any,
-            ) -> Result<Self, Self::Error> {
-                $crate::proto::$Type::try_from(any)
-                    .and_then(|msg| Ok(msg.try_into()?))
-            }
-        }
+		impl TryFrom<&ibc_proto::google::protobuf::Any> for $Outer {
+			type Error = $crate::DecodeError;
+			fn try_from(any: &ibc_proto::google::protobuf::Any) -> Result<Self, Self::Error> {
+				Ok(Self(cf_guest_upstream::proto::AnyConvert::try_from_any(&any.type_url, &any.value)?))
+			}
+		}
 
-        impl $(<$T: $bond>)* ibc::protobuf::Protobuf<$Proto>
-            for $Type $(<$T>)* { }
+		impl ibc::protobuf::Protobuf<ibc_proto::google::protobuf::Any> for $Outer {}
+	};
 
-        #[test]
-        fn test_any_conversion() {
-            #[allow(dead_code)]
-            type Type = $Type $( ::<$concrete> )*;
+	($($Inner:ident)::*<PK> as $Outer:ident) => {
+		#[derive(Clone, PartialEq, Eq, derive_more::From, derive_more::Into)]
+		#[repr(transparent)]
+		pub struct $Outer<PK: guestchain::PubKey>(pub $($Inner)::*<PK>);
 
-            // Check conversion to and from proto
-            $(
-                let msg = proto::$Type::test();
-                let obj: Type = $obj;
-                assert_eq!(msg, proto::$Type::from(&obj));
-                assert_eq!(Ok(obj), $Type::try_from(&msg));
-            )*
+		impl<PK: guestchain::PubKey + core::fmt::Debug> core::fmt::Debug for $Outer<PK> {
+			fn fmt(&self, fmtr: &mut core::fmt::Formatter) -> core::fmt::Result {
+				self.0.fmt(fmtr)
+			}
+		}
 
-            // Check failure on invalid proto
-            $(
-                assert_eq!(Err(proto::BadMessage), Type::try_from($bad));
-            )*
-        }
-    };
+		impl<PK: guestchain::PubKey> From<$Outer<PK>> for ibc_proto::google::protobuf::Any {
+			fn from(msg: $Outer<PK>) -> Self {
+				Self::from(&msg)
+			}
+		}
+
+		impl<PK: guestchain::PubKey> From<&$Outer<PK>> for ibc_proto::google::protobuf::Any {
+			fn from(msg: &$Outer<PK>) -> Self {
+				let any = cf_guest_upstream::proto::Any::from(&msg.0);
+				Self {
+					type_url: any.type_url,
+					value: any.value
+				}
+			}
+		}
+
+		impl<PK: guestchain::PubKey> TryFrom<ibc_proto::google::protobuf::Any> for $Outer<PK> {
+			type Error = $crate::DecodeError;
+			fn try_from(any: ibc_proto::google::protobuf::Any) -> Result<Self, Self::Error> {
+				Self::try_from(&any)
+			}
+		}
+
+		impl<PK: guestchain::PubKey> TryFrom<&ibc_proto::google::protobuf::Any> for $Outer<PK> {
+			type Error = $crate::DecodeError;
+			fn try_from(any: &ibc_proto::google::protobuf::Any) -> Result<Self, Self::Error> {
+				Ok(Self(cf_guest_upstream::proto::AnyConvert::try_from_any(&any.type_url, &any.value)?))
+			}
+		}
+
+		impl<PK: guestchain::PubKey> ibc::protobuf::Protobuf<ibc_proto::google::protobuf::Any> for $Outer<PK> {}
+	};
+
+	(impl Default for $Outer:ident) => {
+		impl Default for $Outer {
+			fn default() -> Self { Self(Default::default()) }
+		}
+	};
+
+	(impl<PK> Default for $Outer:ident) => {
+		impl<PK: Default> Default for $Outer<PK> {
+			fn default() -> Self { Self(Default::default()) }
+		}
+	};
+
+	(impl Eq for $Outer:ident) => {
+		impl core::cmp::PartialEq for $Outer {
+			fn eq(&self, other: &Self) -> bool { self.0.eq(&other.0) }
+		}
+		impl core::cmp::Eq for $Outer { }
+	};
+
+	(impl proto for $Type:ident) => {
+		impl From<$Type> for $crate::proto::$Type {
+			fn from(msg: $Type) -> Self {
+				Self(cf_guest_upstream::proto::$Type::from(&msg.0))
+			}
+		}
+
+		impl From<&$Type> for $crate::proto::$Type {
+			fn from(msg: &$Type) -> Self {
+				Self(cf_guest_upstream::proto::$Type::from(&msg.0))
+			}
+		}
+
+		impl TryFrom<$crate::proto::$Type> for $Type {
+			type Error = $crate::proto::BadMessage;
+			fn try_from(msg: $crate::proto::$Type) -> Result<Self, Self::Error> {
+				Self::try_from(&msg)
+			}
+		}
+
+		impl TryFrom<&$crate::proto::$Type> for $Type {
+			type Error = $crate::proto::BadMessage;
+			fn try_from(msg: &$crate::proto::$Type) -> Result<Self, Self::Error> {
+				Ok(Self(cf_guest_upstream::$Type::try_from(&msg.0)?))
+			}
+		}
+	};
+
+	(impl<PK> proto for $Type:ident) => {
+		impl<PK: guestchain::PubKey> From<$Type<PK>> for $crate::proto::$Type {
+			fn from(msg: $Type<PK>) -> Self {
+				Self(cf_guest_upstream::proto::$Type::from(&msg.0))
+			}
+		}
+
+		impl<PK: guestchain::PubKey> From<&$Type<PK>> for $crate::proto::$Type {
+			fn from(msg: &$Type<PK>) -> Self {
+				Self(cf_guest_upstream::proto::$Type::from(&msg.0))
+			}
+		}
+
+		impl<PK: guestchain::PubKey> TryFrom<$crate::proto::$Type> for $Type<PK> {
+			type Error = $crate::proto::BadMessage;
+			fn try_from(msg: $crate::proto::$Type) -> Result<Self, Self::Error> {
+				Self::try_from(&msg)
+			}
+		}
+
+		impl<PK: guestchain::PubKey> TryFrom<&$crate::proto::$Type> for $Type<PK> {
+			type Error = $crate::proto::BadMessage;
+			fn try_from(msg: &$crate::proto::$Type) -> Result<Self, Self::Error> {
+				Ok(Self(cf_guest_upstream::$Type::try_from(&msg.0)?))
+			}
+		}
+	};
 }
 
-use any_convert;
+use wrap;

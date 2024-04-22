@@ -113,7 +113,9 @@ pub fn convert_old_msgs_to_new(messages: Vec<Ics26Envelope<LocalClientTypes>>) -
 					})),
 				#[allow(deprecated)]
 				ibc::core::ics03_connection::msgs::ConnectionMsg::ConnectionOpenTry(e) => {
-					let encoded_cs = ibc_proto::google::protobuf::Any::from(e.client_state.as_ref().unwrap().clone());
+					let encoded_cs = ibc_proto::google::protobuf::Any::from(
+						e.client_state.as_ref().unwrap().clone(),
+					);
 					MsgEnvelope::Connection(ConnectionMsg::OpenTry(MsgConnectionOpenTry {
 						counterparty: Counterparty {
 							client_id: ClientId::from_str(e.counterparty.client_id().as_str())
@@ -185,8 +187,13 @@ pub fn convert_old_msgs_to_new(messages: Vec<Ics26Envelope<LocalClientTypes>>) -
 					}))
 				},
 				ibc::core::ics03_connection::msgs::ConnectionMsg::ConnectionOpenAck(e) => {
-					let encoded_cs = ibc_proto::google::protobuf::Any::from(e.client_state.as_ref().unwrap().clone());
-					log::info!("This is the proof height for consensus state {:?}", e.proofs.consensus_proof().unwrap().height());
+					let encoded_cs = ibc_proto::google::protobuf::Any::from(
+						e.client_state.as_ref().unwrap().clone(),
+					);
+					log::info!(
+						"This is the proof height for consensus state {:?}",
+						e.proofs.consensus_proof().unwrap().height()
+					);
 
 					MsgEnvelope::Connection(ConnectionMsg::OpenAck(MsgConnectionOpenAck {
 						signer: Signer::from(e.signer.as_ref().to_string()),
@@ -516,4 +523,3 @@ pub fn convert_old_msgs_to_new(messages: Vec<Ics26Envelope<LocalClientTypes>>) -
 		.collect();
 	new_messages
 }
-
