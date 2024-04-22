@@ -5,17 +5,19 @@ use guestchain::Signature;
 use crate::alloc::string::ToString;
 use alloc::vec::Vec;
 use guestchain::{PubKey, Verifier};
-use ibc::core::{
-	ics02_client::{
-		client_consensus::ConsensusState,
-		client_def::{ClientDef, ConsensusUpdateResult},
-		client_state::ClientState as OtherClientState,
-		error::Error as Ics02ClientError,
+use ibc::{
+	core::{
+		ics02_client::{
+			client_consensus::ConsensusState,
+			client_def::{ClientDef, ConsensusUpdateResult},
+			client_state::ClientState as OtherClientState,
+			error::Error as Ics02ClientError,
+		},
+		ics26_routing::context::ReaderContext,
 	},
-	ics26_routing::context::ReaderContext,
+	protobuf::Protobuf,
 };
 use prost::Message;
-use tendermint_proto::Protobuf;
 
 use crate::{error::Error, ClientMessage, ClientState, ConsensusState as ClientConsensusState};
 

@@ -1,14 +1,7 @@
-use alloc::{
-	string::{String, ToString},
-	vec::Vec,
-};
-use core::time::Duration;
+use alloc::string::{String, ToString};
 
 use ibc::{
-	core::{
-		ics02_client::height::Height, ics23_commitment::specs::ProofSpecs,
-		ics24_host::identifier::ClientId,
-	},
+	core::{ics02_client::height::Height, ics24_host::identifier::ClientId},
 	timestamp::Timestamp,
 };
 use lib::hash::CryptoHash;
@@ -122,7 +115,7 @@ where
 	fn upgrade(
 		mut self,
 		upgrade_height: ibc::Height,
-		upgrade_options: Self::UpgradeOptions,
+		_upgrade_options: Self::UpgradeOptions,
 		_chain_id: ibc::core::ics24_host::identifier::ChainId,
 	) -> Self {
 		self.0.latest_height = upgrade_height.revision_height.into();
@@ -133,7 +126,7 @@ where
 		elapsed.as_nanos() as u64 > self.0.trusting_period_ns
 	}
 
-	fn encode_to_vec(&self) -> Result<ibc::prelude::Vec<u8>, tendermint_proto::Error> {
+	fn encode_to_vec(&self) -> Result<ibc::prelude::Vec<u8>, ibc::protobuf::Error> {
 		Ok(self.0.encode())
 	}
 }

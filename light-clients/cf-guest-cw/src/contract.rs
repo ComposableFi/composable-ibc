@@ -86,7 +86,7 @@ fn process_message(
 	//log!(ctx, "process_message: {:?}", msg);
 	let result = match msg {
 		ExecuteMsg::VerifyMembership(msg) => {
-			let client_state = ctx.client_state(&client_id)?;
+			let _ = ctx.client_state(&client_id)?;
 			let msg = VerifyMembershipMsg::try_from(msg)?;
 			crate::helpers::verify_delay_passed(
 				ctx,
@@ -95,7 +95,6 @@ fn process_message(
 				msg.delay_block_period,
 			)?;
 			let consensus_state = ctx.consensus_state(&client_id, msg.height)?;
-			// TODO(blas)
 			verify(
 				&CommitmentPrefix::default(),
 				&msg.proof,
@@ -106,7 +105,7 @@ fn process_message(
 			Ok(()).map(|_| to_binary(&ContractResult::success()))
 		},
 		ExecuteMsg::VerifyNonMembership(msg) => {
-			let client_state = ctx.client_state(&client_id)?;
+			let _ = ctx.client_state(&client_id)?;
 			let msg = VerifyNonMembershipMsg::try_from(msg)?;
 			crate::helpers::verify_delay_passed(
 				ctx,
@@ -184,19 +183,16 @@ fn process_message(
 		},
 		ExecuteMsg::CheckSubstituteAndUpdateState(
 			crate::msg::CheckSubstituteAndUpdateStateMsg {},
-		) => helpers::check_substitute_and_update_state(ctx)
-			.map_err(|e| ContractError::Tendermint(e.to_string()))
-			.and_then(|(cs, cu)| {
+		) => helpers::check_substitute_and_update_state(ctx).map_err(Into::into).and_then(
+			|(cs, cu)| {
 				let height = cs.latest_height();
 				ctx.store_consensus_state_prefixed(height, cu, SUBJECT_PREFIX);
-				ctx.store_client_state_prefixed(cs, SUBJECT_PREFIX)
-					.map_err(|e| ContractError::Tendermint(e.to_string()))?;
+				ctx.store_client_state_prefixed(cs, SUBJECT_PREFIX)?;
 				Ok(to_binary(&ContractResult::success()))
-			}),
+			},
+		),
 		ExecuteMsg::VerifyUpgradeAndUpdateState(msg) => {
-			let old_client_state = ctx
-				.client_state(&client_id)
-				.map_err(|e| ContractError::Tendermint(e.to_string()))?;
+			let old_client_state = ctx.client_state(&client_id)?;
 			let msg: VerifyUpgradeAndUpdateStateMsg =
 				VerifyUpgradeAndUpdateStateMsg::try_from(msg)?;
 			helpers::verify_upgrade_and_update_state(
@@ -208,17 +204,14 @@ fn process_message(
 				msg.proof_upgrade_client,
 				msg.proof_upgrade_consensus_state,
 			)
-			.map_err(|e| ContractError::Tendermint(e.to_string()))
+			.map_err(Into::into)
 			.and_then(|(cs, cu)| {
 				let height = cs.latest_height();
-				ctx.store_consensus_state(client_id.clone(), height, cu)
-					.map_err(|e| ContractError::Tendermint(e.to_string()))?;
-				ctx.store_client_state(client_id, cs)
-					.map_err(|e| ContractError::Tendermint(e.to_string()))?;
+				ctx.store_consensus_state(client_id.clone(), height, cu)?;
+				ctx.store_client_state(client_id, cs)?;
 				Ok(to_binary(&ContractResult::success()))
 			})
 		},
-		_ => unimplemented!("none of the other messages are implemented at the moment"),
 	};
 	Ok(result??)
 }

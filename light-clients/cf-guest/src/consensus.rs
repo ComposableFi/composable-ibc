@@ -27,7 +27,7 @@ impl ibc::core::ics02_client::client_consensus::ConsensusState for ConsensusStat
 		ibc::timestamp::Timestamp::from_nanoseconds(self.0.timestamp_ns.get()).unwrap()
 	}
 
-	fn encode_to_vec(&self) -> Result<ibc::prelude::Vec<u8>, tendermint_proto::Error> {
+	fn encode_to_vec(&self) -> Result<ibc::prelude::Vec<u8>, ibc::protobuf::Error> {
 		Ok(proto::ConsensusState::from(self).encode_to_vec())
 	}
 }

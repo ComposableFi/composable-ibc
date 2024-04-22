@@ -99,12 +99,7 @@ impl<'a> ChannelReader for Context<'a> {
 
 	/// A hashing function for packet commitments
 	fn hash(&self, value: Vec<u8>) -> Vec<u8> {
-		// let mut hasher = Sha256::default();
-		// hasher.update(value);
-		// hasher.finalize().to_vec()
-
-		//TODO(blas)
-		vec![]
+		cf_guest::digest(&value).as_slice().into()
 	}
 
 	fn client_update_time(

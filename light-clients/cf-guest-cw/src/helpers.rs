@@ -13,9 +13,6 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-use std::time::Duration;
-
-use guestchain::PubKey;
 use schemars::JsonSchema;
 use serde::{Deserialize, Serialize};
 
@@ -28,21 +25,18 @@ use cosmwasm_std::{to_binary, Addr, CosmosMsg, StdResult, WasmMsg};
 use ibc::{
 	core::{
 		ics02_client::{
-			client_consensus::ConsensusState as _, client_state::ClientState as _,
-			context::ClientReader, error::Error as Ics02Error, height::Height,
+			client_state::ClientState as _, context::ClientReader, error::Error as Ics02Error,
+			height::Height,
 		},
-		ics23_commitment::{commitment::CommitmentProofBytes, merkle::MerkleProof},
+		ics23_commitment::commitment::CommitmentProofBytes,
 		ics24_host::identifier::ClientId,
 	},
 	protobuf::Protobuf,
 };
-use ibc_proto::{
-	google::protobuf::Any,
-	ibc::core::commitment::v1::{MerklePath, MerkleProof as RawMerkleProof},
-};
+use ibc_proto::google::protobuf::Any;
 use prost::Message;
 
-use cf_guest::{error::Error, ClientState, ConsensusState};
+use cf_guest::{ClientState, ConsensusState};
 
 use ics08_wasm::{
 	client_state::ClientState as WasmClientState,

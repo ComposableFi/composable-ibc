@@ -41,6 +41,14 @@ impl From<BadMessage> for ClientError {
 	}
 }
 
+/// Returns digest of the value.
+///
+/// This is used, among other places, as packet commitment.
+#[inline]
+pub fn digest(value: &[u8]) -> lib::hash::CryptoHash {
+	lib::hash::CryptoHash::digest(value)
+}
+
 /// Returns digest of the value with client id mixed in.
 ///
 /// We don’t store full client id in the trie key for paths which include
@@ -99,7 +107,7 @@ macro_rules! wrap {
 			}
 		}
 
-		impl tendermint_proto::Protobuf<ibc_proto::google::protobuf::Any> for $Outer {}
+		impl ibc::protobuf::Protobuf<ibc_proto::google::protobuf::Any> for $Outer {}
 	};
 
 	($($Inner:ident)::*<PK> as $Outer:ident) => {
@@ -143,7 +151,7 @@ macro_rules! wrap {
 			}
 		}
 
-		impl<PK: guestchain::PubKey> tendermint_proto::Protobuf<ibc_proto::google::protobuf::Any> for $Outer<PK> {}
+		impl<PK: guestchain::PubKey> ibc::protobuf::Protobuf<ibc_proto::google::protobuf::Any> for $Outer<PK> {}
 	};
 
 	(impl Default for $Outer:ident) => {

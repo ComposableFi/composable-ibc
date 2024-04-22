@@ -1656,16 +1656,17 @@ dependencies = [
 [[package]]
 name = "cf-guest"
 version = "0.0.0"
-source = "git+https://github.com/ComposableFi/emulated-light-client/#c9be1f03a87ecffd61ce4635198d8ee03f952bb8"
+source = "git+https://github.com/ComposableFi/emulated-light-client/#8039dce2f90221f2c778992aafcf42e39b4c5104"
 dependencies = [
  "borsh 0.10.3",
  "bytemuck",
  "derive_more",
  "guestchain",
- "ibc-core-client-context 0.50.0 (git+https://github.com/dhruvja/ibc-rs?rev=6bb51e2d02c016d572974ec8f47633c1f85b6ba8)",
- "ibc-core-commitment-types 0.50.0 (git+https://github.com/dhruvja/ibc-rs?rev=6bb51e2d02c016d572974ec8f47633c1f85b6ba8)",
- "ibc-core-host 0.50.0 (git+https://github.com/dhruvja/ibc-rs?rev=6bb51e2d02c016d572974ec8f47633c1f85b6ba8)",
- "ibc-primitives 0.50.0 (git+https://github.com/dhruvja/ibc-rs?rev=6bb51e2d02c016d572974ec8f47633c1f85b6ba8)",
+ "ibc-client-tendermint-types",
+ "ibc-core-client-context",
+ "ibc-core-commitment-types",
+ "ibc-core-host",
+ "ibc-primitives 0.50.0 (git+https://github.com/mina86/ibc-rs?rev=6015aea441d4660f7f7ecd89b5e770a993448089)",
  "ibc-proto 0.41.0",
  "lib",
  "prost 0.12.3",
@@ -1687,9 +1688,9 @@ dependencies = [
  "ed25519-consensus",
  "guestchain",
  "ibc 0.15.0",
- "ibc-core-client-context 0.50.0 (git+https://github.com/mina86/ibc-rs?rev=6015aea441d4660f7f7ecd89b5e770a993448089)",
- "ibc-core-client-types 0.50.0 (git+https://github.com/mina86/ibc-rs?rev=6015aea441d4660f7f7ecd89b5e770a993448089)",
- "ibc-core-handler-types 0.50.0 (git+https://github.com/mina86/ibc-rs?rev=6015aea441d4660f7f7ecd89b5e770a993448089)",
+ "ibc-core-client-context",
+ "ibc-core-client-types",
+ "ibc-core-handler-types",
  "ibc-core-host-types 0.50.0 (git+https://github.com/mina86/ibc-rs?rev=6015aea441d4660f7f7ecd89b5e770a993448089)",
  "ibc-derive 0.1.0",
  "ibc-primitives 0.50.0 (git+https://github.com/mina86/ibc-rs?rev=6015aea441d4660f7f7ecd89b5e770a993448089)",
@@ -5001,15 +5002,15 @@ dependencies = [
 [[package]]
 name = "guestchain"
 version = "0.0.0"
-source = "git+https://github.com/ComposableFi/emulated-light-client/#c9be1f03a87ecffd61ce4635198d8ee03f952bb8"
+source = "git+https://github.com/ComposableFi/emulated-light-client/#8039dce2f90221f2c778992aafcf42e39b4c5104"
 dependencies = [
  "borsh 0.10.3",
  "bytemuck",
  "derive_more",
- "ibc-core-client-context 0.50.0 (git+https://github.com/dhruvja/ibc-rs?rev=6bb51e2d02c016d572974ec8f47633c1f85b6ba8)",
- "ibc-core-commitment-types 0.50.0 (git+https://github.com/dhruvja/ibc-rs?rev=6bb51e2d02c016d572974ec8f47633c1f85b6ba8)",
- "ibc-core-host 0.50.0 (git+https://github.com/dhruvja/ibc-rs?rev=6bb51e2d02c016d572974ec8f47633c1f85b6ba8)",
- "ibc-primitives 0.50.0 (git+https://github.com/dhruvja/ibc-rs?rev=6bb51e2d02c016d572974ec8f47633c1f85b6ba8)",
+ "ibc-core-client-context",
+ "ibc-core-commitment-types",
+ "ibc-core-host",
+ "ibc-primitives 0.50.0 (git+https://github.com/mina86/ibc-rs?rev=6015aea441d4660f7f7ecd89b5e770a993448089)",
  "ibc-proto 0.41.0",
  "lib",
  "prost 0.12.3",
@@ -5474,11 +5475,11 @@ dependencies = [
  "ibc 0.15.0",
  "ibc-app-transfer-types",
  "ibc-client-tendermint-types",
- "ibc-core-channel-types 0.50.0 (git+https://github.com/mina86/ibc-rs?rev=6015aea441d4660f7f7ecd89b5e770a993448089)",
- "ibc-core-client-types 0.50.0 (git+https://github.com/mina86/ibc-rs?rev=6015aea441d4660f7f7ecd89b5e770a993448089)",
- "ibc-core-commitment-types 0.50.0 (git+https://github.com/mina86/ibc-rs?rev=6015aea441d4660f7f7ecd89b5e770a993448089)",
- "ibc-core-connection-types 0.50.0 (git+https://github.com/mina86/ibc-rs?rev=6015aea441d4660f7f7ecd89b5e770a993448089)",
- "ibc-core-handler-types 0.50.0 (git+https://github.com/mina86/ibc-rs?rev=6015aea441d4660f7f7ecd89b5e770a993448089)",
+ "ibc-core-channel-types",
+ "ibc-core-client-types",
+ "ibc-core-commitment-types",
+ "ibc-core-connection-types",
+ "ibc-core-handler-types",
  "ibc-core-host-types 0.50.0 (git+https://github.com/mina86/ibc-rs?rev=6015aea441d4660f7f7ecd89b5e770a993448089)",
  "ibc-primitives 0.50.0 (git+https://github.com/mina86/ibc-rs?rev=6015aea441d4660f7f7ecd89b5e770a993448089)",
  "ibc-proto 0.18.0",
@@ -5696,11 +5697,11 @@ dependencies = [
  "ibc-app-transfer-types",
  "ibc-client-tendermint-types",
  "ibc-client-wasm-types",
- "ibc-core-channel-types 0.50.0 (git+https://github.com/mina86/ibc-rs?rev=6015aea441d4660f7f7ecd89b5e770a993448089)",
- "ibc-core-client-types 0.50.0 (git+https://github.com/mina86/ibc-rs?rev=6015aea441d4660f7f7ecd89b5e770a993448089)",
- "ibc-core-commitment-types 0.50.0 (git+https://github.com/mina86/ibc-rs?rev=6015aea441d4660f7f7ecd89b5e770a993448089)",
- "ibc-core-connection-types 0.50.0 (git+https://github.com/mina86/ibc-rs?rev=6015aea441d4660f7f7ecd89b5e770a993448089)",
- "ibc-core-handler-types 0.50.0 (git+https://github.com/mina86/ibc-rs?rev=6015aea441d4660f7f7ecd89b5e770a993448089)",
+ "ibc-core-channel-types",
+ "ibc-core-client-types",
+ "ibc-core-commitment-types",
+ "ibc-core-connection-types",
+ "ibc-core-handler-types",
  "ibc-core-host-types 0.50.0 (git+https://github.com/mina86/ibc-rs?rev=6015aea441d4660f7f7ecd89b5e770a993448089)",
  "ibc-primitives 0.1.0",
  "ibc-primitives 0.50.0 (git+https://github.com/mina86/ibc-rs?rev=6015aea441d4660f7f7ecd89b5e770a993448089)",
@@ -5734,10 +5735,10 @@ dependencies = [
  "solana-write-account",
  "stdx",
  "tendermint 0.28.0",
- "tendermint 0.34.0",
+ "tendermint 0.34.1 (git+https://github.com/informalsystems/tendermint-rs?rev=37822e540e272d2ca9e763769ad20c581203ff9a)",
  "tendermint-light-client",
  "tendermint-light-client-verifier 0.28.0",
- "tendermint-light-client-verifier 0.34.0",
+ "tendermint-light-client-verifier 0.34.1 (git+https://github.com/informalsystems/tendermint-rs?rev=37822e540e272d2ca9e763769ad20c581203ff9a)",
  "tendermint-proto 0.28.0",
  "tendermint-rpc",
  "thiserror",
@@ -5823,7 +5824,7 @@ dependencies = [
  "env_logger 0.9.3",
  "flex-error",
  "hex",
- "ibc-core-host-types 0.50.0 (git+https://github.com/mina86/ibc-rs?rev=6015aea441d4660f7f7ecd89b5e770a993448089)",
+ "ibc-core-host-types 0.50.0 (git+https://github.com/mina86/ibc-rs?rev=2b50319f3460d03e8781e5a834c4b56bdcfdc5bc)",
  "ibc-derive 0.1.0",
  "ibc-proto 0.18.0",
  "ics23 0.10.0",
@@ -5907,13 +5908,13 @@ dependencies = [
  "derive_more",
  "ibc-client-tendermint-types",
  "ibc-core-client",
- "ibc-core-commitment-types 0.50.0 (git+https://github.com/mina86/ibc-rs?rev=6015aea441d4660f7f7ecd89b5e770a993448089)",
- "ibc-core-handler-types 0.50.0 (git+https://github.com/mina86/ibc-rs?rev=6015aea441d4660f7f7ecd89b5e770a993448089)",
- "ibc-core-host 0.50.0 (git+https://github.com/mina86/ibc-rs?rev=6015aea441d4660f7f7ecd89b5e770a993448089)",
+ "ibc-core-commitment-types",
+ "ibc-core-handler-types",
+ "ibc-core-host",
  "ibc-primitives 0.50.0 (git+https://github.com/mina86/ibc-rs?rev=6015aea441d4660f7f7ecd89b5e770a993448089)",
  "serde",
- "tendermint 0.34.1",
- "tendermint-light-client-verifier 0.34.0",
+ "tendermint 0.34.1 (git+https://github.com/mina86/tendermint-rs?rev=45fbd500d731effb95a98257630feb46f6c41d06)",
+ "tendermint-light-client-verifier 0.34.1 (git+https://github.com/mina86/tendermint-rs?rev=45fbd500d731effb95a98257630feb46f6c41d06)",
 ]
 
 [[package]]
@@ -5923,16 +5924,16 @@ source = "git+https://github.com/mina86/ibc-rs?rev=6015aea441d4660f7f7ecd89b5e77
 dependencies = [
  "borsh 0.10.3",
  "displaydoc",
- "ibc-core-client-types 0.50.0 (git+https://github.com/mina86/ibc-rs?rev=6015aea441d4660f7f7ecd89b5e770a993448089)",
- "ibc-core-commitment-types 0.50.0 (git+https://github.com/mina86/ibc-rs?rev=6015aea441d4660f7f7ecd89b5e770a993448089)",
+ "ibc-core-client-types",
+ "ibc-core-commitment-types",
  "ibc-core-host-types 0.50.0 (git+https://github.com/mina86/ibc-rs?rev=6015aea441d4660f7f7ecd89b5e770a993448089)",
  "ibc-primitives 0.50.0 (git+https://github.com/mina86/ibc-rs?rev=6015aea441d4660f7f7ecd89b5e770a993448089)",
  "ibc-proto 0.41.0",
  "prost 0.12.3",
  "serde",
- "tendermint 0.34.1",
- "tendermint-light-client-verifier 0.34.0",
- "tendermint-proto 0.34.1 (registry+https://github.com/rust-lang/crates.io-index)",
+ "tendermint 0.34.1 (git+https://github.com/mina86/tendermint-rs?rev=45fbd500d731effb95a98257630feb46f6c41d06)",
+ "tendermint-light-client-verifier 0.34.1 (git+https://github.com/mina86/tendermint-rs?rev=45fbd500d731effb95a98257630feb46f6c41d06)",
+ "tendermint-proto 0.34.1 (git+https://github.com/mina86/tendermint-rs?rev=45fbd500d731effb95a98257630feb46f6c41d06)",
 ]
 
 [[package]]
@@ -5965,10 +5966,10 @@ source = "git+https://github.com/mina86/ibc-rs?rev=6015aea441d4660f7f7ecd89b5e77
 dependencies = [
  "ibc-core-channel",
  "ibc-core-client",
- "ibc-core-commitment-types 0.50.0 (git+https://github.com/mina86/ibc-rs?rev=6015aea441d4660f7f7ecd89b5e770a993448089)",
+ "ibc-core-commitment-types",
  "ibc-core-connection",
  "ibc-core-handler",
- "ibc-core-host 0.50.0 (git+https://github.com/mina86/ibc-rs?rev=6015aea441d4660f7f7ecd89b5e770a993448089)",
+ "ibc-core-host",
  "ibc-core-router",
  "ibc-derive 0.6.0",
  "ibc-primitives 0.50.0 (git+https://github.com/mina86/ibc-rs?rev=6015aea441d4660f7f7ecd89b5e770a993448089)",
@@ -5979,12 +5980,12 @@ name = "ibc-core-channel"
 version = "0.50.0"
 source = "git+https://github.com/mina86/ibc-rs?rev=6015aea441d4660f7f7ecd89b5e770a993448089#6015aea441d4660f7f7ecd89b5e770a993448089"
 dependencies = [
- "ibc-core-channel-types 0.50.0 (git+https://github.com/mina86/ibc-rs?rev=6015aea441d4660f7f7ecd89b5e770a993448089)",
+ "ibc-core-channel-types",
  "ibc-core-client",
- "ibc-core-commitment-types 0.50.0 (git+https://github.com/mina86/ibc-rs?rev=6015aea441d4660f7f7ecd89b5e770a993448089)",
+ "ibc-core-commitment-types",
  "ibc-core-connection",
- "ibc-core-handler-types 0.50.0 (git+https://github.com/mina86/ibc-rs?rev=6015aea441d4660f7f7ecd89b5e770a993448089)",
- "ibc-core-host 0.50.0 (git+https://github.com/mina86/ibc-rs?rev=6015aea441d4660f7f7ecd89b5e770a993448089)",
+ "ibc-core-handler-types",
+ "ibc-core-host",
  "ibc-core-router",
  "ibc-primitives 0.50.0 (git+https://github.com/mina86/ibc-rs?rev=6015aea441d4660f7f7ecd89b5e770a993448089)",
 ]
@@ -5997,34 +5998,16 @@ dependencies = [
  "borsh 0.10.3",
  "derive_more",
  "displaydoc",
- "ibc-core-client-types 0.50.0 (git+https://github.com/mina86/ibc-rs?rev=6015aea441d4660f7f7ecd89b5e770a993448089)",
- "ibc-core-commitment-types 0.50.0 (git+https://github.com/mina86/ibc-rs?rev=6015aea441d4660f7f7ecd89b5e770a993448089)",
- "ibc-core-connection-types 0.50.0 (git+https://github.com/mina86/ibc-rs?rev=6015aea441d4660f7f7ecd89b5e770a993448089)",
+ "ibc-core-client-types",
+ "ibc-core-commitment-types",
+ "ibc-core-connection-types",
  "ibc-core-host-types 0.50.0 (git+https://github.com/mina86/ibc-rs?rev=6015aea441d4660f7f7ecd89b5e770a993448089)",
  "ibc-primitives 0.50.0 (git+https://github.com/mina86/ibc-rs?rev=6015aea441d4660f7f7ecd89b5e770a993448089)",
  "ibc-proto 0.41.0",
  "serde",
  "sha2 0.10.8",
  "subtle-encoding",
- "tendermint 0.34.1",
-]
-
-[[package]]
-name = "ibc-core-channel-types"
-version = "0.50.0"
-source = "git+https://github.com/dhruvja/ibc-rs?rev=6bb51e2d02c016d572974ec8f47633c1f85b6ba8#6bb51e2d02c016d572974ec8f47633c1f85b6ba8"
-dependencies = [
- "derive_more",
- "displaydoc",
- "ibc-core-client-types 0.50.0 (git+https://github.com/dhruvja/ibc-rs?rev=6bb51e2d02c016d572974ec8f47633c1f85b6ba8)",
- "ibc-core-commitment-types 0.50.0 (git+https://github.com/dhruvja/ibc-rs?rev=6bb51e2d02c016d572974ec8f47633c1f85b6ba8)",
- "ibc-core-connection-types 0.50.0 (git+https://github.com/dhruvja/ibc-rs?rev=6bb51e2d02c016d572974ec8f47633c1f85b6ba8)",
- "ibc-core-host-types 0.50.0 (git+https://github.com/dhruvja/ibc-rs?rev=6bb51e2d02c016d572974ec8f47633c1f85b6ba8)",
- "ibc-primitives 0.50.0 (git+https://github.com/dhruvja/ibc-rs?rev=6bb51e2d02c016d572974ec8f47633c1f85b6ba8)",
- "ibc-proto 0.41.0",
- "sha2 0.10.8",
- "subtle-encoding",
- "tendermint 0.34.1",
+ "tendermint 0.34.1 (git+https://github.com/mina86/tendermint-rs?rev=45fbd500d731effb95a98257630feb46f6c41d06)",
 ]
 
 [[package]]
@@ -6033,11 +6016,11 @@ version = "0.50.0"
 source = "git+https://github.com/mina86/ibc-rs?rev=6015aea441d4660f7f7ecd89b5e770a993448089#6015aea441d4660f7f7ecd89b5e770a993448089"
 dependencies = [
  "ibc-client-tendermint-types",
- "ibc-core-client-context 0.50.0 (git+https://github.com/mina86/ibc-rs?rev=6015aea441d4660f7f7ecd89b5e770a993448089)",
- "ibc-core-client-types 0.50.0 (git+https://github.com/mina86/ibc-rs?rev=6015aea441d4660f7f7ecd89b5e770a993448089)",
- "ibc-core-commitment-types 0.50.0 (git+https://github.com/mina86/ibc-rs?rev=6015aea441d4660f7f7ecd89b5e770a993448089)",
- "ibc-core-handler-types 0.50.0 (git+https://github.com/mina86/ibc-rs?rev=6015aea441d4660f7f7ecd89b5e770a993448089)",
- "ibc-core-host 0.50.0 (git+https://github.com/mina86/ibc-rs?rev=6015aea441d4660f7f7ecd89b5e770a993448089)",
+ "ibc-core-client-context",
+ "ibc-core-client-types",
+ "ibc-core-commitment-types",
+ "ibc-core-handler-types",
+ "ibc-core-host",
  "ibc-primitives 0.50.0 (git+https://github.com/mina86/ibc-rs?rev=6015aea441d4660f7f7ecd89b5e770a993448089)",
 ]
 
@@ -6049,29 +6032,13 @@ dependencies = [
  "derive_more",
  "displaydoc",
  "ibc-client-tendermint-types",
- "ibc-core-client-types 0.50.0 (git+https://github.com/mina86/ibc-rs?rev=6015aea441d4660f7f7ecd89b5e770a993448089)",
- "ibc-core-commitment-types 0.50.0 (git+https://github.com/mina86/ibc-rs?rev=6015aea441d4660f7f7ecd89b5e770a993448089)",
- "ibc-core-handler-types 0.50.0 (git+https://github.com/mina86/ibc-rs?rev=6015aea441d4660f7f7ecd89b5e770a993448089)",
+ "ibc-core-client-types",
+ "ibc-core-commitment-types",
+ "ibc-core-handler-types",
  "ibc-core-host-types 0.50.0 (git+https://github.com/mina86/ibc-rs?rev=6015aea441d4660f7f7ecd89b5e770a993448089)",
  "ibc-primitives 0.50.0 (git+https://github.com/mina86/ibc-rs?rev=6015aea441d4660f7f7ecd89b5e770a993448089)",
  "subtle-encoding",
- "tendermint 0.34.1",
-]
-
-[[package]]
-name = "ibc-core-client-context"
-version = "0.50.0"
-source = "git+https://github.com/dhruvja/ibc-rs?rev=6bb51e2d02c016d572974ec8f47633c1f85b6ba8#6bb51e2d02c016d572974ec8f47633c1f85b6ba8"
-dependencies = [
- "derive_more",
- "displaydoc",
- "ibc-core-client-types 0.50.0 (git+https://github.com/dhruvja/ibc-rs?rev=6bb51e2d02c016d572974ec8f47633c1f85b6ba8)",
- "ibc-core-commitment-types 0.50.0 (git+https://github.com/dhruvja/ibc-rs?rev=6bb51e2d02c016d572974ec8f47633c1f85b6ba8)",
- "ibc-core-handler-types 0.50.0 (git+https://github.com/dhruvja/ibc-rs?rev=6bb51e2d02c016d572974ec8f47633c1f85b6ba8)",
- "ibc-core-host-types 0.50.0 (git+https://github.com/dhruvja/ibc-rs?rev=6bb51e2d02c016d572974ec8f47633c1f85b6ba8)",
- "ibc-primitives 0.50.0 (git+https://github.com/dhruvja/ibc-rs?rev=6bb51e2d02c016d572974ec8f47633c1f85b6ba8)",
- "subtle-encoding",
- "tendermint 0.34.1",
+ "tendermint 0.34.1 (git+https://github.com/mina86/tendermint-rs?rev=45fbd500d731effb95a98257630feb46f6c41d06)",
 ]
 
 [[package]]
@@ -6082,28 +6049,13 @@ dependencies = [
  "borsh 0.10.3",
  "derive_more",
  "displaydoc",
- "ibc-core-commitment-types 0.50.0 (git+https://github.com/mina86/ibc-rs?rev=6015aea441d4660f7f7ecd89b5e770a993448089)",
+ "ibc-core-commitment-types",
  "ibc-core-host-types 0.50.0 (git+https://github.com/mina86/ibc-rs?rev=6015aea441d4660f7f7ecd89b5e770a993448089)",
  "ibc-primitives 0.50.0 (git+https://github.com/mina86/ibc-rs?rev=6015aea441d4660f7f7ecd89b5e770a993448089)",
  "ibc-proto 0.41.0",
  "serde",
  "subtle-encoding",
- "tendermint 0.34.1",
-]
-
-[[package]]
-name = "ibc-core-client-types"
-version = "0.50.0"
-source = "git+https://github.com/dhruvja/ibc-rs?rev=6bb51e2d02c016d572974ec8f47633c1f85b6ba8#6bb51e2d02c016d572974ec8f47633c1f85b6ba8"
-dependencies = [
- "derive_more",
- "displaydoc",
- "ibc-core-commitment-types 0.50.0 (git+https://github.com/dhruvja/ibc-rs?rev=6bb51e2d02c016d572974ec8f47633c1f85b6ba8)",
- "ibc-core-host-types 0.50.0 (git+https://github.com/dhruvja/ibc-rs?rev=6bb51e2d02c016d572974ec8f47633c1f85b6ba8)",
- "ibc-primitives 0.50.0 (git+https://github.com/dhruvja/ibc-rs?rev=6bb51e2d02c016d572974ec8f47633c1f85b6ba8)",
- "ibc-proto 0.41.0",
- "subtle-encoding",
- "tendermint 0.34.1",
+ "tendermint 0.34.1 (git+https://github.com/mina86/tendermint-rs?rev=45fbd500d731effb95a98257630feb46f6c41d06)",
 ]
 
 [[package]]
@@ -6118,19 +6070,6 @@ dependencies = [
  "ibc-proto 0.41.0",
  "ics23 0.11.1",
  "serde",
- "subtle-encoding",
-]
-
-[[package]]
-name = "ibc-core-commitment-types"
-version = "0.50.0"
-source = "git+https://github.com/dhruvja/ibc-rs?rev=6bb51e2d02c016d572974ec8f47633c1f85b6ba8#6bb51e2d02c016d572974ec8f47633c1f85b6ba8"
-dependencies = [
- "derive_more",
- "displaydoc",
- "ibc-primitives 0.50.0 (git+https://github.com/dhruvja/ibc-rs?rev=6bb51e2d02c016d572974ec8f47633c1f85b6ba8)",
- "ibc-proto 0.41.0",
- "ics23 0.11.1",
  "subtle-encoding",
 ]
 
@@ -6140,9 +6079,9 @@ version = "0.50.0"
 source = "git+https://github.com/mina86/ibc-rs?rev=6015aea441d4660f7f7ecd89b5e770a993448089#6015aea441d4660f7f7ecd89b5e770a993448089"
 dependencies = [
  "ibc-core-client",
- "ibc-core-connection-types 0.50.0 (git+https://github.com/mina86/ibc-rs?rev=6015aea441d4660f7f7ecd89b5e770a993448089)",
- "ibc-core-handler-types 0.50.0 (git+https://github.com/mina86/ibc-rs?rev=6015aea441d4660f7f7ecd89b5e770a993448089)",
- "ibc-core-host 0.50.0 (git+https://github.com/mina86/ibc-rs?rev=6015aea441d4660f7f7ecd89b5e770a993448089)",
+ "ibc-core-connection-types",
+ "ibc-core-handler-types",
+ "ibc-core-host",
  "ibc-primitives 0.50.0 (git+https://github.com/mina86/ibc-rs?rev=6015aea441d4660f7f7ecd89b5e770a993448089)",
 ]
 
@@ -6154,30 +6093,14 @@ dependencies = [
  "borsh 0.10.3",
  "derive_more",
  "displaydoc",
- "ibc-core-client-types 0.50.0 (git+https://github.com/mina86/ibc-rs?rev=6015aea441d4660f7f7ecd89b5e770a993448089)",
- "ibc-core-commitment-types 0.50.0 (git+https://github.com/mina86/ibc-rs?rev=6015aea441d4660f7f7ecd89b5e770a993448089)",
+ "ibc-core-client-types",
+ "ibc-core-commitment-types",
  "ibc-core-host-types 0.50.0 (git+https://github.com/mina86/ibc-rs?rev=6015aea441d4660f7f7ecd89b5e770a993448089)",
  "ibc-primitives 0.50.0 (git+https://github.com/mina86/ibc-rs?rev=6015aea441d4660f7f7ecd89b5e770a993448089)",
  "ibc-proto 0.41.0",
  "serde",
  "subtle-encoding",
- "tendermint 0.34.1",
-]
-
-[[package]]
-name = "ibc-core-connection-types"
-version = "0.50.0"
-source = "git+https://github.com/dhruvja/ibc-rs?rev=6bb51e2d02c016d572974ec8f47633c1f85b6ba8#6bb51e2d02c016d572974ec8f47633c1f85b6ba8"
-dependencies = [
- "derive_more",
- "displaydoc",
- "ibc-core-client-types 0.50.0 (git+https://github.com/dhruvja/ibc-rs?rev=6bb51e2d02c016d572974ec8f47633c1f85b6ba8)",
- "ibc-core-commitment-types 0.50.0 (git+https://github.com/dhruvja/ibc-rs?rev=6bb51e2d02c016d572974ec8f47633c1f85b6ba8)",
- "ibc-core-host-types 0.50.0 (git+https://github.com/dhruvja/ibc-rs?rev=6bb51e2d02c016d572974ec8f47633c1f85b6ba8)",
- "ibc-primitives 0.50.0 (git+https://github.com/dhruvja/ibc-rs?rev=6bb51e2d02c016d572974ec8f47633c1f85b6ba8)",
- "ibc-proto 0.41.0",
- "subtle-encoding",
- "tendermint 0.34.1",
+ "tendermint 0.34.1 (git+https://github.com/mina86/tendermint-rs?rev=45fbd500d731effb95a98257630feb46f6c41d06)",
 ]
 
 [[package]]
@@ -6188,10 +6111,10 @@ dependencies = [
  "ibc-client-tendermint-types",
  "ibc-core-channel",
  "ibc-core-client",
- "ibc-core-commitment-types 0.50.0 (git+https://github.com/mina86/ibc-rs?rev=6015aea441d4660f7f7ecd89b5e770a993448089)",
+ "ibc-core-commitment-types",
  "ibc-core-connection",
- "ibc-core-handler-types 0.50.0 (git+https://github.com/mina86/ibc-rs?rev=6015aea441d4660f7f7ecd89b5e770a993448089)",
- "ibc-core-host 0.50.0 (git+https://github.com/mina86/ibc-rs?rev=6015aea441d4660f7f7ecd89b5e770a993448089)",
+ "ibc-core-handler-types",
+ "ibc-core-host",
  "ibc-core-router",
  "ibc-primitives 0.50.0 (git+https://github.com/mina86/ibc-rs?rev=6015aea441d4660f7f7ecd89b5e770a993448089)",
 ]
@@ -6204,36 +6127,17 @@ dependencies = [
  "borsh 0.10.3",
  "derive_more",
  "displaydoc",
- "ibc-core-channel-types 0.50.0 (git+https://github.com/mina86/ibc-rs?rev=6015aea441d4660f7f7ecd89b5e770a993448089)",
- "ibc-core-client-types 0.50.0 (git+https://github.com/mina86/ibc-rs?rev=6015aea441d4660f7f7ecd89b5e770a993448089)",
- "ibc-core-commitment-types 0.50.0 (git+https://github.com/mina86/ibc-rs?rev=6015aea441d4660f7f7ecd89b5e770a993448089)",
- "ibc-core-connection-types 0.50.0 (git+https://github.com/mina86/ibc-rs?rev=6015aea441d4660f7f7ecd89b5e770a993448089)",
+ "ibc-core-channel-types",
+ "ibc-core-client-types",
+ "ibc-core-commitment-types",
+ "ibc-core-connection-types",
  "ibc-core-host-types 0.50.0 (git+https://github.com/mina86/ibc-rs?rev=6015aea441d4660f7f7ecd89b5e770a993448089)",
- "ibc-core-router-types 0.50.0 (git+https://github.com/mina86/ibc-rs?rev=6015aea441d4660f7f7ecd89b5e770a993448089)",
+ "ibc-core-router-types",
  "ibc-primitives 0.50.0 (git+https://github.com/mina86/ibc-rs?rev=6015aea441d4660f7f7ecd89b5e770a993448089)",
  "ibc-proto 0.41.0",
  "serde",
  "subtle-encoding",
- "tendermint 0.34.1",
-]
-
-[[package]]
-name = "ibc-core-handler-types"
-version = "0.50.0"
-source = "git+https://github.com/dhruvja/ibc-rs?rev=6bb51e2d02c016d572974ec8f47633c1f85b6ba8#6bb51e2d02c016d572974ec8f47633c1f85b6ba8"
-dependencies = [
- "derive_more",
- "displaydoc",
- "ibc-core-channel-types 0.50.0 (git+https://github.com/dhruvja/ibc-rs?rev=6bb51e2d02c016d572974ec8f47633c1f85b6ba8)",
- "ibc-core-client-types 0.50.0 (git+https://github.com/dhruvja/ibc-rs?rev=6bb51e2d02c016d572974ec8f47633c1f85b6ba8)",
- "ibc-core-commitment-types 0.50.0 (git+https://github.com/dhruvja/ibc-rs?rev=6bb51e2d02c016d572974ec8f47633c1f85b6ba8)",
- "ibc-core-connection-types 0.50.0 (git+https://github.com/dhruvja/ibc-rs?rev=6bb51e2d02c016d572974ec8f47633c1f85b6ba8)",
- "ibc-core-host-types 0.50.0 (git+https://github.com/dhruvja/ibc-rs?rev=6bb51e2d02c016d572974ec8f47633c1f85b6ba8)",
- "ibc-core-router-types 0.50.0 (git+https://github.com/dhruvja/ibc-rs?rev=6bb51e2d02c016d572974ec8f47633c1f85b6ba8)",
- "ibc-primitives 0.50.0 (git+https://github.com/dhruvja/ibc-rs?rev=6bb51e2d02c016d572974ec8f47633c1f85b6ba8)",
- "ibc-proto 0.41.0",
- "subtle-encoding",
- "tendermint 0.34.1",
+ "tendermint 0.34.1 (git+https://github.com/mina86/tendermint-rs?rev=45fbd500d731effb95a98257630feb46f6c41d06)",
 ]
 
 [[package]]
@@ -6243,32 +6147,14 @@ source = "git+https://github.com/mina86/ibc-rs?rev=6015aea441d4660f7f7ecd89b5e77
 dependencies = [
  "derive_more",
  "displaydoc",
- "ibc-core-channel-types 0.50.0 (git+https://github.com/mina86/ibc-rs?rev=6015aea441d4660f7f7ecd89b5e770a993448089)",
- "ibc-core-client-context 0.50.0 (git+https://github.com/mina86/ibc-rs?rev=6015aea441d4660f7f7ecd89b5e770a993448089)",
- "ibc-core-client-types 0.50.0 (git+https://github.com/mina86/ibc-rs?rev=6015aea441d4660f7f7ecd89b5e770a993448089)",
- "ibc-core-commitment-types 0.50.0 (git+https://github.com/mina86/ibc-rs?rev=6015aea441d4660f7f7ecd89b5e770a993448089)",
- "ibc-core-connection-types 0.50.0 (git+https://github.com/mina86/ibc-rs?rev=6015aea441d4660f7f7ecd89b5e770a993448089)",
- "ibc-core-handler-types 0.50.0 (git+https://github.com/mina86/ibc-rs?rev=6015aea441d4660f7f7ecd89b5e770a993448089)",
+ "ibc-core-channel-types",
+ "ibc-core-client-context",
+ "ibc-core-client-types",
+ "ibc-core-commitment-types",
+ "ibc-core-connection-types",
+ "ibc-core-handler-types",
  "ibc-core-host-types 0.50.0 (git+https://github.com/mina86/ibc-rs?rev=6015aea441d4660f7f7ecd89b5e770a993448089)",
  "ibc-primitives 0.50.0 (git+https://github.com/mina86/ibc-rs?rev=6015aea441d4660f7f7ecd89b5e770a993448089)",
- "subtle-encoding",
-]
-
-[[package]]
-name = "ibc-core-host"
-version = "0.50.0"
-source = "git+https://github.com/dhruvja/ibc-rs?rev=6bb51e2d02c016d572974ec8f47633c1f85b6ba8#6bb51e2d02c016d572974ec8f47633c1f85b6ba8"
-dependencies = [
- "derive_more",
- "displaydoc",
- "ibc-core-channel-types 0.50.0 (git+https://github.com/dhruvja/ibc-rs?rev=6bb51e2d02c016d572974ec8f47633c1f85b6ba8)",
- "ibc-core-client-context 0.50.0 (git+https://github.com/dhruvja/ibc-rs?rev=6bb51e2d02c016d572974ec8f47633c1f85b6ba8)",
- "ibc-core-client-types 0.50.0 (git+https://github.com/dhruvja/ibc-rs?rev=6bb51e2d02c016d572974ec8f47633c1f85b6ba8)",
- "ibc-core-commitment-types 0.50.0 (git+https://github.com/dhruvja/ibc-rs?rev=6bb51e2d02c016d572974ec8f47633c1f85b6ba8)",
- "ibc-core-connection-types 0.50.0 (git+https://github.com/dhruvja/ibc-rs?rev=6bb51e2d02c016d572974ec8f47633c1f85b6ba8)",
- "ibc-core-handler-types 0.50.0 (git+https://github.com/dhruvja/ibc-rs?rev=6bb51e2d02c016d572974ec8f47633c1f85b6ba8)",
- "ibc-core-host-types 0.50.0 (git+https://github.com/dhruvja/ibc-rs?rev=6bb51e2d02c016d572974ec8f47633c1f85b6ba8)",
- "ibc-primitives 0.50.0 (git+https://github.com/dhruvja/ibc-rs?rev=6bb51e2d02c016d572974ec8f47633c1f85b6ba8)",
  "subtle-encoding",
 ]
 
@@ -6282,18 +6168,28 @@ dependencies = [
  "displaydoc",
  "ibc-app-transfer-types",
  "ibc-client-tendermint",
- "ibc-core-client-context 0.50.0 (git+https://github.com/mina86/ibc-rs?rev=6015aea441d4660f7f7ecd89b5e770a993448089)",
- "ibc-core-client-types 0.50.0 (git+https://github.com/mina86/ibc-rs?rev=6015aea441d4660f7f7ecd89b5e770a993448089)",
- "ibc-core-commitment-types 0.50.0 (git+https://github.com/mina86/ibc-rs?rev=6015aea441d4660f7f7ecd89b5e770a993448089)",
- "ibc-core-connection-types 0.50.0 (git+https://github.com/mina86/ibc-rs?rev=6015aea441d4660f7f7ecd89b5e770a993448089)",
- "ibc-core-handler-types 0.50.0 (git+https://github.com/mina86/ibc-rs?rev=6015aea441d4660f7f7ecd89b5e770a993448089)",
+ "ibc-core-client-context",
+ "ibc-core-client-types",
+ "ibc-core-commitment-types",
+ "ibc-core-connection-types",
+ "ibc-core-handler-types",
  "ibc-core-host-types 0.50.0 (git+https://github.com/mina86/ibc-rs?rev=6015aea441d4660f7f7ecd89b5e770a993448089)",
  "ibc-primitives 0.50.0 (git+https://github.com/mina86/ibc-rs?rev=6015aea441d4660f7f7ecd89b5e770a993448089)",
  "ibc-proto 0.41.0",
  "serde",
  "sha2 0.10.8",
  "subtle-encoding",
- "tendermint 0.34.1",
+ "tendermint 0.34.1 (git+https://github.com/mina86/tendermint-rs?rev=45fbd500d731effb95a98257630feb46f6c41d06)",
+]
+
+[[package]]
+name = "ibc-core-host-types"
+version = "0.50.0"
+source = "git+https://github.com/mina86/ibc-rs?rev=2b50319f3460d03e8781e5a834c4b56bdcfdc5bc#2b50319f3460d03e8781e5a834c4b56bdcfdc5bc"
+dependencies = [
+ "derive_more",
+ "displaydoc",
+ "ibc-primitives 0.50.0 (git+https://github.com/mina86/ibc-rs?rev=2b50319f3460d03e8781e5a834c4b56bdcfdc5bc)",
 ]
 
 [[package]]
@@ -6306,16 +6202,6 @@ dependencies = [
  "displaydoc",
  "ibc-primitives 0.50.0 (git+https://github.com/mina86/ibc-rs?rev=6015aea441d4660f7f7ecd89b5e770a993448089)",
  "serde",
-]
-
-[[package]]
-name = "ibc-core-host-types"
-version = "0.50.0"
-source = "git+https://github.com/dhruvja/ibc-rs?rev=6bb51e2d02c016d572974ec8f47633c1f85b6ba8#6bb51e2d02c016d572974ec8f47633c1f85b6ba8"
-dependencies = [
- "derive_more",
- "displaydoc",
- "ibc-primitives 0.50.0 (git+https://github.com/dhruvja/ibc-rs?rev=6bb51e2d02c016d572974ec8f47633c1f85b6ba8)",
 ]
 
 [[package]]
@@ -6325,9 +6211,9 @@ source = "git+https://github.com/mina86/ibc-rs?rev=6015aea441d4660f7f7ecd89b5e77
 dependencies = [
  "derive_more",
  "displaydoc",
- "ibc-core-channel-types 0.50.0 (git+https://github.com/mina86/ibc-rs?rev=6015aea441d4660f7f7ecd89b5e770a993448089)",
+ "ibc-core-channel-types",
  "ibc-core-host-types 0.50.0 (git+https://github.com/mina86/ibc-rs?rev=6015aea441d4660f7f7ecd89b5e770a993448089)",
- "ibc-core-router-types 0.50.0 (git+https://github.com/mina86/ibc-rs?rev=6015aea441d4660f7f7ecd89b5e770a993448089)",
+ "ibc-core-router-types",
  "ibc-primitives 0.50.0 (git+https://github.com/mina86/ibc-rs?rev=6015aea441d4660f7f7ecd89b5e770a993448089)",
  "subtle-encoding",
 ]
@@ -6345,21 +6231,7 @@ dependencies = [
  "ibc-proto 0.41.0",
  "serde",
  "subtle-encoding",
- "tendermint 0.34.1",
-]
-
-[[package]]
-name = "ibc-core-router-types"
-version = "0.50.0"
-source = "git+https://github.com/dhruvja/ibc-rs?rev=6bb51e2d02c016d572974ec8f47633c1f85b6ba8#6bb51e2d02c016d572974ec8f47633c1f85b6ba8"
-dependencies = [
- "derive_more",
- "displaydoc",
- "ibc-core-host-types 0.50.0 (git+https://github.com/dhruvja/ibc-rs?rev=6bb51e2d02c016d572974ec8f47633c1f85b6ba8)",
- "ibc-primitives 0.50.0 (git+https://github.com/dhruvja/ibc-rs?rev=6bb51e2d02c016d572974ec8f47633c1f85b6ba8)",
- "ibc-proto 0.41.0",
- "subtle-encoding",
- "tendermint 0.34.1",
+ "tendermint 0.34.1 (git+https://github.com/mina86/tendermint-rs?rev=45fbd500d731effb95a98257630feb46f6c41d06)",
 ]
 
 [[package]]
@@ -6409,6 +6281,19 @@ dependencies = [
 [[package]]
 name = "ibc-primitives"
 version = "0.50.0"
+source = "git+https://github.com/mina86/ibc-rs?rev=2b50319f3460d03e8781e5a834c4b56bdcfdc5bc#2b50319f3460d03e8781e5a834c4b56bdcfdc5bc"
+dependencies = [
+ "derive_more",
+ "displaydoc",
+ "ibc-proto 0.41.0",
+ "prost 0.12.3",
+ "tendermint 0.34.1 (git+https://github.com/mina86/tendermint-rs?rev=45fbd500d731effb95a98257630feb46f6c41d06)",
+ "time",
+]
+
+[[package]]
+name = "ibc-primitives"
+version = "0.50.0"
 source = "git+https://github.com/mina86/ibc-rs?rev=6015aea441d4660f7f7ecd89b5e770a993448089#6015aea441d4660f7f7ecd89b5e770a993448089"
 dependencies = [
  "borsh 0.10.3",
@@ -6417,20 +6302,7 @@ dependencies = [
  "ibc-proto 0.41.0",
  "prost 0.12.3",
  "serde",
- "tendermint 0.34.1",
- "time",
-]
-
-[[package]]
-name = "ibc-primitives"
-version = "0.50.0"
-source = "git+https://github.com/dhruvja/ibc-rs?rev=6bb51e2d02c016d572974ec8f47633c1f85b6ba8#6bb51e2d02c016d572974ec8f47633c1f85b6ba8"
-dependencies = [
- "derive_more",
- "displaydoc",
- "ibc-proto 0.41.0",
- "prost 0.12.3",
- "tendermint 0.34.1",
+ "tendermint 0.34.1 (git+https://github.com/mina86/tendermint-rs?rev=45fbd500d731effb95a98257630feb46f6c41d06)",
  "time",
 ]
 
@@ -6462,7 +6334,7 @@ dependencies = [
  "prost 0.12.3",
  "serde",
  "subtle-encoding",
- "tendermint-proto 0.34.1 (registry+https://github.com/rust-lang/crates.io-index)",
+ "tendermint-proto 0.34.1 (git+https://github.com/mina86/tendermint-rs?rev=45fbd500d731effb95a98257630feb46f6c41d06)",
 ]
 
 [[package]]
@@ -7476,7 +7348,7 @@ checksum = "830d08ce1d1d941e6b30645f1a0eb5643013d835ce3779a5fc208261dbe10f55"
 [[package]]
 name = "lib"
 version = "0.0.0"
-source = "git+https://github.com/ComposableFi/emulated-light-client/#c9be1f03a87ecffd61ce4635198d8ee03f952bb8"
+source = "git+https://github.com/ComposableFi/emulated-light-client/#8039dce2f90221f2c778992aafcf42e39b4c5104"
 dependencies = [
  "base64 0.21.7",
  "borsh 0.10.3",
@@ -8377,7 +8249,7 @@ dependencies = [
 [[package]]
 name = "memory"
 version = "0.0.0"
-source = "git+https://github.com/ComposableFi/emulated-light-client/#c9be1f03a87ecffd61ce4635198d8ee03f952bb8"
+source = "git+https://github.com/ComposableFi/emulated-light-client/#8039dce2f90221f2c778992aafcf42e39b4c5104"
 dependencies = [
  "derive_more",
  "stdx",
@@ -12460,11 +12332,11 @@ dependencies = [
 [[package]]
 name = "proto-utils"
 version = "0.0.0"
-source = "git+https://github.com/ComposableFi/emulated-light-client/#c9be1f03a87ecffd61ce4635198d8ee03f952bb8"
+source = "git+https://github.com/ComposableFi/emulated-light-client/#8039dce2f90221f2c778992aafcf42e39b4c5104"
 dependencies = [
  "const_format",
  "derive_more",
- "ibc-core-client-context 0.50.0 (git+https://github.com/dhruvja/ibc-rs?rev=6bb51e2d02c016d572974ec8f47633c1f85b6ba8)",
+ "ibc-core-client-context",
  "ibc-proto 0.41.0",
  "prost 0.12.3",
 ]
@@ -14876,7 +14748,7 @@ dependencies = [
 [[package]]
 name = "sealable-trie"
 version = "0.0.0"
-source = "git+https://github.com/ComposableFi/emulated-light-client/#c9be1f03a87ecffd61ce4635198d8ee03f952bb8"
+source = "git+https://github.com/ComposableFi/emulated-light-client/#8039dce2f90221f2c778992aafcf42e39b4c5104"
 dependencies = [
  "ascii 1.1.0",
  "base64 0.21.7",
@@ -15310,7 +15182,7 @@ dependencies = [
  "bytes",
  "ics23 0.10.0",
  "proptest",
- "rand 0.8.5",
+ "rand 0.4.6",
  "sha2 0.10.8",
  "tendermint 0.28.0",
 ]
@@ -15461,7 +15333,7 @@ dependencies = [
 [[package]]
 name = "solana-allocator"
 version = "0.0.0"
-source = "git+https://github.com/ComposableFi/emulated-light-client/#aa2f9aa2c9a30505172be75d2714bb17eb4b1400"
+source = "git+https://github.com/ComposableFi/emulated-light-client/#8039dce2f90221f2c778992aafcf42e39b4c5104"
 dependencies = [
  "bytemuck",
  "solana-program",
@@ -15598,7 +15470,7 @@ dependencies = [
 [[package]]
 name = "solana-ibc"
 version = "0.1.0"
-source = "git+https://github.com/ComposableFi/emulated-light-client/#aa2f9aa2c9a30505172be75d2714bb17eb4b1400"
+source = "git+https://github.com/ComposableFi/emulated-light-client/#8039dce2f90221f2c778992aafcf42e39b4c5104"
 dependencies = [
  "anchor-lang",
  "anchor-spl",
@@ -15626,8 +15498,8 @@ dependencies = [
  "spl-token",
  "stdx",
  "strum 0.25.0",
- "tendermint 0.34.1",
- "tendermint-light-client-verifier 0.34.0",
+ "tendermint 0.34.1 (git+https://github.com/mina86/tendermint-rs?rev=45fbd500d731effb95a98257630feb46f6c41d06)",
+ "tendermint-light-client-verifier 0.34.1 (git+https://github.com/mina86/tendermint-rs?rev=45fbd500d731effb95a98257630feb46f6c41d06)",
  "trie-ids",
  "uint",
  "wasm",
@@ -16020,7 +15892,7 @@ checksum = "468aa43b7edb1f9b7b7b686d5c3aeb6630dc1708e86e31343499dd5c4d775183"
 [[package]]
 name = "solana-signature-verifier"
 version = "0.0.0"
-source = "git+https://github.com/ComposableFi/emulated-light-client/#aa2f9aa2c9a30505172be75d2714bb17eb4b1400"
+source = "git+https://github.com/ComposableFi/emulated-light-client/#8039dce2f90221f2c778992aafcf42e39b4c5104"
 dependencies = [
  "base64 0.21.7",
  "borsh 0.10.3",
@@ -16132,7 +16004,7 @@ dependencies = [
 [[package]]
 name = "solana-trie"
 version = "0.0.0"
-source = "git+https://github.com/ComposableFi/emulated-light-client/#aa2f9aa2c9a30505172be75d2714bb17eb4b1400"
+source = "git+https://github.com/ComposableFi/emulated-light-client/#8039dce2f90221f2c778992aafcf42e39b4c5104"
 dependencies = [
  "bytemuck",
  "lib",
@@ -16198,7 +16070,7 @@ dependencies = [
 [[package]]
 name = "solana-write-account"
 version = "0.0.0"
-source = "git+https://github.com/ComposableFi/emulated-light-client/#aa2f9aa2c9a30505172be75d2714bb17eb4b1400"
+source = "git+https://github.com/ComposableFi/emulated-light-client/#8039dce2f90221f2c778992aafcf42e39b4c5104"
 dependencies = [
  "solana-program",
  "stdx",
@@ -17720,7 +17592,7 @@ dependencies = [
 [[package]]
 name = "stdx"
 version = "0.0.0"
-source = "git+https://github.com/ComposableFi/emulated-light-client/#c9be1f03a87ecffd61ce4635198d8ee03f952bb8"
+source = "git+https://github.com/ComposableFi/emulated-light-client/#8039dce2f90221f2c778992aafcf42e39b4c5104"
 
 [[package]]
 name = "strsim"
@@ -18167,8 +18039,34 @@ dependencies = [
 
 [[package]]
 name = "tendermint"
-version = "0.34.0"
-source = "git+https://github.com/informalsystems/tendermint-rs?rev=37822e540e272d2ca9e763769ad20c581203ff9a#37822e540e272d2ca9e763769ad20c581203ff9a"
+version = "0.34.1"
+source = "git+https://github.com/informalsystems/tendermint-rs?rev=37822e540e272d2ca9e763769ad20c581203ff9a#45fbd500d731effb95a98257630feb46f6c41d06"
+dependencies = [
+ "bytes",
+ "digest 0.10.7",
+ "ed25519 2.2.2",
+ "flex-error",
+ "futures",
+ "num-traits",
+ "once_cell",
+ "prost 0.12.3",
+ "prost-types 0.12.3",
+ "serde",
+ "serde_bytes",
+ "serde_json",
+ "serde_repr",
+ "signature 2.1.0",
+ "subtle",
+ "subtle-encoding",
+ "tendermint-proto 0.34.1 (git+https://github.com/informalsystems/tendermint-rs?rev=37822e540e272d2ca9e763769ad20c581203ff9a)",
+ "time",
+ "zeroize",
+]
+
+[[package]]
+name = "tendermint"
+version = "0.34.1"
+source = "git+https://github.com/mina86/tendermint-rs?rev=45fbd500d731effb95a98257630feb46f6c41d06#45fbd500d731effb95a98257630feb46f6c41d06"
 dependencies = [
  "bytes",
  "digest 0.10.7",
@@ -18188,34 +18086,7 @@ dependencies = [
  "signature 2.1.0",
  "subtle",
  "subtle-encoding",
- "tendermint-proto 0.34.0",
- "time",
- "zeroize",
-]
-
-[[package]]
-name = "tendermint"
-version = "0.34.1"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "15ab8f0a25d0d2ad49ac615da054d6a76aa6603ff95f7d18bafdd34450a1a04b"
-dependencies = [
- "bytes",
- "digest 0.10.7",
- "ed25519 2.2.2",
- "flex-error",
- "futures",
- "num-traits",
- "once_cell",
- "prost 0.12.3",
- "prost-types 0.12.3",
- "serde",
- "serde_bytes",
- "serde_json",
- "serde_repr",
- "signature 2.1.0",
- "subtle",
- "subtle-encoding",
- "tendermint-proto 0.34.1 (registry+https://github.com/rust-lang/crates.io-index)",
+ "tendermint-proto 0.34.1 (git+https://github.com/mina86/tendermint-rs?rev=45fbd500d731effb95a98257630feb46f6c41d06)",
  "time",
  "zeroize",
 ]
@@ -18268,13 +18139,25 @@ dependencies = [
 
 [[package]]
 name = "tendermint-light-client-verifier"
-version = "0.34.0"
-source = "git+https://github.com/informalsystems/tendermint-rs?rev=37822e540e272d2ca9e763769ad20c581203ff9a#37822e540e272d2ca9e763769ad20c581203ff9a"
+version = "0.34.1"
+source = "git+https://github.com/informalsystems/tendermint-rs?rev=37822e540e272d2ca9e763769ad20c581203ff9a#45fbd500d731effb95a98257630feb46f6c41d06"
 dependencies = [
  "derive_more",
  "flex-error",
  "serde",
- "tendermint 0.34.0",
+ "tendermint 0.34.1 (git+https://github.com/informalsystems/tendermint-rs?rev=37822e540e272d2ca9e763769ad20c581203ff9a)",
+ "time",
+]
+
+[[package]]
+name = "tendermint-light-client-verifier"
+version = "0.34.1"
+source = "git+https://github.com/mina86/tendermint-rs?rev=45fbd500d731effb95a98257630feb46f6c41d06#45fbd500d731effb95a98257630feb46f6c41d06"
+dependencies = [
+ "derive_more",
+ "flex-error",
+ "serde",
+ "tendermint 0.34.1 (git+https://github.com/mina86/tendermint-rs?rev=45fbd500d731effb95a98257630feb46f6c41d06)",
  "time",
 ]
 
@@ -18297,31 +18180,11 @@ dependencies = [
 
 [[package]]
 name = "tendermint-proto"
-version = "0.34.0"
-source = "git+https://github.com/informalsystems/tendermint-rs?rev=37822e540e272d2ca9e763769ad20c581203ff9a#37822e540e272d2ca9e763769ad20c581203ff9a"
-dependencies = [
- "bytes",
- "flex-error",
- "num-derive 0.3.3",
- "num-traits",
- "prost 0.12.3",
- "prost-types 0.12.3",
- "serde",
- "serde_bytes",
- "subtle-encoding",
- "time",
-]
-
-[[package]]
-name = "tendermint-proto"
 version = "0.34.1"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "b797dd3d2beaaee91d2f065e7bdf239dc8d80bba4a183a288bc1279dd5a69a1e"
+source = "git+https://github.com/informalsystems/tendermint-rs?rev=37822e540e272d2ca9e763769ad20c581203ff9a#45fbd500d731effb95a98257630feb46f6c41d06"
 dependencies = [
  "bytes",
  "flex-error",
- "num-derive 0.3.3",
- "num-traits",
  "prost 0.12.3",
  "prost-types 0.12.3",
  "serde",
@@ -19045,17 +18908,17 @@ dependencies = [
 [[package]]
 name = "trie-ids"
 version = "0.0.0"
-source = "git+https://github.com/ComposableFi/emulated-light-client/#c9be1f03a87ecffd61ce4635198d8ee03f952bb8"
+source = "git+https://github.com/ComposableFi/emulated-light-client/#8039dce2f90221f2c778992aafcf42e39b4c5104"
 dependencies = [
  "ascii 1.1.0",
  "base64 0.21.7",
  "borsh 0.10.3",
  "bytemuck",
  "derive_more",
- "ibc-core-channel-types 0.50.0 (git+https://github.com/dhruvja/ibc-rs?rev=6bb51e2d02c016d572974ec8f47633c1f85b6ba8)",
- "ibc-core-client-types 0.50.0 (git+https://github.com/dhruvja/ibc-rs?rev=6bb51e2d02c016d572974ec8f47633c1f85b6ba8)",
- "ibc-core-connection-types 0.50.0 (git+https://github.com/dhruvja/ibc-rs?rev=6bb51e2d02c016d572974ec8f47633c1f85b6ba8)",
- "ibc-core-host-types 0.50.0 (git+https://github.com/dhruvja/ibc-rs?rev=6bb51e2d02c016d572974ec8f47633c1f85b6ba8)",
+ "ibc-core-channel-types",
+ "ibc-core-client-types",
+ "ibc-core-connection-types",
+ "ibc-core-host-types 0.50.0 (git+https://github.com/mina86/ibc-rs?rev=6015aea441d4660f7f7ecd89b5e770a993448089)",
  "strum 0.25.0",
 ]
 
@@ -19230,9 +19093,9 @@ version = "1.6.3"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "97fee6b57c6a41524a810daee9286c02d7752c4253064d0b05472833a438f675"
 dependencies = [
- "cfg-if 1.0.0",
+ "cfg-if 0.1.10",
  "digest 0.10.7",
- "rand 0.8.5",
+ "rand 0.4.6",
  "static_assertions",
 ]
 
@@ -19508,12 +19371,12 @@ checksum = "9c8d87e72b64a3b4db28d11ce29237c246188f4f51057d65a7eab63b7987e423"
 [[package]]
 name = "wasm"
 version = "0.0.0"
-source = "git+https://github.com/ComposableFi/emulated-light-client/#aa2f9aa2c9a30505172be75d2714bb17eb4b1400"
+source = "git+https://github.com/ComposableFi/emulated-light-client/#8039dce2f90221f2c778992aafcf42e39b4c5104"
 dependencies = [
  "const_format",
  "derive_more",
- "ibc-core-client-context 0.50.0 (git+https://github.com/mina86/ibc-rs?rev=6015aea441d4660f7f7ecd89b5e770a993448089)",
- "ibc-core-commitment-types 0.50.0 (git+https://github.com/mina86/ibc-rs?rev=6015aea441d4660f7f7ecd89b5e770a993448089)",
+ "ibc-core-client-context",
+ "ibc-core-commitment-types",
  "ibc-primitives 0.50.0 (git+https://github.com/mina86/ibc-rs?rev=6015aea441d4660f7f7ecd89b5e770a993448089)",
  "ibc-proto 0.41.0",
  "lib",
@@ -20937,16 +20800,56 @@ dependencies = [
 ]
 
 [[patch.unused]]
-name = "bip39"
-version = "2.0.0"
-source = "git+https://github.com/dhruvja/rust-bip39.git#e3e70f8e935e71a86d177a057cedaa8163af0046"
+name = "ibc"
+version = "0.50.0"
+source = "git+https://github.com/mina86/ibc-rs?rev=2b50319f3460d03e8781e5a834c4b56bdcfdc5bc#2b50319f3460d03e8781e5a834c4b56bdcfdc5bc"
+
+[[patch.unused]]
+name = "ibc-client-tendermint-types"
+version = "0.50.0"
+source = "git+https://github.com/mina86/ibc-rs?rev=2b50319f3460d03e8781e5a834c4b56bdcfdc5bc#2b50319f3460d03e8781e5a834c4b56bdcfdc5bc"
+
+[[patch.unused]]
+name = "ibc-core-channel-types"
+version = "0.50.0"
+source = "git+https://github.com/mina86/ibc-rs?rev=2b50319f3460d03e8781e5a834c4b56bdcfdc5bc#2b50319f3460d03e8781e5a834c4b56bdcfdc5bc"
+
+[[patch.unused]]
+name = "ibc-core-client-context"
+version = "0.50.0"
+source = "git+https://github.com/mina86/ibc-rs?rev=2b50319f3460d03e8781e5a834c4b56bdcfdc5bc#2b50319f3460d03e8781e5a834c4b56bdcfdc5bc"
+
+[[patch.unused]]
+name = "ibc-core-client-types"
+version = "0.50.0"
+source = "git+https://github.com/mina86/ibc-rs?rev=2b50319f3460d03e8781e5a834c4b56bdcfdc5bc#2b50319f3460d03e8781e5a834c4b56bdcfdc5bc"
+
+[[patch.unused]]
+name = "ibc-core-commitment-types"
+version = "0.50.0"
+source = "git+https://github.com/mina86/ibc-rs?rev=2b50319f3460d03e8781e5a834c4b56bdcfdc5bc#2b50319f3460d03e8781e5a834c4b56bdcfdc5bc"
+
+[[patch.unused]]
+name = "ibc-core-connection-types"
+version = "0.50.0"
+source = "git+https://github.com/mina86/ibc-rs?rev=2b50319f3460d03e8781e5a834c4b56bdcfdc5bc#2b50319f3460d03e8781e5a834c4b56bdcfdc5bc"
+
+[[patch.unused]]
+name = "ibc-core-host"
+version = "0.50.0"
+source = "git+https://github.com/mina86/ibc-rs?rev=2b50319f3460d03e8781e5a834c4b56bdcfdc5bc#2b50319f3460d03e8781e5a834c4b56bdcfdc5bc"
+
+[[patch.unused]]
+name = "ibc-testkit"
+version = "0.50.0"
+source = "git+https://github.com/mina86/ibc-rs?rev=2b50319f3460d03e8781e5a834c4b56bdcfdc5bc#2b50319f3460d03e8781e5a834c4b56bdcfdc5bc"
 
 [[patch.unused]]
 name = "tendermint-light-client"
-version = "0.34.0"
-source = "git+https://github.com/informalsystems/tendermint-rs?rev=37822e540e272d2ca9e763769ad20c581203ff9a#37822e540e272d2ca9e763769ad20c581203ff9a"
+version = "0.34.1"
+source = "git+https://github.com/mina86/tendermint-rs?rev=45fbd500d731effb95a98257630feb46f6c41d06#45fbd500d731effb95a98257630feb46f6c41d06"
 
 [[patch.unused]]
 name = "tendermint-testgen"
-version = "0.34.0"
-source = "git+https://github.com/informalsystems/tendermint-rs?rev=37822e540e272d2ca9e763769ad20c581203ff9a#37822e540e272d2ca9e763769ad20c581203ff9a"
+version = "0.34.1"
+source = "git+https://github.com/mina86/tendermint-rs?rev=45fbd500d731effb95a98257630feb46f6c41d06#45fbd500d731effb95a98257630feb46f6c41d06"

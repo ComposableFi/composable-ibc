@@ -429,8 +429,7 @@ impl AnyClientState {
 			AnyClientState::Beefy(client_state) => client_state.latest_height(),
 			AnyClientState::Tendermint(client_state) => client_state.latest_height(),
 			AnyClientState::Wasm(client_state) => client_state.latest_height(),
-			AnyClientState::Guest(client_state) =>
-				ibc::Height::new(1, u64::from(client_state.latest_height)),
+			AnyClientState::Guest(client_state) => client_state.latest_height(),
 			#[cfg(any(test, feature = "testing"))]
 			AnyClientState::Mock(client_state) => client_state.latest_height(),
 		}
@@ -503,11 +502,7 @@ impl AnyClientMessage {
 					h.inner.maybe_header_height(),
 				ics08_wasm::client_message::ClientMessage::Misbehaviour(_) => None,
 			},
-			Self::Guest(inner) => match inner {
-				cf_guest::ClientMessage::Header(h) =>
-					Some(Height::new(1, u64::from(h.block_header.block_height))),
-				cf_guest::ClientMessage::Misbehaviour(_) => None,
-			},
+			Self::Guest(inner) => inner.maybe_header_height(),
 			#[cfg(any(test, feature = "testing"))]
 			Self::Mock(inner) => match inner {
 				ibc::mock::header::MockClientMessage::Header(h) => Some(h.height()),
@@ -605,11 +600,11 @@ impl TryFrom<Any> for AnyClientMessage {
 				cf_guest::ClientMessage::decode_vec(&value.value)
 					.map_err(ics02_client::error::Error::decode_raw_header)?,
 			)),
-			GUEST_HEADER_TYPE_URL => Ok(Self::Guest(cf_guest::ClientMessage::Header(
+			GUEST_HEADER_TYPE_URL => Ok(Self::Guest(cf_guest::ClientMessage::from(
 				cf_guest::Header::decode_vec(&value.value)
 					.map_err(ics02_client::error::Error::decode_raw_header)?,
 			))),
-			GUEST_MISBEHAVIOUR_TYPE_URL => Ok(Self::Guest(cf_guest::ClientMessage::Misbehaviour(
+			GUEST_MISBEHAVIOUR_TYPE_URL => Ok(Self::Guest(cf_guest::ClientMessage::from(
 				cf_guest::Misbehaviour::decode_vec(&value.value)
 					.map_err(ics02_client::error::Error::decode_raw_header)?,
 			))),

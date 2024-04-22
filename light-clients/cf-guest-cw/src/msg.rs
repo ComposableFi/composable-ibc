@@ -14,11 +14,10 @@
 // limitations under the License.
 
 use crate::{ics23::FakeInner, Bytes, ContractError};
-use core::{str::FromStr, time::Duration};
+use core::str::FromStr;
 use cosmwasm_schema::cw_serde;
 use ibc::{
 	core::{
-		ics02_client::trust_threshold::TrustThreshold,
 		ics23_commitment::commitment::{CommitmentPrefix, CommitmentProofBytes},
 		ics24_host::Path,
 	},
