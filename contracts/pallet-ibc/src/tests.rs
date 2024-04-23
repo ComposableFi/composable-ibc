@@ -254,7 +254,7 @@ fn send_transfer() {
 		let channel_id = ChannelId::new(0);
 		let port_id = PortId::transfer();
 		let packet_info = Pallet::<Test>::get_send_packet_info(
-			channel_id.to_string().as_bytes().to_vec(),
+			channel_id.to_string().into_bytes(),
 			port_id.as_bytes().to_vec(),
 			vec![1],
 		)
@@ -384,7 +384,7 @@ fn send_transfer_no_fee_feeless_channels() {
 		let channel_id = ChannelId::new(0);
 		let port_id = PortId::transfer();
 		let packet_info = Pallet::<Test>::get_send_packet_info(
-			channel_id.to_string().as_bytes().to_vec(),
+			channel_id.to_string().into_bytes(),
 			port_id.as_bytes().to_vec(),
 			vec![1],
 		)
@@ -782,7 +782,7 @@ fn on_ack_transfer_with_custom_success_result() {
 		));
 
 		let packet_info = Ibc::get_send_packet_info(
-			channel_id.to_string().as_bytes().to_vec(),
+			channel_id.to_string().into_bytes(),
 			PortId::transfer().as_bytes().to_vec(),
 			vec![1],
 		)
@@ -1087,7 +1087,7 @@ fn should_fetch_recv_packet_with_acknowledgement() {
 		let channel_id = ChannelId::new(0);
 		let port_id = PortId::transfer();
 		let packet_info = Pallet::<Test>::get_recv_packet_info(
-			channel_id.to_string().as_bytes().to_vec(),
+			channel_id.to_string().into_bytes(),
 			port_id.as_bytes().to_vec(),
 			vec![1],
 		)
@@ -1174,7 +1174,7 @@ fn should_cleanup_offchain_packets_correctly() {
 	});
 
 	ext.execute_with(|| {
-		let channel_id_bytes = channel_id.to_string().as_bytes().to_vec();
+		let channel_id_bytes = channel_id.to_string().into_bytes();
 		let port_id_bytes = port_id.as_bytes().to_vec();
 
 		let (send_seq_set, _) =
@@ -1193,7 +1193,7 @@ fn should_cleanup_offchain_packets_correctly() {
 	});
 
 	ext.execute_with(|| {
-		let channel_id_bytes = channel_id.to_string().as_bytes().to_vec();
+		let channel_id_bytes = channel_id.to_string().into_bytes();
 		let port_id_bytes = port_id.as_bytes().to_vec();
 
 		let (send_seq_set, last_removed_send) =
@@ -1225,7 +1225,7 @@ fn should_cleanup_offchain_packets_correctly() {
 	});
 
 	ext.execute_with(|| {
-		let channel_id_bytes = channel_id.to_string().as_bytes().to_vec();
+		let channel_id_bytes = channel_id.to_string().into_bytes();
 		let port_id_bytes = port_id.as_bytes().to_vec();
 
 		let (send_seq_set, last_removed_send) =
