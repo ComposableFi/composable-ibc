@@ -89,19 +89,21 @@ where
 	C::AnyClientState: TryFrom<Any>,
 	C::AnyConsensusState: TryFrom<Any>,
 	Error: From<<C::AnyClientState as TryFrom<Any>>::Error>,
+	Error: From<<C::AnyConsensusState as TryFrom<Any>>::Error>,
 {
 	type Error = Error;
 
 	fn try_from(raw: RawMsgCreateClient) -> Result<Self, Error> {
-		let raw_client_state = raw.client_state.ok_or_else(Error::missing_raw_client_state)?;
+		let client_state = raw.client_state.ok_or_else(Error::missing_raw_client_state)?;
+		let client_state = C::AnyClientState::try_from(client_state)?;
 
 		let consensus_state = raw
 			.consensus_state
-			.and_then(|cs| C::AnyConsensusState::try_from(cs).ok())
 			.ok_or_else(Error::missing_raw_consensus_state)?;
+		let consensus_state = C::AnyConsensusState::try_from(consensus_state)?;
 
 		MsgCreateAnyClient::new(
-			C::AnyClientState::try_from(raw_client_state)?,
+			client_state,
 			consensus_state,
 			raw.signer.parse().map_err(Error::signer)?,
 		)
