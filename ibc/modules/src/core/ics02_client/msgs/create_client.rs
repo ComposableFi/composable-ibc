@@ -97,9 +97,7 @@ where
 		let client_state = raw.client_state.ok_or_else(Error::missing_raw_client_state)?;
 		let client_state = C::AnyClientState::try_from(client_state)?;
 
-		let consensus_state = raw
-			.consensus_state
-			.ok_or_else(Error::missing_raw_consensus_state)?;
+		let consensus_state = raw.consensus_state.ok_or_else(Error::missing_raw_consensus_state)?;
 		let consensus_state = C::AnyConsensusState::try_from(consensus_state)?;
 
 		MsgCreateAnyClient::new(
