@@ -25,7 +25,7 @@ anchor test --skip-local-validator -- --features mocks
 4. Open `app/ante/ibc_ante.go` on line 63 and comment the if statement there. Remove unused imports
 5. Run `mkdir centaurid-nogov`
 6. Build the node using g`o build -mod vendor -o centaurid-nogov ./...`
-7. Run the network using the script attached below 
+7. Run the network using the script attached below
 ```
 ./scripts/testnode.sh
 ```
@@ -33,11 +33,10 @@ anchor test --skip-local-validator -- --features mocks
 ### iii. Running the testsuite
 1. Run the command below to compile the wasm contract.
 ```
-cargo +nightly-2023-02-07 build -p icsxx-solana-cw --release --target wasm32-unknown-unknown --lib --no-default-features
+cargo +nightly-2023-02-07 build -p cf-guest-cw --release --target wasm32-unknown-unknown --lib --no-default-features
 ```
 2. Set the appropriate rpc url for solana and cosmos.
 3. Run the following command to run the integration test.
 ```
 RUST_BACKTRACE=1 cargo test --package hyperspace-testsuite --test solana_cosmos --  --nocapture
 ```
-
