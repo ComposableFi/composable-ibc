@@ -5,11 +5,6 @@ use alloc::{
 	string::ToString,
 	vec::Vec,
 };
-// use cf_guest::proto::{
-// 	ClientState::TYPE_URL as GUEST_CLIENT_STATE_TYPE_URL,
-// 	ConsensusState::TYPE_URL as GUEST_CONSENSUS_STATE_TYPE_URL,
-// 	Header::TYPE_URL as GUEST_HEADER_TYPE_URL,
-// };
 use borsh::maybestd::io;
 use frame_support::{
 	pallet_prelude::{StorageValue, ValueQuery},
@@ -73,11 +68,11 @@ use tendermint::{
 };
 use tendermint_proto::Protobuf;
 
-pub const GUEST_CLIENT_STATE_TYPE_URL: &str = "/lightclients.guest.v1.ClientState";
-pub const GUEST_CONSENSUS_STATE_TYPE_URL: &str = "/lightclients.guest.v1.ConsensusState";
-pub const GUEST_CLIENT_MESSAGE_TYPE_URL: &str = "/lightclients.guest.v1.ClientMessage";
-pub const GUEST_HEADER_TYPE_URL: &str = "/lightclients.guest.v1.Header";
-pub const GUEST_MISBEHAVIOUR_TYPE_URL: &str = "/lightclients.guest.v1.Misbehaviour";
+const GUEST_CLIENT_MESSAGE_TYPE_URL: &'static str = cf_guest::proto::ClientMessage::IBC_TYPE_URL;
+const GUEST_CLIENT_STATE_TYPE_URL: &'static str = cf_guest::proto::ClientState::IBC_TYPE_URL;
+const GUEST_CONSENSUS_STATE_TYPE_URL: &'static str = cf_guest::proto::ConsensusState::IBC_TYPE_URL;
+const GUEST_HEADER_TYPE_URL: &'static str = cf_guest::proto::Header::IBC_TYPE_URL;
+const GUEST_MISBEHAVIOUR_TYPE_URL: &'static str = cf_guest::proto::Misbehaviour::IBC_TYPE_URL;
 
 #[derive(Clone, Default, PartialEq, Debug, Eq)]
 pub struct HostFunctionsManager;

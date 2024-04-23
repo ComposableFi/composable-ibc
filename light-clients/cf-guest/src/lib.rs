@@ -174,6 +174,11 @@ macro_rules! wrap {
 	};
 
 	(impl proto for $Type:ident) => {
+		impl $crate::proto::$Type {
+			pub const IBC_TYPE_URL: &'static str =
+				cf_guest_upstream::proto::$Type::IBC_TYPE_URL;
+		}
+
 		impl From<$Type> for $crate::proto::$Type {
 			fn from(msg: $Type) -> Self {
 				Self(cf_guest_upstream::proto::$Type::from(&msg.0))
@@ -202,6 +207,11 @@ macro_rules! wrap {
 	};
 
 	(impl<PK> proto for $Type:ident) => {
+		impl $crate::proto::$Type {
+			pub const IBC_TYPE_URL: &'static str =
+				cf_guest_upstream::proto::$Type::IBC_TYPE_URL;
+		}
+
 		impl<PK: guestchain::PubKey> From<$Type<PK>> for $crate::proto::$Type {
 			fn from(msg: $Type<PK>) -> Self {
 				Self(cf_guest_upstream::proto::$Type::from(&msg.0))
