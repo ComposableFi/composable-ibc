@@ -12,8 +12,6 @@ use crate::{client_def::GuestClient, error::Error, CLIENT_TYPE};
 super::wrap!(cf_guest_upstream::ClientState<PK> as ClientState);
 super::wrap!(impl<PK> proto for ClientState);
 
-// impl<PK: guestchain::PubKey> Protobuf<crate::proto::ClientState> for ClientState<PK> {}
-
 impl<PK: guestchain::PubKey> ClientState<PK> {
 	pub fn new(
 		genesis_hash: CryptoHash,
@@ -128,5 +126,59 @@ where
 
 	fn encode_to_vec(&self) -> Result<ibc::prelude::Vec<u8>, ibc::protobuf::Error> {
 		Ok(self.0.encode())
+	}
+}
+
+#[cfg(test)]
+mod tests {
+	use super::*;
+
+	use guestchain::validators::MockPubKey;
+
+	const ANY_MESSAGE: [u8; 116] = [
+		10, 34, 47, 108, 105, 103, 104, 116, 99, 108, 105, 101, 110, 116, 115, 46, 103, 117, 101,
+		115, 116, 46, 118, 49, 46, 67, 108, 105, 101, 110, 116, 83, 116, 97, 116, 101, 18, 78, 10,
+		32, 243, 148, 241, 41, 122, 49, 51, 253, 97, 145, 113, 22, 234, 164, 193, 183, 185, 48,
+		160, 186, 69, 72, 144, 156, 126, 229, 103, 131, 220, 174, 140, 165, 16, 5, 24, 128, 128,
+		144, 202, 210, 198, 14, 34, 32, 86, 12, 131, 131, 127, 125, 82, 54, 32, 207, 121, 149, 204,
+		11, 121, 102, 180, 211, 111, 54, 0, 207, 247, 125, 195, 57, 10, 10, 80, 84, 86, 152,
+	];
+
+	fn message() -> &'static [u8] {
+		&ANY_MESSAGE[38..]
+	}
+
+	const GENESIS_HASH: CryptoHash = CryptoHash([
+		243, 148, 241, 41, 122, 49, 51, 253, 97, 145, 113, 22, 234, 164, 193, 183, 185, 48, 160,
+		186, 69, 72, 144, 156, 126, 229, 103, 131, 220, 174, 140, 165,
+	]);
+	const EPOCH_COMMITMENT: CryptoHash = CryptoHash([
+		86, 12, 131, 131, 127, 125, 82, 54, 32, 207, 121, 149, 204, 11, 121, 102, 180, 211, 111,
+		54, 0, 207, 247, 125, 195, 57, 10, 10, 80, 84, 86, 152,
+	]);
+
+	fn check(state: ClientState<MockPubKey>) {
+		let want = ClientState::<MockPubKey>::new(
+			GENESIS_HASH.clone(),
+			5.into(),
+			64000000000000,
+			EPOCH_COMMITMENT.clone(),
+			Some(EPOCH_COMMITMENT.clone()),
+			false,
+		);
+		assert_eq!(want, state);
+	}
+
+	#[test]
+	fn test_decode_vec() {
+		check(ibc::protobuf::Protobuf::decode_vec(message()).unwrap());
+	}
+
+	#[test]
+	fn test_from_any() {
+		use ibc_proto::google::protobuf::Any;
+
+		let any: Any = prost::Message::decode(ANY_MESSAGE.as_ref()).unwrap();
+		check(any.try_into().unwrap());
 	}
 }

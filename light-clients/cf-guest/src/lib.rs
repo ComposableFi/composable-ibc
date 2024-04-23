@@ -106,8 +106,6 @@ macro_rules! wrap {
 				Ok(Self(cf_guest_upstream::proto::AnyConvert::try_from_any(&any.type_url, &any.value)?))
 			}
 		}
-
-		impl ibc::protobuf::Protobuf<ibc_proto::google::protobuf::Any> for $Outer {}
 	};
 
 	($($Inner:ident)::*<PK> as $Outer:ident) => {
@@ -150,8 +148,6 @@ macro_rules! wrap {
 				Ok(Self(cf_guest_upstream::proto::AnyConvert::try_from_any(&any.type_url, &any.value)?))
 			}
 		}
-
-		impl<PK: guestchain::PubKey> ibc::protobuf::Protobuf<ibc_proto::google::protobuf::Any> for $Outer<PK> {}
 	};
 
 	(impl Default for $Outer:ident) => {
@@ -204,6 +200,8 @@ macro_rules! wrap {
 				Ok(Self(cf_guest_upstream::$Type::try_from(&msg.0)?))
 			}
 		}
+
+		impl ibc::protobuf::Protobuf<$crate::proto::$Type> for $Type {}
 	};
 
 	(impl<PK> proto for $Type:ident) => {
@@ -237,6 +235,8 @@ macro_rules! wrap {
 				Ok(Self(cf_guest_upstream::$Type::try_from(&msg.0)?))
 			}
 		}
+
+		impl<PK: guestchain::PubKey> ibc::protobuf::Protobuf<$crate::proto::$Type> for $Type<PK> {}
 	};
 }
 
