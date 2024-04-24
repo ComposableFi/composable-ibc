@@ -255,13 +255,14 @@ impl IbcProvider for SolanaClient {
 		);
 		let msg = MsgUpdateAnyClient::<LocalClientTypes> {
 			client_id: self.client_id(),
-			client_message: AnyClientMessage::Guest(guest_header.into()),
+			client_message: AnyClientMessage::Guest(cf_guest::ClientMessage::from(guest_header)),
 			signer: counterparty.account_id(),
 		};
 		let value = msg
 			.encode_vec()
 			.map_err(|e| Error::from(format!("Failed to encode MsgUpdateClient {msg:?}: {e:?}")))
 			.unwrap();
+		log::info!("This is wihle update {:?}", value);
 		let events_len = block_events.len();
 		let updates = (
 			Any { type_url: msg.type_url(), value },
@@ -954,7 +955,7 @@ deserialize client state"
 		let new_channel_id =
 			ibc_core_host_types::identifiers::ChannelId::new(channel_id.sequence());
 		let trie_comp = PortChannelPK::try_from(new_port_id, new_channel_id).unwrap();
-		let key = TrieKey::new(Tag::Ack, trie_comp);
+		let key = TrieKey::new(Tag::Commitment, trie_comp);
 		let sequences: Vec<u64> = trie
 			.get_subtrie(&key)
 			.unwrap()
@@ -1016,7 +1017,7 @@ deserialize client state"
 		let new_channel_id =
 			ibc_core_host_types::identifiers::ChannelId::new(channel_id.sequence());
 		let trie_comp = PortChannelPK::try_from(new_port_id, new_channel_id).unwrap();
-		let key = TrieKey::new(Tag::Ack, trie_comp);
+		let key = TrieKey::new(Tag::Commitment, trie_comp);
 		let packet_receipt_sequences: Vec<u64> = trie
 			.get_subtrie(&key)
 			.unwrap()
@@ -1031,8 +1032,8 @@ deserialize client state"
 			.iter()
 			.flat_map(|&seq| {
 				match packet_receipt_sequences.iter().find(|&&receipt_seq| receipt_seq == seq) {
-					Some(_) => None,
-					None => Some(seq),
+					Some(_) => Some(seq),
+					None => None,
 				}
 			})
 			.collect())
@@ -1775,7 +1776,12 @@ impl LightClientSync for SolanaClient {
 					.unwrap(),
 					signatures: final_signatures,
 				};
+				log::info!(
+					"This is header {:?}", guest_header
+				);
 				log::info!("Height: {:?} signature {:?}", block_header.block_height, sig);
+
+				log::info!("This is client message {:?}", AnyClientMessage::Guest(guest_header.clone().into()));
 
 				let msg = MsgUpdateAnyClient::<LocalClientTypes> {
 					client_id: self.client_id(),

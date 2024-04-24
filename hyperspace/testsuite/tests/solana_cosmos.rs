@@ -54,39 +54,38 @@ pub struct Args {
 
 impl Default for Args {
 	fn default() -> Self {
-		let relay = std::env::var("RELAY_HOST").unwrap_or_else(|_| "127.0.0.1".to_string());
-		let solana = std::env::var("SOLANA_HOST").unwrap_or_else(|_| "127.0.0.1".to_string());
-		let cosmos = std::env::var("COSMOS_HOST").unwrap_or_else(|_| "10.132.0.6".to_string());
+		let relay = std::env::var("RELAY_HOST").unwrap_or_else(|_| "192.168.1.101".to_string());
+		let solana = std::env::var("SOLANA_HOST").unwrap_or_else(|_| "192.168.1.101".to_string());
+		let cosmos = std::env::var("COSMOS_HOST").unwrap_or_else(|_| "192.168.1.101".to_string());
 		let wasm_path = std::env::var("WASM_PATH").unwrap_or_else(|_| {
-			"../../target/wasm32-unknown-unknown/release/ics07_guest_cw.wasm".to_string()
+			"../../target/wasm32-unknown-unknown/release/cf_guest_cw.wasm".to_string()
 		});
 
 		Args {
 			// chain_a: format!("https://devnet.helius-rpc.com/?api-key=bc5c0cfc-46df-4781-978f-af6ca7a202c2"),
 			chain_a: format!("http://{solana}:8899"),
-			// chain_b: format!("http://{cosmos}:26657"),
+			chain_b: format!("http://{cosmos}:26657"),
 			// chain_b: format!("http://34.34.178.141:26657"),
 			// chain_b: format!("http://10.132.0.13:26657/"), // testnet
-			chain_b: format!("http://10.132.0.6:26657/"), // mainnet
+			// chain_b: format!("http://10.132.0.6:26657/"), // mainnet
 			// chain_b: format!("https://rpc-testnet5.composable-cosmos.composablenodes.tech"),
 			relay_chain: format!("ws://{relay}:9944"),
 			para_id: 2000,
 			connection_prefix_a: "ibc".to_string(),
 			connection_prefix_b: "ibc".to_string(),
 			// cosmos_grpc: format!("http://34.34.182.7:9098"),
-			// cosmos_grpc: format!("http://{cosmos}:9999"),
+			cosmos_grpc: format!("http://{cosmos}:9090"),
 			// cosmos_grpc: format!("http://34.34.178.141:9999"),
 			// cosmos_grpc: format!("http://10.132.0.13:9999/"), // testnet
-			cosmos_grpc: format!("http://10.132.0.6:9999/"), // mainnet
-			// cosmos_ws: format!("ws://{cosmos}:26657/websocket"),
+			// cosmos_grpc: format!("http://10.132.0.6:9999/"), // mainnet
+			cosmos_ws: format!("ws://{cosmos}:26657/websocket"),
 			// cosmos_ws: format!("ws://34.34.178.141:26657/websocket"),
 			// cosmos_ws:
 			// format!("wss://rpc-testnet5.composable-cosmos.composablenodes.tech/websocket"),
 			// cosmos_ws: format!("ws://10.132.0.13:26657/websocket"),
-			cosmos_ws: format!("ws://10.132.0.6:26657/websocket"), // mainnet
-			solana_ws: format!("ws://{solana}:8900"),
-			// solana_ws:
-			// format!("wss://devnet.helius-rpc.com/?api-key=bc5c0cfc-46df-4781-978f-af6ca7a202c2"),
+			// cosmos_ws: format!("ws://10.132.0.6:26657/websocket"), // mainnet
+		  solana_ws: format!("ws://{solana}:8900"),
+			// solana_ws: format!("wss://devnet.helius-rpc.com/?api-key=bc5c0cfc-46df-4781-978f-af6ca7a202c2"),
 			wasm_path,
 		}
 	}
@@ -124,9 +123,10 @@ async fn setup_clients() -> (AnyChain, AnyChain) {
 			153, 230, 192, 225, 51, 119, 216, 14, 69, 225, 73, 7, 204, 144, 39, 213, 91, 255, 136,
 			38, 95, 131, 197, 4, 101, 186,
 		],
-		solana_ibc_program_id: "3MZrLWwMvD9mcMiNd7mnbrqmZDzjg29qmLo7FMTqr3qT".to_string(),
-		write_program_id: "FttaQtn8T8CnDCXd7JwxvkkKSYgVi7XwwyY7p2b6TCUt".to_string(),
-		signature_verifier_program_id: "2G9Wsz1LfzJ2gpVbeXuSciih2s3wKdj4fcTjeD1JJ3M1".to_string(),
+		solana_ibc_program_id: "9FeHRJLHJSEw4dYZrABHWTRKruFjxDmkLtPmhM5WFYL7".to_string(),
+		write_program_id: "FufGpHqMQgGVjtMH9AV8YMrJYq8zaK6USRsJkZP4yDjo".to_string(),
+		signature_verifier_program_id: 
+			"C6r1VEbn3mSpecgrZ7NdBvWUtYVJWrDPv4uU9Xs956gc".to_string(),
 	};
 
 	let mut config_b = CosmosClientConfig {
@@ -135,20 +135,20 @@ async fn setup_clients() -> (AnyChain, AnyChain) {
         grpc_url: args.cosmos_grpc.clone().parse().unwrap(),
         websocket_url: args.cosmos_ws.clone().parse().unwrap(),
         // chain_id: "banksy-testnet-5".to_string(),
-        chain_id: "centauri-1".to_string(),
+        chain_id: "test-1".to_string(),
         client_id: None,
         connection_id: None,
         account_prefix: "centauri".to_string(),
-        fee_denom: "ppica".to_string(),
-        fee_amount: "10000000".to_string(),
-        gas_limit: 100000000,
+        fee_denom: "stake".to_string(),
+        fee_amount: "92233720368547899".to_string(),
+        gas_limit: (i64::MAX - 1) as u64,
         store_prefix: args.connection_prefix_b,
         max_tx_size: 200000,
         mnemonic:
         // centauri1g5r2vmnp6lta9cpst4lzc4syy3kcj2ljte3tlh
-        // "decorate bright ozone fork gallery riot bus exhaust worth way bone indoor calm squirrel merry zero scheme cotton until shop any excess stage laundry"
+        "decorate bright ozone fork gallery riot bus exhaust worth way bone indoor calm squirrel merry zero scheme cotton until shop any excess stage laundry"
 				// "peace cash suffer celery broken blade fame fiscal lesson fancy virus bless recipe inherit reason cart mask mask absurd venture culture problem reward crew"
-				"scissors enroll comfort wrist eight catch decide stage squirrel phrase close december staff baby stable mirror hand allow sort dish wrist gas quantum puppy"
+				// "scissors enroll comfort wrist eight catch decide stage squirrel phrase close december staff baby stable mirror hand allow sort dish wrist gas quantum puppy"
             .to_string(),
         wasm_code_id: None,
         channel_whitelist: vec![],
@@ -169,23 +169,22 @@ async fn setup_clients() -> (AnyChain, AnyChain) {
 
 	println!("This is chain b prefix {:?}", chain_b.commitment_prefix.as_bytes());
 
-	// let wasm_data = tokio::fs::read(&args.wasm_path).await.expect("Failed to read wasm file");
-	// let code_id = match chain_b.upload_wasm(wasm_data.clone()).await {
-	// 	Ok(code_id) => {
-	// 		log::info!("wasm was uploaded");
-	// 		code_id
-	// 	},
-	// 	Err(e) => {
-	// 		let e_str = format!("{e:?}");
-	// 		if !e_str.contains("wasm code already exists") {
-	// 			panic!("Failed to upload wasm: {e_str}");
-	// 		}
-	// 		sha2_256(&wasm_data).to_vec()
-	// 	},
-	// };
-	// let code_id_str = hex::encode(code_id);
-	let code_id_str =
-		String::from("66ce7420d21e2555b0e6ce952c0826590fb5f6508a9ac84a5c11178cec58a303");
+	let wasm_data = tokio::fs::read(&args.wasm_path).await.expect("Failed to read wasm file");
+	let code_id = match chain_b.upload_wasm(wasm_data.clone()).await {
+		Ok(code_id) => {
+			log::info!("wasm was uploaded");
+			code_id
+		},
+		Err(e) => {
+			let e_str = format!("{e:?}");
+			if !e_str.contains("wasm code already exists") {
+				panic!("Failed to upload wasm: {e_str}");
+			}
+			sha2_256(&wasm_data).to_vec()
+		},
+	};
+	let code_id_str = hex::encode(code_id);
+	// let code_id_str = String::from("66ce7420d21e2555b0e6ce952c0826590fb5f6508a9ac84a5c11178cec58a303");
 	log::info!("This is wasm checksum {:?}", code_id_str);
 	config_b.wasm_code_id = Some(code_id_str);
 
@@ -208,7 +207,7 @@ async fn setup_clients() -> (AnyChain, AnyChain) {
 	chain_a_wrapped.set_client_id(client_a);
 	chain_b_wrapped.set_client_id(client_b);
 	// chain_b_wrapped.set_client_id(ClientId::new("07-tendermint", 0).unwrap());
-	// chain_a_wrapped.set_client_id(ClientId::new("08-wasm", 137).unwrap());
+	// chain_a_wrapped.set_client_id(ClientId::new("08-wasm", 1).unwrap());
 	(chain_a_wrapped, chain_b_wrapped)
 }
 
@@ -221,18 +220,18 @@ async fn solana_to_cosmos_ibc_messaging_full_integration_test() {
 	logging::setup_logging();
 
 	let asset_id_a = AnyAssetId::Solana("33WVSef9zaw49KbNdPGTmACVRnAXzN3o1fsqbUrLp2mh".to_string());
-	let asset_id_b = AnyAssetId::Cosmos("ppica".to_string());
+	let asset_id_b = AnyAssetId::Cosmos("stake".to_string());
 	let (mut chain_a, mut chain_b) = setup_clients().await;
 	let (handle, channel_a, channel_b, connection_id_a, connection_id_b) =
-		setup_connection_and_channel(&mut chain_a, &mut chain_b, Duration::from_secs(0)).await;
+		setup_connection_and_channel(&mut chain_a, &mut chain_b, Duration::from_secs(10)).await;
 
 	handle.abort();
 
 	// let connection_id_a = ConnectionId::from_str("connection-0").unwrap();
-	// let connection_id_b = ConnectionId::from_str("connection-0").unwrap();
+	// let connection_id_b = ConnectionId::from_str("connection-1").unwrap();
 
 	// let channel_a = ChannelId::from_str("channel-0").unwrap();
-	// let channel_b = ChannelId::from_str("channel-0").unwrap();
+	// let channel_b = ChannelId::from_str("channel-1").unwrap();
 
 	log::info!("Channel A: {:?}", channel_a);
 	log::info!("Channel B: {:?}", channel_b);

@@ -735,7 +735,7 @@ deserialize consensus state"
 			tries += 1;
 		}
 		if tries == max_tries {
-			panic!("Max retries reached for normal tx in solana");
+			log::info!("Max retries reached for normal tx in solana");
 		}
 		Ok(signature)
 	}

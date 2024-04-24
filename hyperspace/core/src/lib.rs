@@ -438,8 +438,8 @@ async fn process_updates<A: Chain, B: Chain>(
 			// search, which won't work in this case
 			skip_optional_updates &&
 				update_type.is_optional() &&
-				!need_to_send_proofs_for_sequences &&
-				!timeout_heights.contains(&height),
+				!need_to_send_proofs_for_sequences || (
+				!timeout_heights.contains(&height)),
 			has_packet_events(&event_types),
 			messages.is_empty(),
 		) {

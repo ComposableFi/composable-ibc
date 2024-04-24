@@ -664,7 +664,7 @@ pub async fn query_undelivered_acks(
 		.ok_or_else(|| Error::Custom("Expected counterparty channel id".to_string()))?;
 	let counterparty_port_id = channel_end.counterparty().port_id.clone();
 
-	let mut undelivered_acks = sink
+	let mut undelivered_acks: Vec<u64> = sink
 		.query_unreceived_acknowledgements(
 			sink_height,
 			counterparty_channel_id,
