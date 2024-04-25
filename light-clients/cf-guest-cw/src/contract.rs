@@ -88,12 +88,12 @@ fn process_message(
 		ExecuteMsg::VerifyMembership(msg) => {
 			let _ = ctx.client_state(&client_id)?;
 			let msg = VerifyMembershipMsg::try_from(msg)?;
-			crate::helpers::verify_delay_passed(
-				ctx,
-				msg.height,
-				msg.delay_time_period,
-				msg.delay_block_period,
-			)?;
+			// crate::helpers::verify_delay_passed(
+			// 	ctx,
+			// 	msg.height,
+			// 	msg.delay_time_period,
+			// 	msg.delay_block_period,
+			// )?;
 			let consensus_state = ctx.consensus_state(&client_id, msg.height)?;
 			verify(
 				&CommitmentPrefix::default(),
@@ -107,12 +107,12 @@ fn process_message(
 		ExecuteMsg::VerifyNonMembership(msg) => {
 			let _ = ctx.client_state(&client_id)?;
 			let msg = VerifyNonMembershipMsg::try_from(msg)?;
-			crate::helpers::verify_delay_passed(
-				ctx,
-				msg.height,
-				msg.delay_time_period,
-				msg.delay_block_period,
-			)?;
+			// crate::helpers::verify_delay_passed(
+			// 	ctx,
+			// 	msg.height,
+			// 	msg.delay_time_period,
+			// 	msg.delay_block_period,
+			// )?;
 			let consensus_state = ctx.consensus_state(&client_id, msg.height)?;
 
 			verify(

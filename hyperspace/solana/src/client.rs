@@ -581,7 +581,7 @@ deserialize consensus state"
 						if Pubkey::from_str(&base_denom.to_string()).is_ok() {
 							log::info!("Receiver chain source");
 							let escrow_seeds =
-								[port_id.as_bytes(), channel_id.as_bytes(), hashed_denom.as_ref()];
+								["escrow".as_bytes(), port_id.as_bytes(), channel_id.as_bytes(), hashed_denom.as_ref()];
 							let escrow_account = Pubkey::find_program_address(
 								&escrow_seeds,
 								&self.solana_ibc_program_id,
@@ -593,7 +593,7 @@ deserialize consensus state"
 							(Some(escrow_account), token_mint)
 						} else {
 							log::info!("Not receiver chain source");
-							let token_mint_seeds = [hashed_denom.as_ref()];
+							let token_mint_seeds = ["mint".as_bytes(), port_id.as_bytes(), channel_id.as_bytes(),hashed_denom.as_ref()];
 							let token_mint = Pubkey::find_program_address(
 								&token_mint_seeds,
 								&self.solana_ibc_program_id,
@@ -777,7 +777,7 @@ deserialize consensus state"
 		let (escrow_account, token_mint) =
 			if is_sender_chain_source(port_id.clone(), channel_id.clone(), &token.denom) {
 				let escrow_seeds =
-					[port_id.as_bytes(), channel_id.as_bytes(), hashed_denom.as_ref()];
+					["escrow".as_bytes(), port_id.as_bytes(), channel_id.as_bytes(), hashed_denom.as_ref()];
 				let escrow_account =
 					Pubkey::find_program_address(&escrow_seeds, &self.solana_ibc_program_id).0;
 				// let prefix = TracePrefix::new(port_id.clone(), channel_id.clone());
@@ -791,7 +791,7 @@ deserialize consensus state"
 				let token_mint = Pubkey::from_str(&base_denom.to_string()).unwrap();
 				(Some(escrow_account), token_mint)
 			} else {
-				let token_mint_seeds = [hashed_denom.as_ref()];
+				let token_mint_seeds = ["mint".as_bytes(), port_id.as_bytes(), channel_id.as_bytes(), hashed_denom.as_ref()];
 				let token_mint =
 					Pubkey::find_program_address(&token_mint_seeds, &self.solana_ibc_program_id).0;
 				(None, token_mint)

@@ -399,6 +399,9 @@ pub async fn get_client_state_at_height(
 	while current_height >= upto_height && current_height > 0 {
 		let (transactions, last_searched_hash) =
 			get_previous_transactions(&rpc, program_id, before_hash).await;
+		if transactions.is_empty() {
+			break
+		}
 		before_hash = Some(
 			anchor_client::solana_sdk::signature::Signature::from_str(&last_searched_hash).unwrap(),
 		);
@@ -547,6 +550,9 @@ pub async fn get_header_from_height(
 	while block_header.is_none() {
 		let (transactions, last_searched_hash) =
 			get_previous_transactions(&rpc, program_id, before_hash).await;
+		if transactions.is_empty() {
+			break
+		}
 		before_hash = Some(
 			anchor_client::solana_sdk::signature::Signature::from_str(&last_searched_hash).unwrap(),
 		);
@@ -593,6 +599,9 @@ pub async fn get_signatures_upto_height(
 	while current_height >= upto_height {
 		let (transactions, last_searched_hash) =
 			get_previous_transactions(&rpc, program_id, before_hash).await;
+		if transactions.is_empty() {
+			break
+		}
 		before_hash = Some(
 			anchor_client::solana_sdk::signature::Signature::from_str(&last_searched_hash).unwrap(),
 		);
@@ -669,6 +678,9 @@ pub async fn get_previous_transactions(
 		)
 		.await
 		.unwrap();
+	if transaction_signatures.is_empty() {
+		return (vec![], before_hash.map_or("".to_string(), |sig| sig.to_string()))
+	}
 	let last_searched_hash = transaction_signatures
 		.last()
 		.map_or("".to_string(), |sig| sig.signature.clone());
@@ -720,6 +732,26 @@ pub struct Response {
 	pub jsonrpc: String,
 	pub id: u64,
 	pub result: EncodedConfirmedTransactionWithStatusMeta,
+}
+
+#[tokio::test]
+pub async fn testing_events_final() {
+	let rpc = RpcClient::new("http://127.0.0.1:8899".to_string());
+	let mut last_hash = None;
+	loop {
+		let (events, prev) = get_previous_transactions(
+			&rpc,
+			Pubkey::from_str("9FeHRJLHJSEw4dYZrABHWTRKruFjxDmkLtPmhM5WFYL7").unwrap(),
+			last_hash,
+		)
+		.await;
+		if events.is_empty() {
+			println!("No events found");
+			break
+		}
+		println!("Received events {}", events.len());
+		last_hash = Some(anchor_client::solana_sdk::signature::Signature::from_str(&prev).unwrap());
+	}
 }
 
 #[test]

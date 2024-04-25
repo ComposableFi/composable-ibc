@@ -654,7 +654,7 @@ impl From<AnyClientMessage> for Any {
 				value: msg.encode_vec().expect("encode_vec failed"),
 			},
 			AnyClientMessage::Guest(msg) => Any {
-				type_url: GUEST_HEADER_TYPE_URL.to_string(),
+				type_url: GUEST_CLIENT_MESSAGE_TYPE_URL.to_string(),
 				value: msg.encode_vec().expect("encode_vec failed"),
 			},
 			#[cfg(any(test, feature = "testing"))]

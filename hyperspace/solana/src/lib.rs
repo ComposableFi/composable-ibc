@@ -242,6 +242,7 @@ impl IbcProvider for SolanaClient {
 				// min_quorum_stake may be greater than total_stake so we’re not
 				// using .clamp to make sure we never return value higher than
 				// total_stake.
+				println!("THis is total {:?} and quorum {:?}", total, quorum);
 				quorum.max(NonZeroU128::new(1000).unwrap()).min(total)
 			})
 			.unwrap(),
@@ -1017,7 +1018,7 @@ deserialize client state"
 		let new_channel_id =
 			ibc_core_host_types::identifiers::ChannelId::new(channel_id.sequence());
 		let trie_comp = PortChannelPK::try_from(new_port_id, new_channel_id).unwrap();
-		let key = TrieKey::new(Tag::Commitment, trie_comp);
+		let key = TrieKey::new(Tag::Ack, trie_comp);
 		let packet_receipt_sequences: Vec<u64> = trie
 			.get_subtrie(&key)
 			.unwrap()
@@ -1032,8 +1033,8 @@ deserialize client state"
 			.iter()
 			.flat_map(|&seq| {
 				match packet_receipt_sequences.iter().find(|&&receipt_seq| receipt_seq == seq) {
-					Some(_) => Some(seq),
-					None => None,
+					Some(_) => None,
+					None => Some(seq),
 				}
 			})
 			.collect())
@@ -1776,13 +1777,6 @@ impl LightClientSync for SolanaClient {
 					.unwrap(),
 					signatures: final_signatures,
 				};
-				log::info!(
-					"This is header {:?}", guest_header
-				);
-				log::info!("Height: {:?} signature {:?}", block_header.block_height, sig);
-
-				log::info!("This is client message {:?}", AnyClientMessage::Guest(guest_header.clone().into()));
-
 				let msg = MsgUpdateAnyClient::<LocalClientTypes> {
 					client_id: self.client_id(),
 					client_message: AnyClientMessage::Guest(guest_header.into()),
