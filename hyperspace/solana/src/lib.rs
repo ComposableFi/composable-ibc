@@ -209,6 +209,7 @@ impl IbcProvider for SolanaClient {
 		}
 
 		let chain_account = self.get_chain_storage().await;
+		Duration::from_secs(2);
 		let (signatures, block_header) = events::get_signatures_for_blockhash(
 			rpc_client,
 			self.solana_ibc_program_id,
@@ -216,6 +217,7 @@ impl IbcProvider for SolanaClient {
 		)
 		.await
 		.unwrap();
+
 		let block_hash = block_header.calc_hash();
 		let block_height: u64 = block_header.block_height.into();
 		let mut all_validators = Vec::new();
@@ -242,6 +244,7 @@ impl IbcProvider for SolanaClient {
 				// min_quorum_stake may be greater than total_stake so we’re not
 				// using .clamp to make sure we never return value higher than
 				// total_stake.
+				println!("THis is total {:?} and quorum {:?}", total, quorum);
 				quorum.max(NonZeroU128::new(1000).unwrap()).min(total)
 			})
 			.unwrap(),
@@ -262,6 +265,7 @@ impl IbcProvider for SolanaClient {
 			.encode_vec()
 			.map_err(|e| Error::from(format!("Failed to encode MsgUpdateClient {msg:?}: {e:?}")))
 			.unwrap();
+		log::info!("This is wihle update {:?}", value);
 		let events_len = block_events.len();
 		let updates = (
 			Any { type_url: msg.type_url(), value },
@@ -751,15 +755,15 @@ deserialize client state"
 		let result = proof.verify(&block_header_og.state_root, &trie_key, val.as_ref());
 		let result_1 = proof.verify(&block_header.state_root, &trie_key, val.as_ref());
 		let block_height = block_header_og.block_height;
-		loop {
-			sleep(Duration::from_millis(500));
-			let chain_account = self.get_chain_storage().await;
-			let block_header_og = chain_account.head().unwrap();
-			if block_header_og.block_height > block_height {
-				log::info!("Got higher height");
-				break
-			}
-		}
+		// loop {
+		// 	sleep(Duration::from_millis(500));
+		// 	let chain_account = self.get_chain_storage().await;
+		// 	let block_header_og = chain_account.head().unwrap();
+		// 	if block_header_og.block_height > block_height {
+		// 		log::info!("Got higher height");
+		// 		break
+		// 	}
+		// }
 		log::info!("This is value in proof verify {:?}", val);
 		log::info!(
 			"This is result of time out packet proof verify lts {:?}, at proof height {:?}",
@@ -1774,12 +1778,9 @@ impl LightClientSync for SolanaClient {
 					.unwrap(),
 					signatures: final_signatures,
 				};
-				log::info!("Height: {:?} signature {:?}", block_header.block_height, sig);
 				let msg = MsgUpdateAnyClient::<LocalClientTypes> {
 					client_id: self.client_id(),
-					client_message: AnyClientMessage::Guest(cf_guest::ClientMessage::Header(
-						guest_header,
-					)),
+					client_message: AnyClientMessage::Guest(guest_header.into()),
 					signer: counterparty.account_id(),
 				};
 				let value = msg
@@ -1941,7 +1942,7 @@ impl Chain for SolanaClient {
 					serde_json::from_slice(&e.packet.data).unwrap();
 				signature = self
 					.send_deliver(
-						DeliverIxType::PacketTransfer {
+						DeliverIxType::Recv {
 							token: packet_data.token,
 							port_id: e.packet.port_id_on_a,
 							channel_id: e.packet.chan_id_on_a,
@@ -1956,10 +1957,12 @@ impl Chain for SolanaClient {
 					serde_json::from_slice(&e.packet.data).unwrap();
 				signature = self
 					.send_deliver(
-						DeliverIxType::PacketTransfer {
+						DeliverIxType::Timeout {
 							token: packet_data.token,
 							port_id: e.packet.port_id_on_a,
 							channel_id: e.packet.chan_id_on_a,
+							sender_token_account: Pubkey::from_str(packet_data.sender.as_ref())
+								.unwrap(),
 						},
 						chunk_account,
 						max_tries,
