@@ -54,9 +54,9 @@ pub struct Args {
 
 impl Default for Args {
 	fn default() -> Self {
-		let relay = std::env::var("RELAY_HOST").unwrap_or_else(|_| "172.20.10.3".to_string());
-		let solana = std::env::var("SOLANA_HOST").unwrap_or_else(|_| "172.20.10.3".to_string());
-		let cosmos = std::env::var("COSMOS_HOST").unwrap_or_else(|_| "172.20.10.3".to_string());
+		let relay = std::env::var("RELAY_HOST").unwrap_or_else(|_| "192.168.1.11".to_string());
+		let solana = std::env::var("SOLANA_HOST").unwrap_or_else(|_| "192.168.1.11".to_string());
+		let cosmos = std::env::var("COSMOS_HOST").unwrap_or_else(|_| "192.168.1.11".to_string());
 		let wasm_path = std::env::var("WASM_PATH").unwrap_or_else(|_| {
 			"../../target/wasm32-unknown-unknown/release/ics07_guest_cw.wasm".to_string()
 		});
@@ -207,7 +207,7 @@ async fn setup_clients() -> (AnyChain, AnyChain) {
 	chain_a_wrapped.set_client_id(client_a);
 	chain_b_wrapped.set_client_id(client_b);
 	// chain_b_wrapped.set_client_id(ClientId::new("07-tendermint", 1).unwrap());
-	// chain_a_wrapped.set_client_id(ClientId::new("08-wasm", 2).unwrap());
+	// chain_a_wrapped.set_client_id(ClientId::new("08-wasm", 0).unwrap());
 	(chain_a_wrapped, chain_b_wrapped)
 }
 
@@ -227,11 +227,11 @@ async fn solana_to_cosmos_ibc_messaging_full_integration_test() {
 
 	handle.abort();
 
-	// let connection_id_a = ConnectionId::from_str("connection-1").unwrap();
-	// let connection_id_b = ConnectionId::from_str("connection-1").unwrap();
+	// let connection_id_a = ConnectionId::from_str("connection-0").unwrap();
+	// let connection_id_b = ConnectionId::from_str("connection-0").unwrap();
 
 	// let channel_a = ChannelId::from_str("channel-0").unwrap();
-	// let channel_b = ChannelId::from_str("channel-1").unwrap();
+	// let channel_b = ChannelId::from_str("channel-0").unwrap();
 
 	log::info!("Channel A: {:?}", channel_a);
 	log::info!("Channel B: {:?}", channel_b);

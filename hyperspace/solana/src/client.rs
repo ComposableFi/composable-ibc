@@ -70,6 +70,9 @@ pub enum DeliverIxType {
 		channel_id: ibc_core_host_types::identifiers::ChannelId,
 		sender_token_account: Pubkey,
 	},
+	Acknowledgement {
+		sender: Pubkey,
+	},
 	Normal,
 }
 
@@ -758,6 +761,40 @@ deserialize consensus state"
 							ibc::prelude::Err("Error".to_owned())
 						})
 				},
+				DeliverIxType::Acknowledgement { sender } => {
+					program
+					.request()
+					.instruction(ComputeBudgetInstruction::set_compute_unit_limit(2_000_000u32))
+					.instruction(ComputeBudgetInstruction::request_heap_frame(128 * 1024))
+					.instruction(ComputeBudgetInstruction::set_compute_unit_price(500000))
+					.accounts(solana_ibc::ix_data_account::Accounts::new(
+						solana_ibc::accounts::Deliver {
+							sender: authority.pubkey(),
+							receiver: Some(sender),
+							storage: solana_ibc_storage_key,
+							trie: trie_key,
+							chain: chain_key,
+							system_program: system_program::ID,
+							mint_authority: Some(self.solana_ibc_program_id),
+							fee_collector: Some(self.get_fee_collector_key()),
+							token_mint: Some(self.solana_ibc_program_id),
+							escrow_account: Some(self.solana_ibc_program_id),
+							receiver_token_account: Some(self.solana_ibc_program_id),
+							associated_token_program: Some(self.solana_ibc_program_id),
+							token_program: Some(self.solana_ibc_program_id),
+						},
+						chunk_account,
+					))
+					.args(ix_data_account::Instruction)
+					.signer(&*authority)
+					.send()
+					.await
+					.or_else(|e| {
+						println!("This is error {:?}", e);
+						status = false;
+						ibc::prelude::Err("Error".to_owned())
+					})
+				}
 				DeliverIxType::Normal => program
 					.request()
 					.instruction(ComputeBudgetInstruction::set_compute_unit_limit(2_000_000u32))
@@ -924,7 +961,6 @@ deserialize consensus state"
 				escrow_account,
 				fee_collector: Some(self.get_fee_collector_key()),
 				receiver_token_account: Some(sender_token_address),
-				associated_token_program: Some(anchor_spl::associated_token::ID),
 				token_program: Some(anchor_spl::token::ID),
 			})
 			.args(solana_ibc::instruction::SendTransfer {
