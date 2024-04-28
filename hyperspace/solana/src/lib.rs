@@ -1,7 +1,7 @@
 #![feature(more_qualified_paths)]
 extern crate alloc;
 
-use anchor_client::solana_sdk::transaction::Transaction;
+use anchor_client::{solana_client::rpc_client::RpcClient, solana_sdk::transaction::Transaction};
 use anchor_spl::associated_token::get_associated_token_address;
 use client::FinalityEvent;
 use client_state::convert_new_client_state_to_old;
@@ -958,7 +958,7 @@ deserialize client state"
 		let new_channel_id =
 			ibc_core_host_types::identifiers::ChannelId::new(channel_id.sequence());
 		let trie_comp = PortChannelPK::try_from(new_port_id, new_channel_id).unwrap();
-		let key = TrieKey::new(Tag::Commitment, trie_comp);
+		let key = TrieKey::new(Tag::Ack, trie_comp);
 		let sequences: Vec<u64> = trie
 			.get_subtrie(&key)
 			.unwrap()
@@ -1035,8 +1035,8 @@ deserialize client state"
 			.iter()
 			.flat_map(|&seq| {
 				match packet_receipt_sequences.iter().find(|&&receipt_seq| receipt_seq == seq) {
-					Some(_) => None,
-					None => Some(seq),
+					Some(_) => Some(seq),
+					None => None,
 				}
 			})
 			.collect())
@@ -2064,4 +2064,39 @@ impl Chain for SolanaClient {
 	fn set_rpc_call_delay(&mut self, delay: Duration) {
 		self.common_state_mut().set_rpc_call_delay(delay)
 	}
+}
+
+
+#[test]
+pub fn test_seq() {
+	let program_id = Pubkey::from_str("2HLLVco5HvwWriNbUhmVwA2pCetRkpgrqwnjcsZdyTKT").unwrap();
+	let port_id = PortId::from_str("transfer").unwrap();
+	let channel_id = ChannelId::from_str("channel-0").unwrap();
+	let rpc_client = RpcClient::new("https://api.devnet.solana.com".to_string());
+	let trie_seeds = &[TRIE_SEED];
+  let trie_key = Pubkey::find_program_address(trie_seeds, &program_id).0;
+	let trie_account = rpc_client
+		.get_account_with_commitment(&trie_key, CommitmentConfig::processed())
+		// .await
+		.unwrap()
+		.value
+		.unwrap();
+	let trie = solana_trie::TrieAccount::new(trie_account.data).unwrap();
+		let new_port_id =
+			ibc_core_host_types::identifiers::PortId::from_str(port_id.as_str()).unwrap();
+		let new_channel_id =
+			ibc_core_host_types::identifiers::ChannelId::new(channel_id.sequence());
+		let trie_comp = PortChannelPK::try_from(new_port_id, new_channel_id).unwrap();
+		let key = TrieKey::new(Tag::Receipt, trie_comp);
+		let packet_receipt_sequences: Vec<u64> = trie
+			.get_subtrie(&key)
+			.unwrap()
+			.iter()
+			.map(|c| {
+				u64::from_be_bytes(
+					Vec::<u8>::try_from(c.sub_key.clone()).unwrap().as_slice().try_into().unwrap(),
+				)
+			})
+			.collect();
+		println!("{:?}", packet_receipt_sequences);
 }
