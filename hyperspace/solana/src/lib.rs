@@ -958,7 +958,7 @@ deserialize client state"
 		let new_channel_id =
 			ibc_core_host_types::identifiers::ChannelId::new(channel_id.sequence());
 		let trie_comp = PortChannelPK::try_from(new_port_id, new_channel_id).unwrap();
-		let key = TrieKey::new(Tag::Ack, trie_comp);
+		let key = TrieKey::new(Tag::Commitment, trie_comp);
 		let sequences: Vec<u64> = trie
 			.get_subtrie(&key)
 			.unwrap()
