@@ -1972,7 +1972,7 @@ impl Chain for SolanaClient {
 			} else if let MsgEnvelope::Packet(PacketMsg::Ack(e)) = message {
 				let packet_data: ibc_app_transfer_types::packet::PacketData =
 					serde_json::from_slice(&e.packet.data).unwrap();
-				let sender_token_account = Pubkey::from_str(&packet_data.sender).unwrap();
+				let sender_token_account = Pubkey::from_str(&packet_data.sender.as_ref()).unwrap();
 				let sender_acc = self
 					.rpc_client()
 					.get_token_account(&sender_token_account)
