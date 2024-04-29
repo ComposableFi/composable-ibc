@@ -63,6 +63,7 @@ pub enum DeliverIxType {
 		token: Coin<PrefixedDenom>,
 		port_id: ibc_core_host_types::identifiers::PortId,
 		channel_id: ibc_core_host_types::identifiers::ChannelId,
+		receiver: String,
 	},
 	Timeout {
 		token: Coin<PrefixedDenom>,
@@ -584,7 +585,7 @@ deserialize consensus state"
 					log::info!("This is signature for freeing signature {:?}", sig);
 					signature
 				},
-				DeliverIxType::Recv { ref token, ref port_id, ref channel_id } => {
+				DeliverIxType::Recv { ref token, ref port_id, ref channel_id, ref receiver } => {
 					let hashed_denom =
 						CryptoHash::digest(&token.denom.base_denom.as_str().as_bytes());
 					log::info!(
@@ -657,8 +658,9 @@ deserialize consensus state"
 					// if !status {
 					// 	continue
 					// }
-					let receiver_token_account =
-						get_associated_token_address(&authority.pubkey(), &token_mint);
+					// let receiver_token_account =
+					// 	get_associated_token_address(&authority.pubkey(), &token_mint);
+					let receiver_token_account = Pubkey::from_str(receiver).unwrap();
 					program
 						.request()
 						.instruction(ComputeBudgetInstruction::set_compute_unit_limit(2_000_000u32))

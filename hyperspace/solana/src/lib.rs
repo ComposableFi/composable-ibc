@@ -1946,6 +1946,7 @@ impl Chain for SolanaClient {
 							token: packet_data.token,
 							port_id: e.packet.port_id_on_a,
 							channel_id: e.packet.chan_id_on_a,
+							receiver: packet_data.receiver.to_string(),
 						},
 						chunk_account,
 						max_tries,
