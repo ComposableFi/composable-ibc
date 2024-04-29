@@ -660,10 +660,8 @@ deserialize consensus state"
 					// }
 					// let receiver_token_account =
 					// 	get_associated_token_address(&authority.pubkey(), &token_mint);
-					let receiver_token_account = Pubkey::from_str(receiver).unwrap();
-					let token_account =
-						rpc.get_token_account(&receiver_token_account).await.unwrap().unwrap();
-					let receiver_account = Pubkey::from_str(&token_account.owner).unwrap();
+					let receiver_account = Pubkey::from_str(receiver).unwrap();
+				  let receiver_address = get_associated_token_address(&receiver_account, &token_mint);	
 					program
 						.request()
 						.instruction(ComputeBudgetInstruction::set_compute_unit_limit(2_000_000u32))
@@ -681,7 +679,7 @@ deserialize consensus state"
 								token_mint: Some(token_mint),
 								escrow_account,
 								fee_collector: Some(self.get_fee_collector_key()),
-								receiver_token_account: Some(receiver_token_account),
+								receiver_token_account: Some(receiver_address),
 								associated_token_program: Some(anchor_spl::associated_token::ID),
 								token_program: Some(anchor_spl::token::ID),
 							},
