@@ -661,6 +661,9 @@ deserialize consensus state"
 					// let receiver_token_account =
 					// 	get_associated_token_address(&authority.pubkey(), &token_mint);
 					let receiver_token_account = Pubkey::from_str(receiver).unwrap();
+					let token_account =
+						rpc.get_token_account(&receiver_token_account).await.unwrap().unwrap();
+					let receiver_account = Pubkey::from_str(&token_account.owner).unwrap();
 					program
 						.request()
 						.instruction(ComputeBudgetInstruction::set_compute_unit_limit(2_000_000u32))
@@ -669,7 +672,7 @@ deserialize consensus state"
 						.accounts(solana_ibc::ix_data_account::Accounts::new(
 							solana_ibc::accounts::Deliver {
 								sender: authority.pubkey(),
-								receiver: Some(authority.pubkey()),
+								receiver: Some(receiver_account),
 								storage: solana_ibc_storage_key,
 								trie: trie_key,
 								chain: chain_key,
