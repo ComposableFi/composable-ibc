@@ -314,7 +314,7 @@ impl IbcProvider for SolanaClient {
 						}
 					},
 					Err(err) => {
-						panic!("{}", format!("Disconnected: {err}"));
+						log::error!("{}", format!("Disconnected: {err}"));
 					},
 				}
 			}
@@ -732,7 +732,10 @@ deserialize client state"
 					PortChannelPK::try_from(new_port_id.clone(), new_channel_id.clone()).unwrap();
 				TrieKey::for_channel_end(&channel_end_path)
 			},
-			_ => panic!("invalid key in proof query proof"),
+			_ => {
+				log::error!("invalid key in proof query proof");
+				return Err(Error::Custom("Invalid key".to_owned()))
+			}
 		};
 		let trie = self.get_trie().await;
 		let (val, proof) = trie
@@ -1416,7 +1419,8 @@ deserialize client state"
 		if let Some(header) = header {
 			return Ok(header.timestamp_ns.into())
 		} else {
-			panic!("No block header found for height {:?}", block_number);
+			log::error!("No block header found for height {:?}", block_number);
+			return Err(Error::RpcError(format!("No block header found for height {:?}", block_number)))
 		}
 	}
 
@@ -1861,7 +1865,7 @@ impl Chain for SolanaClient {
 						}
 					},
 					Err(err) => {
-						panic!("{}", format!("Disconnected: {err}"));
+						log::error!("{}", format!("Disconnected: {err}"));
 					},
 				}
 			}
