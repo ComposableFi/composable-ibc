@@ -65,7 +65,7 @@ pub enum DeliverIxType {
 		token: Coin<PrefixedDenom>,
 		port_id: ibc_core_host_types::identifiers::PortId,
 		channel_id: ibc_core_host_types::identifiers::ChannelId,
-		receiver: String,
+    receiver: String,
 	},
 	Timeout {
 		token: Coin<PrefixedDenom>,
@@ -615,10 +615,6 @@ deserialize consensus state"
 						);
 					log::info!("This is token mint while sending transfer {:?}", token_mint);
 					let mint_authority = self.get_mint_auth_key();
-					// // Check if token exists
-					// let token_mint_info = rpc.get_token_supply(&token_mint).await;
-					// if token_mint_info.is_err() {
-
 					program
 						.request()
 						.instruction(ComputeBudgetInstruction::set_compute_unit_limit(2_000_000u32))
@@ -658,7 +654,7 @@ deserialize consensus state"
 					ref channel_id,
 					ref sender_token_account,
 				} => {
-					let hashed_denom = CryptoHash::digest(&token.denom.to_string().as_bytes());
+                    let hashed_denom = CryptoHash::digest(token.denom.base_denom.as_str().as_bytes());
 					log::info!(
 						"PortId: {:?} and channel {:?} and token {:?}",
 						port_id,

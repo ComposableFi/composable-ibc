@@ -336,6 +336,7 @@ impl IbcProvider for SolanaClient {
 		let revision_number = consensus_height.revision_number;
 		let new_client_id =
 			ibc_core_host_types::identifiers::ClientId::from_str(client_id.as_str()).unwrap();
+		log::info!("query_client_consensus before trie key");
 		let consensus_state_trie_key = TrieKey::for_consensus_state(
 			ClientIdx::try_from(new_client_id).unwrap(),
 			ibc_core_client_types::Height::new(
@@ -344,9 +345,11 @@ impl IbcProvider for SolanaClient {
 			)
 			.unwrap(),
 		);
+		log::info!("query_client_consensus before prove trie");
 		let (_, consensus_state_proof) = trie
 			.prove(&consensus_state_trie_key)
 			.map_err(|_| Error::Custom("value is sealed and cannot be fetched".to_owned()))?;
+		log::info!("query_client_consensus before search clients");
 		let client_store = storage
 			.clients
 			.iter()
@@ -355,10 +358,12 @@ impl IbcProvider for SolanaClient {
 				"Client not found with the given client id while querying client consensus"
 					.to_owned(),
 			)?;
+		log::info!("query_client_consensus before get cs states");
 		let serialized_consensus_state = client_store
 			.consensus_states
 			.get(&ibc_core_client_types::Height::new(revision_number, revision_height).unwrap())
 			.ok_or(Error::Custom("No value at given key".to_owned()))?;
+		log::info!("query_client_consensus before convert cs states");
 		let consensus_state = serialized_consensus_state
 			.state()
 			.map_err(|_| {
@@ -369,12 +374,16 @@ deserialize consensus state"
 				)
 			})
 			.unwrap();
+		log::info!("query_client_consensus before convert new and old");
+		let cs_state = convert_new_consensus_state_to_old(consensus_state.clone());
+		log::info!("query_client_consensus before encode");
 		let cs_state = convert_new_consensus_state_to_old(consensus_state.clone());
 		let inner_any = consensus_state.clone().encode_vec();
 		log::info!("this is consensus state {:?}", consensus_state);
 		log::info!("This is inner any consensus state {:?}", inner_any);
 		let chain_account = self.get_chain_storage().await;
 		let block_header_og = chain_account.head().unwrap();
+		log::info!("query_client_consensus before get header from height");
 		let block_header = events::get_header_from_height(
 			self.rpc_client(),
 			self.solana_ibc_program_id,
@@ -397,6 +406,7 @@ deserialize consensus state"
 			result,
 			result_1
 		);
+		log::info!("query_client_consensus completed");
 		Ok(QueryConsensusStateResponse {
 			consensus_state: Some(cs_state.into()),
 			proof: borsh::to_vec(&(block_header, &consensus_state_proof)).unwrap(),
@@ -735,7 +745,7 @@ deserialize client state"
 			_ => {
 				log::error!("invalid key in proof query proof");
 				return Err(Error::Custom("Invalid key".to_owned()))
-			}
+			},
 		};
 		let trie = self.get_trie().await;
 		let (val, proof) = trie
@@ -839,6 +849,10 @@ deserialize client state"
 			sequence: new_seq,
 		};
 		let packet_ack_trie_key = TrieKey::try_from(&packet_ack_path).unwrap();
+		let (packet_ack, packet_ack_proof) = trie
+			.prove(&packet_ack_trie_key)
+			.map_err(|_| Error::Custom("value is sealed and cannot be fetched".to_owned()))?;
+		let ack = packet_ack.ok_or(Error::Custom("No value at given key".to_owned()))?;
 		let (packet_ack, packet_ack_proof) = trie
 			.prove(&packet_ack_trie_key)
 			.map_err(|_| Error::Custom("value is sealed and cannot be fetched".to_owned()))?;
@@ -990,6 +1004,7 @@ deserialize client state"
 		port_id: ibc::core::ics24_host::identifier::PortId,
 		seqs: Vec<u64>,
 	) -> Result<Vec<u64>, Self::Error> {
+		log::info!("----------Unreceived packets seqs on solana {:?} ", seqs);
 		let trie = self.get_trie().await;
 		let new_port_id =
 			ibc_core_host_types::identifiers::PortId::from_str(port_id.as_str()).unwrap();
@@ -1031,7 +1046,7 @@ deserialize client state"
 		let new_channel_id =
 			ibc_core_host_types::identifiers::ChannelId::new(channel_id.sequence());
 		let trie_comp = PortChannelPK::try_from(new_port_id, new_channel_id).unwrap();
-		let key = TrieKey::new(Tag::Ack, trie_comp);
+		let key = TrieKey::new(Tag::Commitment, trie_comp);
 		let packet_receipt_sequences: Vec<u64> = trie
 			.get_subtrie(&key)
 			.unwrap()
@@ -1428,7 +1443,10 @@ deserialize client state"
 			return Ok(header.timestamp_ns.into())
 		} else {
 			log::error!("No block header found for height {:?}", block_number);
-			return Err(Error::RpcError(format!("No block header found for height {:?}", block_number)))
+			return Err(Error::RpcError(format!(
+				"No block header found for height {:?}",
+				block_number
+			)))
 		}
 	}
 
@@ -1956,8 +1974,8 @@ impl Chain for SolanaClient {
 					.send_deliver(
 						DeliverIxType::Recv {
 							token: packet_data.token,
-							port_id: e.packet.port_id_on_a,
-							channel_id: e.packet.chan_id_on_a,
+							port_id: e.packet.port_id_on_b,
+							channel_id: e.packet.chan_id_on_b,
 							receiver: packet_data.receiver.to_string(),
 						},
 						chunk_account,
@@ -1985,17 +2003,10 @@ impl Chain for SolanaClient {
 			} else if let MsgEnvelope::Packet(PacketMsg::Ack(e)) = message {
 				let packet_data: ibc_app_transfer_types::packet::PacketData =
 					serde_json::from_slice(&e.packet.data).unwrap();
-				let sender_token_account = Pubkey::from_str(&packet_data.sender.as_ref()).unwrap();
-				let sender_acc = self
-					.rpc_client()
-					.get_token_account(&sender_token_account)
-					.await
-					.unwrap()
-					.unwrap();
-				let sender = Pubkey::from_str(&sender_acc.owner).unwrap();
+				let sender_account = Pubkey::from_str(&packet_data.sender.as_ref()).unwrap();
 				signature = self
 					.send_deliver(
-						DeliverIxType::Acknowledgement { sender },
+						DeliverIxType::Acknowledgement { sender: sender_account },
 						chunk_account,
 						max_tries,
 					)
@@ -2079,7 +2090,6 @@ impl Chain for SolanaClient {
 	}
 }
 
-
 #[test]
 pub fn test_seq() {
 	let program_id = Pubkey::from_str("2HLLVco5HvwWriNbUhmVwA2pCetRkpgrqwnjcsZdyTKT").unwrap();
@@ -2087,7 +2097,7 @@ pub fn test_seq() {
 	let channel_id = ChannelId::from_str("channel-0").unwrap();
 	let rpc_client = RpcClient::new("https://api.devnet.solana.com".to_string());
 	let trie_seeds = &[TRIE_SEED];
-  let trie_key = Pubkey::find_program_address(trie_seeds, &program_id).0;
+	let trie_key = Pubkey::find_program_address(trie_seeds, &program_id).0;
 	let trie_account = rpc_client
 		.get_account_with_commitment(&trie_key, CommitmentConfig::processed())
 		// .await
@@ -2095,21 +2105,19 @@ pub fn test_seq() {
 		.value
 		.unwrap();
 	let trie = solana_trie::TrieAccount::new(trie_account.data).unwrap();
-		let new_port_id =
-			ibc_core_host_types::identifiers::PortId::from_str(port_id.as_str()).unwrap();
-		let new_channel_id =
-			ibc_core_host_types::identifiers::ChannelId::new(channel_id.sequence());
-		let trie_comp = PortChannelPK::try_from(new_port_id, new_channel_id).unwrap();
-		let key = TrieKey::new(Tag::Receipt, trie_comp);
-		let packet_receipt_sequences: Vec<u64> = trie
-			.get_subtrie(&key)
-			.unwrap()
-			.iter()
-			.map(|c| {
-				u64::from_be_bytes(
-					Vec::<u8>::try_from(c.sub_key.clone()).unwrap().as_slice().try_into().unwrap(),
-				)
-			})
-			.collect();
-		println!("{:?}", packet_receipt_sequences);
+	let new_port_id = ibc_core_host_types::identifiers::PortId::from_str(port_id.as_str()).unwrap();
+	let new_channel_id = ibc_core_host_types::identifiers::ChannelId::new(channel_id.sequence());
+	let trie_comp = PortChannelPK::try_from(new_port_id, new_channel_id).unwrap();
+	let key = TrieKey::new(Tag::Receipt, trie_comp);
+	let packet_receipt_sequences: Vec<u64> = trie
+		.get_subtrie(&key)
+		.unwrap()
+		.iter()
+		.map(|c| {
+			u64::from_be_bytes(
+				Vec::<u8>::try_from(c.sub_key.clone()).unwrap().as_slice().try_into().unwrap(),
+			)
+		})
+		.collect();
+	println!("{:?}", packet_receipt_sequences);
 }
