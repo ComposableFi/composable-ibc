@@ -63,7 +63,11 @@ pub enum DeliverIxType {
 		token: Coin<PrefixedDenom>,
 		port_id: ibc_core_host_types::identifiers::PortId,
 		channel_id: ibc_core_host_types::identifiers::ChannelId,
+<<<<<<< HEAD
         receiver: String,
+=======
+		receiver: String,
+>>>>>>> a9ca328a26c64fd6e8147ca90e7d971639a43641
 	},
 	Timeout {
 		token: Coin<PrefixedDenom>,
@@ -208,7 +212,7 @@ impl SolanaClient {
 		let fee_collector_seeds = &[solana_ibc::FEE_SEED];
 		let fee_collector =
 			Pubkey::find_program_address(fee_collector_seeds, &self.solana_ibc_program_id).0;
-		fee_collector	
+		fee_collector
 	}
 
 	pub async fn get_trie(&self) -> solana_trie::TrieAccount<Vec<u8>> {
@@ -586,19 +590,31 @@ deserialize consensus state"
 					signature
 				},
 				DeliverIxType::Recv { ref token, ref port_id, ref channel_id, ref receiver } => {
+<<<<<<< HEAD
                     let base_denom = &token.denom.base_denom;
                     let hashed_denom = CryptoHash::digest(base_denom.as_str().as_bytes());
+=======
+					let base_denom = &token.denom.base_denom;
+					let hashed_denom = CryptoHash::digest(base_denom.as_str().as_bytes());
+>>>>>>> a9ca328a26c64fd6e8147ca90e7d971639a43641
 					log::info!(
 						"PortId: {:?} and channel {:?} and token {:?}",
 						port_id,
 						channel_id,
 						token
 					);
+<<<<<<< HEAD
                     let (escrow_account, token_mint) =
 						if Pubkey::from_str(&base_denom.to_string()).is_ok() {
 							log::info!("Receiver chain source");
 							let escrow_seeds =
 								["escrow".as_bytes(), hashed_denom.as_ref()];
+=======
+					let (escrow_account, token_mint) =
+						if Pubkey::from_str(&base_denom.to_string()).is_ok() {
+							log::info!("Receiver chain source");
+							let escrow_seeds = ["escrow".as_bytes(), hashed_denom.as_ref()];
+>>>>>>> a9ca328a26c64fd6e8147ca90e7d971639a43641
 							let escrow_account = Pubkey::find_program_address(
 								&escrow_seeds,
 								&self.solana_ibc_program_id,
@@ -608,7 +624,11 @@ deserialize consensus state"
 							(Some(escrow_account), token_mint)
 						} else {
 							log::info!("Not receiver chain source");
+<<<<<<< HEAD
                             let mut full_token = token.clone();
+=======
+							let mut full_token = token.clone();
+>>>>>>> a9ca328a26c64fd6e8147ca90e7d971639a43641
 							full_token.denom.add_trace_prefix(TracePrefix::new(
 								port_id.clone(),
 								channel_id.clone(),
@@ -621,10 +641,13 @@ deserialize consensus state"
 								&self.solana_ibc_program_id,
 							)
 							.0;
+<<<<<<< HEAD
 					        let token_mint_info = rpc.get_token_supply(&token_mint).await;
 					        if token_mint_info.is_err() {
                                 
                             }
+=======
+>>>>>>> a9ca328a26c64fd6e8147ca90e7d971639a43641
 							(Some(self.solana_ibc_program_id), token_mint)
 						};
 					log::info!("This is token mint while sending transfer {:?}", token_mint);
@@ -676,6 +699,7 @@ deserialize consensus state"
 					// if !status {
 					// 	continue
 					// }
+<<<<<<< HEAD
                     let receiver_account = Pubkey::from_str(receiver).unwrap();
                     //let token_account =
 					//	rpc.get_token_account(&receiver_token_account).await.unwrap().unwrap();
@@ -684,6 +708,13 @@ deserialize consensus state"
                         &receiver_account,
 			&token_mint,
 		);
+=======
+					// let receiver_token_account =
+					// 	get_associated_token_address(&authority.pubkey(), &token_mint);
+					let receiver_account = Pubkey::from_str(receiver).unwrap();
+					let receiver_address =
+						get_associated_token_address(&receiver_account, &token_mint);
+>>>>>>> a9ca328a26c64fd6e8147ca90e7d971639a43641
 					program
 						.request()
 						.instruction(ComputeBudgetInstruction::set_compute_unit_limit(2_000_000u32))
@@ -701,7 +732,11 @@ deserialize consensus state"
 								token_mint: Some(token_mint),
 								escrow_account,
 								fee_collector: Some(self.get_fee_collector_key()),
+<<<<<<< HEAD
 								receiver_token_account: Some(receiver_token_address),
+=======
+								receiver_token_account: Some(receiver_address),
+>>>>>>> a9ca328a26c64fd6e8147ca90e7d971639a43641
 								associated_token_program: Some(anchor_spl::associated_token::ID),
 								token_program: Some(anchor_spl::token::ID),
 							},
@@ -797,8 +832,7 @@ deserialize consensus state"
 							ibc::prelude::Err("Error".to_owned())
 						})
 				},
-				DeliverIxType::Acknowledgement { sender } => {
-					program
+				DeliverIxType::Acknowledgement { sender } => program
 					.request()
 					.instruction(ComputeBudgetInstruction::set_compute_unit_limit(2_000_000u32))
 					.instruction(ComputeBudgetInstruction::request_heap_frame(128 * 1024))
@@ -829,8 +863,7 @@ deserialize consensus state"
 						println!("This is error {:?}", e);
 						status = false;
 						ibc::prelude::Err("Error".to_owned())
-					})
-				}
+					}),
 				DeliverIxType::Normal => program
 					.request()
 					.instruction(ComputeBudgetInstruction::set_compute_unit_limit(2_000_000u32))

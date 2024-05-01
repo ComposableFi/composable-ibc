@@ -1,7 +1,7 @@
 #![feature(more_qualified_paths)]
 extern crate alloc;
 
-use anchor_client::solana_sdk::transaction::Transaction;
+use anchor_client::{solana_client::rpc_client::RpcClient, solana_sdk::transaction::Transaction};
 use anchor_spl::associated_token::get_associated_token_address;
 use client::FinalityEvent;
 use client_state::convert_new_client_state_to_old;
@@ -314,7 +314,7 @@ impl IbcProvider for SolanaClient {
 						}
 					},
 					Err(err) => {
-						panic!("{}", format!("Disconnected: {err}"));
+						log::error!("{}", format!("Disconnected: {err}"));
 					},
 				}
 			}
@@ -742,7 +742,10 @@ deserialize client state"
 					PortChannelPK::try_from(new_port_id.clone(), new_channel_id.clone()).unwrap();
 				TrieKey::for_channel_end(&channel_end_path)
 			},
-			_ => panic!("invalid key in proof query proof"),
+			_ => {
+				log::error!("invalid key in proof query proof");
+				return Err(Error::Custom("Invalid key".to_owned()))
+			}
 		};
 		let trie = self.get_trie().await;
 		let (val, proof) = trie
@@ -850,10 +853,13 @@ deserialize client state"
 			.prove(&packet_ack_trie_key)
 			.map_err(|_| Error::Custom("value is sealed and cannot be fetched".to_owned()))?;
 		let ack = packet_ack.ok_or(Error::Custom("No value at given key".to_owned()))?;
+<<<<<<< HEAD
         let (packet_ack, packet_ack_proof) = trie
 			.prove(&packet_ack_trie_key)
 			.map_err(|_| Error::Custom("value is sealed and cannot be fetched".to_owned()))?;
 		let ack = packet_ack.ok_or(Error::Custom("No value at given key".to_owned()))?;
+=======
+>>>>>>> a9ca328a26c64fd6e8147ca90e7d971639a43641
 		let block_header = events::get_header_from_height(
 			self.rpc_client(),
 			self.solana_ibc_program_id,
@@ -864,7 +870,11 @@ deserialize client state"
 		log::info!("This is packet ack {:?}", ack.0.to_vec());
 		Ok(QueryPacketAcknowledgementResponse {
 			acknowledgement: ack.0.to_vec(),
+<<<<<<< HEAD
             proof: borsh::to_vec(&(block_header, packet_ack_proof)).unwrap(),
+=======
+			proof: borsh::to_vec(&(block_header, packet_ack_proof)).unwrap(),
+>>>>>>> a9ca328a26c64fd6e8147ca90e7d971639a43641
 			proof_height: Some(at.into()),
 		})
 	}
@@ -1439,7 +1449,8 @@ deserialize client state"
 		if let Some(header) = header {
 			return Ok(header.timestamp_ns.into())
 		} else {
-			panic!("No block header found for height {:?}", block_number);
+			log::error!("No block header found for height {:?}", block_number);
+			return Err(Error::RpcError(format!("No block header found for height {:?}", block_number)))
 		}
 	}
 
@@ -1884,7 +1895,7 @@ impl Chain for SolanaClient {
 						}
 					},
 					Err(err) => {
-						panic!("{}", format!("Disconnected: {err}"));
+						log::error!("{}", format!("Disconnected: {err}"));
 					},
 				}
 			}
@@ -2081,4 +2092,39 @@ impl Chain for SolanaClient {
 	fn set_rpc_call_delay(&mut self, delay: Duration) {
 		self.common_state_mut().set_rpc_call_delay(delay)
 	}
+}
+
+
+#[test]
+pub fn test_seq() {
+	let program_id = Pubkey::from_str("2HLLVco5HvwWriNbUhmVwA2pCetRkpgrqwnjcsZdyTKT").unwrap();
+	let port_id = PortId::from_str("transfer").unwrap();
+	let channel_id = ChannelId::from_str("channel-0").unwrap();
+	let rpc_client = RpcClient::new("https://api.devnet.solana.com".to_string());
+	let trie_seeds = &[TRIE_SEED];
+  let trie_key = Pubkey::find_program_address(trie_seeds, &program_id).0;
+	let trie_account = rpc_client
+		.get_account_with_commitment(&trie_key, CommitmentConfig::processed())
+		// .await
+		.unwrap()
+		.value
+		.unwrap();
+	let trie = solana_trie::TrieAccount::new(trie_account.data).unwrap();
+		let new_port_id =
+			ibc_core_host_types::identifiers::PortId::from_str(port_id.as_str()).unwrap();
+		let new_channel_id =
+			ibc_core_host_types::identifiers::ChannelId::new(channel_id.sequence());
+		let trie_comp = PortChannelPK::try_from(new_port_id, new_channel_id).unwrap();
+		let key = TrieKey::new(Tag::Receipt, trie_comp);
+		let packet_receipt_sequences: Vec<u64> = trie
+			.get_subtrie(&key)
+			.unwrap()
+			.iter()
+			.map(|c| {
+				u64::from_be_bytes(
+					Vec::<u8>::try_from(c.sub_key.clone()).unwrap().as_slice().try_into().unwrap(),
+				)
+			})
+			.collect();
+		println!("{:?}", packet_receipt_sequences);
 }
