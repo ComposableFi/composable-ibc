@@ -3,9 +3,11 @@ use anchor_client::{
 		nonblocking::rpc_client::RpcClient as AsyncRpcClient, rpc_config::RpcSendTransactionConfig,
 	},
 	solana_sdk::{
+		address_lookup_table::program,
 		commitment_config::{CommitmentConfig, CommitmentLevel},
 		compute_budget::ComputeBudgetInstruction,
 		instruction::Instruction,
+		pubkey::ParsePubkeyError,
 		signature::{Keypair, Signature},
 		signer::Signer as AnchorSigner,
 	},
@@ -586,96 +588,37 @@ deserialize consensus state"
 					signature
 				},
 				DeliverIxType::Recv { ref token, ref port_id, ref channel_id, ref receiver } => {
-					let base_denom = &token.denom.base_denom;
-					let hashed_denom = CryptoHash::digest(base_denom.as_str().as_bytes());
 					log::info!(
 						"PortId: {:?} and channel {:?} and token {:?}",
 						port_id,
 						channel_id,
 						token
 					);
-					let (escrow_account, token_mint) =
-						if Pubkey::from_str(&base_denom.to_string()).is_ok() {
-							log::info!("Receiver chain source");
-							let escrow_seeds = ["escrow".as_bytes(), hashed_denom.as_ref()];
-							let escrow_account = Pubkey::find_program_address(
-								&escrow_seeds,
-								&self.solana_ibc_program_id,
-							)
-							.0;
-							let token_mint = Pubkey::from_str(&base_denom.to_string()).unwrap();
-							(Some(escrow_account), token_mint)
-						} else {
-							log::info!("Not receiver chain source");
-							let mut full_token = token.clone();
-							full_token.denom.add_trace_prefix(TracePrefix::new(
-								port_id.clone(),
-								channel_id.clone(),
-							));
-							let hashed_denom =
-								CryptoHash::digest(full_token.denom.to_string().as_bytes());
-							let token_mint_seeds = ["mint".as_bytes(), hashed_denom.as_ref()];
-							let token_mint = Pubkey::find_program_address(
-								&token_mint_seeds,
-								&self.solana_ibc_program_id,
-							)
-							.0;
-							(Some(self.solana_ibc_program_id), token_mint)
-						};
+					let (escrow_account, token_mint, receiver_account, receiver_address) =
+						get_accounts(
+							token.denom.clone(),
+							self.solana_ibc_program_id,
+							receiver,
+							port_id,
+							channel_id,
+							&self.rpc_client(),
+						)
+						.await
+						.map_or(
+							(
+								Some(self.solana_ibc_program_id),
+								Some(self.solana_ibc_program_id),
+								Some(self.solana_ibc_program_id),
+								Some(self.solana_ibc_program_id),
+							),
+							|v| v,
+						);
 					log::info!("This is token mint while sending transfer {:?}", token_mint);
 					let mint_authority = self.get_mint_auth_key();
 					// // Check if token exists
 					// let token_mint_info = rpc.get_token_supply(&token_mint).await;
 					// if token_mint_info.is_err() {
-					// 	// Create token Mint token since token doesnt exist
-					// 	let tx = program
-					// 		.request()
-					// 		.instruction(ComputeBudgetInstruction::set_compute_unit_limit(
-					// 			2_000_000u32,
-					// 		))
-					// 		.instruction(ComputeBudgetInstruction::set_compute_unit_price(500000))
-					// 		.accounts(solana_ibc::accounts::InitMint {
-					// 			sender: authority.pubkey(),
-					// 			mint_authority,
-					// 			token_mint,
-					// 			associated_token_program: anchor_spl::associated_token::ID,
-					// 			token_program: anchor_spl::token::ID,
-					// 			system_program: system_program::ID,
-					// 		})
-					// 		.args(solana_ibc::instruction::InitMint {
-					// 			port_id: port_id.clone(),
-					// 			channel_id_on_b: channel_id.clone(),
-					// 			hashed_base_denom: hashed_denom.clone(),
-					// 		})
-					// 		.signer(&*authority)
-					// 		.send()
-					// 		.await
-					// 		.or_else(|e| {
-					// 			println!("This is error {:?}", e);
-					// 			status = false;
-					// 			ibc::prelude::Err("Error".to_owned())
-					// 		});
-					// 	if status {
-					// 		let blockhash = rpc.get_latest_blockhash().await.unwrap();
-					// 		// Wait for finalizing the transaction
-					// 		let _ = rpc
-					// 			.confirm_transaction_with_spinner(
-					// 				&tx.clone().unwrap(),
-					// 				&blockhash,
-					// 				CommitmentConfig::finalized(),
-					// 			)
-					// 			.await
-					// 			.unwrap();
-					// 	}
-					// }
-					// if !status {
-					// 	continue
-					// }
-					// let receiver_token_account =
-					// 	get_associated_token_address(&authority.pubkey(), &token_mint);
-					let receiver_account = Pubkey::from_str(receiver).unwrap();
-					let receiver_address =
-						get_associated_token_address(&receiver_account, &token_mint);
+
 					program
 						.request()
 						.instruction(ComputeBudgetInstruction::set_compute_unit_limit(2_000_000u32))
@@ -684,16 +627,16 @@ deserialize consensus state"
 						.accounts(solana_ibc::ix_data_account::Accounts::new(
 							solana_ibc::accounts::Deliver {
 								sender: authority.pubkey(),
-								receiver: Some(receiver_account),
+								receiver: receiver_account,
 								storage: solana_ibc_storage_key,
 								trie: trie_key,
 								chain: chain_key,
 								system_program: system_program::ID,
 								mint_authority: Some(mint_authority),
-								token_mint: Some(token_mint),
+								token_mint,
 								escrow_account,
 								fee_collector: Some(self.get_fee_collector_key()),
-								receiver_token_account: Some(receiver_address),
+								receiver_token_account: receiver_address,
 								associated_token_program: Some(anchor_spl::associated_token::ID),
 								token_program: Some(anchor_spl::token::ID),
 							},
@@ -722,40 +665,27 @@ deserialize consensus state"
 						channel_id,
 						token
 					);
-					let base_denom = token.denom.base_denom.clone();
-					let (escrow_account, token_mint) =
-						if Pubkey::from_str(&base_denom.to_string()).is_ok() {
-							log::info!("Receiver chain source");
-							let escrow_seeds = ["escrow".as_bytes(), hashed_denom.as_ref()];
-							let escrow_account = Pubkey::find_program_address(
-								&escrow_seeds,
-								&self.solana_ibc_program_id,
-							)
-							.0;
-							let token_mint = Pubkey::from_str(&base_denom.to_string()).unwrap();
-							(Some(escrow_account), token_mint)
-						} else {
-							log::info!("Not receiver chain source");
-							let mut full_token = token.clone();
-							full_token.denom.add_trace_prefix(TracePrefix::new(
-								port_id.clone(),
-								channel_id.clone(),
-							));
-							let hashed_denom =
-								CryptoHash::digest(full_token.denom.to_string().as_bytes());
-							let token_mint_seeds = ["mint".as_bytes(), hashed_denom.as_ref()];
-							let token_mint = Pubkey::find_program_address(
-								&token_mint_seeds,
-								&self.solana_ibc_program_id,
-							)
-							.0;
-							(Some(self.solana_ibc_program_id), token_mint)
-						};
+					let (escrow_account, token_mint, sender_account, sender_address) =
+						get_accounts(
+							token.denom.clone(),
+							self.solana_ibc_program_id,
+							&sender_token_account.to_string(),
+							port_id,
+							channel_id,
+							&self.rpc_client(),
+						)
+						.await
+						.map_or(
+							(
+								Some(self.solana_ibc_program_id),
+								Some(self.solana_ibc_program_id),
+								Some(self.solana_ibc_program_id),
+								Some(self.solana_ibc_program_id),
+							),
+							|v| v,
+						);
 					log::info!("This is token mint while sending transfer {:?}", token_mint);
 					let mint_authority = self.get_mint_auth_key();
-					let token_account =
-						rpc.get_token_account(sender_token_account).await.unwrap().unwrap();
-					let sender_account = Pubkey::from_str(&token_account.owner).unwrap();
 					program
 						.request()
 						.instruction(ComputeBudgetInstruction::set_compute_unit_limit(2_000_000u32))
@@ -764,13 +694,13 @@ deserialize consensus state"
 						.accounts(solana_ibc::ix_data_account::Accounts::new(
 							solana_ibc::accounts::Deliver {
 								sender: authority.pubkey(),
-								receiver: Some(sender_account),
+								receiver: sender_account,
 								storage: solana_ibc_storage_key,
 								trie: trie_key,
 								chain: chain_key,
 								system_program: system_program::ID,
 								mint_authority: Some(mint_authority),
-								token_mint: Some(token_mint),
+								token_mint,
 								escrow_account,
 								fee_collector: Some(self.get_fee_collector_key()),
 								receiver_token_account: Some(*sender_token_account),
@@ -1009,6 +939,40 @@ deserialize consensus state"
 			.unwrap();
 		let signature = sig.to_string();
 		Ok(signature)
+	}
+}
+
+pub async fn get_accounts(
+	denom: PrefixedDenom,
+	program_id: Pubkey,
+	receiver: &String,
+	port_id: &ibc_core_host_types::identifiers::PortId,
+	channel_id: &ibc_core_host_types::identifiers::ChannelId,
+	rpc: &AsyncRpcClient,
+) -> Result<(Option<Pubkey>, Option<Pubkey>, Option<Pubkey>, Option<Pubkey>), ParsePubkeyError> {
+	if Pubkey::from_str(&denom.base_denom.to_string()).is_ok() {
+		log::info!("Receiver chain source");
+		let hashed_denom = CryptoHash::digest(denom.base_denom.as_str().as_bytes());
+		let escrow_seeds = ["escrow".as_bytes(), hashed_denom.as_ref()];
+		let escrow_account = Pubkey::find_program_address(&escrow_seeds, &program_id).0;
+		let token_mint = Pubkey::from_str(&denom.base_denom.to_string())?;
+		let receiver_account = Pubkey::from_str(&receiver)?;
+		let receiver_address = get_associated_token_address(&receiver_account, &token_mint);
+		Ok((Some(escrow_account), Some(token_mint), Some(receiver_account), Some(receiver_address)))
+	} else {
+		log::info!("Not receiver chain source");
+		let mut full_token = denom.clone();
+		full_token.add_trace_prefix(TracePrefix::new(port_id.clone(), channel_id.clone()));
+		let hashed_denom = CryptoHash::digest(full_token.to_string().as_bytes());
+		let token_mint_seeds = ["mint".as_bytes(), hashed_denom.as_ref()];
+		let token_mint = Pubkey::find_program_address(&token_mint_seeds, &program_id).0;
+		let receiver_account = Pubkey::from_str(&receiver).unwrap();
+		let receiver_address = get_associated_token_address(&receiver_account, &token_mint);
+		let token_mint_info = rpc.get_token_supply(&token_mint).await;
+		if token_mint_info.is_err() {
+			return Err(ParsePubkeyError::Invalid)
+		}
+		Ok((Some(program_id), Some(token_mint), Some(receiver_account), Some(receiver_address)))
 	}
 }
 
