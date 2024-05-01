@@ -542,6 +542,7 @@ pub async fn get_header_from_height(
 	program_id: Pubkey,
 	height: u64,
 ) -> Option<BlockHeader> {
+	log::info!("Getting header for height {}", height);
 	let mut before_hash = None;
 	let mut block_header = None;
 	while block_header.is_none() {
@@ -550,6 +551,7 @@ pub async fn get_header_from_height(
 		before_hash = Some(
 			anchor_client::solana_sdk::signature::Signature::from_str(&last_searched_hash).unwrap(),
 		);
+		log::info!("THis is before hash {:?} {:?}", before_hash, last_searched_hash);
 		for tx in transactions {
 			let logs = match tx.result.transaction.meta.clone().unwrap().log_messages {
 				solana_transaction_status::option_serializer::OptionSerializer::Some(e) => e,
