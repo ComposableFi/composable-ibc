@@ -314,7 +314,7 @@ impl IbcProvider for SolanaClient {
 						}
 					},
 					Err(err) => {
-						log::error!("{}", format!("Disconnected: {err}"));
+						panic!("{}", format!("Disconnected: {err}"));
 					},
 				}
 			}
@@ -1891,7 +1891,7 @@ impl Chain for SolanaClient {
 						}
 					},
 					Err(err) => {
-						log::error!("{}", format!("Disconnected: {err}"));
+						panic!("{}", format!("Disconnected: {err}"));
 					},
 				}
 			}
