@@ -3,8 +3,8 @@ name = "solana"
 rpc_url = "https://devnet.helius-rpc.com/?api-key=bc5c0cfc-46df-4781-978f-af6ca7a202c2"
 ws_url = "wss://devnet.helius-rpc.com/?api-key=bc5c0cfc-46df-4781-978f-af6ca7a202c2"
 chain_id = "solana-1"
-client_id = "08-wasm-200"
-connection_id = "connection-0"
+client_id = "08-wasm-201"
+connection_id = "connection-1"
 account_prefix = "ibc"
 fee_denom = "stake"
 fee_amount = "4000"
@@ -12,7 +12,7 @@ gas_limit = 100000000
 store_prefix = "ibc"
 max_tx_size = 320000
 commitment_prefix = [105, 98, 99]
-channel_whitelist = [["channel-0", "transfer"]]
+channel_whitelist = [["channel-1", "transfer"]]
 commitment_level = "confirmed"
 private_key = [48, 123, 8, 80, 248, 0, 217, 142, 124, 193, 95, 24, 168, 139, 214, 136, 147, 210, 168, 135, 26, 36, 162, 89, 150, 185, 99, 191, 247, 135, 78, 111, 12, 8, 4, 81, 129, 165, 153, 230, 192, 225, 51, 119, 216, 14, 69, 225, 73, 7, 204, 144, 39, 213, 91, 255, 136, 38, 95, 131, 197, 4, 101, 186]
 solana_ibc_program_id = "FeFjYj2YuMsk87Cp48ubzQPtW4MWDaKJrCs1TcdgosZJ"

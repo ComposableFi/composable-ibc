@@ -71,7 +71,7 @@ pub enum DeliverIxType {
 		token: Coin<PrefixedDenom>,
 		port_id: ibc_core_host_types::identifiers::PortId,
 		channel_id: ibc_core_host_types::identifiers::ChannelId,
-		sender_token_account: Pubkey,
+		sender_account: String,
 	},
 	Acknowledgement {
 		sender: Pubkey,
@@ -652,9 +652,8 @@ deserialize consensus state"
 					ref token,
 					ref port_id,
 					ref channel_id,
-					ref sender_token_account,
+					ref sender_account,
 				} => {
-                    let hashed_denom = CryptoHash::digest(token.denom.base_denom.as_str().as_bytes());
 					log::info!(
 						"PortId: {:?} and channel {:?} and token {:?}",
 						port_id,
@@ -665,7 +664,7 @@ deserialize consensus state"
 						get_accounts(
 							token.denom.clone(),
 							self.solana_ibc_program_id,
-							&sender_token_account.to_string(),
+							&sender_account,
 							port_id,
 							channel_id,
 							&self.rpc_client(),
@@ -699,7 +698,7 @@ deserialize consensus state"
 								token_mint,
 								escrow_account,
 								fee_collector: Some(self.get_fee_collector_key()),
-								receiver_token_account: Some(*sender_token_account),
+								receiver_token_account: sender_address,
 								associated_token_program: Some(anchor_spl::associated_token::ID),
 								token_program: Some(anchor_spl::token::ID),
 							},

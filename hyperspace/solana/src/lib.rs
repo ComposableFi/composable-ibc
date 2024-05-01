@@ -1992,8 +1992,7 @@ impl Chain for SolanaClient {
 							token: packet_data.token,
 							port_id: e.packet.port_id_on_a,
 							channel_id: e.packet.chan_id_on_a,
-							sender_token_account: Pubkey::from_str(packet_data.sender.as_ref())
-								.unwrap(),
+							sender_account: packet_data.sender.to_string(),
 						},
 						chunk_account,
 						max_tries,
