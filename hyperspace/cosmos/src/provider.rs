@@ -83,6 +83,15 @@ use tendermint_rpc::{
 };
 use tokio::{task::JoinSet, time::sleep};
 
+use tendermint::{
+	account::Id as TMAccountId,
+	block::signed_header::SignedHeader,
+	validator::Set as TMValidatorSet,
+};
+use tendermint_light_client::components::io::{AtHeight, IoError};
+use tendermint_light_client_verifier::types::{LightBlock, PeerId};
+use tendermint_rpc::Paging;
+
 // At least one *mandatory* update should happen during that period
 // TODO: make it configurable
 pub const NUMBER_OF_BLOCKS_TO_PROCESS_PER_ITER: u64 = 500;
@@ -1352,6 +1361,60 @@ impl<H> CosmosClient<H>
 where
 	H: 'static + Clone + Send + Sync,
 {
+	async fn fetch_validator_set(
+		&self,
+		height: AtHeight,
+		proposer_address: Option<TMAccountId>,
+	) -> Result<TMValidatorSet, IoError> {
+		let height = match height {
+			AtHeight::Highest => return Err(IoError::invalid_height()),
+			AtHeight::At(height) => height,
+		};
+
+		let client = &self.rpc_client;
+		let response = client.validators(height, Paging::All).await.map_err(IoError::rpc)?;
+
+		let validator_set = match proposer_address {
+			Some(proposer_address) =>
+				TMValidatorSet::with_proposer(response.validators, proposer_address)
+					.map_err(IoError::invalid_validator_set)?,
+			None => TMValidatorSet::without_proposer(response.validators),
+		};
+
+		Ok(validator_set)
+	}
+
+	async fn fetch_signed_header(&self, height: AtHeight) -> Result<SignedHeader, IoError> {
+		let client = self.rpc_client.clone();
+		let res = match height {
+			AtHeight::Highest => client.latest_commit().await,
+			AtHeight::At(height) => client.commit(height).await,
+		};
+
+		match res {
+			Ok(response) => Ok(response.signed_header),
+			Err(err) => Err(IoError::rpc(err)),
+		}
+	}
+
+	pub async fn fetch_light_block(
+		&self,
+		height: AtHeight,
+		peer_id: PeerId,
+	) -> Result<LightBlock, IoError> {
+		let signed_header = self.fetch_signed_header(height).await?;
+		let height = signed_header.header.height;
+		let proposer_address = signed_header.header.proposer_address;
+
+		let validator_set = self.fetch_validator_set(height.into(), Some(proposer_address)).await?;
+		let next_validator_set = self.fetch_validator_set(height.increment().into(), None).await?;
+
+		let light_block =
+			LightBlock::new(signed_header, validator_set, next_validator_set, peer_id);
+
+		Ok(light_block)
+	}
+
 	async fn parse_ibc_events_at<C: Chain>(
 		&self,
 		counterparty: &C,
@@ -1381,10 +1444,11 @@ where
 		for event in events {
 			let mut channel_and_port_ids = self.channel_whitelist();
 			channel_and_port_ids.extend(counterparty.channel_whitelist());
-      // log::info!("host channel and port ids {:?} ", self.channel_whitelist());
-			// log::info!("counterparty channel and port ids {:?}, ", counterparty.channel_whitelist());
-			// log::info!("Host connection {:?} counterparty {:?}", self.connection_id(), counterparty.connection_id());
-			// log::info!("Host clientID {:?} counterparty {:?}", self.client_id(), counterparty.client_id());
+			// log::info!("host channel and port ids {:?} ", self.channel_whitelist());
+			// log::info!("counterparty channel and port ids {:?}, ",
+			// counterparty.channel_whitelist()); log::info!("Host connection {:?} counterparty
+			// {:?}", self.connection_id(), counterparty.connection_id()); log::info!("Host clientID
+			// {:?} counterparty {:?}", self.client_id(), counterparty.client_id());
 
 			let ibc_event = ibc_event_try_from_abci_event(&event, ibc_height).ok();
 			if matches!(ibc_event, ibc::prelude::Some(IbcEvent::OpenTryConnection(_))) {
