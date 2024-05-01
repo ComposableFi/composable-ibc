@@ -208,7 +208,7 @@ impl SolanaClient {
 		let fee_collector_seeds = &[solana_ibc::FEE_SEED];
 		let fee_collector =
 			Pubkey::find_program_address(fee_collector_seeds, &self.solana_ibc_program_id).0;
-		fee_collector	
+		fee_collector
 	}
 
 	pub async fn get_trie(&self) -> solana_trie::TrieAccount<Vec<u8>> {
@@ -587,8 +587,7 @@ deserialize consensus state"
 				},
 				DeliverIxType::Recv { ref token, ref port_id, ref channel_id, ref receiver } => {
 					let base_denom = &token.denom.base_denom;
-					let hashed_denom =
-						CryptoHash::digest(base_denom.as_str().as_bytes());
+					let hashed_denom = CryptoHash::digest(base_denom.as_str().as_bytes());
 					log::info!(
 						"PortId: {:?} and channel {:?} and token {:?}",
 						port_id,
@@ -598,20 +597,24 @@ deserialize consensus state"
 					let (escrow_account, token_mint) =
 						if Pubkey::from_str(&base_denom.to_string()).is_ok() {
 							log::info!("Receiver chain source");
-							let escrow_seeds =
-								["escrow".as_bytes(), port_id.as_bytes(), channel_id.as_bytes(), hashed_denom.as_ref()];
+							let escrow_seeds = ["escrow".as_bytes(), hashed_denom.as_ref()];
 							let escrow_account = Pubkey::find_program_address(
 								&escrow_seeds,
 								&self.solana_ibc_program_id,
 							)
 							.0;
-							let prefix = TracePrefix::new(port_id.clone(), channel_id.clone());
-							// trace_path.remove_prefix(&prefix);
 							let token_mint = Pubkey::from_str(&base_denom.to_string()).unwrap();
 							(Some(escrow_account), token_mint)
 						} else {
 							log::info!("Not receiver chain source");
-							let token_mint_seeds = ["mint".as_bytes(), port_id.as_bytes(), channel_id.as_bytes(),hashed_denom.as_ref()];
+							let mut full_token = token.clone();
+							full_token.denom.add_trace_prefix(TracePrefix::new(
+								port_id.clone(),
+								channel_id.clone(),
+							));
+							let hashed_denom =
+								CryptoHash::digest(full_token.denom.to_string().as_bytes());
+							let token_mint_seeds = ["mint".as_bytes(), hashed_denom.as_ref()];
 							let token_mint = Pubkey::find_program_address(
 								&token_mint_seeds,
 								&self.solana_ibc_program_id,
@@ -671,7 +674,8 @@ deserialize consensus state"
 					// let receiver_token_account =
 					// 	get_associated_token_address(&authority.pubkey(), &token_mint);
 					let receiver_account = Pubkey::from_str(receiver).unwrap();
-				  let receiver_address = get_associated_token_address(&receiver_account, &token_mint);	
+					let receiver_address =
+						get_associated_token_address(&receiver_account, &token_mint);
 					program
 						.request()
 						.instruction(ComputeBudgetInstruction::set_compute_unit_limit(2_000_000u32))
@@ -711,8 +715,7 @@ deserialize consensus state"
 					ref channel_id,
 					ref sender_token_account,
 				} => {
-					let hashed_denom =
-						CryptoHash::digest(&token.denom.base_denom.as_str().as_bytes());
+					let hashed_denom = CryptoHash::digest(&token.denom.to_string().as_bytes());
 					log::info!(
 						"PortId: {:?} and channel {:?} and token {:?}",
 						port_id,
@@ -723,20 +726,24 @@ deserialize consensus state"
 					let (escrow_account, token_mint) =
 						if Pubkey::from_str(&base_denom.to_string()).is_ok() {
 							log::info!("Receiver chain source");
-							let escrow_seeds =
-								["escrow".as_bytes(), port_id.as_bytes(), channel_id.as_bytes(), hashed_denom.as_ref()];
+							let escrow_seeds = ["escrow".as_bytes(), hashed_denom.as_ref()];
 							let escrow_account = Pubkey::find_program_address(
 								&escrow_seeds,
 								&self.solana_ibc_program_id,
 							)
 							.0;
-							let prefix = TracePrefix::new(port_id.clone(), channel_id.clone());
-							// trace_path.remove_prefix(&prefix);
 							let token_mint = Pubkey::from_str(&base_denom.to_string()).unwrap();
 							(Some(escrow_account), token_mint)
 						} else {
 							log::info!("Not receiver chain source");
-							let token_mint_seeds = ["mint".as_bytes(), port_id.as_bytes(), channel_id.as_bytes(),hashed_denom.as_ref()];
+							let mut full_token = token.clone();
+							full_token.denom.add_trace_prefix(TracePrefix::new(
+								port_id.clone(),
+								channel_id.clone(),
+							));
+							let hashed_denom =
+								CryptoHash::digest(full_token.denom.to_string().as_bytes());
+							let token_mint_seeds = ["mint".as_bytes(), hashed_denom.as_ref()];
 							let token_mint = Pubkey::find_program_address(
 								&token_mint_seeds,
 								&self.solana_ibc_program_id,
@@ -782,8 +789,7 @@ deserialize consensus state"
 							ibc::prelude::Err("Error".to_owned())
 						})
 				},
-				DeliverIxType::Acknowledgement { sender } => {
-					program
+				DeliverIxType::Acknowledgement { sender } => program
 					.request()
 					.instruction(ComputeBudgetInstruction::set_compute_unit_limit(2_000_000u32))
 					.instruction(ComputeBudgetInstruction::request_heap_frame(128 * 1024))
@@ -814,8 +820,7 @@ deserialize consensus state"
 						println!("This is error {:?}", e);
 						status = false;
 						ibc::prelude::Err("Error".to_owned())
-					})
-				}
+					}),
 				DeliverIxType::Normal => program
 					.request()
 					.instruction(ComputeBudgetInstruction::set_compute_unit_limit(2_000_000u32))

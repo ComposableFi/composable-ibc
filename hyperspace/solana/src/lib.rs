@@ -843,9 +843,17 @@ deserialize client state"
 			.prove(&packet_ack_trie_key)
 			.map_err(|_| Error::Custom("value is sealed and cannot be fetched".to_owned()))?;
 		let ack = packet_ack.ok_or(Error::Custom("No value at given key".to_owned()))?;
+		let block_header = events::get_header_from_height(
+			self.rpc_client(),
+			self.solana_ibc_program_id,
+			at.revision_height,
+		)
+		.await
+		.expect(&format!("No block header found for height {:?}", at.revision_height));
+		log::info!("This is packet ack {:?}", ack.0.to_vec());
 		Ok(QueryPacketAcknowledgementResponse {
 			acknowledgement: ack.0.to_vec(),
-			proof: borsh::to_vec(&packet_ack_proof).unwrap(),
+			proof: borsh::to_vec(&(block_header, packet_ack_proof)).unwrap(),
 			proof_height: Some(at.into()),
 		})
 	}
