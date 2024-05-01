@@ -496,6 +496,10 @@ pub async fn parse_events(
 				// 3. otherwise skip.
 				let port_id = send_packet.packet.source_port.clone();
 				let channel_id = send_packet.packet.source_channel;
+				if channel_id == ibc::core::ics24_host::identifier::ChannelId::new(0) {
+					log::info!("Skipping packet since its not in whitelist {:?}", channel_id);
+					continue
+				}
 				let channel_response = source
 					.query_channel_end(send_packet.height, channel_id, port_id.clone())
 					.await?;
