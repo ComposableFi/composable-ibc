@@ -1136,26 +1136,35 @@ deserialize client state"
 	) -> Result<Vec<ibc_rpc::PacketInfo>, Self::Error> {
 		log::info!("Inside query send packets");
 		let rpc_client = self.rpc_client();
-		let hash = None;
 		if seqs.is_empty() {
 			return Ok(Vec::new())
 		}
-		let (transactions, _) =
-			events::get_previous_transactions(&rpc_client, self.solana_ibc_program_id, hash).await;
-		let send_packet_events: Vec<_> = transactions
-			.iter()
-			.filter_map(|tx| {
-				let logs = match tx.result.transaction.meta.clone().unwrap().log_messages {
+		let mut total_packets = Vec::new();
+		let mut before_hash = None;
+		while total_packets.len() < seqs.len() {
+			let (transactions, last_searched_hash) = events::get_previous_transactions(
+				&rpc_client,
+				self.solana_ibc_program_id,
+				before_hash,
+			)
+			.await;
+			before_hash = Some(
+				anchor_client::solana_sdk::signature::Signature::from_str(&last_searched_hash)
+					.unwrap(),
+			);
+			let send_packet_events: Vec<_> =
+				transactions
+					.iter()
+					.filter_map(|tx| {
+						let logs = match tx.result.transaction.meta.clone().unwrap().log_messages {
 					solana_transaction_status::option_serializer::OptionSerializer::Some(e) => e,
 					_ => Vec::new(),
 				};
-				let (events, _proof_height) = events::get_events_from_logs(logs.clone());
-				let mut send_packet = None;
-				for event in events {
-					send_packet =
-						match event {
-							solana_ibc::events::Event::IbcEvent(event) =>
-								match event {
+						let (events, _proof_height) = events::get_events_from_logs(logs.clone());
+						let mut send_packet = None;
+						for event in events {
+							send_packet = match event {
+								solana_ibc::events::Event::IbcEvent(event) => match event {
 									ibc_core_handler_types::events::IbcEvent::SendPacket(
 										packet,
 									) => {
@@ -1184,37 +1193,39 @@ deserialize client state"
 									},
 									_ => None,
 								},
-							_ => None,
-						};
-					if send_packet.is_some() {
-						break
+								_ => None,
+							};
+							if send_packet.is_some() {
+								break
+							}
+						}
+						send_packet
+					})
+					.collect();
+			let packets: Vec<_> = send_packet_events
+				.iter()
+				.map(|(packet, proof_height)| ibc_rpc::PacketInfo {
+					height: Some(proof_height.clone()),
+					sequence: packet.seq_on_a().value(),
+					source_port: packet.port_id_on_a().to_string(),
+					source_channel: packet.chan_id_on_a().to_string(),
+					destination_port: packet.port_id_on_b().to_string(),
+					destination_channel: packet.chan_id_on_b().to_string(),
+					channel_order: packet.channel_ordering().to_string(),
+					data: packet.packet_data().to_vec(),
+					timeout_height: Height {
+						revision_height: packet.timeout_height_on_b().commitment_revision_height(),
+						revision_number: packet.timeout_height_on_b().commitment_revision_number(),
 					}
-				}
-				send_packet
-			})
-			.collect();
-		let packets: Vec<_> = send_packet_events
-			.iter()
-			.map(|(packet, proof_height)| ibc_rpc::PacketInfo {
-				height: Some(proof_height.clone()),
-				sequence: packet.seq_on_a().value(),
-				source_port: packet.port_id_on_a().to_string(),
-				source_channel: packet.chan_id_on_a().to_string(),
-				destination_port: packet.port_id_on_b().to_string(),
-				destination_channel: packet.chan_id_on_b().to_string(),
-				channel_order: packet.channel_ordering().to_string(),
-				data: packet.packet_data().to_vec(),
-				timeout_height: Height {
-					revision_height: packet.timeout_height_on_b().commitment_revision_height(),
-					revision_number: packet.timeout_height_on_b().commitment_revision_number(),
-				}
-				.into(),
-				timeout_timestamp: packet.timeout_timestamp_on_b().nanoseconds(),
-				ack: None,
-			})
-			.collect();
-		log::info!("Found sent packets {:?}", packets);
-		Ok(packets)
+					.into(),
+					timeout_timestamp: packet.timeout_timestamp_on_b().nanoseconds(),
+					ack: None,
+				})
+				.collect();
+			total_packets.extend(packets);
+		}
+		log::info!("Found sent packets {:?}", total_packets);
+		Ok(total_packets)
 	}
 
 	async fn query_received_packets(
@@ -1228,9 +1239,20 @@ deserialize client state"
 		if seqs.is_empty() {
 			return Ok(Vec::new())
 		}
-		let (transactions, _) =
-			events::get_previous_transactions(&rpc_client, self.solana_ibc_program_id, None).await;
-		let recv_packet_events: Vec<_> = transactions
+		let mut before_hash = None;
+		let mut total_packets = Vec::new();
+		while total_packets.len() < seqs.len() {
+			let (transactions, last_searched_hash) = events::get_previous_transactions(
+				&rpc_client,
+				self.solana_ibc_program_id,
+				before_hash,
+			)
+			.await;
+			before_hash = Some(
+				anchor_client::solana_sdk::signature::Signature::from_str(&last_searched_hash)
+					.unwrap(),
+			);
+			let recv_packet_events: Vec<_> = transactions
 			.iter()
 			.filter_map(|tx| {
 				let logs = match tx.result.transaction.meta.clone().unwrap().log_messages {
@@ -1265,36 +1287,38 @@ deserialize client state"
 				}
 			})
 			.collect();
-		let packets: Vec<_> = recv_packet_events
-			.iter()
-			.map(|(recv_packet, height)| match recv_packet {
-				ibc_core_handler_types::events::IbcEvent::WriteAcknowledgement(packet) =>
-					ibc_rpc::PacketInfo {
-						height: Some(*height),
-						sequence: packet.seq_on_a().value(),
-						source_port: packet.port_id_on_a().to_string(),
-						source_channel: packet.chan_id_on_a().to_string(),
-						destination_port: packet.port_id_on_b().to_string(),
-						destination_channel: packet.chan_id_on_b().to_string(),
-						channel_order: String::from(""),
-						data: packet.packet_data().to_vec(),
-						timeout_height: Height {
-							revision_height: packet
-								.timeout_height_on_b()
-								.commitment_revision_height(),
-							revision_number: packet
-								.timeout_height_on_b()
-								.commitment_revision_number(),
-						}
-						.into(),
-						timeout_timestamp: packet.timeout_timestamp_on_b().nanoseconds(),
-						ack: Some(packet.acknowledgement().as_bytes().to_vec()),
-					},
-				_ => panic!("Infallible"),
-			})
-			.collect();
-		println!("Length of packets {}", packets.len());
-		Ok(packets)
+			let packets: Vec<_> = recv_packet_events
+				.iter()
+				.map(|(recv_packet, height)| match recv_packet {
+					ibc_core_handler_types::events::IbcEvent::WriteAcknowledgement(packet) =>
+						ibc_rpc::PacketInfo {
+							height: Some(*height),
+							sequence: packet.seq_on_a().value(),
+							source_port: packet.port_id_on_a().to_string(),
+							source_channel: packet.chan_id_on_a().to_string(),
+							destination_port: packet.port_id_on_b().to_string(),
+							destination_channel: packet.chan_id_on_b().to_string(),
+							channel_order: String::from(""),
+							data: packet.packet_data().to_vec(),
+							timeout_height: Height {
+								revision_height: packet
+									.timeout_height_on_b()
+									.commitment_revision_height(),
+								revision_number: packet
+									.timeout_height_on_b()
+									.commitment_revision_number(),
+							}
+							.into(),
+							timeout_timestamp: packet.timeout_timestamp_on_b().nanoseconds(),
+							ack: Some(packet.acknowledgement().as_bytes().to_vec()),
+						},
+					_ => panic!("Infallible"),
+				})
+				.collect();
+			total_packets.extend(packets);
+		}
+		println!("Length of receive packets {}", total_packets.len());
+		Ok(total_packets)
 	}
 
 	fn expected_block_time(&self) -> Duration {
