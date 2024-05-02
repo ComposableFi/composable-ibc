@@ -278,9 +278,11 @@ async fn process_some_finality_event<A: Chain, B: Chain>(
 			loop {
 				let largest_height = timeout_heights.iter().max().unwrap();
 				let latest_height_on_solana = sink.latest_height_and_timestamp().await.unwrap().0;
-				if latest_height_on_solana.revision_height < *largest_height {
-					log::info!("Latest height not yet finalized");
+				if latest_height_on_solana.revision_height >= *largest_height {
+					log::info!("Latest height is finalized");
+					break;
 				}
+				log::info!("Waiting for next block {:?} to be finalized", latest_height_on_solana);
 				Duration::from_secs(1)
 			}
 			let (updates, heights) = sink.fetch_mandatory_updates(source).await.unwrap();
