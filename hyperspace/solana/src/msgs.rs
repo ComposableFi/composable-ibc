@@ -113,7 +113,9 @@ pub fn convert_old_msgs_to_new(messages: Vec<Ics26Envelope<LocalClientTypes>>) -
 					})),
 				#[allow(deprecated)]
 				ibc::core::ics03_connection::msgs::ConnectionMsg::ConnectionOpenTry(e) => {
-					let encoded_cs = ibc_proto::google::protobuf::Any::from(e.client_state.as_ref().unwrap().clone());
+					let encoded_cs = ibc_proto::google::protobuf::Any::from(
+						e.client_state.as_ref().unwrap().clone(),
+					);
 					MsgEnvelope::Connection(ConnectionMsg::OpenTry(MsgConnectionOpenTry {
 						counterparty: Counterparty {
 							client_id: ClientId::from_str(e.counterparty.client_id().as_str())
@@ -185,8 +187,13 @@ pub fn convert_old_msgs_to_new(messages: Vec<Ics26Envelope<LocalClientTypes>>) -
 					}))
 				},
 				ibc::core::ics03_connection::msgs::ConnectionMsg::ConnectionOpenAck(e) => {
-					let encoded_cs = ibc_proto::google::protobuf::Any::from(e.client_state.as_ref().unwrap().clone());
-					log::info!("This is the proof height for consensus state {:?}", e.proofs.consensus_proof().unwrap().height());
+					let encoded_cs = ibc_proto::google::protobuf::Any::from(
+						e.client_state.as_ref().unwrap().clone(),
+					);
+					log::info!(
+						"This is the proof height for consensus state {:?}",
+						e.proofs.consensus_proof().unwrap().height()
+					);
 
 					MsgEnvelope::Connection(ConnectionMsg::OpenAck(MsgConnectionOpenAck {
 						signer: Signer::from(e.signer.as_ref().to_string()),
@@ -377,13 +384,15 @@ pub fn convert_old_msgs_to_new(messages: Vec<Ics26Envelope<LocalClientTypes>>) -
 								.unwrap(),
 							chan_id_on_b: ChannelId::new(e.packet.destination_channel.sequence()),
 							data: e.packet.data.clone(),
-							timeout_height_on_b: if e.packet.timeout_height.revision_number > 0 { TimeoutHeight::At(
-								Height::new(
-									e.packet.timeout_height.revision_number,
-									e.packet.timeout_height.revision_height,
+							timeout_height_on_b: if e.packet.timeout_height.revision_number > 0 {
+								TimeoutHeight::At(
+									Height::new(
+										e.packet.timeout_height.revision_number,
+										e.packet.timeout_height.revision_height,
+									)
+									.unwrap(),
 								)
-								.unwrap(),
-							)} else {
+							} else {
 								TimeoutHeight::Never
 							},
 							timeout_timestamp_on_b: Timestamp::from_nanoseconds(
@@ -412,13 +421,15 @@ pub fn convert_old_msgs_to_new(messages: Vec<Ics26Envelope<LocalClientTypes>>) -
 								.unwrap(),
 							chan_id_on_b: ChannelId::new(e.packet.destination_channel.sequence()),
 							data: e.packet.data.clone(),
-							timeout_height_on_b: if e.packet.timeout_height.revision_number > 0 { TimeoutHeight::At(
-								Height::new(
-									e.packet.timeout_height.revision_number,
-									e.packet.timeout_height.revision_height,
+							timeout_height_on_b: if e.packet.timeout_height.revision_number > 0 {
+								TimeoutHeight::At(
+									Height::new(
+										e.packet.timeout_height.revision_number,
+										e.packet.timeout_height.revision_height,
+									)
+									.unwrap(),
 								)
-								.unwrap(),
-							)} else {
+							} else {
 								TimeoutHeight::Never
 							},
 							timeout_timestamp_on_b: Timestamp::from_nanoseconds(
@@ -453,13 +464,17 @@ pub fn convert_old_msgs_to_new(messages: Vec<Ics26Envelope<LocalClientTypes>>) -
 								.unwrap(),
 							chan_id_on_b: ChannelId::new(e.packet.destination_channel.sequence()),
 							data: e.packet.data.clone(),
-							timeout_height_on_b: TimeoutHeight::At(
-								Height::new(
-									e.packet.timeout_height.revision_number,
-									e.packet.timeout_height.revision_height,
+							timeout_height_on_b: if e.packet.timeout_height.revision_number > 0 {
+								TimeoutHeight::At(
+									Height::new(
+										e.packet.timeout_height.revision_number,
+										e.packet.timeout_height.revision_height,
+									)
+									.unwrap(),
 								)
-								.unwrap(),
-							),
+							} else {
+								TimeoutHeight::Never
+							},
 							timeout_timestamp_on_b: Timestamp::from_nanoseconds(
 								e.packet.timeout_timestamp.nanoseconds(),
 							)
@@ -487,13 +502,17 @@ pub fn convert_old_msgs_to_new(messages: Vec<Ics26Envelope<LocalClientTypes>>) -
 								.unwrap(),
 							chan_id_on_b: ChannelId::new(e.packet.destination_channel.sequence()),
 							data: e.packet.data.clone(),
-							timeout_height_on_b: TimeoutHeight::At(
-								Height::new(
-									e.packet.timeout_height.revision_number,
-									e.packet.timeout_height.revision_height,
+							timeout_height_on_b: if e.packet.timeout_height.revision_number > 0 {
+								TimeoutHeight::At(
+									Height::new(
+										e.packet.timeout_height.revision_number,
+										e.packet.timeout_height.revision_height,
+									)
+									.unwrap(),
 								)
-								.unwrap(),
-							),
+							} else {
+								TimeoutHeight::Never
+							},
 							timeout_timestamp_on_b: Timestamp::from_nanoseconds(
 								e.packet.timeout_timestamp.nanoseconds(),
 							)
@@ -520,4 +539,3 @@ pub fn convert_old_msgs_to_new(messages: Vec<Ics26Envelope<LocalClientTypes>>) -
 		.collect();
 	new_messages
 }
-
