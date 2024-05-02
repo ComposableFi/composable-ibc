@@ -283,7 +283,7 @@ async fn process_some_finality_event<A: Chain, B: Chain>(
 					break;
 				}
 				log::info!("Waiting for next block {:?} to be finalized", latest_height_on_solana);
-				Duration::from_secs(1)
+				core::time::Duration::from_secs(1)
 			}
 			let (updates, heights) = sink.fetch_mandatory_updates(source).await.unwrap();
 			let updates_to_be_sent: Vec<Any> = heights
