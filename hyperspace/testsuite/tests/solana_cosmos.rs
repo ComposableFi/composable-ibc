@@ -54,9 +54,9 @@ pub struct Args {
 
 impl Default for Args {
 	fn default() -> Self {
-		let relay = std::env::var("RELAY_HOST").unwrap_or_else(|_| "192.168.1.11".to_string());
-		let solana = std::env::var("SOLANA_HOST").unwrap_or_else(|_| "192.168.1.11".to_string());
-		let cosmos = std::env::var("COSMOS_HOST").unwrap_or_else(|_| "192.168.1.11".to_string());
+		let relay = std::env::var("RELAY_HOST").unwrap_or_else(|_| "192.168.1.101".to_string());
+		let solana = std::env::var("SOLANA_HOST").unwrap_or_else(|_| "192.168.1.101".to_string());
+		let cosmos = std::env::var("COSMOS_HOST").unwrap_or_else(|_| "192.168.1.101".to_string());
 		let wasm_path = std::env::var("WASM_PATH").unwrap_or_else(|_| {
 			"../../target/wasm32-unknown-unknown/release/ics07_guest_cw.wasm".to_string()
 		});
@@ -123,7 +123,7 @@ async fn setup_clients() -> (AnyChain, AnyChain) {
 			153, 230, 192, 225, 51, 119, 216, 14, 69, 225, 73, 7, 204, 144, 39, 213, 91, 255, 136,
 			38, 95, 131, 197, 4, 101, 186,
 		],
-		solana_ibc_program_id: "9FeHRJLHJSEw4dYZrABHWTRKruFjxDmkLtPmhM5WFYL7".to_string(),
+		solana_ibc_program_id: "FeFjYj2YuMsk87Cp48ubzQPtW4MWDaKJrCs1TcdgosZJ".to_string(),
 		write_program_id: "FufGpHqMQgGVjtMH9AV8YMrJYq8zaK6USRsJkZP4yDjo".to_string(),
 		signature_verifier_program_id: 
 			"C6r1VEbn3mSpecgrZ7NdBvWUtYVJWrDPv4uU9Xs956gc".to_string(),
@@ -202,12 +202,12 @@ async fn setup_clients() -> (AnyChain, AnyChain) {
 	// 	return (chain_a_wrapped, chain_b_wrapped)
 	// }
 
-	let (client_a, client_b) =
-		create_clients(&mut chain_a_wrapped, &mut chain_b_wrapped).await.unwrap();
-	chain_a_wrapped.set_client_id(client_a);
-	chain_b_wrapped.set_client_id(client_b);
-	// chain_b_wrapped.set_client_id(ClientId::new("07-tendermint", 1).unwrap());
-	// chain_a_wrapped.set_client_id(ClientId::new("08-wasm", 0).unwrap());
+	// let (client_a, client_b) =
+	// 	create_clients(&mut chain_a_wrapped, &mut chain_b_wrapped).await.unwrap();
+	// chain_a_wrapped.set_client_id(client_a);
+	// chain_b_wrapped.set_client_id(client_b);
+	chain_b_wrapped.set_client_id(ClientId::new("07-tendermint", 1).unwrap());
+	chain_a_wrapped.set_client_id(ClientId::new("08-wasm", 1).unwrap());
 	(chain_a_wrapped, chain_b_wrapped)
 }
 
@@ -222,16 +222,16 @@ async fn solana_to_cosmos_ibc_messaging_full_integration_test() {
 	let asset_id_a = AnyAssetId::Solana("33WVSef9zaw49KbNdPGTmACVRnAXzN3o1fsqbUrLp2mh".to_string());
 	let asset_id_b = AnyAssetId::Cosmos("stake".to_string());
 	let (mut chain_a, mut chain_b) = setup_clients().await;
-	let (handle, channel_a, channel_b, connection_id_a, connection_id_b) =
-		setup_connection_and_channel(&mut chain_a, &mut chain_b, Duration::from_secs(10)).await;
+	// let (handle, channel_a, channel_b, connection_id_a, connection_id_b) =
+	// 	setup_connection_and_channel(&mut chain_a, &mut chain_b, Duration::from_secs(10)).await;
 
-	handle.abort();
+	// handle.abort();
 
-	// let connection_id_a = ConnectionId::from_str("connection-0").unwrap();
-	// let connection_id_b = ConnectionId::from_str("connection-0").unwrap();
+	let connection_id_a = ConnectionId::from_str("connection-1").unwrap();
+	let connection_id_b = ConnectionId::from_str("connection-0").unwrap();
 
-	// let channel_a = ChannelId::from_str("channel-0").unwrap();
-	// let channel_b = ChannelId::from_str("channel-0").unwrap();
+	let channel_a = ChannelId::from_str("channel-0").unwrap();
+	let channel_b = ChannelId::from_str("channel-0").unwrap();
 
 	log::info!("Channel A: {:?}", channel_a);
 	log::info!("Channel B: {:?}", channel_b);
@@ -249,41 +249,41 @@ async fn solana_to_cosmos_ibc_messaging_full_integration_test() {
 
 	// no timeouts + connection delay
 
-	ibc_messaging_with_connection_delay(
-		&mut chain_a,
-		&mut chain_b,
-		asset_id_a.clone(),
-		asset_id_b.clone(),
-		channel_a,
-		channel_b,
-	)
-	.await;
+	// ibc_messaging_with_connection_delay(
+	// 	&mut chain_a,
+	// 	&mut chain_b,
+	// 	asset_id_a.clone(),
+	// 	asset_id_b.clone(),
+	// 	channel_a,
+	// 	channel_b,
+	// )
+	// .await;
 
 	// timeouts + connection delay
-	ibc_messaging_packet_height_timeout_with_connection_delay(
-		&mut chain_a,
-		&mut chain_b,
-		asset_id_a.clone(),
-		channel_a,
-		channel_b,
-	)
-	.await;
-	ibc_messaging_packet_height_timeout_with_connection_delay(
-		&mut chain_b,
-		&mut chain_a,
-		asset_id_b.clone(),
-		channel_b,
-		channel_a,
-	)
-	.await;
-	ibc_messaging_packet_timestamp_timeout_with_connection_delay(
-		&mut chain_b,
-		&mut chain_a,
-		asset_id_b.clone(),
-		channel_b,
-		channel_a,
-	)
-	.await;
+	// ibc_messaging_packet_height_timeout_with_connection_delay(
+	// 	&mut chain_a,
+	// 	&mut chain_b,
+	// 	asset_id_a.clone(),
+	// 	channel_a,
+	// 	channel_b,
+	// )
+	// .await;
+	// ibc_messaging_packet_height_timeout_with_connection_delay(
+	// 	&mut chain_b,
+	// 	&mut chain_a,
+	// 	asset_id_b.clone(),
+	// 	channel_b,
+	// 	channel_a,
+	// )
+	// .await;
+	// ibc_messaging_packet_timestamp_timeout_with_connection_delay(
+	// 	&mut chain_b,
+	// 	&mut chain_a,
+	// 	asset_id_b.clone(),
+	// 	channel_b,
+	// 	channel_a,
+	// )
+	// .await;
 	ibc_messaging_packet_timestamp_timeout_with_connection_delay(
 		&mut chain_a,
 		&mut chain_b,

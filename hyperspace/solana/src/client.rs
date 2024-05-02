@@ -841,8 +841,6 @@ deserialize consensus state"
 			if is_sender_chain_source(port_id.clone(), channel_id.clone(), &token.denom) {
 				let escrow_seeds = [
 					"escrow".as_bytes(),
-					port_id.as_bytes(),
-					channel_id.as_bytes(),
 					hashed_denom.as_ref(),
 				];
 				let escrow_account =
@@ -860,8 +858,6 @@ deserialize consensus state"
 			} else {
 				let token_mint_seeds = [
 					"mint".as_bytes(),
-					port_id.as_bytes(),
-					channel_id.as_bytes(),
 					hashed_denom.as_ref(),
 				];
 				let token_mint =
@@ -875,7 +871,7 @@ deserialize consensus state"
 		);
 		let packet_data = ibc_app_transfer_types::packet::PacketData {
 			token,
-			sender: ibc_new_primitives::Signer::from(sender_token_address.to_string()),
+			sender: ibc_new_primitives::Signer::from(msg.sender.as_ref().to_string()),
 			receiver: ibc_new_primitives::Signer::from(msg.receiver.as_ref().to_string()),
 			memo: ibc_app_transfer_types::Memo::from(msg.memo),
 		};
@@ -902,7 +898,7 @@ deserialize consensus state"
 			.instruction(ComputeBudgetInstruction::set_compute_unit_limit(2_000_000u32))
 			.accounts(solana_ibc::accounts::SendTransfer {
 				sender: authority.pubkey(),
-				receiver: None,
+				receiver: Some(authority.pubkey()),
 				storage: solana_ibc_storage_key,
 				trie: trie_key,
 				chain: chain_key,
@@ -915,9 +911,7 @@ deserialize consensus state"
 				token_program: Some(anchor_spl::token::ID),
 			})
 			.args(solana_ibc::instruction::SendTransfer {
-				port_id,
-				channel_id,
-				hashed_base_denom: hashed_denom,
+				hashed_full_denom: hashed_denom,
 				msg: new_msg_transfer,
 			})
 			// .payer(Arc::new(keypair))
