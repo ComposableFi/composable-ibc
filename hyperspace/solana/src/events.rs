@@ -393,6 +393,7 @@ pub async fn get_client_state_at_height(
 	program_id: Pubkey,
 	upto_height: u64,
 ) -> Option<solana_ibc::client_state::AnyClientState> {
+	log::info!("Getting client states at height {:?}", upto_height);
 	let mut client_state = None;
 	let mut before_hash = None;
 	let mut current_height = upto_height;
@@ -403,6 +404,7 @@ pub async fn get_client_state_at_height(
 			anchor_client::solana_sdk::signature::Signature::from_str(&last_searched_hash).unwrap(),
 		);
 		for tx in transactions {
+			log::info!("Transaction {:?}", tx);
 			let logs = match tx.result.transaction.meta.clone().unwrap().log_messages {
 				solana_transaction_status::option_serializer::OptionSerializer::Some(e) => e,
 				_ => Vec::new(),
@@ -435,6 +437,7 @@ pub async fn get_client_state_at_height(
 			if height == 0 || client_state_logs.is_empty() {
 				continue
 			}
+			log::info!("Found height {:?}", height);
 			if height < upto_height {
 				break
 			}

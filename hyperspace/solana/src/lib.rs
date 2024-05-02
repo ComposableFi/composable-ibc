@@ -1968,6 +1968,7 @@ impl Chain for SolanaClient {
 			.unwrap();
 
 			chunks.chunk_size = core::num::NonZeroU16::new(500).unwrap();
+			
 			for instruction in &mut chunks {
 				let transaction = Transaction::new_signed_with_payer(
 					&[instruction],
