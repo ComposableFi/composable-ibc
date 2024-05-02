@@ -767,16 +767,16 @@ deserialize client state"
 		// 		.expect(&format!("No block header found for height {:?}", at.revision_height));
 		// let result = proof.verify(&block_header_og.state_root, &trie_key, val.as_ref());
 		// let result_1 = proof.verify(&block_header.state_root, &trie_key, val.as_ref());
-		let block_height = block_header_og.block_height;
-		loop {
-			sleep(Duration::from_millis(500));
-			let chain_account = self.get_chain_storage().await;
-			let block_header_og = chain_account.head().unwrap();
-			if block_header_og.block_height > block_height {
-				log::info!("Got higher height");
-				break
-			}
-		}
+		// let block_height = block_header_og.block_height;
+		// loop {
+		// 	sleep(Duration::from_millis(500));
+		// 	let chain_account = self.get_chain_storage().await;
+		// 	let block_header_og = chain_account.head().unwrap();
+		// 	if block_header_og.block_height > block_height {
+		// 		log::info!("Got higher height");
+		// 		break
+		// 	}
+		// }
 		log::info!("This is value in proof verify {:?}", val);
 		// log::info!(
 		// 	"This is result of time out packet proof verify lts {:?}, at proof height {:?}",

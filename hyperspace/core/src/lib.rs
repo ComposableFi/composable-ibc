@@ -275,6 +275,14 @@ async fn process_some_finality_event<A: Chain, B: Chain>(
 				};
 				timeout_heights.push(timeout_msg.proofs.height().revision_height);
 			}
+			loop {
+				let largest_height = timeout_heights.iter().max().unwrap();
+				let latest_height_on_solana = sink.latest_height_and_timestamp().await.unwrap().0;
+				if latest_height_on_solana.revision_height < *largest_height {
+					log::info!("Latest height not yet finalized");
+				}
+				Duration::from_secs(1)
+			}
 			let (updates, heights) = sink.fetch_mandatory_updates(source).await.unwrap();
 			let updates_to_be_sent: Vec<Any> = heights
 				.iter()
@@ -375,7 +383,9 @@ async fn process_updates<A: Chain, B: Chain>(
 						_ => panic!("Only expected new block event"),
 					};
 					let temp_height = Height::new(1, height.revision_height);
-					if timeout_heights.contains(&temp_height) && height.revision_height > latest_update_height {
+					if timeout_heights.contains(&temp_height) &&
+						height.revision_height > latest_update_height
+					{
 						return Some(mandatory_updates[index].clone())
 					}
 					None
@@ -450,9 +460,17 @@ async fn process_updates<A: Chain, B: Chain>(
 				if update_type.is_optional() && need_to_send_proofs_for_sequences {
 					log::info!("Sending an optional update because source ({}) chain has undelivered sequences at height{}", sink.name(), height.revision_height);
 				} else {
-					log::info!("Sending mandatory client update message for {} at height {}", sink.name(), height.revision_height)
+					log::info!(
+						"Sending mandatory client update message for {} at height {}",
+						sink.name(),
+						height.revision_height
+					)
 				},
-			_ => log::info!("Received finalized events from: {} at height {} {event_types:#?}", source.name(), height.revision_height),
+			_ => log::info!(
+				"Received finalized events from: {} at height {} {event_types:#?}",
+				source.name(),
+				height.revision_height
+			),
 		};
 		log::info!(
 			"pushed msg update client for {} with msg {} of len {}",

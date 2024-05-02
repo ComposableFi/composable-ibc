@@ -238,7 +238,7 @@ pub async fn query_ready_and_timed_out_packets(
 						// so we know this packet has timed out on the sink, we need to find the maximum
 						// consensus state height at which we can generate a non-membership proof of the
 						// packet for the sink's client on the source.
-						let proof_height = latest_sink_height_on_source;
+						let proof_height = latest_source_height_on_sink;
 						// 	if let Some(proof_height) = get_timeout_proof_height(
 						// 		&**source,
 						// 		&**sink,
