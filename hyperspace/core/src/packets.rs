@@ -238,42 +238,42 @@ pub async fn query_ready_and_timed_out_packets(
 						// so we know this packet has timed out on the sink, we need to find the maximum
 						// consensus state height at which we can generate a non-membership proof of the
 						// packet for the sink's client on the source.
-						let proof_height = latest_source_height_on_sink;
-						// 	if let Some(proof_height) = get_timeout_proof_height(
-						// 		&**source,
-						// 		&**sink,
-						// 		source_height,
-						// 		sink_height,
-						// 		sink_timestamp,
-						// 		latest_sink_height_on_source,
-						// 		&packet,
-						// 		packet_height,
-						// 	)
-						// 	.await
-						// {
-						// 	proof_height
-						// } else {
-						// 	log::info!(target: "hyperspace", "Skipping packet as no timeout proof height could be found: {:?}", packet);
-						// 	return Ok(None)
-						// };
+						// let proof_height = latest_source_height_on_sink;
+							if let Some(proof_height) = get_timeout_proof_height(
+								&**source,
+								&**sink,
+								source_height,
+								sink_height,
+								sink_timestamp,
+								latest_sink_height_on_source,
+								&packet,
+								packet_height,
+							)
+							.await
+						{
+							proof_height
+						} else {
+							log::info!(target: "hyperspace", "Skipping packet as no timeout proof height could be found: {:?}", packet);
+							return Ok(None)
+						};
 
 						// given this maximum height, has the connection delay been satisfied?
-						// if !verify_delay_passed(
-						// 	&**source,
-						// 	&**sink,
-						// 	source_timestamp,
-						// 	source_height,
-						// 	sink_timestamp,
-						// 	sink_height,
-						// 	source_connection_end.delay_period(),
-						// 	proof_height,
-						// 	VerifyDelayOn::Source,
-						// )
-						// 	.await?
-						// {
-						// 	log::info!(target: "hyperspace", "Skipping packet as connection delay has not passed {:?}", packet);
-						// 	return Ok(None)
-						// }
+						if !verify_delay_passed(
+							&**source,
+							&**sink,
+							source_timestamp,
+							source_height,
+							sink_timestamp,
+							sink_height,
+							source_connection_end.delay_period(),
+							proof_height,
+							VerifyDelayOn::Source,
+						)
+							.await?
+						{
+							log::info!(target: "hyperspace", "Skipping packet as connection delay has not passed {:?}", packet);
+							return Ok(None)
+						}
 
 						// lets construct the timeout message to be sent to the source
 						let msg = construct_timeout_message(
