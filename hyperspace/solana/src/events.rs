@@ -404,7 +404,6 @@ pub async fn get_client_state_at_height(
 			anchor_client::solana_sdk::signature::Signature::from_str(&last_searched_hash).unwrap(),
 		);
 		for tx in transactions {
-			log::info!("Transaction {:?}", tx);
 			let logs = match tx.result.transaction.meta.clone().unwrap().log_messages {
 				solana_transaction_status::option_serializer::OptionSerializer::Some(e) => e,
 				_ => Vec::new(),
