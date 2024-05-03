@@ -454,7 +454,6 @@ deserialize consensus state"
 						signature_seeds,
 						&self.signature_verifier_program_id,
 					);
-					let mut instructions = Vec::new();
 					for chunk in 0..chunks {
 						let start = chunk * chunk_size;
 						let end = (start + chunk_size).min(total_signatures);
@@ -502,29 +501,25 @@ deserialize consensus state"
 							let entry: Entry = Entry { pubkey, signature, message };
 							entries.push(entry);
 						}
-						let ix = program
+						let sig = program
 							.request()
 							.instruction(new_instruction(entries.as_slice()).unwrap())
 							.instruction(instruction)
-							.signer(&*authority)	
-							.transaction()
-							.unwrap();
-						instructions.push(ix);
-						// .send()
-						// .await
-						// .or_else(|e| {
-						// 	println!("This is error for signature {:?}", e);
-						// 	status = false;
-						// 	ibc::prelude::Err("Error".to_owned())
-						// });
-						// log::info!("This is signature for sending signature {:?}", sig);
+						.send()
+						.await
+						.or_else(|e| {
+							println!("This is error for signature {:?}", e);
+							status = false;
+							ibc::prelude::Err("Error".to_owned())
+						});
+						log::info!("This is signature for sending signature {:?}", sig);
 					}
-					let futures =
-						instructions.iter().map(|tx| rpc.send_and_confirm_transaction(tx));
-					let signatures = join_all(futures).await;
-					for sig in signatures {
-						println!("  Signature Chunking Signature {:?}", sig);
-					}
+					// let futures =
+					// 	instructions.iter().map(|tx| rpc.send_and_confirm_transaction(tx));
+					// let signatures = join_all(futures).await;
+					// for sig in signatures {
+					// 	println!("  Signature Chunking Signature {:?}", sig);
+					// }
 					let signature = program
 						.request()
 						.instruction(ComputeBudgetInstruction::set_compute_unit_limit(2_000_000u32))
