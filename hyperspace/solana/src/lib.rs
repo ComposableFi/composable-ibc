@@ -378,8 +378,6 @@ deserialize consensus state"
 				)
 			})
 			.unwrap();
-		log::info!("query_client_consensus before convert new and old");
-		let cs_state = convert_new_consensus_state_to_old(consensus_state.clone());
 		log::info!("query_client_consensus before encode");
 		let cs_state = convert_new_consensus_state_to_old(consensus_state.clone());
 		let inner_any = consensus_state.clone().encode_vec();
@@ -388,32 +386,32 @@ deserialize consensus state"
 		let chain_account = self.get_chain_storage().await;
 		let block_header_og = chain_account.head().unwrap();
 		log::info!("query_client_consensus before get header from height");
-		let block_header = events::get_header_from_height(
-			self.rpc_client(),
-			self.solana_ibc_program_id,
-			at.revision_height,
-		)
-		.await
-		.expect(&format!("No block header found for height {:?}", at.revision_height));
-		let result = consensus_state_proof.verify(
-			&block_header_og.state_root,
-			&consensus_state_trie_key,
-			Some(&CryptoHash::digest(&inner_any)),
-		);
-		let result_1 = consensus_state_proof.verify(
-			&block_header.state_root,
-			&consensus_state_trie_key,
-			Some(&CryptoHash::digest(&inner_any)),
-		);
-		log::info!(
-			"This is result of consensus state proof verify lts {:?} at proof height {:?}",
-			result,
-			result_1
-		);
-		log::info!("query_client_consensus completed");
+		// let block_header = events::get_header_from_height(
+		// 	self.rpc_client(),
+		// 	self.solana_ibc_program_id,
+		// 	at.revision_height,
+		// )
+		// .await
+		// .expect(&format!("No block header found for height {:?}", at.revision_height));
+		// let result = consensus_state_proof.verify(
+		// 	&block_header_og.state_root,
+		// 	&consensus_state_trie_key,
+		// 	Some(&CryptoHash::digest(&inner_any)),
+		// );
+		// let result_1 = consensus_state_proof.verify(
+		// 	&block_header.state_root,
+		// 	&consensus_state_trie_key,
+		// 	Some(&CryptoHash::digest(&inner_any)),
+		// );
+		// log::info!(
+		// 	"This is result of consensus state proof verify lts {:?} at proof height {:?}",
+		// 	result,
+		// 	result_1
+		// );
+		// log::info!("query_client_consensus completed");
 		Ok(QueryConsensusStateResponse {
 			consensus_state: Some(cs_state.into()),
-			proof: borsh::to_vec(&(block_header, &consensus_state_proof)).unwrap(),
+			proof: borsh::to_vec(&(block_header_og, &consensus_state_proof)).unwrap(),
 			proof_height: Some(at.into()),
 		})
 	}

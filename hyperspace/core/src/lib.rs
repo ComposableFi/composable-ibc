@@ -411,6 +411,7 @@ async fn process_updates<A: Chain, B: Chain>(
 				.collect();
 			log::info!("Updates to be sent {:?}", updates_to_be_sent);
 			updates_to_be_added = updates_to_be_sent;
+			updates_to_be_added.reverse();
 		}
 	}
 	log::info!(
@@ -422,14 +423,6 @@ async fn process_updates<A: Chain, B: Chain>(
 	let update_max_height = updates.iter().map(|(_, height, ..)| height.clone()).max().unwrap();
 
 	for (msg_update_client, height, events, update_type) in updates {
-		// if height.revision_height != update_max_height.revision_height {
-		// 	log::info!(
-		// 		"Skipping update for {} at height {} because it is not the latest update",
-		// 		source.name(),
-		// 		height.revision_height
-		// 	);
-		// 	continue
-		// }
 		if let Some(metrics) = metrics.as_mut() {
 			if let Err(e) = metrics.handle_events(events.as_slice()).await {
 				log::error!("Failed to handle metrics for {} {:?}", source.name(), e);
