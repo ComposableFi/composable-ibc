@@ -94,7 +94,7 @@ use tendermint_rpc::Paging;
 
 // At least one *mandatory* update should happen during that period
 // TODO: make it configurable
-pub const NUMBER_OF_BLOCKS_TO_PROCESS_PER_ITER: u64 = 500;
+// pub const NUMBER_OF_BLOCKS_TO_PROCESS_PER_ITER: u64 = 500;
 
 #[derive(Clone, Debug)]
 pub enum FinalityEvent {
@@ -149,10 +149,7 @@ where
 		let latest_revision = latest_height.revision_number;
 
 		let from = TmHeight::try_from(latest_cp_client_height).unwrap();
-		let to = finality_event_height.min(
-			TmHeight::try_from(latest_cp_client_height + NUMBER_OF_BLOCKS_TO_PROCESS_PER_ITER)
-				.expect("should not overflow"),
-		);
+		let to = finality_event_height;
 		log::info!(target: "hyperspace_cosmos", "--------------------------Getting blocks {}..{}----------------------", from, to);
 
 		// query (exclusively) up to `to`, because the proof for the event at `to - 1` will be
@@ -202,9 +199,9 @@ where
 			.zip(update_headers)
 			.enumerate()
 		{
-			if i == NUMBER_OF_BLOCKS_TO_PROCESS_PER_ITER as usize - 1 {
-				update_type = UpdateType::Mandatory;
-			}
+			// if i == NUMBER_OF_BLOCKS_TO_PROCESS_PER_ITER as usize - 1 {
+			// 	update_type = UpdateType::Mandatory;
+			// }
 			let height = update_header.height();
 			let update_client_header = {
 				let msg = MsgUpdateAnyClient::<LocalClientTypes> {

@@ -84,8 +84,9 @@ impl Default for Args {
 			// format!("wss://rpc-testnet5.composable-cosmos.composablenodes.tech/websocket"),
 			// cosmos_ws: format!("ws://10.132.0.13:26657/websocket"),
 			// cosmos_ws: format!("ws://10.132.0.6:26657/websocket"), // mainnet
-		  solana_ws: format!("ws://{solana}:8900"),
-			// solana_ws: format!("wss://devnet.helius-rpc.com/?api-key=bc5c0cfc-46df-4781-978f-af6ca7a202c2"),
+			solana_ws: format!("ws://{solana}:8900"),
+			// solana_ws:
+			// format!("wss://devnet.helius-rpc.com/?api-key=bc5c0cfc-46df-4781-978f-af6ca7a202c2"),
 			wasm_path,
 		}
 	}
@@ -114,6 +115,7 @@ async fn setup_clients() -> (AnyChain, AnyChain) {
 		common_state_config: CommonClientConfig {
 			skip_optional_client_updates: true,
 			max_packets_to_process: 1,
+			client_update_interval_sec: 10,
 		},
 		channel_whitelist: vec![],
 		commitment_level: "confirmed".to_string(),
@@ -125,8 +127,7 @@ async fn setup_clients() -> (AnyChain, AnyChain) {
 		],
 		solana_ibc_program_id: "FeFjYj2YuMsk87Cp48ubzQPtW4MWDaKJrCs1TcdgosZJ".to_string(),
 		write_program_id: "FufGpHqMQgGVjtMH9AV8YMrJYq8zaK6USRsJkZP4yDjo".to_string(),
-		signature_verifier_program_id: 
-			"C6r1VEbn3mSpecgrZ7NdBvWUtYVJWrDPv4uU9Xs956gc".to_string(),
+		signature_verifier_program_id: "C6r1VEbn3mSpecgrZ7NdBvWUtYVJWrDPv4uU9Xs956gc".to_string(),
 	};
 
 	let mut config_b = CosmosClientConfig {
@@ -155,6 +156,7 @@ async fn setup_clients() -> (AnyChain, AnyChain) {
         common: CommonClientConfig {
             skip_optional_client_updates: true,
             max_packets_to_process: 200,
+    				client_update_interval_sec: 10,
         },
         skip_tokens_list: Some(vec!["uosmo".to_string()]),
     };
@@ -184,7 +186,8 @@ async fn setup_clients() -> (AnyChain, AnyChain) {
 		},
 	};
 	let code_id_str = hex::encode(code_id);
-	// let code_id_str = String::from("66ce7420d21e2555b0e6ce952c0826590fb5f6508a9ac84a5c11178cec58a303");
+	// let code_id_str =
+	// String::from("66ce7420d21e2555b0e6ce952c0826590fb5f6508a9ac84a5c11178cec58a303");
 	log::info!("This is wasm checksum {:?}", code_id_str);
 	config_b.wasm_code_id = Some(code_id_str);
 
@@ -202,12 +205,12 @@ async fn setup_clients() -> (AnyChain, AnyChain) {
 	// 	return (chain_a_wrapped, chain_b_wrapped)
 	// }
 
-	// let (client_a, client_b) =
-	// 	create_clients(&mut chain_a_wrapped, &mut chain_b_wrapped).await.unwrap();
-	// chain_a_wrapped.set_client_id(client_a);
-	// chain_b_wrapped.set_client_id(client_b);
-	chain_b_wrapped.set_client_id(ClientId::new("07-tendermint", 1).unwrap());
-	chain_a_wrapped.set_client_id(ClientId::new("08-wasm", 1).unwrap());
+	let (client_a, client_b) =
+		create_clients(&mut chain_a_wrapped, &mut chain_b_wrapped).await.unwrap();
+	chain_a_wrapped.set_client_id(client_a);
+	chain_b_wrapped.set_client_id(client_b);
+	// chain_b_wrapped.set_client_id(ClientId::new("07-tendermint", 0).unwrap());
+	// chain_a_wrapped.set_client_id(ClientId::new("08-wasm", 0).unwrap());
 	(chain_a_wrapped, chain_b_wrapped)
 }
 
@@ -222,16 +225,16 @@ async fn solana_to_cosmos_ibc_messaging_full_integration_test() {
 	let asset_id_a = AnyAssetId::Solana("33WVSef9zaw49KbNdPGTmACVRnAXzN3o1fsqbUrLp2mh".to_string());
 	let asset_id_b = AnyAssetId::Cosmos("stake".to_string());
 	let (mut chain_a, mut chain_b) = setup_clients().await;
-	// let (handle, channel_a, channel_b, connection_id_a, connection_id_b) =
-	// 	setup_connection_and_channel(&mut chain_a, &mut chain_b, Duration::from_secs(10)).await;
+	let (handle, channel_a, channel_b, connection_id_a, connection_id_b) =
+		setup_connection_and_channel(&mut chain_a, &mut chain_b, Duration::from_secs(10)).await;
 
-	// handle.abort();
+	handle.abort();
 
-	let connection_id_a = ConnectionId::from_str("connection-1").unwrap();
-	let connection_id_b = ConnectionId::from_str("connection-0").unwrap();
+	// let connection_id_a = ConnectionId::from_str("connection-0").unwrap();
+	// let connection_id_b = ConnectionId::from_str("connection-0").unwrap();
 
-	let channel_a = ChannelId::from_str("channel-0").unwrap();
-	let channel_b = ChannelId::from_str("channel-0").unwrap();
+	// let channel_a = ChannelId::from_str("channel-0").unwrap();
+	// let channel_b = ChannelId::from_str("channel-0").unwrap();
 
 	log::info!("Channel A: {:?}", channel_a);
 	log::info!("Channel B: {:?}", channel_b);
@@ -249,15 +252,15 @@ async fn solana_to_cosmos_ibc_messaging_full_integration_test() {
 
 	// no timeouts + connection delay
 
-	// ibc_messaging_with_connection_delay(
-	// 	&mut chain_a,
-	// 	&mut chain_b,
-	// 	asset_id_a.clone(),
-	// 	asset_id_b.clone(),
-	// 	channel_a,
-	// 	channel_b,
-	// )
-	// .await;
+	ibc_messaging_with_connection_delay(
+		&mut chain_a,
+		&mut chain_b,
+		asset_id_a.clone(),
+		asset_id_b.clone(),
+		channel_a,
+		channel_b,
+	)
+	.await;
 
 	// timeouts + connection delay
 	// ibc_messaging_packet_height_timeout_with_connection_delay(

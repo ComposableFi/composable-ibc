@@ -6,6 +6,7 @@ use anchor_spl::associated_token::get_associated_token_address;
 use client::FinalityEvent;
 use client_state::convert_new_client_state_to_old;
 use consensus_state::convert_new_consensus_state_to_old;
+use futures::future::join_all;
 use core::{pin::Pin, str::FromStr, time::Duration};
 use guestchain::{BlockHeader, Epoch, PubKey, Validator};
 use ibc_core_channel_types::msgs::PacketMsg;
@@ -20,7 +21,10 @@ use solana_transaction_status::UiTransactionEncoding;
 use std::{num::NonZeroU128, ops::Deref, thread::sleep};
 use tendermint::{Hash, Time};
 use tendermint_proto::Protobuf;
-use tokio::{sync::mpsc::unbounded_channel, task::spawn_blocking};
+use tokio::{
+	sync::mpsc::unbounded_channel,
+	task::{spawn_blocking, JoinSet},
+};
 
 use anchor_client::{
 	solana_client::{
@@ -941,7 +945,7 @@ deserialize client state"
 		let block_header = chain.head().unwrap();
 		let height = block_header.block_height.into();
 		let timestamp_ns: u64 = block_header.timestamp_ns.into();
-		log::info!("THis is the timestamp of solana {:?}", timestamp_ns);
+		log::info!("THis is the timestamp and height of solana {:?} {:?}", timestamp_ns, height);
 		Ok((Height::new(1, height), Timestamp::from_nanoseconds(timestamp_ns).unwrap()))
 	}
 
@@ -1967,18 +1971,33 @@ impl Chain for SolanaClient {
 			)
 			.unwrap();
 
-			chunks.chunk_size = core::num::NonZeroU16::new(500).unwrap();
-			
-			for instruction in &mut chunks {
-				let transaction = Transaction::new_signed_with_payer(
-					&[instruction],
+			chunks.chunk_size = core::num::NonZeroU16::new(800).unwrap();
+
+			let instructions: Vec<Transaction> = chunks.map(|ix| {
+				Transaction::new_signed_with_payer(
+					&[ix],
 					Some(&authority.pubkey()),
 					&[&*authority],
 					blockhash,
-				);
-				let sig =
-					rpc.send_and_confirm_transaction_with_spinner(&transaction).await.unwrap();
-				println!("  Signature {sig}");
+				)	
+			}).collect();
+
+			let futures = instructions.iter().map(|tx| rpc.send_and_confirm_transaction(tx));
+
+			// for instruction in &mut chunks {
+			// 	let transaction = Transaction::new_signed_with_payer(
+			// 		&[instruction],
+			// 		Some(&authority.pubkey()),
+			// 		&[&*authority],
+			// 		blockhash,
+			// 	);
+			// 	let sig = rpc.send_and_confirm_transaction_with_spinner(&transaction).await.unwrap();
+			// 	// futures.push(x);
+			// 	println!("  Signature {sig}");
+			// }
+			let signatures = join_all(futures).await;
+			for sig in signatures {
+				println!("  Signature {:?}", sig);	
 			}
 			if let MsgEnvelope::Client(ClientMsg::UpdateClient(e)) = message {
 				signature = self

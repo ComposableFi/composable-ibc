@@ -27,6 +27,7 @@ use ibc_proto::{
 		connection::v1::QueryConnectionResponse,
 	},
 };
+use log::info;
 use rand::Rng;
 use serde::{Deserialize, Serialize};
 use std::{
@@ -35,7 +36,7 @@ use std::{
 	pin::Pin,
 	str::FromStr,
 	sync::{Arc, Mutex},
-	time::Duration,
+	time::{Duration, SystemTime},
 };
 use tokio::{sync::Mutex as AsyncMutex, task::JoinSet, time::sleep};
 
@@ -53,7 +54,7 @@ use ibc::{
 		ics04_channel::{
 			channel::{ChannelEnd, Order},
 			context::calculate_block_delay,
-			packet::Packet,
+			packet::{Packet, Sequence},
 		},
 		ics23_commitment::commitment::CommitmentPrefix,
 		ics24_host::identifier::{ChannelId, ClientId, ConnectionId, PortId},
@@ -78,7 +79,7 @@ pub enum UpdateMessage {
 	Batch(Vec<Any>),
 }
 
-#[derive(Debug)]
+#[derive(Debug, PartialEq, Eq)]
 pub enum UpdateType {
 	// contains an authority set change.
 	Mandatory,
@@ -112,6 +113,19 @@ pub struct CommonClientConfig {
 	pub skip_optional_client_updates: bool,
 	#[serde(default = "max_packets_to_process")]
 	pub max_packets_to_process: u32,
+	/// Minimal time that should pass between two client updates
+	#[serde(default)]
+	pub client_update_interval_sec: u32,
+}
+
+impl Default for CommonClientConfig {
+	fn default() -> Self {
+		Self {
+			skip_optional_client_updates: default_skip_optional_client_updates(),
+			max_packets_to_process: max_packets_to_process(),
+			client_update_interval_sec: 10,
+		}
+	}
 }
 
 /// A common data that all clients should keep.
@@ -132,7 +146,11 @@ pub struct CommonClientState {
 	pub initial_rpc_call_delay: Duration,
 	pub misbehaviour_client_msg_queue: Arc<AsyncMutex<Vec<AnyClientMessage>>>,
 	pub max_packets_to_process: usize,
-	pub skip_tokens_list: Vec<String>,
+	pub ignored_timeouted_sequences: Arc<AsyncMutex<HashSet<u64>>>,
+	/// Minimal time that should pass between two client updates
+	pub client_update_interval: Duration,
+	/// Last time when client was updated
+	pub last_client_update_time: SystemTime,
 }
 
 impl Default for CommonClientState {
@@ -145,12 +163,28 @@ impl Default for CommonClientState {
 			initial_rpc_call_delay: rpc_call_delay,
 			misbehaviour_client_msg_queue: Arc::new(Default::default()),
 			max_packets_to_process: 100,
-			skip_tokens_list: Default::default(),
+			ignored_timeouted_sequences: Arc::new(Default::default()),
+			client_update_interval: Default::default(),
+			last_client_update_time: SystemTime::now(),
 		}
 	}
 }
 
 impl CommonClientState {
+	pub fn from_config(config: &CommonClientConfig) -> Self {
+		Self {
+			skip_optional_client_updates: config.skip_optional_client_updates,
+			maybe_has_undelivered_packets: Default::default(),
+			rpc_call_delay: Duration::from_millis(10),
+			initial_rpc_call_delay: Duration::from_millis(10),
+			misbehaviour_client_msg_queue: Arc::new(Default::default()),
+			max_packets_to_process: config.max_packets_to_process as usize,
+			ignored_timeouted_sequences: Arc::new(Default::default()),
+			client_update_interval: Duration::from_secs(config.client_update_interval_sec.into()),
+			last_client_update_time: SystemTime::now(),
+		}
+	}
+
 	pub async fn on_undelivered_sequences(&self, has: bool, kind: UndeliveredType) {
 		log::trace!(
 			target: "hyperspace",
@@ -189,6 +223,7 @@ pub fn apply_prefix(mut commitment_prefix: Vec<u8>, path: impl Into<Vec<u8>>) ->
 /// - acknowledgement packet (`Acks`),
 /// - receive packet (`Recvs`)
 /// - timeout packet (`Timeouts`)
+/// - proofs for the packets (`Proofs`)
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
 pub enum UndeliveredType {
 	Acks,
@@ -293,7 +328,7 @@ pub trait IbcProvider {
 		seq: u64,
 	) -> Result<QueryPacketReceiptResponse, Self::Error>;
 
-	/// Return latest finalized height and timestamp
+	/// Return latest finalized height and timestamp specifically for the chain.
 	async fn latest_height_and_timestamp(&self) -> Result<(Height, Timestamp), Self::Error>;
 
 	async fn query_packet_commitments(
@@ -600,12 +635,15 @@ pub async fn query_undelivered_sequences(
 	)
 	.map_err(|e| Error::Custom(e.to_string()))?;
 	// First we fetch all packet commitments from source
+	// let _ignored_timeouts = source.common_state().ignored_timeouted_sequences.lock().await;
 	let seqs = source
 		.query_packet_commitments(source_height, channel_id, port_id.clone())
 		.await?
 		.into_iter()
+		// .filter(|seq| !ignored_timeouts.contains(seq))
 		.collect::<Vec<_>>();
 	log::trace!(target: "hyperspace", "Seqs: {:?}", seqs);
+
 	let counterparty_channel_id = channel_end
 		.counterparty()
 		.channel_id
@@ -649,20 +687,21 @@ pub async fn query_undelivered_acks(
 			.ok_or_else(|| Error::Custom("ChannelEnd not could not be decoded".to_string()))?,
 	)
 	.map_err(|e| Error::Custom(e.to_string()))?;
-	// First we fetch all packet acknowledgements from source
-	let seqs = source
-		.query_packet_acknowledgements(source_height, channel_id, port_id.clone())
-		.await?;
-	log::info!(
-		target: "hyperspace",
-		"Found {} packet acks from {} chain",
-		seqs.len(), source.name()
-	);
 	let counterparty_channel_id = channel_end
 		.counterparty()
 		.channel_id
 		.ok_or_else(|| Error::Custom("Expected counterparty channel id".to_string()))?;
 	let counterparty_port_id = channel_end.counterparty().port_id.clone();
+
+	// First we fetch all packet acknowledgements from source
+	let seqs = source
+		.query_packet_acknowledgements(source_height, channel_id, port_id.clone())
+		.await?;
+	log::trace!(
+		target: "hyperspace",
+		"Found {} packet acks from {} chain",
+		seqs.len(), source.name()
+	);
 
 	let mut undelivered_acks = sink
 		.query_unreceived_acknowledgements(
@@ -672,7 +711,7 @@ pub async fn query_undelivered_acks(
 			seqs,
 		)
 		.await?;
-	log::info!(
+	log::trace!(
 		target: "hyperspace",
 		"Found {} undelivered packet acks for {} chain",
 		undelivered_acks.len(), sink.name()
@@ -708,132 +747,72 @@ pub async fn find_suitable_proof_height_for_client(
 	at: Height,
 	client_id: ClientId,
 	start_height: Height,
+	height_to_match: Option<Height>,
 	timestamp_to_match: Option<Timestamp>,
 	latest_client_height: Height,
 ) -> Option<Height> {
-	log::info!(
+	log::trace!(
 		target: "hyperspace",
 		"Searching for suitable proof height for client {} ({}) starting at {}, {:?}, latest_client_height={}",
 		client_id, sink.name(), start_height, timestamp_to_match, latest_client_height
 	);
-	// If searching for existence of just a height we use a pure linear search because there's no
-	// valid comparison to be made and there might be missing values  for some heights
-	if timestamp_to_match.is_none() {
-		// try to find latest states first, because relayer's strategy is to submit the most
-		// recent ones
-		for height in start_height.revision_height..=latest_client_height.revision_height {
-			let temp_height = Height::new(start_height.revision_number, height);
-			let consensus_state =
-				sink.query_client_consensus(at, client_id.clone(), temp_height).await.ok();
-			let decoded = consensus_state
-				.map(|x| x.consensus_state.map(AnyConsensusState::try_from))
-				.flatten();
-			if !matches!(decoded, Some(Ok(_))) {
-				continue
-			}
-			let proof_height = source.get_proof_height(temp_height).await;
-			let has_client_state = sink
-				.query_client_update_time_and_height(client_id.clone(), proof_height)
-				.await
-				.ok()
-				.is_some();
-			if !has_client_state {
-				continue
-			}
-			log::info!("Found proof height on {} as {}:{}", sink.name(), temp_height, proof_height);
-			return Some(temp_height)
+	let start_height = source.get_proof_height(start_height).await;
+
+	// We use pure linear search because there's no valid comparison to be made and there might be
+	// missing values  for some heights
+	for height in start_height.revision_height..=latest_client_height.revision_height {
+		let mut temp_height = Height::new(start_height.revision_number, height);
+
+		if sink
+			.query_client_update_time_and_height(client_id.clone(), temp_height)
+			.await
+			.ok()
+			.is_none()
+		{
+			continue
 		}
-	} else {
-		log::info!("Inside timestamp to match");
-		let timestamp_to_match = timestamp_to_match.unwrap();
-		/*
-		We have start and end height. The proof height exists between these two heights.
-		start is latest client height of source on sink
-		end is latest height of source
-		These heights are the latest height of source on sink.
-
-		Success Scenario: Sink -> Solana, Source -> Cosmos (end-start > 0 and is able to find the height)
-		Failure Scenario: Sink -> Cosmos, Source -> Solana (end = start and is not able to find the height )
-
-		In the failure scenario, it fetches the proof height and append 1(Thats what cosmos does) to it and check if the client state exists.
-		And since it doesnt have the client state, it fails.
-
-		*/
-		let mut start = start_height.revision_height;
-		let mut end = latest_client_height.revision_height;
-		let mut last_known_valid_height = None;
-		if start > end {
-			return None
-		}
-
-		log::debug!(
-			target: "hyperspace",
-			"Entered binary search for proof height on {} for client {} starting at {}", sink.name(), client_id, start_height
-		);
-		log::info!("end - start is {}", end - start);
-		while end - start > 1 {
-			log::info!("Inside while loop");
-			let mid = (end + start) / 2;
-			let temp_height = Height::new(start_height.revision_number, mid);
-			let consensus_state =
-				sink.query_client_consensus(at, client_id.clone(), temp_height).await.ok();
-			let Some(Ok(consensus_state)) = consensus_state
-				.map(|x| x.consensus_state.map(AnyConsensusState::try_from))
-				.flatten()
-			else {
-				start += 1;
-				continue
-			};
-			let proof_height = source.get_proof_height(temp_height).await;
-			let has_client_state = sink
-				.query_client_update_time_and_height(client_id.clone(), proof_height)
-				.await
-				.ok()
-				.is_some();
-			if !has_client_state {
-				start += 1;
-				continue
-			}
-
-			if consensus_state.timestamp().nanoseconds() < timestamp_to_match.nanoseconds() {
-				start = mid + 1;
-				continue
-			} else {
-				last_known_valid_height = Some(temp_height);
-				end = mid;
-			}
-		}
-		let start_height = Height::new(start_height.revision_number, start);
 
 		let consensus_state =
-			sink.query_client_consensus(at, client_id.clone(), start_height).await.ok();
-		if let Some(Ok(consensus_state)) = consensus_state
+			sink.query_client_consensus(at, client_id.clone(), temp_height).await.ok();
+		let decoded = consensus_state
 			.map(|x| x.consensus_state.map(AnyConsensusState::try_from))
-			.flatten()
-		{
+			.flatten();
+		if !matches!(decoded, Some(Ok(_))) {
+			continue
+		}
+		let mut matches = false;
+		if let Some(timestamp_to_match) = &timestamp_to_match {
+			let consensus_state = decoded.unwrap().unwrap();
+
 			if consensus_state.timestamp().nanoseconds() >= timestamp_to_match.nanoseconds() {
-				let proof_height = source.get_proof_height(start_height).await;
-				let has_client_state = sink
-					.query_client_update_time_and_height(client_id.clone(), proof_height)
-					.await
-					.ok()
-					.is_some();
-				log::info!("do we have client state {:?}", has_client_state);
-				if has_client_state {
-					return Some(start_height)
-				}
+				matches = true;
 			}
 		}
-		log::info!("THis is last known valid height {:?}", last_known_valid_height);
-		return last_known_valid_height
+		if let Some(height_to_match) = &height_to_match {
+			if temp_height >= *height_to_match {
+				matches = true;
+			}
+		}
+		if !matches {
+			continue
+		}
+
+		let proof_height = source.get_proof_height(temp_height).await;
+		if proof_height != temp_height {
+			temp_height.revision_height -=
+				proof_height.revision_height - temp_height.revision_height;
+		}
+		info!("Found proof height on {} as {}:{}", sink.name(), temp_height, proof_height);
+		return Some(temp_height)
 	}
 	None
 }
 
+// TODO: query_maximum_height_for_timeout_proofs: return Result<Option<Height>, _>
 pub async fn query_maximum_height_for_timeout_proofs(
 	source: &impl Chain,
 	sink: &impl Chain,
-) -> Option<u64> {
+) -> Option<Height> {
 	let (source_height, ..) = source.latest_height_and_timestamp().await.ok()?;
 	let (sink_height, ..) = sink.latest_height_and_timestamp().await.ok()?;
 	let mut join_set: JoinSet<Option<_>> = JoinSet::new();
@@ -853,8 +832,10 @@ pub async fn query_maximum_height_for_timeout_proofs(
 			.rev()
 			.take(source.common_state().max_packets_to_process)
 			.collect();
-		let send_packets =
-			source.query_send_packets(channel, port_id, undelivered_sequences).await.ok()?;
+		let send_packets = source
+			.query_send_packets( channel, port_id, undelivered_sequences)
+			.await
+			.ok()?;
 		for send_packet in send_packets {
 			let source = source.clone();
 			let sink = sink.clone();
@@ -878,27 +859,27 @@ pub async fn query_maximum_height_for_timeout_proofs(
 					sink.query_timestamp_at(height.revision_height).await.ok()?;
 				let period = send_packet.timeout_timestamp.saturating_sub(timestamp_at_creation);
 				if period == 0 {
-					return Some(send_packet.timeout_height.revision_height)
+					return Some(Height::from(send_packet.timeout_height))
 				}
 				let period = Duration::from_nanos(period);
 				let period =
 					calculate_block_delay(period, sink.expected_block_time()).saturating_add(1);
 				let approx_height = revision_height + period;
 				let timeout_height = if send_packet.timeout_height.revision_height < approx_height {
-					send_packet.timeout_height.revision_height
+					Height::from(send_packet.timeout_height)
 				} else {
-					approx_height
+					Height::new(send_packet.timeout_height.revision_number, approx_height)
 				};
 
 				Some(timeout_height)
 			});
 		}
 	}
-	let mut min_timeout_height = None;
+	let mut max_timeout_height = None;
 	while let Some(timeout_height) = join_set.join_next().await {
-		min_timeout_height = min_timeout_height.max(timeout_height.ok()?)
+		max_timeout_height = max_timeout_height.max(timeout_height.ok()?)
 	}
-	min_timeout_height
+	max_timeout_height
 }
 
 pub fn filter_events_by_ids(
@@ -979,7 +960,7 @@ pub fn filter_events_by_ids(
 		IbcEvent::ChainError(_) => true,
 	};
 	if !v {
-		log::debug!(target: "hyperspace_parachain", "Filtered out event: {:?}", ev);
+		log::debug!(target: "hyperspace", "Filtered out event: {:?}", ev);
 	}
 	v
 }

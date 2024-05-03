@@ -280,7 +280,7 @@ async fn process_some_finality_event<A: Chain, B: Chain>(
 				let latest_height_on_solana = sink.latest_height_and_timestamp().await.unwrap().0;
 				if latest_height_on_solana.revision_height >= *largest_height {
 					log::info!("Latest height is finalized");
-					break;
+					break
 				}
 				log::info!("Waiting for next block {:?} to be finalized", latest_height_on_solana);
 				core::time::Duration::from_secs(1);
@@ -366,12 +366,28 @@ async fn process_updates<A: Chain, B: Chain>(
 			};
 			timeout_heights.push(height);
 		}
-		let (mandatory_updates, heights) = source.fetch_mandatory_updates(sink).await.unwrap();
 		let latest_update_height = updates.last().unwrap().1.revision_height;
 		let height_is_greater = timeout_heights
 			.iter()
 			.any(|height| height.revision_height > latest_update_height);
+
 		if height_is_greater {
+			loop {
+				let largest_height = timeout_heights.iter().max().unwrap();
+				let latest_height_on_solana = source.latest_height_and_timestamp().await.unwrap().0;
+				log::info!(
+					"This is the largest height {:?} {:?}",
+					largest_height,
+					latest_height_on_solana
+				);
+				if latest_height_on_solana.revision_height > largest_height.revision_height {
+					log::info!("Latest height is finalized");
+					break
+				}
+				log::info!("Waiting for next block {:?} to be finalized", latest_height_on_solana);
+				core::time::Duration::from_secs(1);
+			}
+			let (mandatory_updates, heights) = source.fetch_mandatory_updates(sink).await.unwrap();
 			// log::info!("Height is greater than timeout height {:?}", );
 			log::info!("These are heights {:?}", heights);
 			let updates_to_be_sent: Vec<Any> = heights
@@ -393,6 +409,7 @@ async fn process_updates<A: Chain, B: Chain>(
 					None
 				})
 				.collect();
+			log::info!("Updates to be sent {:?}", updates_to_be_sent);
 			updates_to_be_added = updates_to_be_sent;
 		}
 	}
@@ -402,7 +419,17 @@ async fn process_updates<A: Chain, B: Chain>(
 		timeout_heights
 	);
 
+	let update_max_height = updates.iter().map(|(_, height, ..)| height.clone()).max().unwrap();
+
 	for (msg_update_client, height, events, update_type) in updates {
+		// if height.revision_height != update_max_height.revision_height {
+		// 	log::info!(
+		// 		"Skipping update for {} at height {} because it is not the latest update",
+		// 		source.name(),
+		// 		height.revision_height
+		// 	);
+		// 	continue
+		// }
 		if let Some(metrics) = metrics.as_mut() {
 			if let Err(e) = metrics.handle_events(events.as_slice()).await {
 				log::error!("Failed to handle metrics for {} {:?}", source.name(), e);
@@ -480,6 +507,14 @@ async fn process_updates<A: Chain, B: Chain>(
 			msg_update_client.type_url,
 			msg_update_client.value.len()
 		);
+		if height.revision_height != update_max_height.revision_height && messages.is_empty() {
+			log::info!(
+				"Skipping update for {} at height {} because it is not the latest update",
+				source.name(),
+				height.revision_height
+			);
+			continue
+		}
 		msgs.push(msg_update_client);
 		msgs.append(&mut messages);
 	}

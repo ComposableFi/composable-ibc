@@ -15,7 +15,6 @@
 use crate::packets::connection_delay::has_delay_elapsed;
 use ibc::{
 	core::{
-		ics02_client::client_state::ClientState as ClientStateT,
 		ics04_channel::{
 			channel::{ChannelEnd, Order, State},
 			context::calculate_block_delay,
@@ -23,12 +22,11 @@ use ibc::{
 				acknowledgement::MsgAcknowledgement, recv_packet::MsgRecvPacket,
 				timeout::MsgTimeout, timeout_on_close::MsgTimeoutOnClose,
 			},
-			packet::{Packet, Sequence, TimeoutVariant},
+			packet::{Packet, TimeoutVariant},
 		},
 		ics23_commitment::commitment::CommitmentProofBytes,
-		ics24_host::{
-			identifier::{ChannelId, PortId},
-			path::{AcksPath, ChannelEndsPath, CommitmentsPath, ReceiptsPath, SeqRecvsPath},
+		ics24_host::path::{
+			AcksPath, ChannelEndsPath, CommitmentsPath, ReceiptsPath, SeqRecvsPath,
 		},
 	},
 	proofs::Proofs,
@@ -37,17 +35,17 @@ use ibc::{
 	Height,
 };
 use ibc_proto::google::protobuf::Any;
-use pallet_ibc::light_clients::AnyClientState;
 use primitives::{find_suitable_proof_height_for_client, Chain};
-use std::{str::FromStr, time::Duration};
-use tendermint_proto::Protobuf;
+use std::time::Duration;
 use lib::hash::CryptoHash;
+use tendermint_proto::Protobuf;
 
 #[allow(clippy::too_many_arguments)]
 pub async fn get_timeout_proof_height(
 	source: &impl Chain,
 	sink: &impl Chain,
 	source_height: Height,
+	source_timestamp: Timestamp,
 	sink_height: Height,
 	sink_timestamp: Timestamp,
 	latest_client_height_on_source: Height,
@@ -55,53 +53,74 @@ pub async fn get_timeout_proof_height(
 	packet_creation_height: u64,
 ) -> Option<Height> {
 	let timeout_variant = Packet::timeout_variant(packet, &sink_timestamp, sink_height).unwrap();
-	log::info!(target: "hyperspace", "get_timeout_proof_height: {}->{}, timeout_variant={:?}, source_height={}, sink_height={}, sink_timestamp={}, latest_client_height_on_source={}, packet_creation_height={}, packet={:?}",
+	log::trace!(target: "hyperspace", "get_timeout_proof_height: {}->{}, timeout_variant={:?}, source_height={}, sink_height={}, sink_timestamp={}, latest_client_height_on_source={}, packet_creation_height={}, packet={:?}",
 		source.name(), sink.name(), timeout_variant, source_height, sink_height, sink_timestamp, latest_client_height_on_source, packet_creation_height, packet);
 
 	match timeout_variant {
-		TimeoutVariant::Height =>
-			find_suitable_proof_height_for_client(
-				sink,
-				source,
-				source_height,
-				sink.client_id(),
-				packet.timeout_height,
-				None,
-				latest_client_height_on_source,
-			)
-			.await,
-		TimeoutVariant::Timestamp => {
-			// Get approximate number of blocks contained in this timestamp so we can have a lower
-			// bound for where to start our search
-			// We offset the sink height when this packet was created with the approximate number of
-			// blocks contained in the difference in timestamp at packet creation until timeout
-			let height = Height::new(source_height.revision_number, packet_creation_height);
-			log::trace!(
-				target: "hyperspace",
-				"Querying client state at {height}"
-			);
-			let sink_client_state =
-				source.query_client_state(height, sink.client_id()).await.ok()?;
-			let sink_client_state =
-				AnyClientState::try_from(sink_client_state.client_state?).ok()?;
-			let height = sink_client_state.latest_height();
-			let timestamp_at_creation =
-				sink.query_timestamp_at(height.revision_height).await.ok()?;
-			// may underflow if the user have chosen timeout less than the block timestamp at which
-			// the packet was created, so we use `saturating_sub`
-			let period =
-				packet.timeout_timestamp.nanoseconds().saturating_sub(timestamp_at_creation);
-			let period = Duration::from_nanos(period);
-			let start_height = height.revision_height +
-				calculate_block_delay(period, sink.expected_block_time()).saturating_sub(1);
-			log::info!("This is block delay {:?}", height.revision_height);
-			let start_height = Height::new(sink_height.revision_number, start_height);
+		TimeoutVariant::Height => {
+			let start_height = packet.timeout_height;
 			find_suitable_proof_height_for_client(
 				sink,
 				source,
 				source_height,
 				sink.client_id(),
 				start_height,
+				Some(start_height),
+				None,
+				latest_client_height_on_source,
+			)
+			.await
+		},
+		TimeoutVariant::Timestamp => {
+			// Get approximate number of blocks contained in this timestamp so we can have a lower
+			// bound for where to start our search
+			// We offset the sink height when this packet was created with the approximate number of
+			// blocks contained in the difference in timestamp at packet creation until timeout
+
+			/*
+			1. Calculate packet creation time on A.
+			2. Calculate time difference between the current time and the packet creation time (dTa)
+			3. Calculate the number of blocks contained in dTb (nTb)
+			4. Calculate the height of the packet on B (Hb) by subtracting nTb from the current height of B (Tb = Hb - nTb)
+			5. Calculate timeout block on B (TOb) by adding the timeout duration (dTO) in B blocks to Hb
+			 */
+
+			let timeout_ns = packet.timeout_timestamp.nanoseconds();
+			let sink_ns = sink_timestamp.nanoseconds();
+			if timeout_ns > sink_ns {
+				return None
+			}
+
+			let packet_lifetime_blocks_on_a =
+				source_height.revision_height.saturating_sub(packet_creation_height);
+			let packet_timestamp = (source_timestamp -
+				source.expected_block_time() * packet_lifetime_blocks_on_a as u32)
+				.ok()?;
+			let timeout_timestamp_relative = Duration::from_nanos(
+				packet
+					.timeout_timestamp
+					.nanoseconds()
+					.saturating_sub(packet_timestamp.nanoseconds()),
+			);
+			let packet_lifetime_timestamp =
+				source.expected_block_time() * (packet_lifetime_blocks_on_a as u32);
+			let packet_lifetime_blocks_on_b = (packet_lifetime_timestamp.as_nanos() /
+				sink.expected_block_time().as_nanos()) as u64;
+			let packet_height_on_b =
+				sink_height.revision_height.saturating_sub(packet_lifetime_blocks_on_b);
+			let timeout_block_on_b = (packet_height_on_b +
+				(timeout_timestamp_relative.as_nanos() / sink.expected_block_time().as_nanos())
+					as u64)
+				.saturating_sub(1);
+
+			let start_height = Height::new(sink_height.revision_number, timeout_block_on_b);
+			find_suitable_proof_height_for_client(
+				sink,
+				source,
+				source_height,
+				sink.client_id(),
+				start_height,
+				None,
 				Some(packet.timeout_timestamp),
 				latest_client_height_on_source,
 			)
@@ -110,36 +129,43 @@ pub async fn get_timeout_proof_height(
 		TimeoutVariant::Both => {
 			// Get approximate number of blocks contained in this timestamp so we can have a lower
 			// bound for where to start our search
-			let sink_client_state = source
-				.query_client_state(
-					Height::new(source_height.revision_number, packet_creation_height),
-					sink.client_id(),
-				)
-				.await
+			let timeout_ns = packet.timeout_timestamp.nanoseconds();
+			let sink_ns = sink_timestamp.nanoseconds();
+			if timeout_ns > sink_ns {
+				return None
+			}
+
+			let packet_lifetime_blocks_on_a =
+				source_height.revision_height.saturating_sub(packet_creation_height);
+			let packet_timestamp = (source_timestamp -
+				source.expected_block_time() * packet_lifetime_blocks_on_a as u32)
 				.ok()?;
-			let sink_client_state =
-				AnyClientState::try_from(sink_client_state.client_state?).ok()?;
-			let height = sink_client_state.latest_height();
-			let timestamp_at_creation =
-				sink.query_timestamp_at(height.revision_height).await.ok()?;
-			// may underflow if the user have chosen timeout less than the block timestamp at which
-			// the packet was created, so we use `saturating_sub`
-			let period =
-				packet.timeout_timestamp.nanoseconds().saturating_sub(timestamp_at_creation);
-			let period = Duration::from_nanos(period);
-			let start_height = height.revision_height +
-				calculate_block_delay(period, sink.expected_block_time()).saturating_sub(1);
-			let start_height = if start_height < packet.timeout_height.revision_height {
-				packet.timeout_height
-			} else {
-				Height::new(packet.timeout_height.revision_number, start_height)
-			};
+			let timeout_timestamp_relative = Duration::from_nanos(
+				packet
+					.timeout_timestamp
+					.nanoseconds()
+					.saturating_sub(packet_timestamp.nanoseconds()),
+			);
+			let packet_lifetime_timestamp =
+				source.expected_block_time() * (packet_lifetime_blocks_on_a as u32);
+			let packet_lifetime_blocks_on_b = (packet_lifetime_timestamp.as_nanos() /
+				sink.expected_block_time().as_nanos()) as u64;
+			let packet_height_on_b =
+				sink_height.revision_height.saturating_sub(packet_lifetime_blocks_on_b);
+			let timeout_block_on_b = (packet_height_on_b +
+				(timeout_timestamp_relative.as_nanos() / sink.expected_block_time().as_nanos())
+					as u64)
+				.saturating_sub(1);
+			let start_height = Height::new(sink_height.revision_number, timeout_block_on_b)
+				.min(packet.timeout_height);
+
 			find_suitable_proof_height_for_client(
 				sink,
 				source,
 				source_height,
 				sink.client_id(),
 				start_height,
+				Some(packet.timeout_height),
 				Some(packet.timeout_timestamp),
 				latest_client_height_on_source,
 			)
@@ -239,6 +265,8 @@ pub async fn construct_timeout_message(
 	next_sequence_recv: u64,
 	proof_height: Height,
 ) -> Result<Any, anyhow::Error> {
+	log::trace!(target: "hyperspace", "construct_timeout_message: source: {}, sink: {}, sink_channel_end: {:?}, packet: {:?}, next_sequence_recv: {}, proof_height: {}, data: {}",
+		source.name(), sink.name(), sink_channel_end, packet, next_sequence_recv, proof_height, String::from_utf8_lossy(&packet.data));
 	let path_type = if sink_channel_end.ordering == Order::Ordered {
 		KeyPathType::SeqRecv
 	} else {
@@ -252,14 +280,7 @@ pub async fn construct_timeout_message(
 		let channel_key = get_key_path(KeyPathType::ChannelPath, &packet).into_bytes();
 		let proof_closed = sink.query_proof(proof_height, vec![channel_key]).await?;
 		let proof_closed = CommitmentProofBytes::try_from(proof_closed)?;
-		let actual_proof_height = if sink.name() == "solana" {
-			let mut proof_bytes = proof_unreceived.clone();
-			let (header, _): (guestchain::BlockHeader, sealable_trie::proof::Proof) =
-				borsh::BorshDeserialize::deserialize_reader(&mut proof_bytes.as_bytes())?;
-			Height::new(1, header.block_height.into())
-		} else {
-			sink.get_proof_height(proof_height).await
-		};
+		let actual_proof_height = sink.get_proof_height(proof_height).await;
 		let msg = MsgTimeoutOnClose {
 			packet,
 			next_sequence_recv: next_sequence_recv.into(),
@@ -275,14 +296,7 @@ pub async fn construct_timeout_message(
 		let value = msg.encode_vec()?;
 		Any { value, type_url: msg.type_url() }
 	} else {
-		let actual_proof_height = if sink.name() == "solana" {
-			let mut proof_bytes = proof_unreceived.clone();
-			let (header, _): (guestchain::BlockHeader, sealable_trie::proof::Proof) =
-				borsh::BorshDeserialize::deserialize_reader(&mut proof_bytes.as_bytes())?;
-			Height::new(1, header.block_height.into())
-		} else {
-			sink.get_proof_height(proof_height).await
-		};
+		let actual_proof_height = sink.get_proof_height(proof_height).await;
 		log::debug!(target: "hyperspace", "actual_proof_height={actual_proof_height}");
 		let msg = MsgTimeout {
 			packet,
@@ -346,7 +360,7 @@ pub async fn construct_ack_message(
 		log::info!("Getting proof height from cosmos");
 		source.get_proof_height(proof_height).await
 	};
-	
+
 	log::info!("This is ack {:?}", CryptoHash::digest(&ack));
 	let msg = MsgAcknowledgement {
 		packet,
@@ -409,53 +423,4 @@ pub fn get_key_path(key_path_type: KeyPathType, packet: &Packet) -> String {
 			)
 		},
 	}
-}
-
-#[test]
-pub fn test_path() {
-	use trie_ids::TrieKey;
-	let packet = Packet {
-		source_port: PortId::from_str("transfer").unwrap(),
-		source_channel: ChannelId::new(1),
-		destination_port: PortId::from_str("transfer").unwrap(),
-		destination_channel: ChannelId::new(1),
-		sequence: Sequence::from_str("1").unwrap(),
-		timeout_height: Height::new(0, 1),
-		timeout_timestamp: Timestamp::from_nanoseconds(1).unwrap(),
-		data: Vec::new(),
-	};
-	let key = get_key_path(KeyPathType::CommitmentPath, &packet);
-	println!("Old key path {:?} and bytes {:?}", key, key.as_bytes());
-	let new_port_id =
-		ibc_core_host_types::identifiers::PortId::from_str(packet.source_port.as_str()).unwrap();
-	let new_channel_id =
-		ibc_core_host_types::identifiers::ChannelId::new(packet.source_channel.sequence());
-	let new_seq = ibc_core_host_types::identifiers::Sequence::from(u64::from(packet.sequence));
-	let packet_commitment_path = ibc_core_host_types::path::CommitmentPath {
-		port_id: new_port_id,
-		channel_id: new_channel_id,
-		sequence: new_seq,
-	};
-	let packet_commitment_trie_key = TrieKey::try_from(&packet_commitment_path).unwrap();
-	println!("This is trie key {:?}", packet_commitment_trie_key);
-	// assert_eq!(
-	// 	get_key_path(KeyPathType::SeqRecv, &packet),
-	// 	"seqs/destination_port/destination_channel"
-	// );
-	// assert_eq!(
-	// 	get_key_path(KeyPathType::ReceiptPath, &packet),
-	// 	"receipts/destination_port/destination_channel/1"
-	// );
-	// assert_eq!(
-	// 	get_key_path(KeyPathType::CommitmentPath, &packet),
-	// 	"commitments/source_port/source_channel/1"
-	// );
-	// assert_eq!(
-	// 	get_key_path(KeyPathType::AcksPath, &packet),
-	// 	"acks/destination_port/destination_channel/1"
-	// );
-	// assert_eq!(
-	// 	get_key_path(KeyPathType::ChannelPath, &packet),
-	// 	"channels/destination_port/destination_channel"
-	// );
 }
