@@ -565,31 +565,31 @@ deserialize client state"
 		};
 		let chain_account = self.get_chain_storage().await;
 		let block_header_og = chain_account.head().unwrap();
-		let block_header = events::get_header_from_height(
-			self.rpc_client(),
-			self.solana_ibc_program_id,
-			at.revision_height,
-		)
-		.await
-		.expect(&format!("No block header found for height {:?}", at.revision_height));
-		let result = connection_end_proof.verify(
-			&block_header_og.state_root,
-			&connection_end_trie_key,
-			Some(&CryptoHash::digest(&inner_any)),
-		);
-		let result_1 = connection_end_proof.verify(
-			&block_header.state_root,
-			&connection_end_trie_key,
-			Some(&CryptoHash::digest(&inner_any)),
-		);
-		log::info!(
-			"This is result of connection end proof verify lts {:?} at proof height {:?}",
-			result,
-			result_1
-		);
+		// let block_header = events::get_header_from_height(
+		// 	self.rpc_client(),
+		// 	self.solana_ibc_program_id,
+		// 	at.revision_height,
+		// )
+		// .await
+		// .expect(&format!("No block header found for height {:?}", at.revision_height));
+		// let result = connection_end_proof.verify(
+		// 	&block_header_og.state_root,
+		// 	&connection_end_trie_key,
+		// 	Some(&CryptoHash::digest(&inner_any)),
+		// );
+		// let result_1 = connection_end_proof.verify(
+		// 	&block_header.state_root,
+		// 	&connection_end_trie_key,
+		// 	Some(&CryptoHash::digest(&inner_any)),
+		// );
+		// log::info!(
+		// 	"This is result of connection end proof verify lts {:?} at proof height {:?}",
+		// 	result,
+		// 	result_1
+		// );
 		Ok(QueryConnectionResponse {
 			connection: Some(connection_end),
-			proof: borsh::to_vec(&(block_header, &connection_end_proof)).unwrap(),
+			proof: borsh::to_vec(&(block_header_og, &connection_end_proof)).unwrap(),
 			proof_height: Some(at.into()),
 		})
 	}
@@ -651,13 +651,15 @@ deserialize client state"
 				.collect(),
 			version: inner_channel_end.version.to_string(),
 		};
-		let block_header = events::get_header_from_height(
-			self.rpc_client(),
-			self.solana_ibc_program_id,
-			at.revision_height,
-		)
-		.await
-		.expect(&format!("No block header found for height {:?}", at.revision_height));
+		// let block_header = events::get_header_from_height(
+		// 	self.rpc_client(),
+		// 	self.solana_ibc_program_id,
+		// 	at.revision_height,
+		// )
+		// .await
+		// .expect(&format!("No block header found for height {:?}", at.revision_height));
+		let chain_account = self.get_chain_storage().await;
+		let block_header = chain_account.head().unwrap();
 		Ok(QueryChannelResponse {
 			channel: Some(channel_end),
 			proof: borsh::to_vec(&(block_header, &channel_end_proof)).unwrap(),
