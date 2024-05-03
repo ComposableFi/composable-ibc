@@ -506,6 +506,7 @@ deserialize consensus state"
 							.request()
 							.instruction(new_instruction(entries.as_slice()).unwrap())
 							.instruction(instruction)
+							.signer(&*authority)	
 							.transaction()
 							.unwrap();
 						instructions.push(ix);
