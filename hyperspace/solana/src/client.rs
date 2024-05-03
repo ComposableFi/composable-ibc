@@ -15,6 +15,7 @@ use anchor_client::{
 };
 use anchor_lang::{prelude::*, system_program};
 use anchor_spl::associated_token::get_associated_token_address;
+use futures::future::join_all;
 use core::{str::FromStr, time::Duration};
 use ibc::{
 	applications::transfer::{msgs::transfer::MsgTransfer, PrefixedCoin},
@@ -65,7 +66,7 @@ pub enum DeliverIxType {
 		token: Coin<PrefixedDenom>,
 		port_id: ibc_core_host_types::identifiers::PortId,
 		channel_id: ibc_core_host_types::identifiers::ChannelId,
-    receiver: String,
+		receiver: String,
 	},
 	Timeout {
 		token: Coin<PrefixedDenom>,
@@ -453,6 +454,7 @@ deserialize consensus state"
 						signature_seeds,
 						&self.signature_verifier_program_id,
 					);
+					let mut instructions = Vec::new();
 					for chunk in 0..chunks {
 						let start = chunk * chunk_size;
 						let end = (start + chunk_size).min(total_signatures);
@@ -500,18 +502,27 @@ deserialize consensus state"
 							let entry: Entry = Entry { pubkey, signature, message };
 							entries.push(entry);
 						}
-						let sig = program
+						let ix = program
 							.request()
 							.instruction(new_instruction(entries.as_slice()).unwrap())
 							.instruction(instruction)
-							.send()
-							.await
-							.or_else(|e| {
-								println!("This is error for signature {:?}", e);
-								status = false;
-								ibc::prelude::Err("Error".to_owned())
-							});
-						log::info!("This is signature for sending signature {:?}", sig);
+							.transaction()
+							.unwrap();
+						instructions.push(ix);
+						// .send()
+						// .await
+						// .or_else(|e| {
+						// 	println!("This is error for signature {:?}", e);
+						// 	status = false;
+						// 	ibc::prelude::Err("Error".to_owned())
+						// });
+						// log::info!("This is signature for sending signature {:?}", sig);
+					}
+					let futures =
+						instructions.iter().map(|tx| rpc.send_and_confirm_transaction(tx));
+					let signatures = join_all(futures).await;
+					for sig in signatures {
+						println!("  Signature Chunking Signature {:?}", sig);
 					}
 					let signature = program
 						.request()
@@ -839,10 +850,7 @@ deserialize consensus state"
 		let hashed_denom = CryptoHash::digest(&token.denom.base_denom.as_str().as_bytes());
 		let (escrow_account, token_mint) =
 			if is_sender_chain_source(port_id.clone(), channel_id.clone(), &token.denom) {
-				let escrow_seeds = [
-					"escrow".as_bytes(),
-					hashed_denom.as_ref(),
-				];
+				let escrow_seeds = ["escrow".as_bytes(), hashed_denom.as_ref()];
 				let escrow_account =
 					Pubkey::find_program_address(&escrow_seeds, &self.solana_ibc_program_id).0;
 				// let prefix = TracePrefix::new(port_id.clone(), channel_id.clone());
@@ -856,10 +864,7 @@ deserialize consensus state"
 				let token_mint = Pubkey::from_str(&base_denom.to_string()).unwrap();
 				(Some(escrow_account), token_mint)
 			} else {
-				let token_mint_seeds = [
-					"mint".as_bytes(),
-					hashed_denom.as_ref(),
-				];
+				let token_mint_seeds = ["mint".as_bytes(), hashed_denom.as_ref()];
 				let token_mint =
 					Pubkey::find_program_address(&token_mint_seeds, &self.solana_ibc_program_id).0;
 				(None, token_mint)

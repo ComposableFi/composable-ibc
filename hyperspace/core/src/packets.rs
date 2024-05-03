@@ -290,7 +290,7 @@ pub async fn query_ready_and_timed_out_packets(
 							.await?;
 						return Ok(Some(Left(msg)))
 					} else {
-						log::trace!(target: "hyperspace", "The packet has not timed out yet: {:?}", packet);
+						log::info!(target: "hyperspace", "The packet has not timed out yet: {:?}", packet);
 					}
 
 					// If packet has not timed out but channel is closed on sink we skip
@@ -314,7 +314,7 @@ pub async fn query_ready_and_timed_out_packets(
 					
 					if source.get_proof_height(Height::new(source_height.revision_number, packet_height)).await.revision_height > latest_source_height_on_sink.revision_height {
 						// Sink does not have client update required to prove recv packet message
-						log::debug!(target: "hyperspace", "Skipping packet as sink does not have client update required to prove recv packet message: {:?}", packet);
+						log::info!(target: "hyperspace", "Skipping packet as sink does not have client update required to prove recv packet message: {:?}", packet);
 						recv_packets_count.fetch_add(1, Ordering::SeqCst);
 						return Ok(None)
 					}
@@ -334,7 +334,7 @@ pub async fn query_ready_and_timed_out_packets(
 					{
 						proof_height
 					} else {
-						log::trace!(target: "hyperspace", "Skipping packet as no proof height could be found: {:?}", packet);
+						log::info!(target: "hyperspace", "Skipping packet as no proof height could be found: {:?}", packet);
 						return Ok(None)
 					};
 
@@ -351,7 +351,7 @@ pub async fn query_ready_and_timed_out_packets(
 					)
 						.await?
 					{
-						log::trace!(target: "hyperspace", "Skipping packet as connection delay has not passed {:?}", packet);
+						log::info!(target: "hyperspace", "Skipping packet as connection delay has not passed {:?}", packet);
 						return Ok(None)
 					}
 

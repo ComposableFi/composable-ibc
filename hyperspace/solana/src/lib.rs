@@ -1997,7 +1997,7 @@ impl Chain for SolanaClient {
 			// }
 			let signatures = join_all(futures).await;
 			for sig in signatures {
-				println!("  Signature {:?}", sig);	
+				println!("  Message Chunking Signature {:?}", sig);	
 			}
 			if let MsgEnvelope::Client(ClientMsg::UpdateClient(e)) = message {
 				signature = self
