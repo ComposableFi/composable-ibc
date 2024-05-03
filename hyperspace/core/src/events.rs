@@ -68,6 +68,10 @@ pub async fn parse_events(
 	let mut messages = vec![];
 	// 1. translate events to messages
 	for event in events {
+		if matches!(event, IbcEvent::SendPacket(_)) || matches!(event, IbcEvent::WriteAcknowledgement(_)) {
+			log::info!("Skipping due to connection delay {:?}", event);
+			continue;
+		}
 		match event {
 			IbcEvent::OpenInitConnection(open_init) => {
 				if let Some(connection_id) = open_init.connection_id() {
