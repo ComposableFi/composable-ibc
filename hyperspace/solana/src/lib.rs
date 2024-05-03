@@ -464,13 +464,13 @@ deserialize client state"
 		let any_client_state = convert_new_client_state_to_old(client_state);
 		let chain_account = self.get_chain_storage().await;
 		let block_header_og = chain_account.head().unwrap();
-		let block_header = events::get_header_from_height(
-			self.rpc_client(),
-			self.solana_ibc_program_id,
-			at.revision_height,
-		)
-		.await
-		.expect(&format!("No block header found for height {:?}", at.revision_height));
+		// let block_header = events::get_header_from_height(
+		// 	self.rpc_client(),
+		// 	self.solana_ibc_program_id,
+		// 	at.revision_height,
+		// )
+		// .await
+		// .expect(&format!("No block header found for height {:?}", at.revision_height));
 		// let result = client_state_proof.verify(
 		// 	&block_header_og.state_root,
 		// 	&client_state_trie_key,
@@ -488,7 +488,7 @@ deserialize client state"
 		// );
 		Ok(QueryClientStateResponse {
 			client_state: Some(any_client_state.into()),
-			proof: borsh::to_vec(&(block_header, &client_state_proof)).unwrap(),
+			proof: borsh::to_vec(&(block_header_og, &client_state_proof)).unwrap(),
 			proof_height: Some(at.into()),
 		})
 	}
