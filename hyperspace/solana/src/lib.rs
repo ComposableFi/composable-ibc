@@ -6,8 +6,8 @@ use anchor_spl::associated_token::get_associated_token_address;
 use client::FinalityEvent;
 use client_state::convert_new_client_state_to_old;
 use consensus_state::convert_new_consensus_state_to_old;
-use futures::future::join_all;
 use core::{pin::Pin, str::FromStr, time::Duration};
+use futures::future::join_all;
 use guestchain::{BlockHeader, Epoch, PubKey, Validator};
 use ibc_core_channel_types::msgs::PacketMsg;
 use ibc_core_client_types::msgs::ClientMsg;
@@ -384,34 +384,22 @@ deserialize consensus state"
 		log::info!("this is consensus state {:?}", consensus_state);
 		log::info!("This is inner any consensus state {:?}", inner_any);
 		let chain_account = self.get_chain_storage().await;
-		let block_header_og = chain_account.head().unwrap();
-		log::info!("query_client_consensus before get header from height");
-		// let block_header = events::get_header_from_height(
-		// 	self.rpc_client(),
-		// 	self.solana_ibc_program_id,
-		// 	at.revision_height,
-		// )
-		// .await
-		// .expect(&format!("No block header found for height {:?}", at.revision_height));
-		// let result = consensus_state_proof.verify(
-		// 	&block_header_og.state_root,
-		// 	&consensus_state_trie_key,
-		// 	Some(&CryptoHash::digest(&inner_any)),
-		// );
-		// let result_1 = consensus_state_proof.verify(
-		// 	&block_header.state_root,
-		// 	&consensus_state_trie_key,
-		// 	Some(&CryptoHash::digest(&inner_any)),
-		// );
-		// log::info!(
-		// 	"This is result of consensus state proof verify lts {:?} at proof height {:?}",
-		// 	result,
-		// 	result_1
-		// );
-		// log::info!("query_client_consensus completed");
+		let block_header = if self.query_channels().await.unwrap().is_empty() {
+			log::info!("Fetching previous block header");
+			events::get_header_from_height(
+				self.rpc_client(),
+				self.solana_ibc_program_id,
+				at.revision_height,
+			)
+			.await
+			.expect(&format!("No block header found for height {:?}", at.revision_height))
+		} else {
+			log::info!("Fetching latest header");
+			chain_account.head().unwrap().clone()
+		};
 		Ok(QueryConsensusStateResponse {
 			consensus_state: Some(cs_state.into()),
-			proof: borsh::to_vec(&(block_header_og, &consensus_state_proof)).unwrap(),
+			proof: borsh::to_vec(&(block_header, &consensus_state_proof)).unwrap(),
 			proof_height: Some(at.into()),
 		})
 	}
@@ -461,32 +449,23 @@ deserialize client state"
 		// log::info!("This is inner any client state {:?}", inner_any);
 		let any_client_state = convert_new_client_state_to_old(client_state);
 		let chain_account = self.get_chain_storage().await;
-		let block_header_og = chain_account.head().unwrap();
-		// let block_header = events::get_header_from_height(
-		// 	self.rpc_client(),
-		// 	self.solana_ibc_program_id,
-		// 	at.revision_height,
-		// )
-		// .await
-		// .expect(&format!("No block header found for height {:?}", at.revision_height));
-		// let result = client_state_proof.verify(
-		// 	&block_header_og.state_root,
-		// 	&client_state_trie_key,
-		// 	Some(&CryptoHash::digest(&inner_any)),
-		// );
-		// let result_1 = client_state_proof.verify(
-		// 	&block_header.state_root,
-		// 	&client_state_trie_key,
-		// 	Some(&CryptoHash::digest(&inner_any)),
-		// );
-		// log::info!(
-		// 	"This is result of client state proof verify lts {:?} at proof height {:?}",
-		// 	result,
-		// 	result_1
-		// );
+		log::info!("channel whitelist {:?}", self.channel_whitelist());
+		let block_header = if self.query_channels().await.unwrap().is_empty() {
+			log::info!("Fetching previous block header");
+			events::get_header_from_height(
+				self.rpc_client(),
+				self.solana_ibc_program_id,
+				at.revision_height,
+			)
+			.await
+			.expect(&format!("No block header found for height {:?}", at.revision_height))
+		} else {
+			log::info!("Fetching latest header");
+			chain_account.head().unwrap().clone()
+		};
 		Ok(QueryClientStateResponse {
 			client_state: Some(any_client_state.into()),
-			proof: borsh::to_vec(&(block_header_og, &client_state_proof)).unwrap(),
+			proof: borsh::to_vec(&(block_header, &client_state_proof)).unwrap(),
 			proof_height: Some(at.into()),
 		})
 	}
@@ -562,32 +541,23 @@ deserialize client state"
 			delay_period: inner_connection_end.delay_period().as_nanos() as u64,
 		};
 		let chain_account = self.get_chain_storage().await;
-		let block_header_og = chain_account.head().unwrap();
-		// let block_header = events::get_header_from_height(
-		// 	self.rpc_client(),
-		// 	self.solana_ibc_program_id,
-		// 	at.revision_height,
-		// )
-		// .await
-		// .expect(&format!("No block header found for height {:?}", at.revision_height));
-		// let result = connection_end_proof.verify(
-		// 	&block_header_og.state_root,
-		// 	&connection_end_trie_key,
-		// 	Some(&CryptoHash::digest(&inner_any)),
-		// );
-		// let result_1 = connection_end_proof.verify(
-		// 	&block_header.state_root,
-		// 	&connection_end_trie_key,
-		// 	Some(&CryptoHash::digest(&inner_any)),
-		// );
-		// log::info!(
-		// 	"This is result of connection end proof verify lts {:?} at proof height {:?}",
-		// 	result,
-		// 	result_1
-		// );
+		log::info!("channel whitelist {:?}", self.channel_whitelist());
+		let block_header = if self.query_channels().await.unwrap().is_empty() {
+			log::info!("Fetching previous block header");
+			events::get_header_from_height(
+				self.rpc_client(),
+				self.solana_ibc_program_id,
+				at.revision_height,
+			)
+			.await
+			.expect(&format!("No block header found for height {:?}", at.revision_height))
+		} else {
+			log::info!("Fetching latest header");
+			chain_account.head().unwrap().clone()
+		};
 		Ok(QueryConnectionResponse {
 			connection: Some(connection_end),
-			proof: borsh::to_vec(&(block_header_og, &connection_end_proof)).unwrap(),
+			proof: borsh::to_vec(&(block_header, &connection_end_proof)).unwrap(),
 			proof_height: Some(at.into()),
 		})
 	}
@@ -649,15 +619,21 @@ deserialize client state"
 				.collect(),
 			version: inner_channel_end.version.to_string(),
 		};
-		// let block_header = events::get_header_from_height(
-		// 	self.rpc_client(),
-		// 	self.solana_ibc_program_id,
-		// 	at.revision_height,
-		// )
-		// .await
-		// .expect(&format!("No block header found for height {:?}", at.revision_height));
-		let chain_account = self.get_chain_storage().await;
-		let block_header = chain_account.head().unwrap();
+		log::info!("channel whitelist {:?}", self.channel_whitelist());
+		let block_header = if self.query_channels().await.unwrap().is_empty() {
+			log::info!("Fetching previous block header");
+			events::get_header_from_height(
+				self.rpc_client(),
+				self.solana_ibc_program_id,
+				at.revision_height,
+			)
+			.await
+			.expect(&format!("No block header found for height {:?}", at.revision_height))
+		} else {
+			log::info!("Fetching latest block header");
+			let chain_account = self.get_chain_storage().await;
+			chain_account.head().unwrap().clone()
+		};
 		Ok(QueryChannelResponse {
 			channel: Some(channel_end),
 			proof: borsh::to_vec(&(block_header, &channel_end_proof)).unwrap(),
@@ -1585,26 +1561,41 @@ deserialize client state"
 	> {
 		let latest_height_timestamp = self.latest_height_and_timestamp().await?;
 		println!("This is height on solana {:?}", latest_height_timestamp);
-		let chain = self.get_chain_storage().await;
-		let header = chain.head().unwrap().clone();
+		let chain_account = self.get_chain_storage().await;
+		let header = chain_account.head().unwrap().clone();
 		let blockhash = header.calc_hash();
-		let validator_pubkey =
-			Pubkey::from_str("oxyzEsUj9CV6HsqPCUZqVwrFJJvpd9iCBrPdzTBWLBb").unwrap();
-		let old_validator = chain.validator(validator_pubkey).unwrap().unwrap();
-		let new_validator: Validator<pallet_ibc::light_clients::PubKey> = Validator::new(
-			PubKey::from_bytes(&old_validator.pubkey.to_vec()).unwrap(),
-			NonZeroU128::new(2000).unwrap(),
-		);
-		let epoch = Epoch::new_with(vec![new_validator], |total| {
+		let (signatures, _block_header) = events::get_signatures_for_blockhash(
+			self.rpc_client(),
+			self.solana_ibc_program_id,
+			blockhash.clone(),
+		)
+		.await
+		.unwrap();
+		let mut all_validators = Vec::new();
+		let final_signatures: Vec<_> = signatures
+			.iter()
+			.enumerate()
+			.map(|(index, (validator, signature))| {
+				let old_validator = chain_account.validator(*validator).unwrap().unwrap();
+				let new_validator: Validator<pallet_ibc::light_clients::PubKey> = Validator::new(
+					PubKey::from_bytes(&old_validator.pubkey.to_vec()).unwrap(),
+					old_validator.stake,
+				);
+				all_validators.push(new_validator);
+				(index as u16, signature.clone())
+			})
+			.collect();
+		let epoch = Epoch::new_with(all_validators, |total| {
 			let quorum = NonZeroU128::new(total.get() / 2 + 1).unwrap();
 			// min_quorum_stake may be greater than total_stake so we’re not
 			// using .clamp to make sure we never return value higher than
 			// total_stake.
+			println!("THis is total {:?} and quorum {:?}", total, quorum);
 			quorum.max(NonZeroU128::new(1000).unwrap()).min(total)
 		})
 		.unwrap();
 		let client_state = cf_guest::ClientState::new(
-			chain.genesis().unwrap(),
+			chain_account.genesis().unwrap(),
 			header.block_height,
 			64000 * 10_u64.pow(9),
 			epoch.calc_commitment(),
@@ -1973,14 +1964,16 @@ impl Chain for SolanaClient {
 
 			chunks.chunk_size = core::num::NonZeroU16::new(800).unwrap();
 
-			let instructions: Vec<Transaction> = chunks.map(|ix| {
-				Transaction::new_signed_with_payer(
-					&[ix],
-					Some(&authority.pubkey()),
-					&[&*authority],
-					blockhash,
-				)	
-			}).collect();
+			let instructions: Vec<Transaction> = chunks
+				.map(|ix| {
+					Transaction::new_signed_with_payer(
+						&[ix],
+						Some(&authority.pubkey()),
+						&[&*authority],
+						blockhash,
+					)
+				})
+				.collect();
 
 			let futures = instructions.iter().map(|tx| rpc.send_and_confirm_transaction(tx));
 
@@ -1997,7 +1990,7 @@ impl Chain for SolanaClient {
 			// }
 			let signatures = join_all(futures).await;
 			for sig in signatures {
-				println!("  Message Chunking Signature {:?}", sig);	
+				println!("  Message Chunking Signature {:?}", sig);
 			}
 			if let MsgEnvelope::Client(ClientMsg::UpdateClient(e)) = message {
 				signature = self
