@@ -565,7 +565,7 @@ pub async fn ibc_messaging_with_connection_delay<A, B>(
 	});
 	send_packet_with_connection_delay(chain_a, chain_b, channel_a, channel_b, asset_a, asset_b)
 		.await;
-	handle.abort()
+	// handle.abort()
 }
 
 ///

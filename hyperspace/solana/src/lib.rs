@@ -110,6 +110,8 @@ pub const NUMBER_OF_BLOCKS_TO_PROCESS_PER_ITER: u64 = 250;
 pub const WRITE_ACCOUNT_SEED: &[u8] = b"write";
 pub const SIGNATURE_ACCOUNT_SEED: &[u8] = b"signature";
 
+pub const MIN_TIME_UNTIL_UPDATE: u64 = 30;
+
 pub struct InnerAny {
 	pub type_url: String,
 	pub value: Vec<u8>,
@@ -214,7 +216,6 @@ impl IbcProvider for SolanaClient {
 		}
 
 		let chain_account = self.get_chain_storage().await;
-		Duration::from_secs(2);
 		let (signatures, block_header) = events::get_signatures_for_blockhash(
 			rpc_client,
 			self.solana_ibc_program_id,
@@ -282,11 +283,18 @@ impl IbcProvider for SolanaClient {
 			.unwrap();
 		log::info!("This is wihle update {:?}", value);
 		let events_len = block_events.len();
+		let time_since_last_update =
+			u64::from(block_header.timestamp_ns) - u64::from(prev_block_header.timestamp_ns);
+		if time_since_last_update > client_state.trusting_period_ns / 2 {
+			log::info!("--------------------------PURPOSE UPDATE------------------------");
+		} else {
+			log::info!("-----------------------NO UPDATE---------------------------");
+		}
 		let updates = (
 			Any { type_url: msg.type_url(), value },
 			Height::new(1, finality_height),
 			block_events,
-			if (events_len > 0 || prev_block_header.epoch_id != block_header.epoch_id) {
+			if events_len > 0 || time_since_last_update > client_state.trusting_period_ns / 2 {
 				UpdateType::Mandatory
 			} else {
 				UpdateType::Optional

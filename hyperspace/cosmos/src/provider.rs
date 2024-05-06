@@ -84,8 +84,7 @@ use tendermint_rpc::{
 use tokio::{task::JoinSet, time::sleep};
 
 use tendermint::{
-	account::Id as TMAccountId,
-	block::signed_header::SignedHeader,
+	account::Id as TMAccountId, block::signed_header::SignedHeader,
 	validator::Set as TMValidatorSet,
 };
 use tendermint_light_client::components::io::{AtHeight, IoError};
@@ -128,7 +127,7 @@ where
 			FinalityEvent::Tendermint { from: _, to } => to,
 		};
 		let client_id = self.client_id();
-		let latest_cp_height = counterparty.latest_height_and_timestamp().await?.0;
+		let (latest_cp_height, latest_cp_time) = counterparty.latest_height_and_timestamp().await?;
 		let latest_cp_client_state =
 			counterparty.query_client_state(latest_cp_height, client_id.clone()).await?;
 		let client_state_response = latest_cp_client_state
@@ -148,9 +147,37 @@ where
 		let latest_height = self.latest_height_and_timestamp().await?.0;
 		let latest_revision = latest_height.revision_number;
 
+		let trusted_latest_h = client_state.latest_height();
+
+		let (_, last_update_time) = counterparty
+			.query_client_update_time_and_height(client_id.clone(), trusted_latest_h)
+			.await?;
+
 		let from = TmHeight::try_from(latest_cp_client_height).unwrap();
 		let to = finality_event_height;
 		log::info!(target: "hyperspace_cosmos", "--------------------------Getting blocks {}..{}----------------------", from, to);
+
+		let time_passed_since_last_update = latest_cp_time.duration_since(&last_update_time).unwrap_or_else(|| {
+			log::warn!(target: "hyperspace_cosmos", "Last update time {last_update_time} > {latest_cp_time} (current time on the counterparty chain)", );
+			Duration::from_secs(0)
+		});
+		let mut force_update_at = None;
+		// Force update if the finality event height is reached and the client was not
+		// updated for the trusting period / 2 to avoid client expiration
+		if time_passed_since_last_update > client_state.trusting_period / 2 {
+			// This fixation on the block is needed to wait for the proof for the same block
+			// in the next iterations, instead of requesting a new proof for another block
+			// and never using it
+			let fixed_update_height = finality_event_height.value();
+
+			log::debug!(target: "hyperspace_cosmos", "Time passed since last update: {}, trusting period: {}", time_passed_since_last_update.as_secs(), client_state.trusting_period.as_secs());
+
+			force_update_at = Some(Height::new(latest_height.revision_number, fixed_update_height));
+		}
+
+		if let Some(height) = force_update_at {
+			log::info!(target: "hyperspace_cosmos", "Forcing update at height: {height}");
+		}
 
 		// query (exclusively) up to `to`, because the proof for the event at `to - 1` will be
 		// contained at `to` and will be fetched below by `msg_update_client_header`
@@ -216,6 +243,12 @@ where
 				})?;
 				Any { value, type_url: msg.type_url() }
 			};
+
+			if Some(height) == force_update_at {
+				update_type = UpdateType::Mandatory;
+				log::info!(target: "hyperspace_cosmos", "Forcing update to mandatory at height: {:?}", height);
+			}
+
 			// println!("These are events caught query latest events {:?}", events);
 			updates.push((update_client_header, height, events, update_type));
 		}

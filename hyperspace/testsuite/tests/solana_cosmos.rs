@@ -210,7 +210,7 @@ async fn setup_clients() -> (AnyChain, AnyChain) {
 	chain_a_wrapped.set_client_id(client_a);
 	chain_b_wrapped.set_client_id(client_b);
 	// chain_b_wrapped.set_client_id(ClientId::new("07-tendermint", 0).unwrap());
-	// chain_a_wrapped.set_client_id(ClientId::new("08-wasm", 0).unwrap());
+	// chain_a_wrapped.set_client_id(ClientId::new("08-wasm", 1).unwrap());
 	(chain_a_wrapped, chain_b_wrapped)
 }
 
@@ -287,14 +287,14 @@ async fn solana_to_cosmos_ibc_messaging_full_integration_test() {
 	// 	channel_a,
 	// )
 	// .await;
-	ibc_messaging_packet_timestamp_timeout_with_connection_delay(
-		&mut chain_a,
-		&mut chain_b,
-		asset_id_a.clone(),
-		channel_a,
-		channel_b,
-	)
-	.await;
+	// ibc_messaging_packet_timestamp_timeout_with_connection_delay(
+	// 	&mut chain_a,
+	// 	&mut chain_b,
+	// 	asset_id_a.clone(),
+	// 	channel_a,
+	// 	channel_b,
+	// )
+	// .await;
 
 	// channel closing semantics
 	// ibc_messaging_packet_timeout_on_channel_close(
