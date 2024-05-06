@@ -1565,7 +1565,7 @@ dependencies = [
 [[package]]
 name = "cf-guest"
 version = "0.0.0"
-source = "git+https://github.com/composableFi/emulated-light-client/#71cc08fd66678e5d986435c4e67813cdbcc37172"
+source = "git+https://github.com/composableFi/emulated-light-client/#ffcf1212b3c993881c67129d98e9d8024d8b9b7f"
 dependencies = [
  "borsh 0.10.3",
  "bytemuck",
@@ -4838,7 +4838,7 @@ dependencies = [
 [[package]]
 name = "guestchain"
 version = "0.0.0"
-source = "git+https://github.com/composableFi/emulated-light-client/#71cc08fd66678e5d986435c4e67813cdbcc37172"
+source = "git+https://github.com/composableFi/emulated-light-client/#ffcf1212b3c993881c67129d98e9d8024d8b9b7f"
 dependencies = [
  "borsh 0.10.3",
  "bytemuck",
@@ -5099,11 +5099,11 @@ dependencies = [
 
 [[package]]
 name = "home"
-version = "0.5.9"
+version = "0.5.5"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "e3d1354bf6b7235cb4a0576c2619fd4ed18183f689b12b006a0ee7329eeff9a5"
+checksum = "5444c27eef6923071f7ebcc33e3444508466a76f7a2b93da00ed6e19f30c1ddb"
 dependencies = [
- "windows-sys 0.52.0",
+ "windows-sys 0.48.0",
 ]
 
 [[package]]
@@ -5643,7 +5643,7 @@ dependencies = [
  "iana-time-zone-haiku",
  "js-sys",
  "wasm-bindgen",
- "windows-core 0.52.0",
+ "windows-core",
 ]
 
 [[package]]
@@ -7187,7 +7187,7 @@ checksum = "830d08ce1d1d941e6b30645f1a0eb5643013d835ce3779a5fc208261dbe10f55"
 [[package]]
 name = "lib"
 version = "0.0.0"
-source = "git+https://github.com/composableFi/emulated-light-client/#71cc08fd66678e5d986435c4e67813cdbcc37172"
+source = "git+https://github.com/composableFi/emulated-light-client/#ffcf1212b3c993881c67129d98e9d8024d8b9b7f"
 dependencies = [
  "base64 0.21.7",
  "borsh 0.10.3",
@@ -8049,7 +8049,7 @@ dependencies = [
 [[package]]
 name = "memory"
 version = "0.0.0"
-source = "git+https://github.com/composableFi/emulated-light-client/#71cc08fd66678e5d986435c4e67813cdbcc37172"
+source = "git+https://github.com/composableFi/emulated-light-client/#ffcf1212b3c993881c67129d98e9d8024d8b9b7f"
 dependencies = [
  "derive_more",
  "stdx",
@@ -8230,7 +8230,7 @@ version = "3.2.3"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "ba8ee05284d79b367ae8966d558e1a305a781fc80c9df51f37775169117ba64f"
 dependencies = [
- "borsh 0.9.3",
+ "borsh 0.10.3",
  "num-derive 0.3.3",
  "num-traits",
  "solana-program",
@@ -12147,7 +12147,7 @@ dependencies = [
 [[package]]
 name = "proto-utils"
 version = "0.0.0"
-source = "git+https://github.com/composableFi/emulated-light-client/#71cc08fd66678e5d986435c4e67813cdbcc37172"
+source = "git+https://github.com/composableFi/emulated-light-client/#ffcf1212b3c993881c67129d98e9d8024d8b9b7f"
 dependencies = [
  "const_format",
  "derive_more",
@@ -14537,7 +14537,7 @@ dependencies = [
 [[package]]
 name = "sealable-trie"
 version = "0.0.0"
-source = "git+https://github.com/composableFi/emulated-light-client/#71cc08fd66678e5d986435c4e67813cdbcc37172"
+source = "git+https://github.com/composableFi/emulated-light-client/#ffcf1212b3c993881c67129d98e9d8024d8b9b7f"
 dependencies = [
  "ascii 1.1.0",
  "base64 0.21.7",
@@ -14971,7 +14971,7 @@ dependencies = [
  "bytes",
  "ics23 0.10.0",
  "proptest",
- "rand 0.8.5",
+ "rand 0.4.6",
  "sha2 0.10.8",
  "tendermint 0.28.0",
 ]
@@ -15122,7 +15122,7 @@ dependencies = [
 [[package]]
 name = "solana-allocator"
 version = "0.0.0"
-source = "git+https://github.com/composableFi/emulated-light-client/#71cc08fd66678e5d986435c4e67813cdbcc37172"
+source = "git+https://github.com/composableFi/emulated-light-client/#ffcf1212b3c993881c67129d98e9d8024d8b9b7f"
 dependencies = [
  "bytemuck",
  "solana-program",
@@ -15259,7 +15259,7 @@ dependencies = [
 [[package]]
 name = "solana-ibc"
 version = "0.1.0"
-source = "git+https://github.com/composableFi/emulated-light-client/#71cc08fd66678e5d986435c4e67813cdbcc37172"
+source = "git+https://github.com/composableFi/emulated-light-client/#ffcf1212b3c993881c67129d98e9d8024d8b9b7f"
 dependencies = [
  "anchor-lang",
  "anchor-spl",
@@ -15681,7 +15681,7 @@ checksum = "468aa43b7edb1f9b7b7b686d5c3aeb6630dc1708e86e31343499dd5c4d775183"
 [[package]]
 name = "solana-signature-verifier"
 version = "0.0.0"
-source = "git+https://github.com/composableFi/emulated-light-client/#71cc08fd66678e5d986435c4e67813cdbcc37172"
+source = "git+https://github.com/composableFi/emulated-light-client/#ffcf1212b3c993881c67129d98e9d8024d8b9b7f"
 dependencies = [
  "base64 0.21.7",
  "borsh 0.10.3",
@@ -15794,7 +15794,7 @@ dependencies = [
 [[package]]
 name = "solana-trie"
 version = "0.0.0"
-source = "git+https://github.com/composableFi/emulated-light-client/#71cc08fd66678e5d986435c4e67813cdbcc37172"
+source = "git+https://github.com/composableFi/emulated-light-client/#ffcf1212b3c993881c67129d98e9d8024d8b9b7f"
 dependencies = [
  "bytemuck",
  "lib",
@@ -15860,7 +15860,7 @@ dependencies = [
 [[package]]
 name = "solana-write-account"
 version = "0.0.0"
-source = "git+https://github.com/composableFi/emulated-light-client/#71cc08fd66678e5d986435c4e67813cdbcc37172"
+source = "git+https://github.com/composableFi/emulated-light-client/#ffcf1212b3c993881c67129d98e9d8024d8b9b7f"
 dependencies = [
  "solana-program",
  "stdx",
@@ -17363,7 +17363,7 @@ dependencies = [
 [[package]]
 name = "stdx"
 version = "0.0.0"
-source = "git+https://github.com/composableFi/emulated-light-client/#71cc08fd66678e5d986435c4e67813cdbcc37172"
+source = "git+https://github.com/composableFi/emulated-light-client/#ffcf1212b3c993881c67129d98e9d8024d8b9b7f"
 
 [[package]]
 name = "strsim"
@@ -18623,7 +18623,7 @@ dependencies = [
 [[package]]
 name = "trie-ids"
 version = "0.0.0"
-source = "git+https://github.com/composableFi/emulated-light-client/#71cc08fd66678e5d986435c4e67813cdbcc37172"
+source = "git+https://github.com/composableFi/emulated-light-client/#ffcf1212b3c993881c67129d98e9d8024d8b9b7f"
 dependencies = [
  "ascii 1.1.0",
  "base64 0.21.7",
@@ -18791,7 +18791,7 @@ checksum = "97fee6b57c6a41524a810daee9286c02d7752c4253064d0b05472833a438f675"
 dependencies = [
  "cfg-if 0.1.10",
  "digest 0.10.7",
- "rand 0.8.5",
+ "rand 0.4.6",
  "static_assertions",
 ]
 
@@ -19056,7 +19056,7 @@ dependencies = [
 [[package]]
 name = "wasm"
 version = "0.0.0"
-source = "git+https://github.com/composableFi/emulated-light-client/#71cc08fd66678e5d986435c4e67813cdbcc37172"
+source = "git+https://github.com/composableFi/emulated-light-client/#ffcf1212b3c993881c67129d98e9d8024d8b9b7f"
 dependencies = [
  "const_format",
  "derive_more",
@@ -19714,7 +19714,7 @@ version = "0.51.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "ca229916c5ee38c2f2bc1e9d8f04df975b4bd93f9955dc69fabb5d91270045c9"
 dependencies = [
- "windows-core 0.51.1",
+ "windows-core",
  "windows-targets 0.48.5",
 ]
 
@@ -19725,15 +19725,6 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "f1f8cf84f35d2db49a46868f947758c7a1138116f7fac3bc844f43ade1292e64"
 dependencies = [
  "windows-targets 0.48.5",
-]
-
-[[package]]
-name = "windows-core"
-version = "0.52.0"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "33ab640c8d7e35bf8ba19b884ba838ceb4fba93a4e8c65a9059d08afcfc683d9"
-dependencies = [
- "windows-targets 0.52.5",
 ]
 
 [[package]]

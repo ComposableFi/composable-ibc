@@ -224,18 +224,26 @@ impl IbcProvider for SolanaClient {
 
 		let block_hash = block_header.calc_hash();
 		let block_height: u64 = block_header.block_height.into();
-		let mut all_validators = Vec::new();
+		let validators = chain_account.validators().unwrap();
+		let all_validators: Vec<Validator<pallet_ibc::light_clients::PubKey>> = validators
+			.iter()
+			.map(|validator| {
+				let new_validator: Validator<pallet_ibc::light_clients::PubKey> = Validator::new(
+					PubKey::from_bytes(&validator.pubkey.to_vec()).unwrap(),
+					validator.stake,
+				);
+				new_validator
+			})
+			.collect();
 		let final_signatures: Vec<_> = signatures
 			.iter()
 			.enumerate()
 			.map(|(index, (validator, signature))| {
-				let old_validator = chain_account.validator(*validator).unwrap().unwrap();
-				let new_validator: Validator<pallet_ibc::light_clients::PubKey> = Validator::new(
-					PubKey::from_bytes(&old_validator.pubkey.to_vec()).unwrap(),
-					old_validator.stake,
-				);
-				all_validators.push(new_validator);
-				(index as u16, signature.clone())
+				let validator_idx = all_validators
+					.iter()
+					.position(|v| v.pubkey == PubKey::from_bytes(&validator.to_bytes().as_slice()).unwrap())
+					.unwrap();
+				(validator_idx as u16, signature.clone())
 			})
 			.collect();
 		let guest_header = cf_guest::Header {
@@ -1564,25 +1572,15 @@ deserialize client state"
 		let chain_account = self.get_chain_storage().await;
 		let header = chain_account.head().unwrap().clone();
 		let blockhash = header.calc_hash();
-		let (signatures, _block_header) = events::get_signatures_for_blockhash(
-			self.rpc_client(),
-			self.solana_ibc_program_id,
-			blockhash.clone(),
-		)
-		.await
-		.unwrap();
-		let mut all_validators = Vec::new();
-		let final_signatures: Vec<_> = signatures
+		let validators = chain_account.validators().unwrap();
+		let all_validators = validators
 			.iter()
-			.enumerate()
-			.map(|(index, (validator, signature))| {
-				let old_validator = chain_account.validator(*validator).unwrap().unwrap();
+			.map(|validator| {
 				let new_validator: Validator<pallet_ibc::light_clients::PubKey> = Validator::new(
-					PubKey::from_bytes(&old_validator.pubkey.to_vec()).unwrap(),
-					old_validator.stake,
+					PubKey::from_bytes(&validator.pubkey.to_vec()).unwrap(),
+					validator.stake,
 				);
-				all_validators.push(new_validator);
-				(index as u16, signature.clone())
+				new_validator
 			})
 			.collect();
 		let epoch = Epoch::new_with(all_validators, |total| {
@@ -1590,7 +1588,7 @@ deserialize client state"
 			// min_quorum_stake may be greater than total_stake so we’re not
 			// using .clamp to make sure we never return value higher than
 			// total_stake.
-			println!("THis is total {:?} and quorum {:?}", total, quorum);
+			println!("This is total {:?} and quorum {:?}", total, quorum);
 			quorum.max(NonZeroU128::new(1000).unwrap()).min(total)
 		})
 		.unwrap();
@@ -1796,19 +1794,29 @@ impl LightClientSync for SolanaClient {
 			.iter()
 			.map(|(sig, block_header)| {
 				log::info!("This is sig {:?} and block header {:?}", sig, block_header);
-				let mut all_validators = Vec::new();
+				let validators = chain_account.validators().unwrap();
+				let all_validators: Vec<Validator<pallet_ibc::light_clients::PubKey>> = validators
+					.iter()
+					.map(|validator| {
+						let new_validator: Validator<pallet_ibc::light_clients::PubKey> =
+							Validator::new(
+								PubKey::from_bytes(&validator.pubkey.to_vec()).unwrap(),
+								validator.stake,
+							);
+						new_validator
+					})
+					.collect();
 				let final_signatures: Vec<_> = sig
 					.iter()
 					.enumerate()
 					.map(|(index, (validator, signature))| {
-						let old_validator = chain_account.validator(*validator).unwrap().unwrap();
-						let new_validator: Validator<pallet_ibc::light_clients::PubKey> =
-							Validator::new(
-								PubKey::from_bytes(&old_validator.pubkey.to_vec()).unwrap(),
-								old_validator.stake,
-							);
-						all_validators.push(new_validator);
-						(index as u16, signature.clone())
+						let validator_idx = all_validators
+							.iter()
+							.position(|v| {
+								v.pubkey == PubKey::from_bytes(&validator.to_bytes().as_slice()).unwrap()
+							})
+							.unwrap();
+						(validator_idx as u16, signature.clone())
 					})
 					.collect();
 				log::info!("Final validator in fetch mandatory updates {:?}", final_signatures);
