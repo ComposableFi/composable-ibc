@@ -110,7 +110,7 @@ pub const NUMBER_OF_BLOCKS_TO_PROCESS_PER_ITER: u64 = 250;
 pub const WRITE_ACCOUNT_SEED: &[u8] = b"write";
 pub const SIGNATURE_ACCOUNT_SEED: &[u8] = b"signature";
 
-pub const MIN_TIME_UNTIL_UPDATE: u64 = 30;
+pub const MIN_TIME_UNTIL_UPDATE: u64 = 30 * 60; // 30 mins
 
 pub struct InnerAny {
 	pub type_url: String,
@@ -285,7 +285,7 @@ impl IbcProvider for SolanaClient {
 		let events_len = block_events.len();
 		let time_since_last_update =
 			u64::from(block_header.timestamp_ns) - u64::from(prev_block_header.timestamp_ns);
-		if time_since_last_update > client_state.trusting_period_ns / 2 {
+		if time_since_last_update > MIN_TIME_UNTIL_UPDATE * 1_000_000_000 {
 			log::info!("--------------------------PURPOSE UPDATE------------------------");
 		} else {
 			log::info!("-----------------------NO UPDATE---------------------------");
@@ -294,7 +294,7 @@ impl IbcProvider for SolanaClient {
 			Any { type_url: msg.type_url(), value },
 			Height::new(1, finality_height),
 			block_events,
-			if events_len > 0 || time_since_last_update > client_state.trusting_period_ns / 2 {
+			if events_len > 0 || time_since_last_update > MIN_TIME_UNTIL_UPDATE * 1_000_000_000 {
 				UpdateType::Mandatory
 			} else {
 				UpdateType::Optional

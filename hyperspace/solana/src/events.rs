@@ -394,10 +394,9 @@ pub async fn get_client_state_at_height(
 	upto_height: u64,
 ) -> Option<solana_ibc::client_state::AnyClientState> {
 	log::info!("Getting client states at height {:?}", upto_height);
-	let mut client_state = None;
 	let mut before_hash = None;
 	let mut current_height = upto_height;
-	while current_height >= upto_height && current_height > 0 {
+	while current_height >= upto_height {
 		let (transactions, last_searched_hash) =
 			get_previous_transactions(&rpc, program_id, before_hash).await;
 		before_hash = Some(
@@ -408,32 +407,16 @@ pub async fn get_client_state_at_height(
 				solana_transaction_status::option_serializer::OptionSerializer::Some(e) => e,
 				_ => Vec::new(),
 			};
-			// Filter with client state msg prepended
-			let client_state_logs: Vec<&str> = logs
+			let (events, height) = get_events_from_logs(logs);
+			let client_state_events: Vec<solana_ibc::events::ClientStateUpdate> = events
 				.iter()
-				.filter_map(|log| {
-					if log.starts_with("Program log: This is updated client state ") {
-						Some(
-							log.strip_prefix("Program log: This is updated client state ").unwrap(),
-						)
-					} else {
-						None
-					}
+				.filter_map(|event| match event {
+					solana_ibc::events::Event::ClientStateUpdate(e) => Some(e.clone()),
+					_ => None,
 				})
 				.collect();
-			let height_str = logs
-				.iter()
-				.find_map(|log| {
-					if log.starts_with("Program log: Current Block height ") {
-						Some(log.strip_prefix("Program log: Current Block height ").unwrap())
-					} else {
-						None
-					}
-				})
-				.map_or("0", |height| height);
-			let height = height_str.parse::<u64>().unwrap();
 			current_height = height;
-			if height == 0 || client_state_logs.is_empty() {
+			if height == 0 || client_state_events.is_empty() {
 				continue
 			}
 			log::info!("Found height {:?}", height);
@@ -441,19 +424,14 @@ pub async fn get_client_state_at_height(
 				break
 			}
 			// There can be only one client state event in a tx
-			let client_state_log = client_state_logs[0];
-			let bytes: Vec<u8> = client_state_log
-				.trim_matches(|c: char| c == '[' || c == ']') // Trim the square brackets
-				.split(", ") // Split the string into individual numbers
-				.map(|s| s.parse::<u8>().unwrap()) // Convert each number from &str to u8
-				.collect(); // Collect into a Vec<u8>
+			let current_client_state = &client_state_events[0];
 			let any_client_state: solana_ibc::client_state::AnyClientState =
-				borsh::BorshDeserialize::try_from_slice(bytes.as_slice()).unwrap();
+				borsh::BorshDeserialize::try_from_slice(current_client_state.state.as_ref()).unwrap();
 			log::info!("This is any client state {:?}", any_client_state);
-			client_state = Some(any_client_state);
+			return Some(any_client_state)
 		}
 	}
-	client_state
+	None
 }
 
 pub fn get_events_from_logs(logs: Vec<String>) -> (Vec<solana_ibc::events::Event<'static>>, u64) {
@@ -683,7 +661,10 @@ pub async fn get_previous_transactions(
 			jsonrpc: "2.0".to_string(),
 			id: 1 as u64,
 			method: "getTransaction".to_string(),
-			params: (signature, Param { commitment: "confirmed".to_string(), maxSupportedTransactionVersion: 0 }),
+			params: (
+				signature,
+				Param { commitment: "confirmed".to_string(), maxSupportedTransactionVersion: 0 },
+			),
 		};
 		body.push(payload);
 	}
@@ -739,28 +720,24 @@ pub fn testing_events() {
 	let port_id = PortId::transfer();
 	let channel_id = ChannelId::new(15);
 	let recv_packet_events: Vec<_> = eves
-			.iter()
-			.filter_map(|tx| {
-				match tx {
-					solana_ibc::events::Event::IbcEvent(e) => match e {
-						ibc_core_handler_types::events::IbcEvent::WriteAcknowledgement(packet) =>
-							if packet.chan_id_on_a().as_str() == &channel_id.to_string() &&
-								packet.port_id_on_a().as_str() == port_id.as_str() &&
-								seqs.iter()
-									.find(|&&seq| packet.seq_on_a().value() == seq)
-									.is_some()
-							{
-								println!("We found packet");
-								Some(packet)
-							} else {
-								None
-							},
-						_ => None,
+		.iter()
+		.filter_map(|tx| match tx {
+			solana_ibc::events::Event::IbcEvent(e) => match e {
+				ibc_core_handler_types::events::IbcEvent::WriteAcknowledgement(packet) =>
+					if packet.chan_id_on_a().as_str() == &channel_id.to_string() &&
+						packet.port_id_on_a().as_str() == port_id.as_str() &&
+						seqs.iter().find(|&&seq| packet.seq_on_a().value() == seq).is_some()
+					{
+						println!("We found packet");
+						Some(packet)
+					} else {
+						None
 					},
-					_ => None,
-				}
-			})
-			.collect();
+				_ => None,
+			},
+			_ => None,
+		})
+		.collect();
 	// let client_state_logs: Vec<&str> = events
 	// 	.iter()
 	// 	.filter_map(|log| {

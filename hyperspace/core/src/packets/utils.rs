@@ -35,9 +35,9 @@ use ibc::{
 	Height,
 };
 use ibc_proto::google::protobuf::Any;
+use lib::hash::CryptoHash;
 use primitives::{find_suitable_proof_height_for_client, Chain};
 use std::time::Duration;
-use lib::hash::CryptoHash;
 use tendermint_proto::Protobuf;
 
 #[allow(clippy::too_many_arguments)]
@@ -276,11 +276,20 @@ pub async fn construct_timeout_message(
 
 	let proof_unreceived = sink.query_proof(proof_height, vec![key]).await?;
 	let proof_unreceived = CommitmentProofBytes::try_from(proof_unreceived)?;
+	let actual_proof_height = if sink.name() == "solana" {
+		log::info!("Getting proof height from solana");
+		let mut proof_bytes = proof_unreceived.clone();
+		let (header, _): (guestchain::BlockHeader, sealable_trie::proof::Proof) =
+			borsh::BorshDeserialize::deserialize_reader(&mut proof_bytes.as_bytes())?;
+		Height::new(1, header.block_height.into())
+	} else {
+		log::info!("Getting proof height from cosmos");
+		sink.get_proof_height(proof_height).await
+	};
 	let msg = if sink_channel_end.state == State::Closed {
 		let channel_key = get_key_path(KeyPathType::ChannelPath, &packet).into_bytes();
 		let proof_closed = sink.query_proof(proof_height, vec![channel_key]).await?;
 		let proof_closed = CommitmentProofBytes::try_from(proof_closed)?;
-		let actual_proof_height = sink.get_proof_height(proof_height).await;
 		let msg = MsgTimeoutOnClose {
 			packet,
 			next_sequence_recv: next_sequence_recv.into(),
@@ -296,7 +305,6 @@ pub async fn construct_timeout_message(
 		let value = msg.encode_vec()?;
 		Any { value, type_url: msg.type_url() }
 	} else {
-		let actual_proof_height = sink.get_proof_height(proof_height).await;
 		log::debug!(target: "hyperspace", "actual_proof_height={actual_proof_height}");
 		let msg = MsgTimeout {
 			packet,

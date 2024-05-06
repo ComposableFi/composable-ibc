@@ -164,7 +164,7 @@ where
 		let mut force_update_at = None;
 		// Force update if the finality event height is reached and the client was not
 		// updated for the trusting period / 2 to avoid client expiration
-		if time_passed_since_last_update > client_state.trusting_period / 2 {
+		if time_passed_since_last_update > Duration::from_secs(30 * 60) {
 			// This fixation on the block is needed to wait for the proof for the same block
 			// in the next iterations, instead of requesting a new proof for another block
 			// and never using it

@@ -263,38 +263,38 @@ async fn solana_to_cosmos_ibc_messaging_full_integration_test() {
 	.await;
 
 	// timeouts + connection delay
-	// ibc_messaging_packet_height_timeout_with_connection_delay(
-	// 	&mut chain_a,
-	// 	&mut chain_b,
-	// 	asset_id_a.clone(),
-	// 	channel_a,
-	// 	channel_b,
-	// )
-	// .await;
-	// ibc_messaging_packet_height_timeout_with_connection_delay(
-	// 	&mut chain_b,
-	// 	&mut chain_a,
-	// 	asset_id_b.clone(),
-	// 	channel_b,
-	// 	channel_a,
-	// )
-	// .await;
-	// ibc_messaging_packet_timestamp_timeout_with_connection_delay(
-	// 	&mut chain_b,
-	// 	&mut chain_a,
-	// 	asset_id_b.clone(),
-	// 	channel_b,
-	// 	channel_a,
-	// )
-	// .await;
-	// ibc_messaging_packet_timestamp_timeout_with_connection_delay(
-	// 	&mut chain_a,
-	// 	&mut chain_b,
-	// 	asset_id_a.clone(),
-	// 	channel_a,
-	// 	channel_b,
-	// )
-	// .await;
+	ibc_messaging_packet_height_timeout_with_connection_delay(
+		&mut chain_a,
+		&mut chain_b,
+		asset_id_a.clone(),
+		channel_a,
+		channel_b,
+	)
+	.await;
+	ibc_messaging_packet_height_timeout_with_connection_delay(
+		&mut chain_b,
+		&mut chain_a,
+		asset_id_b.clone(),
+		channel_b,
+		channel_a,
+	)
+	.await;
+	ibc_messaging_packet_timestamp_timeout_with_connection_delay(
+		&mut chain_b,
+		&mut chain_a,
+		asset_id_b.clone(),
+		channel_b,
+		channel_a,
+	)
+	.await;
+	ibc_messaging_packet_timestamp_timeout_with_connection_delay(
+		&mut chain_a,
+		&mut chain_b,
+		asset_id_a.clone(),
+		channel_a,
+		channel_b,
+	)
+	.await;
 
 	// channel closing semantics
 	// ibc_messaging_packet_timeout_on_channel_close(
