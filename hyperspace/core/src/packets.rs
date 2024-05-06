@@ -195,9 +195,7 @@ pub async fn query_ready_and_timed_out_packets(
 
 		log::debug!(target: "hyperspace", "Found {} undelivered packets for {:?}/{:?} for {seqs:?}", seqs.len(), channel_id, port_id.clone());
 
-		let mut send_packets = source
-			.query_send_packets(channel_id, port_id.clone(), seqs)
-			.await?;
+		let mut send_packets = source.query_send_packets(channel_id, port_id.clone(), seqs).await?;
 		log::trace!(target: "hyperspace", "SendPackets count before deduplication: {}", send_packets.len());
 		send_packets.sort();
 		send_packets.dedup();
@@ -405,9 +403,8 @@ pub async fn query_ready_and_timed_out_packets(
 		.take(max_packets_to_process)
 		.collect::<Vec<_>>();
 
-		let acknowledgements = source
-			.query_received_packets(channel_id, port_id.clone(), acks)
-			.await?;
+		let acknowledgements =
+			source.query_received_packets(channel_id, port_id.clone(), acks).await?;
 		log::trace!(target: "hyperspace", "Got acknowledgements for channel {:?}: {:?}", channel_id, acknowledgements);
 		let mut acknowledgements_join_set: JoinSet<Result<_, anyhow::Error>> = JoinSet::new();
 

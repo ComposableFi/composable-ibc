@@ -832,10 +832,8 @@ pub async fn query_maximum_height_for_timeout_proofs(
 			.rev()
 			.take(source.common_state().max_packets_to_process)
 			.collect();
-		let send_packets = source
-			.query_send_packets( channel, port_id, undelivered_sequences)
-			.await
-			.ok()?;
+		let send_packets =
+			source.query_send_packets(channel, port_id, undelivered_sequences).await.ok()?;
 		for send_packet in send_packets {
 			let source = source.clone();
 			let sink = sink.clone();

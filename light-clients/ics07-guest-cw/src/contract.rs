@@ -270,8 +270,9 @@ pub fn query(deps: Deps, env: Env, msg: QueryMsg) -> StdResult<Binary> {
 			let height = ibc::Height::new(1, height.into());
 			let consensus_state = match get_consensus_state(deps, &client_id, height) {
 				Ok(state) => state,
-				Err(e) => panic!("This is error {:?}", e)
-				// return to_binary(&QueryResponse::status("Expired".to_string())),
+				Err(e) => panic!("This is error {:?}", e), /* return to_binary(&
+				                                            * QueryResponse::status("Expired".
+				                                            * to_string())), */
 			};
 
 			let last_update = consensus_state.timestamp_ns.get();

@@ -4,28 +4,25 @@ use guestchain::Signature;
 use crate::{alloc::string::ToString, proof::VerifyError};
 use alloc::vec::Vec;
 use guestchain::{PubKey, Verifier};
-use ibc::{
-	core::{
-		ics02_client::{
-			client_consensus::ConsensusState, client_def::{ClientDef, ConsensusUpdateResult},
-			client_state::ClientState as OtherClientState, error::Error as Ics02ClientError,
-		},
-		ics23_commitment::commitment::CommitmentPrefix,
-		ics24_host::{
-			path::{
-				self, AcksPath, ChannelEndsPath, ClientConsensusStatePath, ClientStatePath,
-				CommitmentsPath, ConnectionsPath, ReceiptsPath, SeqRecvsPath,
-			},
-		},
-		ics26_routing::context::ReaderContext,
+use ibc::core::{
+	ics02_client::{
+		client_consensus::ConsensusState,
+		client_def::{ClientDef, ConsensusUpdateResult},
+		client_state::ClientState as OtherClientState,
+		error::Error as Ics02ClientError,
 	},
+	ics23_commitment::commitment::CommitmentPrefix,
+	ics24_host::path::{
+		self, AcksPath, ChannelEndsPath, ClientConsensusStatePath, ClientStatePath,
+		CommitmentsPath, ConnectionsPath, ReceiptsPath, SeqRecvsPath,
+	},
+	ics26_routing::context::ReaderContext,
 };
 use prost::Message;
 use tendermint_proto::Protobuf;
 
 use crate::{
-	error::Error, proof::verify, ClientMessage, ClientState,
-	ConsensusState as ClientConsensusState,
+	error::Error, proof::verify, ClientMessage, ClientState, ConsensusState as ClientConsensusState,
 };
 
 type Result<T = (), E = ibc::core::ics02_client::error::Error> = ::core::result::Result<T, E>;
@@ -68,7 +65,7 @@ where
 		(Self::ClientState, ibc::core::ics02_client::client_def::ConsensusUpdateResult<Ctx>),
 		Ics02ClientError,
 	> {
-    let header = match client_msg {
+		let header = match client_msg {
 			ClientMessage::Header(header) => header,
 			_ => unreachable!("02-client will check for Header before calling update_state; qed"),
 		};

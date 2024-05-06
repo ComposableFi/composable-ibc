@@ -78,8 +78,7 @@ macro_rules! impl_proto {
 
 			// "/ibc.lightclients.wasm.v1.ClientState"
 
-			pub const TYPE_URL: &'static str =
-				concat!("/lightclients.guest.v1.", stringify!($Msg));
+			pub const TYPE_URL: &'static str = concat!("/lightclients.guest.v1.", stringify!($Msg));
 
 			/// An example test message.
 			#[cfg(test)]

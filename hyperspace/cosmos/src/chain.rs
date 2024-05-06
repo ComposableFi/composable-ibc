@@ -270,7 +270,6 @@ where
 		log::info!(target: "hyperspace_cosmos", "Reconnected to cosmos chain");
 		Ok(())
 	}
-	
 }
 
 impl<H> CosmosClient<H>

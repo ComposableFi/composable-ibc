@@ -105,7 +105,11 @@ fn check_for_misbehaviour(
 		.map_err(crate::Error::from)
 }
 
-fn process_update_state_msg(mut ctx: context::ContextMut, metadata: state::Metadata, msg: msg::UpdateStateMsg) -> Result {
+fn process_update_state_msg(
+	mut ctx: context::ContextMut,
+	metadata: state::Metadata,
+	msg: msg::UpdateStateMsg,
+) -> Result {
 	let client_state = ctx.client_state()?;
 
 	let header = match msg.client_message {

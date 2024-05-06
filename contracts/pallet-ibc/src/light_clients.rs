@@ -1,5 +1,10 @@
-use alloc::{borrow::ToOwned, boxed::Box, format, string::ToString, vec::Vec};
-use alloc::borrow::Cow;
+use alloc::{
+	borrow::{Cow, ToOwned},
+	boxed::Box,
+	format,
+	string::ToString,
+	vec::Vec,
+};
 // use cf_guest::proto::{
 // 	ClientState::TYPE_URL as GUEST_CLIENT_STATE_TYPE_URL,
 // 	ConsensusState::TYPE_URL as GUEST_CONSENSUS_STATE_TYPE_URL,
@@ -68,15 +73,11 @@ use tendermint::{
 };
 use tendermint_proto::Protobuf;
 
-pub const GUEST_CLIENT_STATE_TYPE_URL: &str =
-	"/lightclients.guest.v1.ClientState";
-pub const GUEST_CONSENSUS_STATE_TYPE_URL: &str =
-	"/lightclients.guest.v1.ConsensusState";
-pub const GUEST_CLIENT_MESSAGE_TYPE_URL: &str =
-	"/lightclients.guest.v1.ClientMessage";
+pub const GUEST_CLIENT_STATE_TYPE_URL: &str = "/lightclients.guest.v1.ClientState";
+pub const GUEST_CONSENSUS_STATE_TYPE_URL: &str = "/lightclients.guest.v1.ConsensusState";
+pub const GUEST_CLIENT_MESSAGE_TYPE_URL: &str = "/lightclients.guest.v1.ClientMessage";
 pub const GUEST_HEADER_TYPE_URL: &str = "/lightclients.guest.v1.Header";
-pub const GUEST_MISBEHAVIOUR_TYPE_URL: &str =
-	"/lightclients.guest.v1.Misbehaviour";
+pub const GUEST_MISBEHAVIOUR_TYPE_URL: &str = "/lightclients.guest.v1.Misbehaviour";
 
 #[derive(Clone, Default, PartialEq, Debug, Eq)]
 pub struct HostFunctionsManager;
@@ -96,7 +97,9 @@ impl guestchain::PubKey for PubKey {
 		bytes.try_into().map(Self).map_err(|_| guestchain::BadFormat)
 	}
 
-	fn as_bytes(&self) -> Cow<'_, [u8]> { todo!() }
+	fn as_bytes(&self) -> Cow<'_, [u8]> {
+		todo!()
+	}
 }
 
 impl borsh::BorshSerialize for PubKey {
@@ -142,8 +145,9 @@ impl guestchain::Signature for Signature {
 			.map_err(|_| guestchain::BadFormat)
 	}
 
-	fn as_bytes(&self) -> Cow<'_, [u8]> { todo!() }
-
+	fn as_bytes(&self) -> Cow<'_, [u8]> {
+		todo!()
+	}
 }
 
 impl borsh::BorshSerialize for Signature {

@@ -355,7 +355,8 @@ impl TryFrom<VerifyUpgradeAndUpdateStateMsgRaw> for VerifyUpgradeAndUpdateStateM
 
 	fn try_from(raw: VerifyUpgradeAndUpdateStateMsgRaw) -> Result<Self, Self::Error> {
 		let any = Any::decode(&mut raw.upgrade_client_state.data.as_slice())?;
-		let upgrade_client_state: ClientState<crate::crypto::PubKey> = ClientState::decode_vec(&any.value)?;
+		let upgrade_client_state: ClientState<crate::crypto::PubKey> =
+			ClientState::decode_vec(&any.value)?;
 		if upgrade_client_state.is_frozen {
 			return ibc::prelude::Err(ContractError::Tendermint(
 				"Upgrade client state not zeroed".to_string(),

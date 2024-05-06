@@ -15,11 +15,14 @@
 
 use core::str::FromStr;
 
+use ::ibc::core::ics24_host::identifier::ClientId;
 use cf_guest::{error::Error, ClientState};
 use cosmwasm_std::{Api, Deps, DepsMut, Env, Storage};
-use ::ibc::core::ics24_host::identifier::ClientId;
 
-use crate::{ibc, state::{self, ConsensusState}};
+use crate::{
+	ibc,
+	state::{self, ConsensusState},
+};
 
 type Result<T, E = crate::Error> = core::result::Result<T, E>;
 
@@ -131,7 +134,6 @@ impl<'a> Context<'a> {
 	pub fn client_state(&self) -> Result<state::ClientState> {
 		req_client_state(&self.client_id, self.client_states().get())
 	}
-
 
 	/// Returns object providing access to read client state from the
 	/// storage.

@@ -223,7 +223,7 @@ pub fn verify(
 				_ => unreachable!(),
 			};
 			CryptoHash(bytemuck::must_cast(hash))
-			// CryptoHash::try_from(value).unwrap()
+		// CryptoHash::try_from(value).unwrap()
 		} else if let Some(id) = path.client_id.as_ref() {
 			// If path includes client id, hash stored in the trie is calculated
 			// with the id mixed in.

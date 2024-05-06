@@ -1,4 +1,3 @@
-
 use alloc::vec::Vec;
 
 use guestchain::{PubKey, Signature};

@@ -14,10 +14,10 @@ impl guestchain::PubKey for PubKey {
 	fn from_bytes(bytes: &[u8]) -> Result<Self, guestchain::BadFormat> {
 		bytes.try_into().map(Self).map_err(|_| guestchain::BadFormat)
 	}
-	
+
 	fn as_bytes(&self) -> alloc::borrow::Cow<'_, [u8]> {
-					todo!()
-			}
+		todo!()
+	}
 }
 
 impl borsh::BorshSerialize for PubKey {
@@ -62,10 +62,10 @@ impl guestchain::Signature for Signature {
 			.map(Self)
 			.map_err(|_| guestchain::BadFormat)
 	}
-	
+
 	fn as_bytes(&self) -> alloc::borrow::Cow<'_, [u8]> {
-					todo!()
-			}
+		todo!()
+	}
 }
 
 impl borsh::BorshSerialize for Signature {

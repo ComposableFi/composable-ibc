@@ -18,8 +18,9 @@ use crate::{mock::LocalClientTypes, Chain};
 use futures::{future, StreamExt};
 use ibc::{
 	core::{
-		ics02_client::msgs::{
-			create_client::MsgCreateAnyClient, update_client::MsgUpdateAnyClient,
+		ics02_client::{
+			client_consensus::ConsensusState,
+			msgs::{create_client::MsgCreateAnyClient, update_client::MsgUpdateAnyClient},
 		},
 		ics03_connection::{connection::Counterparty, msgs::conn_open_init::MsgConnectionOpenInit},
 		ics04_channel,
@@ -36,7 +37,6 @@ use ibc::{
 };
 use ibc_proto::google::protobuf::Any;
 use std::{future::Future, thread::sleep, time::Duration};
-use ibc::core::ics02_client::client_consensus::ConsensusState;
 
 pub async fn timeout_future<T: Future>(future: T, secs: u64, reason: String) -> T::Output {
 	let duration = Duration::from_secs(secs);

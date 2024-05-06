@@ -22,8 +22,8 @@ use crate::{
 	ibc,
 	ibc::{proto::google::protobuf::Any, protobuf::Protobuf},
 };
-use ibc_proto::ibc::lightclients::wasm::v1::ClientState as RawClientState;
 use ::ibc::core::ics02_client::client_consensus::ConsensusState as ConsensusStateTrait;
+use ibc_proto::ibc::lightclients::wasm::v1::ClientState as RawClientState;
 
 type Result<T, E = crate::Error> = core::result::Result<T, E>;
 
@@ -102,7 +102,8 @@ impl ClientStates {
 		// 	code_id: wasm_state.code_id,
 		// 	latest_height: Some(wasm_state.latest_height.into()),
 		// };
-		// let wasm_client_state: ics08_wasm::client_state::ClientState<FakeInner, FakeInner, FakeInner> = ics08_wasm::client_state::ClientState::try_from(raw_client_state).unwrap();
+		// let wasm_client_state: ics08_wasm::client_state::ClientState<FakeInner, FakeInner,
+		// FakeInner> = ics08_wasm::client_state::ClientState::try_from(raw_client_state).unwrap();
 		self.0.set(&key, vec1.as_slice())
 	}
 }

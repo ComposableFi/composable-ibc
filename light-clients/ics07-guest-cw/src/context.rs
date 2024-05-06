@@ -119,7 +119,10 @@ impl<'a> Context<'a> {
 		consensus_states.insert_prefixed(height, encoded, prefix);
 	}
 
-	pub fn client_state_prefixed(&self, prefix: &[u8]) -> Result<ClientState<crate::crypto::PubKey>, ContractError> {
+	pub fn client_state_prefixed(
+		&self,
+		prefix: &[u8],
+	) -> Result<ClientState<crate::crypto::PubKey>, ContractError> {
 		let bytes =
 			ReadonlyClientStates::new(self.storage()).get_prefixed(prefix).ok_or_else(|| {
 				ContractError::Tendermint(format!("no client state found for prefix {prefix:?}",))
@@ -137,10 +140,9 @@ impl<'a> Context<'a> {
 		let data = client_states.get_prefixed(prefix).ok_or_else(|| {
 			ContractError::Tendermint("no client state found for prefix".to_string())
 		})?;
-		let encoded = Context::encode_client_state(client_state, data)
-			.map_err(|e| {
-				ContractError::Tendermint(format!("error encoding client state: {e:?}"))
-			})?;
+		let encoded = Context::encode_client_state(client_state, data).map_err(|e| {
+			ContractError::Tendermint(format!("error encoding client state: {e:?}"))
+		})?;
 		let mut client_states = ClientStates::new(self.storage_mut());
 		client_states.insert_prefixed(encoded, prefix);
 		Ok(())

@@ -300,7 +300,8 @@ impl<PK: PubKey> ClientState<PK> {
 
 	fn verify_header(&self, ctx: &impl guestchain::Verifier<PK>, header: Header<PK>) -> Result<()> {
 		(|| {
-			// panic!("header epoch {:?} and client epoch {:?}", header.epoch_commitment, self.epoch_commitment);
+			// panic!("header epoch {:?} and client epoch {:?}", header.epoch_commitment,
+			// self.epoch_commitment);
 			if header.epoch_commitment != self.epoch_commitment {
 				return Err("Unexpected epoch")
 			}

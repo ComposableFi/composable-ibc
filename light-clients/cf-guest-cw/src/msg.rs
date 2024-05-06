@@ -343,7 +343,10 @@ mod unit_test {
 	use ibc_proto::google::protobuf::Any;
 	use ics08_wasm::client_message::Header;
 
-	use crate::{fake_inner::FakeInner, state::{self, ConsensusState}};
+	use crate::{
+		fake_inner::FakeInner,
+		state::{self, ConsensusState},
+	};
 	use ::ibc::protobuf::Protobuf;
 	use prost::Message;
 
@@ -358,10 +361,8 @@ mod unit_test {
 			173, 242, 189, 16, 128, 244, 203, 147, 182, 138, 179, 222, 23, 16, 128, 244, 203, 147,
 			182, 138, 179, 222, 23,
 		];
-		let any = Any {
-			type_url: "/ibc.lightclients.wasm.v1.ConsensusState".to_string(),
-			value: data
-		};
+		let any =
+			Any { type_url: "/ibc.lightclients.wasm.v1.ConsensusState".to_string(), value: data };
 		let wasm_state =
 			ics08_wasm::consensus_state::ConsensusState::<FakeInner>::decode_vec(&any.value)
 				.unwrap();

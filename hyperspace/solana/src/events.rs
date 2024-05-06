@@ -426,7 +426,8 @@ pub async fn get_client_state_at_height(
 			// There can be only one client state event in a tx
 			let current_client_state = &client_state_events[0];
 			let any_client_state: solana_ibc::client_state::AnyClientState =
-				borsh::BorshDeserialize::try_from_slice(current_client_state.state.as_ref()).unwrap();
+				borsh::BorshDeserialize::try_from_slice(current_client_state.state.as_ref())
+					.unwrap();
 			log::info!("This is any client state {:?}", any_client_state);
 			return Some(any_client_state)
 		}
