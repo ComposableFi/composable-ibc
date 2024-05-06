@@ -166,13 +166,14 @@ impl IbcProvider for SolanaClient {
 		};
 		log::info!("This is client state {:?}", client_state);
 		let latest_cp_client_height = u64::from(client_state.latest_height);
-		let block_header = events::get_header_from_height(
+		let prev_block_header = events::get_header_from_height(
 			self.rpc_client(),
 			self.solana_ibc_program_id,
 			latest_cp_client_height,
 		)
 		.await
 		.expect(&format!("No block header found for height {:?}", latest_cp_client_height));
+
 		println!("This is counterparty client height {:?}", latest_cp_client_height);
 		let mut block_events: Vec<IbcEvent> = Vec::new();
 		let rpc_client = self.rpc_client();
@@ -181,7 +182,7 @@ impl IbcProvider for SolanaClient {
 			.await
 			.map_err(|e| Error::RpcError(format!("{:?}", e)))?;
 		for sig in sigs {
-			if sig.slot < u64::from(block_header.host_height) {
+			if sig.slot < u64::from(prev_block_header.host_height) {
 				break
 			}
 			let signature = Signature::from_str(&sig.signature).unwrap();
@@ -241,7 +242,9 @@ impl IbcProvider for SolanaClient {
 			.map(|(index, (validator, signature))| {
 				let validator_idx = all_validators
 					.iter()
-					.position(|v| v.pubkey == PubKey::from_bytes(&validator.to_bytes().as_slice()).unwrap())
+					.position(|v| {
+						v.pubkey == PubKey::from_bytes(&validator.to_bytes().as_slice()).unwrap()
+					})
 					.unwrap();
 				(validator_idx as u16, signature.clone())
 			})
@@ -283,7 +286,11 @@ impl IbcProvider for SolanaClient {
 			Any { type_url: msg.type_url(), value },
 			Height::new(1, finality_height),
 			block_events,
-			if events_len > 0 { UpdateType::Mandatory } else { UpdateType::Optional },
+			if (events_len > 0 || prev_block_header.epoch_id != block_header.epoch_id) {
+				UpdateType::Mandatory
+			} else {
+				UpdateType::Optional
+			},
 		);
 		Ok(vec![updates])
 	}
@@ -1813,7 +1820,8 @@ impl LightClientSync for SolanaClient {
 						let validator_idx = all_validators
 							.iter()
 							.position(|v| {
-								v.pubkey == PubKey::from_bytes(&validator.to_bytes().as_slice()).unwrap()
+								v.pubkey ==
+									PubKey::from_bytes(&validator.to_bytes().as_slice()).unwrap()
 							})
 							.unwrap();
 						(validator_idx as u16, signature.clone())
