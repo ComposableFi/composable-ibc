@@ -221,5 +221,11 @@ pub async fn create_channel(
 		got => panic!("Last event should be OpenConfirmChannel: {got:?}"),
 	};
 
+	let chain_a_common_client_config = chain_a.common_state_mut();
+	let chain_b_common_client_config = chain_b.common_state_mut();
+
+	chain_a_common_client_config.handshake_completed = true;
+	chain_b_common_client_config.handshake_completed = true;
+
 	Ok((channel_id_a, channel_id_b))
 }

@@ -310,6 +310,7 @@ where
 				ignored_timeouted_sequences: Arc::new(AsyncMutex::new(HashSet::new())),
 				client_update_interval: Duration::from_secs(1),
 				last_client_update_time: SystemTime::now(),
+				handshake_completed: false,
 			},
 			join_handles: Arc::new(TokioMutex::new(vec![ws_driver_jh])),
 		})

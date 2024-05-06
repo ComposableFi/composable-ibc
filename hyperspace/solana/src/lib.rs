@@ -407,12 +407,7 @@ deserialize consensus state"
 		log::info!("this is consensus state {:?}", consensus_state);
 		log::info!("This is inner any consensus state {:?}", inner_any);
 		let chain_account = self.get_chain_storage().await;
-		let existing_channels = self.query_channels().await.unwrap();
-		let whitelisted_channels = self.channel_whitelist();
-		let are_channels_created = existing_channels.iter().find(|(channel_id, port_id)| {
-			whitelisted_channels.get(&(channel_id.clone(), port_id.clone())).is_some()
-		});
-		let block_header = if are_channels_created.is_none() {
+		let block_header = if !self.common_state.handshake_completed {
 			log::info!("Fetching previous block header");
 			events::get_header_from_height(
 				self.rpc_client(),
@@ -477,12 +472,7 @@ deserialize client state"
 		// log::info!("This is inner any client state {:?}", inner_any);
 		let any_client_state = convert_new_client_state_to_old(client_state);
 		let chain_account = self.get_chain_storage().await;
-		let existing_channels = self.query_channels().await.unwrap();
-		let whitelisted_channels = self.channel_whitelist();
-		let are_channels_created = existing_channels.iter().find(|(channel_id, port_id)| {
-			whitelisted_channels.get(&(channel_id.clone(), port_id.clone())).is_some()
-		});
-		let block_header = if are_channels_created.is_none() {
+		let block_header = if !self.common_state.handshake_completed {
 			log::info!("Fetching previous block header");
 			events::get_header_from_height(
 				self.rpc_client(),
@@ -573,12 +563,7 @@ deserialize client state"
 			delay_period: inner_connection_end.delay_period().as_nanos() as u64,
 		};
 		let chain_account = self.get_chain_storage().await;
-		let existing_channels = self.query_channels().await.unwrap();
-		let whitelisted_channels = self.channel_whitelist();
-		let are_channels_created = existing_channels.iter().find(|(channel_id, port_id)| {
-			whitelisted_channels.get(&(channel_id.clone(), port_id.clone())).is_some()
-		});
-		let block_header = if are_channels_created.is_none() {
+		let block_header = if !self.common_state.handshake_completed {
 			log::info!("Fetching previous block header");
 			events::get_header_from_height(
 				self.rpc_client(),
@@ -655,12 +640,7 @@ deserialize client state"
 				.collect(),
 			version: inner_channel_end.version.to_string(),
 		};
-		let existing_channels = self.query_channels().await.unwrap();
-		let whitelisted_channels = self.channel_whitelist();
-		let are_channels_created = existing_channels.iter().find(|(channel_id, port_id)| {
-			whitelisted_channels.get(&(channel_id.clone(), port_id.clone())).is_some()
-		});
-		let block_header = if are_channels_created.is_none() {
+		let block_header = if !self.common_state.handshake_completed {
 			log::info!("Fetching previous block header");
 			events::get_header_from_height(
 				self.rpc_client(),

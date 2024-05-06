@@ -151,6 +151,11 @@ pub struct CommonClientState {
 	pub client_update_interval: Duration,
 	/// Last time when client was updated
 	pub last_client_update_time: SystemTime,
+	/// Flag which provides information if handshake is completed
+	/// 
+	/// Used to prevent finding proof for client state, connection state and channel state
+	/// once the handshake is completed.
+	pub handshake_completed: bool,
 }
 
 impl Default for CommonClientState {
@@ -166,6 +171,7 @@ impl Default for CommonClientState {
 			ignored_timeouted_sequences: Arc::new(Default::default()),
 			client_update_interval: Default::default(),
 			last_client_update_time: SystemTime::now(),
+			handshake_completed: false,
 		}
 	}
 }
@@ -182,6 +188,7 @@ impl CommonClientState {
 			ignored_timeouted_sequences: Arc::new(Default::default()),
 			client_update_interval: Duration::from_secs(config.client_update_interval_sec.into()),
 			last_client_update_time: SystemTime::now(),
+			handshake_completed: false,
 		}
 	}
 

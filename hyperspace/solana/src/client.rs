@@ -114,6 +114,11 @@ pub struct SolanaClient {
 	pub commitment_prefix: CommitmentPrefix,
 	/// Channels cleared for packet relay
 	pub channel_whitelist: Arc<Mutex<HashSet<(ChannelId, PortId)>>>,
+	/// Flag which provides information if handshake is completed
+	/// 
+	/// Used to prevent finding proof for client state, connection state and channel state
+	/// once the handshake is completed.
+	pub handshake_completed: Arc<Mutex<bool>>,
 }
 
 #[derive(std::fmt::Debug, Serialize, Deserialize, Clone)]
@@ -291,6 +296,7 @@ impl SolanaClient {
 			),
 			commitment_prefix: CommitmentPrefix::try_from(config.commitment_prefix).unwrap(),
 			channel_whitelist: Arc::new(Mutex::new(config.channel_whitelist.into_iter().collect())),
+			handshake_completed: Arc::new(Mutex::new(false))
 		})
 	}
 
