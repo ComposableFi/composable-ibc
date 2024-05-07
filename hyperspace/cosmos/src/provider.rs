@@ -105,8 +105,6 @@ pub struct TransactionId<Hash> {
 	pub hash: Hash,
 }
 
-const BLOCK_TIME_OF_SOLANA: u8 = 30;
-
 #[async_trait::async_trait]
 impl<H> IbcProvider for CosmosClient<H>
 where
@@ -159,11 +157,15 @@ where
 		let to = finality_event_height;
 		log::info!(target: "hyperspace_cosmos", "--------------------------Getting blocks {}..{}----------------------", from, to);
 
-		// let time_passed_since_last_update = latest_cp_time.duration_since(&last_update_time).unwrap_or_else(|| {
-		// 	log::warn!(target: "hyperspace_cosmos", "Last update time {last_update_time} > {latest_cp_time} (current time on the counterparty chain)", );
-		// 	Duration::from_secs(0)
+		// let time_passed_since_last_update =
+		// latest_cp_time.duration_since(&last_update_time).unwrap_or_else(|| { 	log::warn!(target:
+		// "hyperspace_cosmos", "Last update time {last_update_time} > {latest_cp_time} (current
+		// time on the counterparty chain)", ); 	Duration::from_secs(0)
 		// });
-		let time_passed_since_last_update = Duration::from_secs((latest_cp_height.revision_height - trusted_latest_h.revision_height) * BLOCK_TIME_OF_SOLANA as u64);
+		let time_passed_since_last_update = Duration::from_secs(
+			(latest_height.revision_height - trusted_latest_h.revision_height) *
+				self.expected_block_time().as_secs(),
+		);
 		let mut force_update_at = None;
 		// Force update if the finality event height is reached and the client was not
 		// updated for the trusting period / 2 to avoid client expiration
