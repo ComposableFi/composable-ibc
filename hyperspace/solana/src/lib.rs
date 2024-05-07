@@ -1985,23 +1985,18 @@ impl Chain for SolanaClient {
 			)
 			.unwrap();
 
-			let chunking_transactions: Vec<Transaction> =
-				if instruction_data.len() > 800 || !self.common_state.handshake_completed {
-					chunks.chunk_size = core::num::NonZeroU16::new(800).unwrap();
+			chunks.chunk_size = core::num::NonZeroU16::new(800).unwrap();
 
-					chunks
-						.map(|ix| {
-							Transaction::new_signed_with_payer(
-								&[ix],
-								Some(&authority.pubkey()),
-								&[&*authority],
-								blockhash,
-							)
-						})
-						.collect()
-				} else {
-					vec![]
-				};
+			let chunking_transactions: Vec<Transaction> = chunks
+				.map(|ix| {
+					Transaction::new_signed_with_payer(
+						&[ix],
+						Some(&authority.pubkey()),
+						&[&*authority],
+						blockhash,
+					)
+				})
+				.collect();
 
 			// for instruction in &mut chunks {
 			// 	let transaction = Transaction::new_signed_with_payer(
@@ -2014,8 +2009,6 @@ impl Chain for SolanaClient {
 			// 	// futures.push(x);
 			// 	println!("  Signature {sig}");
 			// }
-
-			let msg = message.clone();
 
 			let (signature_chunking_transactions, further_transactions) =
 				if let MsgEnvelope::Client(ClientMsg::UpdateClient(e)) = message {
@@ -2038,7 +2031,6 @@ impl Chain for SolanaClient {
 							port_id: e.packet.port_id_on_b,
 							channel_id: e.packet.chan_id_on_b,
 							receiver: packet_data.receiver.to_string(),
-							message: msg,
 						},
 						chunk_account,
 						max_tries,
@@ -2054,7 +2046,6 @@ impl Chain for SolanaClient {
 							port_id: e.packet.port_id_on_a,
 							channel_id: e.packet.chan_id_on_a,
 							sender_account: packet_data.sender.to_string(),
-							message: msg,
 						},
 						chunk_account,
 						max_tries,
@@ -2066,7 +2057,7 @@ impl Chain for SolanaClient {
 						serde_json::from_slice(&e.packet.data).unwrap();
 					let sender_account = Pubkey::from_str(&packet_data.sender.as_ref()).unwrap();
 					self.send_deliver(
-						DeliverIxType::Acknowledgement { sender: sender_account, message: msg },
+						DeliverIxType::Acknowledgement { sender: sender_account },
 						chunk_account,
 						max_tries,
 					)

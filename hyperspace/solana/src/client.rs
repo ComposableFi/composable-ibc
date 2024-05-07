@@ -69,18 +69,15 @@ pub enum DeliverIxType {
 		port_id: ibc_core_host_types::identifiers::PortId,
 		channel_id: ibc_core_host_types::identifiers::ChannelId,
 		receiver: String,
-		message: MsgEnvelope,
 	},
 	Timeout {
 		token: Coin<PrefixedDenom>,
 		port_id: ibc_core_host_types::identifiers::PortId,
 		channel_id: ibc_core_host_types::identifiers::ChannelId,
 		sender_account: String,
-		message: MsgEnvelope,
 	},
 	Acknowledgement {
 		sender: Pubkey,
-		message: MsgEnvelope,
 	},
 	Normal,
 }
@@ -612,13 +609,7 @@ deserialize consensus state"
 				// signature
 				Ok((signature_chunking_txs, vec![transactions]))
 			},
-			DeliverIxType::Recv {
-				ref token,
-				ref port_id,
-				ref channel_id,
-				ref receiver,
-				message,
-			} => {
+			DeliverIxType::Recv { ref token, ref port_id, ref channel_id, ref receiver } => {
 				log::info!(
 					"PortId: {:?} and channel {:?} and token {:?}",
 					port_id,
@@ -651,8 +642,7 @@ deserialize consensus state"
 					.instruction(ComputeBudgetInstruction::set_compute_unit_limit(2_000_000u32))
 					.instruction(ComputeBudgetInstruction::request_heap_frame(128 * 1024))
 					.instruction(ComputeBudgetInstruction::set_compute_unit_price(500000))
-					.accounts(
-						// solana_ibc::ix_data_account::Accounts::new(
+					.accounts(solana_ibc::ix_data_account::Accounts::new(
 						solana_ibc::accounts::Deliver {
 							sender: authority.pubkey(),
 							receiver: receiver_account,
@@ -667,9 +657,10 @@ deserialize consensus state"
 							receiver_token_account: receiver_address,
 							associated_token_program: Some(anchor_spl::associated_token::ID),
 							token_program: Some(anchor_spl::token::ID),
-						}, // chunk_account,
-					)
-					.args(solana_ibc::instruction::Deliver { message: message.clone() })
+						},
+						chunk_account,
+					))
+					.args(ix_data_account::Instruction)
 					.signer(&*authority)
 					.instructions()
 					.unwrap();
@@ -694,7 +685,6 @@ deserialize consensus state"
 				ref port_id,
 				ref channel_id,
 				ref sender_account,
-				message,
 			} => {
 				log::info!(
 					"PortId: {:?} and channel {:?} and token {:?}",
@@ -727,8 +717,7 @@ deserialize consensus state"
 					.instruction(ComputeBudgetInstruction::set_compute_unit_limit(2_000_000u32))
 					.instruction(ComputeBudgetInstruction::request_heap_frame(128 * 1024))
 					.instruction(ComputeBudgetInstruction::set_compute_unit_price(500000))
-					.accounts(
-						// solana_ibc::ix_data_account::Accounts::new(
+					.accounts(solana_ibc::ix_data_account::Accounts::new(
 						solana_ibc::accounts::Deliver {
 							sender: authority.pubkey(),
 							receiver: sender_account,
@@ -744,10 +733,9 @@ deserialize consensus state"
 							associated_token_program: Some(anchor_spl::associated_token::ID),
 							token_program: Some(anchor_spl::token::ID),
 						},
-						// chunk_account,
-						// )
-					)
-					.args(solana_ibc::instruction::Deliver { message: message.clone() })
+						chunk_account,
+					))
+					.args(ix_data_account::Instruction)
 					.signer(&*authority)
 					.instructions()
 					.unwrap();
@@ -767,7 +755,7 @@ deserialize consensus state"
 				// 	ibc::prelude::Err("Error".to_owned())
 				// })
 			},
-			DeliverIxType::Acknowledgement { sender, message } => {
+			DeliverIxType::Acknowledgement { sender } => {
 				let ix = program
 					.request()
 					.instruction(ComputeBudgetInstruction::set_compute_unit_limit(2_000_000u32))
