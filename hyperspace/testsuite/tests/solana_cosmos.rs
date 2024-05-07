@@ -205,12 +205,12 @@ async fn setup_clients() -> (AnyChain, AnyChain) {
 	// 	return (chain_a_wrapped, chain_b_wrapped)
 	// }
 
-	let (client_a, client_b) =
-		create_clients(&mut chain_a_wrapped, &mut chain_b_wrapped).await.unwrap();
-	chain_a_wrapped.set_client_id(client_a);
-	chain_b_wrapped.set_client_id(client_b);
-	// chain_b_wrapped.set_client_id(ClientId::new("07-tendermint", 0).unwrap());
-	// chain_a_wrapped.set_client_id(ClientId::new("08-wasm", 1).unwrap());
+	// let (client_a, client_b) =
+	// 	create_clients(&mut chain_a_wrapped, &mut chain_b_wrapped).await.unwrap();
+	// chain_a_wrapped.set_client_id(client_a);
+	// chain_b_wrapped.set_client_id(client_b);
+	chain_b_wrapped.set_client_id(ClientId::new("07-tendermint", 0).unwrap());
+	chain_a_wrapped.set_client_id(ClientId::new("08-wasm", 0).unwrap());
 	(chain_a_wrapped, chain_b_wrapped)
 }
 

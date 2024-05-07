@@ -1951,6 +1951,8 @@ impl Chain for SolanaClient {
 		let mut signature = String::new();
 		let rpc = program.async_rpc();
 
+		let mut all_transactions = Vec::new();
+
 		for message in messages {
 			let storage = self.get_ibc_storage().await;
 			let client_stores = &storage.clients;
@@ -1979,24 +1981,27 @@ impl Chain for SolanaClient {
 				&self.write_program_id,
 				authority.pubkey(),
 				WRITE_ACCOUNT_SEED,
-				instruction_data,
+				instruction_data.clone(),
 			)
 			.unwrap();
 
-			chunks.chunk_size = core::num::NonZeroU16::new(800).unwrap();
+			let chunking_transactions: Vec<Transaction> =
+				if instruction_data.len() > 800 || !self.common_state.handshake_completed {
+					chunks.chunk_size = core::num::NonZeroU16::new(800).unwrap();
 
-			let instructions: Vec<Transaction> = chunks
-				.map(|ix| {
-					Transaction::new_signed_with_payer(
-						&[ix],
-						Some(&authority.pubkey()),
-						&[&*authority],
-						blockhash,
-					)
-				})
-				.collect();
-
-			let futures = instructions.iter().map(|tx| rpc.send_and_confirm_transaction(tx));
+					chunks
+						.map(|ix| {
+							Transaction::new_signed_with_payer(
+								&[ix],
+								Some(&authority.pubkey()),
+								&[&*authority],
+								blockhash,
+							)
+						})
+						.collect()
+				} else {
+					vec![]
+				};
 
 			// for instruction in &mut chunks {
 			// 	let transaction = Transaction::new_signed_with_payer(
@@ -2009,13 +2014,12 @@ impl Chain for SolanaClient {
 			// 	// futures.push(x);
 			// 	println!("  Signature {sig}");
 			// }
-			let signatures = join_all(futures).await;
-			for sig in signatures {
-				println!("  Message Chunking Signature {:?}", sig);
-			}
-			if let MsgEnvelope::Client(ClientMsg::UpdateClient(e)) = message {
-				signature = self
-					.send_deliver(
+
+			let msg = message.clone();
+
+			let (signature_chunking_transactions, further_transactions) =
+				if let MsgEnvelope::Client(ClientMsg::UpdateClient(e)) = message {
+					self.send_deliver(
 						DeliverIxType::UpdateClient {
 							client_message: e.client_message,
 							client_id: e.client_id,
@@ -2023,56 +2027,125 @@ impl Chain for SolanaClient {
 						chunk_account,
 						max_tries,
 					)
-					.await?;
-				msg!("Packet Update Signature {:?}", signature);
-			} else if let MsgEnvelope::Packet(PacketMsg::Recv(e)) = message {
-				let packet_data: ibc_app_transfer_types::packet::PacketData =
-					serde_json::from_slice(&e.packet.data).unwrap();
-				signature = self
-					.send_deliver(
+					.await?
+				// msg!("Packet Update Signature {:?}", signature);
+				} else if let MsgEnvelope::Packet(PacketMsg::Recv(e)) = message {
+					let packet_data: ibc_app_transfer_types::packet::PacketData =
+						serde_json::from_slice(&e.packet.data).unwrap();
+					self.send_deliver(
 						DeliverIxType::Recv {
 							token: packet_data.token,
 							port_id: e.packet.port_id_on_b,
 							channel_id: e.packet.chan_id_on_b,
 							receiver: packet_data.receiver.to_string(),
+							message: msg,
 						},
 						chunk_account,
 						max_tries,
 					)
-					.await?;
-				msg!("Packet Recv Signature {:?}", signature);
-			} else if let MsgEnvelope::Packet(PacketMsg::Timeout(e)) = message {
-				let packet_data: ibc_app_transfer_types::packet::PacketData =
-					serde_json::from_slice(&e.packet.data).unwrap();
-				signature = self
-					.send_deliver(
+					.await?
+				// msg!("Packet Recv Signature {:?}", signature);
+				} else if let MsgEnvelope::Packet(PacketMsg::Timeout(e)) = message {
+					let packet_data: ibc_app_transfer_types::packet::PacketData =
+						serde_json::from_slice(&e.packet.data).unwrap();
+					self.send_deliver(
 						DeliverIxType::Timeout {
 							token: packet_data.token,
 							port_id: e.packet.port_id_on_a,
 							channel_id: e.packet.chan_id_on_a,
 							sender_account: packet_data.sender.to_string(),
+							message: msg,
 						},
 						chunk_account,
 						max_tries,
 					)
-					.await?;
-				msg!("Packet Timeout Signature {:?}", signature);
-			} else if let MsgEnvelope::Packet(PacketMsg::Ack(e)) = message {
-				let packet_data: ibc_app_transfer_types::packet::PacketData =
-					serde_json::from_slice(&e.packet.data).unwrap();
-				let sender_account = Pubkey::from_str(&packet_data.sender.as_ref()).unwrap();
-				signature = self
-					.send_deliver(
-						DeliverIxType::Acknowledgement { sender: sender_account },
+					.await?
+				// msg!("Packet Timeout Signature {:?}", signature);
+				} else if let MsgEnvelope::Packet(PacketMsg::Ack(e)) = message {
+					let packet_data: ibc_app_transfer_types::packet::PacketData =
+						serde_json::from_slice(&e.packet.data).unwrap();
+					let sender_account = Pubkey::from_str(&packet_data.sender.as_ref()).unwrap();
+					self.send_deliver(
+						DeliverIxType::Acknowledgement { sender: sender_account, message: msg },
 						chunk_account,
 						max_tries,
 					)
-					.await?;
-				msg!("Packet Acknowledgement Signature {:?}", signature);
+					.await?
+				// msg!("Packet Acknowledgement Signature {:?}", signature);
+				} else {
+					// signature =
+					self.send_deliver(DeliverIxType::Normal, chunk_account, max_tries).await?
+					// msg!("Packet Normal Signature {:?}", signature);
+				};
+			// transactions.extend(further_transactions);
+			// log::info!("Chunking tx {:?}", chunking_transactions);
+			// log::info!("Complete tx {:?}", further_transactions);
+			// let message_chunking_futures =
+			// 	further_transactions.iter().map(|tx| rpc.send_and_confirm_transaction(tx));
+			if chunking_transactions.is_empty() {
+				all_transactions.extend(further_transactions);
 			} else {
-				signature =
-					self.send_deliver(DeliverIxType::Normal, chunk_account, max_tries).await?;
-				msg!("Packet Normal Signature {:?}", signature);
+				let message_chunking_futures =
+					chunking_transactions.iter().map(|tx| rpc.send_and_confirm_transaction(tx));
+				let futures = join_all(message_chunking_futures).await;
+				for sig in futures {
+					println!("  Chunking Signature {:?}", sig);
+					signature = sig.unwrap().to_string();
+				}
+				if !signature_chunking_transactions.is_empty() {
+					let signature_chunking_futures = signature_chunking_transactions
+						.iter()
+						.map(|tx| rpc.send_and_confirm_transaction(tx));
+					let futures = join_all(signature_chunking_futures).await;
+					for sig in futures {
+						println!("  Signature chunking Signature {:?}", sig);
+						signature = sig.unwrap().to_string();
+					}
+				}
+				if !further_transactions.is_empty() {
+					let further_transactions_futures =
+						further_transactions.iter().map(|tx| rpc.send_and_confirm_transaction(tx));
+					let futures = join_all(further_transactions_futures).await;
+					for sig in futures {
+						println!("  Completed Signature {:?}", sig);
+						let blockhash = rpc.get_latest_blockhash().await.unwrap();
+						// Wait for finalizing the transaction
+						let _ = rpc
+							.confirm_transaction_with_spinner(
+								&sig.as_ref().unwrap(),
+								&blockhash,
+								CommitmentConfig::finalized(),
+							)
+							.await
+							.unwrap();
+						signature = sig.unwrap().to_string();
+					}
+				}
+			}
+
+			// let signatures = join_all(futures).await;
+			// for sig in signatures {
+			// 	println!("  Signature {:?}", sig);
+			// 	signature = sig.unwrap().to_string();
+			// }
+		}
+		if !all_transactions.is_empty() {
+			let all_transactions_futures =
+				all_transactions.iter().map(|tx| rpc.send_and_confirm_transaction(tx));
+			let futures = join_all(all_transactions_futures).await;
+			for sig in futures {
+				println!(" Without chunking Signature {:?}", sig);
+				// let blockhash = rpc.get_latest_blockhash().await.unwrap();
+				// // Wait for finalizing the transaction
+				// let _ = rpc
+				// 	.confirm_transaction_with_spinner(
+				// 		&sig.as_ref().unwrap(),
+				// 		&blockhash,
+				// 		CommitmentConfig::finalized(),
+				// 	)
+				// 	.await
+				// 	.unwrap();
+				signature = sig.unwrap().to_string();
 			}
 		}
 		Ok(signature)
