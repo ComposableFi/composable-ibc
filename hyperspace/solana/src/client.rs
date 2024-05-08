@@ -288,7 +288,10 @@ impl SolanaClient {
 			write_program_id: Pubkey::from_str(&config.write_program_id).unwrap(),
 			signature_verifier_program_id: Pubkey::from_str(&config.signature_verifier_program_id)
 				.unwrap(),
-			common_state: CommonClientState::default(),
+			common_state: CommonClientState {
+				handshake_completed: config.common_state_config.handshake_completed,
+				..Default::default()
+			},
 			client_type: "07-tendermint".to_string(),
 			last_searched_sig_for_send_packets: Arc::new(
 				tokio::sync::Mutex::new(String::default()),
