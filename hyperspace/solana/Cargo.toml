@@ -44,8 +44,8 @@ borsh = { version = "0.10.3", default-features = false }
 bytemuck = { version = "1.14", default-features = false }
 reqwest = "0.11.24"
 futures-util = "0.3.28"
-jito-searcher-client = { path = "../../../searcher-examples/searcher_client" }
-jito-protos = { path = "../../../searcher-examples/jito_protos" }
+jito-searcher-client = { git = "https://github.com/dhruvja/searcher-examples" }
+jito-protos = { git = "https://github.com/dhruvja/searcher-examples" }
 prost-types = "0.12"
 solana-metrics = "=1.17.30"
 
