@@ -77,7 +77,6 @@ pub async fn parse_events(
 		}
 		match event {
 			IbcEvent::OpenInitConnection(open_init) => {
-				continue;
 				if let Some(connection_id) = open_init.connection_id() {
 					log::info!("I am in open init connection with open init {:?}", open_init);
 					let connection_id = connection_id.clone();
@@ -508,10 +507,6 @@ pub async fn parse_events(
 				// 3. otherwise skip.
 				let port_id = send_packet.packet.source_port.clone();
 				let channel_id = send_packet.packet.source_channel;
-				if channel_id == ibc::core::ics24_host::identifier::ChannelId::new(0) {
-					log::info!("Skipping packet since its not in whitelist {:?}", channel_id);
-					continue
-				}
 				let channel_response = source
 					.query_channel_end(send_packet.height, channel_id, port_id.clone())
 					.await?;
