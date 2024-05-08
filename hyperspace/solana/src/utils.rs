@@ -96,3 +96,27 @@ pub fn new_ed25519_instruction_with_signature(
 pub fn ed25519_signature_payload(entries: Vec<Entry>) -> Option<Instruction> {
 	new_instruction(&entries)
 }
+
+
+/// Displays the error if present, waits for few seconds and
+/// retries execution.
+///
+/// The error is usually due to load on rpc which is solved
+/// by waiting a few seconds.
+#[macro_export]
+macro_rules! skip_fail {
+	($res:expr) => {
+			match $res {
+					Ok(val) => val,
+					Err(e) => {
+							use crate::Duration;
+							use std::thread::sleep;
+							log::error!("{:?}", e);
+							sleep(Duration::from_secs(2));
+							continue;
+					}
+			}
+	};
+}
+
+pub(crate) use skip_fail;

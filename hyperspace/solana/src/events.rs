@@ -42,6 +42,8 @@ use ibc::{
 };
 use pallet_ibc::light_clients::Signature;
 
+use crate::utils::skip_fail;
+
 pub fn convert_new_event_to_old(
 	event: ibc_core_handler_types::events::IbcEvent,
 	height: Height,
@@ -671,14 +673,19 @@ pub async fn get_previous_transactions(
 	}
 	let url = rpc.url();
 	tokio::task::spawn_blocking(move || {
-		let transactions: Vec<Response> = reqwest::blocking::Client::new()
-			.post(url)
-			.json(&body)
-			.send()
-			.unwrap()
-			.json()
-			.unwrap();
-		(transactions, last_searched_hash)
+		for _ in 0..5 {
+			let response: std::result::Result<Vec<Response>, reqwest::Error> =
+				reqwest::blocking::Client::new()
+					.post(url.clone())
+					.json(&body)
+					.send()
+					.unwrap()
+					.json();
+			let transactions = skip_fail!(response);
+			return (transactions, last_searched_hash)
+		}
+		log::error!("Couldnt get transactions after 5 retries");
+		(vec![], "".to_string())
 	})
 	.await
 	.unwrap()
