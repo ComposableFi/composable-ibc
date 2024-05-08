@@ -510,17 +510,15 @@ deserialize consensus state"
 					}
 					let ix = program
 						.request()
+						.instruction(ComputeBudgetInstruction::set_compute_unit_limit(100_000))
+						.instruction(ComputeBudgetInstruction::set_compute_unit_price(50_000))
 						.instruction(new_instruction(entries.as_slice()).unwrap())
 						.instruction(instruction)
 						.instructions()
 						.unwrap();
 					let blockhash = rpc.get_latest_blockhash().await.unwrap();
-					let transactions = Transaction::new_signed_with_payer(
-						ix.as_slice(),
-						Some(&authority.pubkey()),
-						&[&*authority],
-						blockhash,
-					);
+					let transactions =
+						Transaction::new_with_payer(ix.as_slice(), Some(&authority.pubkey()));
 					signature_chunking_txs.push(transactions);
 					// .send()
 					// .await
@@ -541,7 +539,7 @@ deserialize consensus state"
 					.request()
 					.instruction(ComputeBudgetInstruction::set_compute_unit_limit(2_000_000u32))
 					.instruction(ComputeBudgetInstruction::request_heap_frame(256 * 1024))
-					.instruction(ComputeBudgetInstruction::set_compute_unit_price(500000))
+					.instruction(ComputeBudgetInstruction::set_compute_unit_price(50_000))
 					.accounts(solana_ibc::accounts::Deliver {
 						sender: authority.pubkey(),
 						receiver: Some(self.solana_ibc_program_id),
@@ -570,12 +568,8 @@ deserialize consensus state"
 					.instructions()
 					.unwrap();
 				let blockhash = rpc.get_latest_blockhash().await.unwrap();
-				let transactions = Transaction::new_signed_with_payer(
-					ix.as_slice(),
-					Some(&authority.pubkey()),
-					&[&*authority],
-					blockhash,
-				);
+				let transactions =
+					Transaction::new_with_payer(ix.as_slice(), Some(&authority.pubkey()));
 				// .send()
 				// .await
 				// .or_else(|e| {
@@ -598,7 +592,14 @@ deserialize consensus state"
 					&data,
 					accounts,
 				);
-				let tx = program.request().instruction(instruction).transaction().unwrap();
+				let tx = program
+					.request()
+					.instruction(ComputeBudgetInstruction::set_compute_unit_limit(100_000))
+					.instruction(ComputeBudgetInstruction::set_compute_unit_price(50_000))
+					.instruction(instruction)
+					.payer(authority)
+					.transaction()
+					.unwrap();
 				// .send()
 				// .await.or_else(|e| {
 				// 	println!("This is error {:?}", e);
@@ -607,7 +608,7 @@ deserialize consensus state"
 				// });
 				// log::info!("This is signature for freeing signature {:?}", sig);
 				// signature
-				Ok((signature_chunking_txs, vec![transactions]))
+				Ok((signature_chunking_txs, vec![transactions, tx]))
 			},
 			DeliverIxType::Recv { ref token, ref port_id, ref channel_id, ref receiver } => {
 				log::info!(
@@ -665,12 +666,8 @@ deserialize consensus state"
 					.instructions()
 					.unwrap();
 				let blockhash = rpc.get_latest_blockhash().await.unwrap();
-				let transactions = Transaction::new_signed_with_payer(
-					ix.as_slice(),
-					Some(&authority.pubkey()),
-					&[&*authority],
-					blockhash,
-				);
+				let transactions =
+					Transaction::new_with_payer(ix.as_slice(), Some(&authority.pubkey()));
 				Ok((vec![], vec![transactions]))
 				// .send()
 				// .await
@@ -716,7 +713,7 @@ deserialize consensus state"
 					.request()
 					.instruction(ComputeBudgetInstruction::set_compute_unit_limit(2_000_000u32))
 					.instruction(ComputeBudgetInstruction::request_heap_frame(128 * 1024))
-					.instruction(ComputeBudgetInstruction::set_compute_unit_price(500000))
+					.instruction(ComputeBudgetInstruction::set_compute_unit_price(50_000))
 					.accounts(solana_ibc::ix_data_account::Accounts::new(
 						solana_ibc::accounts::Deliver {
 							sender: authority.pubkey(),
@@ -740,12 +737,8 @@ deserialize consensus state"
 					.instructions()
 					.unwrap();
 				let blockhash = rpc.get_latest_blockhash().await.unwrap();
-				let transactions = Transaction::new_signed_with_payer(
-					ix.as_slice(),
-					Some(&authority.pubkey()),
-					&[&*authority],
-					blockhash,
-				);
+				let transactions =
+					Transaction::new_with_payer(ix.as_slice(), Some(&authority.pubkey()));
 				Ok((vec![], vec![transactions]))
 				// .send()
 				// .await
@@ -760,7 +753,7 @@ deserialize consensus state"
 					.request()
 					.instruction(ComputeBudgetInstruction::set_compute_unit_limit(2_000_000u32))
 					.instruction(ComputeBudgetInstruction::request_heap_frame(128 * 1024))
-					.instruction(ComputeBudgetInstruction::set_compute_unit_price(500000))
+					.instruction(ComputeBudgetInstruction::set_compute_unit_price(50_000))
 					.accounts(solana_ibc::ix_data_account::Accounts::new(
 						solana_ibc::accounts::Deliver {
 							sender: authority.pubkey(),
@@ -785,12 +778,8 @@ deserialize consensus state"
 					.instructions()
 					.unwrap();
 				let blockhash = rpc.get_latest_blockhash().await.unwrap();
-				let transactions = Transaction::new_signed_with_payer(
-					ix.as_slice(),
-					Some(&authority.pubkey()),
-					&[&*authority],
-					blockhash,
-				);
+				let transactions =
+					Transaction::new_with_payer(ix.as_slice(), Some(&authority.pubkey()));
 				Ok((vec![], vec![transactions]))
 				// .send()
 				// .await
@@ -801,11 +790,18 @@ deserialize consensus state"
 				// })
 			},
 			DeliverIxType::Normal => {
+				let jito_address =
+					Pubkey::from_str("96gYZGLnJYVFmbjzopPSU6QiEV5fGqZNyN9nmNhvrZU5").unwrap();
 				let ix = program
 					.request()
+					// 	.instruction(anchor_lang::solana_program::system_instruction::transfer(
+					//     &authority.pubkey(),
+					//     &jito_address,
+					//     400000,
+					// ))
 					.instruction(ComputeBudgetInstruction::set_compute_unit_limit(2_000_000u32))
 					.instruction(ComputeBudgetInstruction::request_heap_frame(128 * 1024))
-					.instruction(ComputeBudgetInstruction::set_compute_unit_price(500000))
+					.instruction(ComputeBudgetInstruction::set_compute_unit_price(50_000))
 					.accounts(solana_ibc::ix_data_account::Accounts::new(
 						solana_ibc::accounts::Deliver {
 							sender: authority.pubkey(),
@@ -831,12 +827,8 @@ deserialize consensus state"
 					.unwrap();
 
 				let blockhash = rpc.get_latest_blockhash().await.unwrap();
-				let transactions = Transaction::new_signed_with_payer(
-					ix.as_slice(),
-					Some(&authority.pubkey()),
-					&[&*authority],
-					blockhash,
-				);
+				let transactions =
+					Transaction::new_with_payer(ix.as_slice(), Some(&authority.pubkey()));
 				Ok((vec![], vec![transactions]))
 				// .send_with_spinner_and_config(RpcSendTransactionConfig {
 				// 	skip_preflight: true,

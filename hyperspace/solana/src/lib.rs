@@ -1,7 +1,15 @@
 #![feature(more_qualified_paths)]
 extern crate alloc;
 
-use anchor_client::{solana_client::rpc_client::RpcClient, solana_sdk::transaction::Transaction};
+use anchor_client::{
+	solana_client::{rpc_client::RpcClient, rpc_config::RpcSendTransactionConfig},
+	solana_sdk::{
+		compute_budget::ComputeBudgetInstruction,
+		instruction::Instruction,
+		system_instruction::transfer,
+		transaction::{Transaction, VersionedTransaction},
+	},
+};
 use anchor_spl::associated_token::get_associated_token_address;
 use client::FinalityEvent;
 use client_state::convert_new_client_state_to_old;
@@ -17,8 +25,9 @@ use ics07_tendermint::{
 	consensus_state::ConsensusState as TmConsensusState,
 };
 use msgs::convert_old_msgs_to_new;
+use serde::{Deserialize, Serialize};
 use solana_transaction_status::UiTransactionEncoding;
-use std::{num::NonZeroU128, ops::Deref, thread::sleep};
+use std::{num::NonZeroU128, ops::Deref, thread::sleep, time::Instant};
 use tendermint::{Hash, Time};
 use tendermint_proto::Protobuf;
 use tokio::{
@@ -73,6 +82,15 @@ use ibc_proto::{
 		},
 	},
 };
+use jito_protos::{
+	convert::versioned_tx_from_packet,
+	searcher::{
+		mempool_subscription, searcher_service_client::SearcherServiceClient,
+		ConnectedLeadersRegionedRequest, GetTipAccountsRequest, MempoolSubscription,
+		NextScheduledLeaderRequest, PendingTxNotification, ProgramSubscriptionV0,
+		SubscribeBundleResultsRequest, WriteLockedAccountSubscriptionV0,
+	},
+};
 use lib::hash::CryptoHash;
 use pallet_ibc::light_clients::{AnyClientMessage, AnyClientState, AnyConsensusState};
 use primitives::{
@@ -98,6 +116,7 @@ mod client_state;
 mod consensus_state;
 mod error;
 mod events;
+// mod jito;
 mod msgs;
 #[cfg(feature = "testing")]
 mod test_provider;
@@ -109,6 +128,9 @@ const CHAIN_SEED: &[u8] = b"chain";
 pub const NUMBER_OF_BLOCKS_TO_PROCESS_PER_ITER: u64 = 250;
 pub const WRITE_ACCOUNT_SEED: &[u8] = b"write";
 pub const SIGNATURE_ACCOUNT_SEED: &[u8] = b"signature";
+
+pub const BLOCK_ENGINE_URL: &str = "https://mainnet.block-engine.jito.wtf";
+pub const TRANSACTION_TYPE: &str = "JITO"; // JITO/RPC
 
 pub const MIN_TIME_UNTIL_UPDATE: u64 = 30 * 60; // 30 mins
 
@@ -285,6 +307,7 @@ impl IbcProvider for SolanaClient {
 		let events_len = block_events.len();
 		let time_since_last_update =
 			u64::from(block_header.timestamp_ns) - u64::from(prev_block_header.timestamp_ns);
+		log::info!("TIme since last update on solana {}", time_since_last_update / 1_000_000_000);
 		if time_since_last_update > MIN_TIME_UNTIL_UPDATE * 1_000_000_000 {
 			log::info!("--------------------------PURPOSE UPDATE------------------------");
 		} else {
@@ -1975,8 +1998,6 @@ impl Chain for SolanaClient {
 
 			let max_tries = 5;
 
-			let blockhash = rpc.get_latest_blockhash().await.unwrap();
-
 			let (mut chunks, chunk_account, _) = write::instruction::WriteIter::new(
 				&self.write_program_id,
 				authority.pubkey(),
@@ -1987,13 +2008,15 @@ impl Chain for SolanaClient {
 
 			chunks.chunk_size = core::num::NonZeroU16::new(800).unwrap();
 
+			let compute_budget_ix = ComputeBudgetInstruction::set_compute_unit_limit(30_000);
+			let compute_unit_price_ix =
+				ComputeBudgetInstruction::set_compute_unit_price(10_000_001);
+
 			let chunking_transactions: Vec<Transaction> = chunks
 				.map(|ix| {
-					Transaction::new_signed_with_payer(
-						&[ix],
+					Transaction::new_with_payer(
+						&[compute_budget_ix.clone(), compute_unit_price_ix.clone(), ix],
 						Some(&authority.pubkey()),
-						&[&*authority],
-						blockhash,
 					)
 				})
 				.collect();
@@ -2073,46 +2096,50 @@ impl Chain for SolanaClient {
 			// log::info!("Complete tx {:?}", further_transactions);
 			// let message_chunking_futures =
 			// 	further_transactions.iter().map(|tx| rpc.send_and_confirm_transaction(tx));
-			if chunking_transactions.is_empty() {
-				all_transactions.extend(further_transactions);
-			} else {
-				let message_chunking_futures =
-					chunking_transactions.iter().map(|tx| rpc.send_and_confirm_transaction(tx));
-				let futures = join_all(message_chunking_futures).await;
-				for sig in futures {
-					println!("  Chunking Signature {:?}", sig);
-					signature = sig.unwrap().to_string();
-				}
-				if !signature_chunking_transactions.is_empty() {
-					let signature_chunking_futures = signature_chunking_transactions
-						.iter()
-						.map(|tx| rpc.send_and_confirm_transaction(tx));
-					let futures = join_all(signature_chunking_futures).await;
-					for sig in futures {
-						println!("  Signature chunking Signature {:?}", sig);
-						signature = sig.unwrap().to_string();
-					}
-				}
-				if !further_transactions.is_empty() {
-					let further_transactions_futures =
-						further_transactions.iter().map(|tx| rpc.send_and_confirm_transaction(tx));
-					let futures = join_all(further_transactions_futures).await;
-					for sig in futures {
-						println!("  Completed Signature {:?}", sig);
-						let blockhash = rpc.get_latest_blockhash().await.unwrap();
-						// Wait for finalizing the transaction
-						let _ = rpc
-							.confirm_transaction_with_spinner(
-								&sig.as_ref().unwrap(),
-								&blockhash,
-								CommitmentConfig::finalized(),
-							)
-							.await
-							.unwrap();
-						signature = sig.unwrap().to_string();
-					}
-				}
-			}
+			// if chunking_transactions.is_empty() {
+			// 	all_transactions.extend(further_transactions);
+			// } else {
+			// 	let message_chunking_futures =
+			// 		chunking_transactions.iter().map(|tx| rpc.send_and_confirm_transaction(tx));
+			// 	let futures = join_all(message_chunking_futures).await;
+			// 	for sig in futures {
+			// 		println!("  Chunking Signature {:?}", sig);
+			// 		signature = sig.unwrap().to_string();
+			// 	}
+			// 	if !signature_chunking_transactions.is_empty() {
+			// 		let signature_chunking_futures = signature_chunking_transactions
+			// 			.iter()
+			// 			.map(|tx| rpc.send_and_confirm_transaction(tx));
+			// 		let futures = join_all(signature_chunking_futures).await;
+			// 		for sig in futures {
+			// 			println!("  Signature chunking Signature {:?}", sig);
+			// 			signature = sig.unwrap().to_string();
+			// 		}
+			// 	}
+			// 	if !further_transactions.is_empty() {
+			// 		let further_transactions_futures =
+			// 			further_transactions.iter().map(|tx| rpc.send_and_confirm_transaction(tx));
+			// 		let futures = join_all(further_transactions_futures).await;
+			// 		for sig in futures {
+			// 			println!("  Completed Signature {:?}", sig);
+			// 			let blockhash = rpc.get_latest_blockhash().await.unwrap();
+			// 			// Wait for finalizing the transaction
+			// 			let _ = rpc
+			// 				.confirm_transaction_with_spinner(
+			// 					&sig.as_ref().unwrap(),
+			// 					&blockhash,
+			// 					CommitmentConfig::finalized(),
+			// 				)
+			// 				.await
+			// 				.unwrap();
+			// 			signature = sig.unwrap().to_string();
+			// 		}
+			// 	}
+			// }
+
+			all_transactions.extend(chunking_transactions);
+			all_transactions.extend(signature_chunking_transactions);
+			all_transactions.extend(further_transactions);
 
 			// let signatures = join_all(futures).await;
 			// for sig in signatures {
@@ -2120,25 +2147,208 @@ impl Chain for SolanaClient {
 			// 	signature = sig.unwrap().to_string();
 			// }
 		}
-		if !all_transactions.is_empty() {
-			let all_transactions_futures =
-				all_transactions.iter().map(|tx| rpc.send_and_confirm_transaction(tx));
-			let futures = join_all(all_transactions_futures).await;
-			for sig in futures {
-				println!(" Without chunking Signature {:?}", sig);
-				// let blockhash = rpc.get_latest_blockhash().await.unwrap();
-				// // Wait for finalizing the transaction
-				// let _ = rpc
-				// 	.confirm_transaction_with_spinner(
-				// 		&sig.as_ref().unwrap(),
-				// 		&blockhash,
-				// 		CommitmentConfig::finalized(),
-				// 	)
-				// 	.await
-				// 	.unwrap();
-				signature = sig.unwrap().to_string();
+
+		if TRANSACTION_TYPE == "RPC" {
+			let length = all_transactions.len();
+			log::info!("Total transactions {:?}", length);
+			let start_time = Instant::now();
+			for mut transaction in all_transactions {
+				let mut tries = 0;
+				let before_time = Instant::now();
+				loop {
+					sleep(Duration::from_secs(1));
+					log::info!("Current Try: {}", tries);
+					let blockhash = rpc.get_latest_blockhash().await.unwrap();
+					transaction.sign(&[&*authority], blockhash);
+					let sig = rpc
+						.send_transaction_with_config(
+							&transaction,
+							RpcSendTransactionConfig {
+								skip_preflight: true,
+								max_retries: Some(0),
+								..RpcSendTransactionConfig::default()
+							},
+						)
+						.await;
+
+					if let Ok(si) = sig {
+						signature = si.to_string();
+						// Wait for finalizing the transaction
+						let mut success = false;
+						// let blockhash = rpc.get_latest_blockhash().await.unwrap();
+						for status_retry in 0..usize::MAX {
+							match rpc.get_signature_status(&si).await.unwrap() {
+								Some(Ok(_)) => {
+									log::info!("  Signature {:?}", si);
+									success = true;
+									break
+								},
+								Some(Err(e)) => {
+									log::error!("Error while sending the transaction {:?}", e);
+									success = true;
+									break
+								},
+								None => {
+									if !rpc
+										.is_blockhash_valid(
+											&blockhash,
+											CommitmentConfig::processed(),
+										)
+										.await
+										.unwrap()
+									{
+										// Block hash is not found by some reason
+										log::error!("Blockhash not found");
+										success = false;
+										break
+									} else if status_retry < usize::MAX {
+										// Retry twice a second
+										sleep(Duration::from_millis(500));
+										continue
+									}
+								},
+							}
+						}
+						if !success {
+							tries += 1;
+							continue
+						}
+						break
+					} else {
+						log::error!("Error {:?}", sig);
+						tries += 1;
+						continue
+					}
+				}
+				let after_time = Instant::now();
+				let diff = after_time - before_time;
+				let success_rate = 100 / (tries + 1);
+				log::info!("Time taken {}", diff.as_millis());
+				log::info!("Success rate {}", success_rate);
+			}
+			let end_time = Instant::now();
+			let diff = end_time - start_time;
+			log::info!("Time taken for all transactions {}", diff.as_millis());
+			log::info!("Average time for 1 transaction {}", (diff.as_millis() / length as u128));
+		} else if TRANSACTION_TYPE == "JITO" {
+			log::info!("Total transactions {:?}", all_transactions.len());
+			let start_time = Instant::now();
+			for transactions in all_transactions.chunks(4) {
+				let mut tries = 0;
+
+				let before_time = Instant::now();
+				while tries < 5 {
+					println!("Try For Tx: {}", tries);
+					let mut current_transactions = Vec::new();
+
+					let mut client =
+						jito_searcher_client::get_searcher_client(&BLOCK_ENGINE_URL, &authority)
+							.await
+							.expect("connects to searcher client");
+					let mut bundle_results_subscription = client
+						.subscribe_bundle_results(SubscribeBundleResultsRequest {})
+						.await
+						.expect("subscribe to bundle results")
+						.into_inner();
+
+					// // wait for jito-solana leader slot
+					// let mut is_leader_slot = false;
+
+					// while !is_leader_slot {
+					// 	let next_leader = client
+					// 		.get_next_scheduled_leader(NextScheduledLeaderRequest {
+					// 			regions: Vec::new(),
+					// 		})
+					// 		.await
+					// 		.expect("gets next scheduled leader")
+					// 		.into_inner();
+					// 	let num_slots = next_leader.next_leader_slot - next_leader.current_slot;
+					// 	is_leader_slot = num_slots <= 2;
+					// 	log::info!(
+					// 		"next jito leader slot in {num_slots} slots in {}",
+					// 		next_leader.next_leader_region
+					// 	);
+					// 	sleep(Duration::from_millis(500));
+					// }
+
+					let jito_address =
+						Pubkey::from_str("96gYZGLnJYVFmbjzopPSU6QiEV5fGqZNyN9nmNhvrZU5").unwrap();
+					let ix = anchor_lang::solana_program::system_instruction::transfer(
+						&authority.pubkey(),
+						&jito_address,
+						400000,
+					);
+					let rpc_client = self.rpc_client();
+					let blockhash = rpc.get_latest_blockhash().await.unwrap();
+					let tx = Transaction::new_with_payer(&[ix], Some(&authority.pubkey()));
+
+					current_transactions.push(tx);
+					current_transactions.extend(transactions.to_vec());
+
+					let versioned_transactions: Vec<VersionedTransaction> = current_transactions
+						.into_iter()
+						.map(|mut tx| {
+							tx.sign(&[&*authority], blockhash);
+							tx.clone().into()
+						})
+						.collect();
+
+					let signatures = jito_searcher_client::send_bundle_with_confirmation(
+						&versioned_transactions,
+						&rpc_client,
+						&mut client,
+						&mut bundle_results_subscription,
+					)
+					.await
+					.or_else(|e| {
+						println!("This is error {:?}", e);
+						ibc::prelude::Err("Error".to_owned())
+					});
+
+					if let Ok(sigs) = signatures {
+						signature = sigs.last().unwrap().to_string();
+						break
+					} else {
+						tries += 1;
+						continue
+					}
+				}
+				let after_time = Instant::now();
+				let diff = after_time - before_time;
+				let success_rate = 100 / (tries + 1);
+				log::info!("Time taken {}", diff.as_millis());
+				log::info!("Success rate {}", success_rate);
+			}
+			let end_time = Instant::now();
+			let diff = end_time - start_time;
+			log::info!("Time taken for all transactions {}", diff.as_millis());
+			log::info!(
+				"Average time for 1 transaction {}",
+				(diff.as_millis() / all_transactions.len() as u128)
+			);
+		}
+
+		let blockhash = rpc.get_latest_blockhash().await.unwrap();
+		// Wait for finalizing the transaction
+		if !self.common_state.handshake_completed {
+			loop {
+				log::info!("Finalizing Transaction");
+				let result = rpc
+					.confirm_transaction_with_commitment(
+						&Signature::from_str(&signature).unwrap(),
+						CommitmentConfig::finalized(),
+					)
+					.await
+					.unwrap();
+				if result.value {
+					break
+				}
+				sleep(Duration::from_secs(1));
+				log::info!("This is result {:?}", result);
+				continue
 			}
 		}
+
 		Ok(signature)
 	}
 

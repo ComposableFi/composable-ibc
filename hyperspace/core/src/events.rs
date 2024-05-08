@@ -328,6 +328,8 @@ pub async fn parse_events(
 				}
 			},
 			IbcEvent::OpenInitChannel(open_init) => {
+				log::info!("Skipping open init channel {:?}", open_init);
+				continue;
 				if let Some(channel_id) = open_init.channel_id {
 					let channel_response = source
 						.query_channel_end(

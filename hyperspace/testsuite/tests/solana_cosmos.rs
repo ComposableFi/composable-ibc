@@ -63,7 +63,10 @@ impl Default for Args {
 
 		Args {
 			// chain_a: format!("https://devnet.helius-rpc.com/?api-key=bc5c0cfc-46df-4781-978f-af6ca7a202c2"),
-			chain_a: format!("http://{solana}:8899"),
+			// chain_a: format!("http://{solana}:8899"),
+			chain_a: format!(
+				"https://mainnet.helius-rpc.com/?api-key=65520d87-04b2-43a5-b5d5-35d5db0601b3"
+			),
 			chain_b: format!("http://{cosmos}:26657"),
 			// chain_b: format!("http://34.34.178.141:26657"),
 			// chain_b: format!("http://10.132.0.13:26657/"), // testnet
@@ -84,7 +87,8 @@ impl Default for Args {
 			// format!("wss://rpc-testnet5.composable-cosmos.composablenodes.tech/websocket"),
 			// cosmos_ws: format!("ws://10.132.0.13:26657/websocket"),
 			// cosmos_ws: format!("ws://10.132.0.6:26657/websocket"), // mainnet
-			solana_ws: format!("ws://{solana}:8900"),
+			// solana_ws: format!("ws://{solana}:8900"),
+			solana_ws: format!("wss://mainnet.helius-rpc.com/?api-key=65520d87-04b2-43a5-b5d5-35d5db0601b3"),	
 			// solana_ws:
 			// format!("wss://devnet.helius-rpc.com/?api-key=bc5c0cfc-46df-4781-978f-af6ca7a202c2"),
 			wasm_path,
@@ -205,12 +209,12 @@ async fn setup_clients() -> (AnyChain, AnyChain) {
 	// 	return (chain_a_wrapped, chain_b_wrapped)
 	// }
 
-	// let (client_a, client_b) =
-	// 	create_clients(&mut chain_a_wrapped, &mut chain_b_wrapped).await.unwrap();
-	// chain_a_wrapped.set_client_id(client_a);
-	// chain_b_wrapped.set_client_id(client_b);
-	chain_b_wrapped.set_client_id(ClientId::new("07-tendermint", 0).unwrap());
-	chain_a_wrapped.set_client_id(ClientId::new("08-wasm", 0).unwrap());
+	let (client_a, client_b) =
+		create_clients(&mut chain_a_wrapped, &mut chain_b_wrapped).await.unwrap();
+	chain_a_wrapped.set_client_id(client_a);
+	chain_b_wrapped.set_client_id(client_b);
+	// chain_b_wrapped.set_client_id(ClientId::new("07-tendermint", 0).unwrap());
+	// chain_a_wrapped.set_client_id(ClientId::new("08-wasm", 0).unwrap());
 	(chain_a_wrapped, chain_b_wrapped)
 }
 
@@ -225,10 +229,10 @@ async fn solana_to_cosmos_ibc_messaging_full_integration_test() {
 	let asset_id_a = AnyAssetId::Solana("33WVSef9zaw49KbNdPGTmACVRnAXzN3o1fsqbUrLp2mh".to_string());
 	let asset_id_b = AnyAssetId::Cosmos("stake".to_string());
 	let (mut chain_a, mut chain_b) = setup_clients().await;
-	let (handle, channel_a, channel_b, connection_id_a, connection_id_b) =
-		setup_connection_and_channel(&mut chain_a, &mut chain_b, Duration::from_secs(10)).await;
+	// let (handle, channel_a, channel_b, connection_id_a, connection_id_b) =
+	// 	setup_connection_and_channel(&mut chain_a, &mut chain_b, Duration::from_secs(10)).await;
 
-	handle.abort();
+	// handle.abort();
 
 	// let connection_id_a = ConnectionId::from_str("connection-0").unwrap();
 	// let connection_id_b = ConnectionId::from_str("connection-0").unwrap();

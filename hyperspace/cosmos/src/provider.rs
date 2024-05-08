@@ -166,6 +166,7 @@ where
 			(latest_height.revision_height - trusted_latest_h.revision_height) *
 				self.expected_block_time().as_secs(),
 		);
+		log::info!("Time passed since last update on cosmos {:?}", time_passed_since_last_update.as_secs());
 		let mut force_update_at = None;
 		// Force update if the finality event height is reached and the client was not
 		// updated for the trusting period / 2 to avoid client expiration
