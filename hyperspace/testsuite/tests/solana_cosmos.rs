@@ -153,8 +153,6 @@ async fn setup_clients() -> (AnyChain, AnyChain) {
         mnemonic:
         // centauri1g5r2vmnp6lta9cpst4lzc4syy3kcj2ljte3tlh
         "decorate bright ozone fork gallery riot bus exhaust worth way bone indoor calm squirrel merry zero scheme cotton until shop any excess stage laundry"
-				// "peace cash suffer celery broken blade fame fiscal lesson fancy virus bless recipe inherit reason cart mask mask absurd venture culture problem reward crew"
-				// "scissors enroll comfort wrist eight catch decide stage squirrel phrase close december staff baby stable mirror hand allow sort dish wrist gas quantum puppy"
             .to_string(),
         wasm_code_id: None,
         channel_whitelist: vec![],
