@@ -54,11 +54,11 @@ where
 	A: Chain,
 	B: Chain,
 {
-	// let chain_a_common_client_config = chain_a.common_state_mut();
-	// let chain_b_common_client_config = chain_b.common_state_mut();
+	let chain_a_common_client_config = chain_a.common_state_mut();
+	let chain_b_common_client_config = chain_b.common_state_mut();
 
-	// chain_a_common_client_config.handshake_completed = true;
-	// chain_b_common_client_config.handshake_completed = true;
+	chain_a_common_client_config.handshake_completed = true;
+	chain_b_common_client_config.handshake_completed = true;
 	let stream_a = RecentStream::new(chain_a.finality_notifications().await?);
 	let stream_b = RecentStream::new(chain_b.finality_notifications().await?);
 	let (mut chain_a_finality, mut chain_b_finality) = (stream_a, stream_b);

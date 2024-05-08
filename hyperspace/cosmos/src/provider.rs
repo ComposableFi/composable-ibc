@@ -162,6 +162,7 @@ where
 		// "hyperspace_cosmos", "Last update time {last_update_time} > {latest_cp_time} (current
 		// time on the counterparty chain)", ); 	Duration::from_secs(0)
 		// });
+		log::info!("Latest height {:?} and trusted height {:?}", latest_height, trusted_latest_h);
 		let time_passed_since_last_update = Duration::from_secs(
 			(latest_height.revision_height - trusted_latest_h.revision_height) *
 				self.expected_block_time().as_secs(),

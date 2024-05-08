@@ -23,3 +23,4 @@ signature_verifier_program_id = "C6r1VEbn3mSpecgrZ7NdBvWUtYVJWrDPv4uU9Xs956gc"
 skip_optional_client_updates = true
 max_packets_to_process = 10
 client_update_interval_sec = 0
+handshake_completed = false

@@ -116,6 +116,9 @@ pub struct CommonClientConfig {
 	/// Minimal time that should pass between two client updates
 	#[serde(default)]
 	pub client_update_interval_sec: u32,
+
+	#[serde(default)]
+	pub handshake_completed: bool,
 }
 
 impl Default for CommonClientConfig {
@@ -124,6 +127,7 @@ impl Default for CommonClientConfig {
 			skip_optional_client_updates: default_skip_optional_client_updates(),
 			max_packets_to_process: max_packets_to_process(),
 			client_update_interval_sec: 10,
+			handshake_completed: false,
 		}
 	}
 }
@@ -188,7 +192,7 @@ impl CommonClientState {
 			ignored_timeouted_sequences: Arc::new(Default::default()),
 			client_update_interval: Duration::from_secs(config.client_update_interval_sec.into()),
 			last_client_update_time: SystemTime::now(),
-			handshake_completed: false,
+			handshake_completed: config.handshake_completed,
 		}
 	}
 

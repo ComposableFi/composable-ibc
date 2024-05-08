@@ -120,6 +120,7 @@ async fn setup_clients() -> (AnyChain, AnyChain) {
 			skip_optional_client_updates: true,
 			max_packets_to_process: 1,
 			client_update_interval_sec: 10,
+    	handshake_completed: false,
 		},
 		channel_whitelist: vec![],
 		commitment_level: "confirmed".to_string(),
@@ -161,6 +162,7 @@ async fn setup_clients() -> (AnyChain, AnyChain) {
             skip_optional_client_updates: true,
             max_packets_to_process: 200,
     				client_update_interval_sec: 10,
+						handshake_completed: false,
         },
         skip_tokens_list: Some(vec!["uosmo".to_string()]),
     };

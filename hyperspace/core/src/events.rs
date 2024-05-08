@@ -77,6 +77,7 @@ pub async fn parse_events(
 		}
 		match event {
 			IbcEvent::OpenInitConnection(open_init) => {
+				continue;
 				if let Some(connection_id) = open_init.connection_id() {
 					log::info!("I am in open init connection with open init {:?}", open_init);
 					let connection_id = connection_id.clone();
