@@ -702,13 +702,13 @@ pub async fn get_previous_transactions(
 	let url = rpc.url();
 	tokio::task::spawn_blocking(move || {
 		for _ in 0..5 {
-			let response: std::result::Result<Vec<Response>, reqwest::Error> =
+			let response =
 				reqwest::blocking::Client::new()
 					.post(url.clone())
 					.json(&body)
-					.send()
-					.unwrap()
-					.json();
+					.send();
+			let response = skip_fail!(response);
+			let response: std::result::Result<Vec<Response>, reqwest::Error> = response.json();
 			let transactions = skip_fail!(response);
 			return (transactions, last_searched_hash);
 		}
