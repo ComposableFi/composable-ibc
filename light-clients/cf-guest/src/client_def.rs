@@ -443,18 +443,11 @@ impl<Ctx: ReaderContext, PK: PubKey> cf_guest_upstream::CommonContext<PK>
 	}
 	
 	fn earliest_consensus_state(
-					&self,
-					client_id: &ibc_core_host_types::identifiers::ClientId,
-			) -> NewResult<Option<(ibc_core_client_types::Height, Self::AnyConsensusState)>> {
-				unimplemented!("delete_consensus_state_and_metadata")
-			}
-
-	// fn sorted_consensus_state_heights(
-	// 	&self,
-	// 	_client_id: &ibc_core_host_types::identifiers::ClientId,
-	// ) -> NewResult<Vec<ibc_core_client_types::Height>> {
-	// 	unimplemented!("sorted_consensus_state_heights")
-	// }
+		&self,
+		_client_id: &ibc_core_host_types::identifiers::ClientId,
+	) -> NewResult<Option<(ibc_core_client_types::Height, Self::AnyConsensusState)>> {
+		unimplemented!("earliest_consensus_state")
+	}
 }
 
 // Helper wrappers

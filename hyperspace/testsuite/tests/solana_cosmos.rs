@@ -204,12 +204,12 @@ async fn setup_clients() -> (AnyChain, AnyChain) {
 	// 	return (chain_a_wrapped, chain_b_wrapped)
 	// }
 
-	// let (client_a, client_b) =
-	// 	create_clients(&mut chain_a_wrapped, &mut chain_b_wrapped).await.unwrap();
-	// chain_a_wrapped.set_client_id(client_a);
-	// chain_b_wrapped.set_client_id(client_b);
-	chain_b_wrapped.set_client_id(ClientId::new("07-tendermint", 0).unwrap());
-	chain_a_wrapped.set_client_id(ClientId::new("08-wasm", 0).unwrap());
+	let (client_a, client_b) =
+		create_clients(&mut chain_a_wrapped, &mut chain_b_wrapped).await.unwrap();
+	chain_a_wrapped.set_client_id(client_a);
+	chain_b_wrapped.set_client_id(client_b);
+	// chain_b_wrapped.set_client_id(ClientId::new("07-tendermint", 0).unwrap());
+	// chain_a_wrapped.set_client_id(ClientId::new("08-wasm", 0).unwrap());
 	(chain_a_wrapped, chain_b_wrapped)
 }
 
@@ -229,11 +229,11 @@ async fn solana_to_cosmos_ibc_messaging_full_integration_test() {
 
 	handle.abort();
 
-	let connection_id_a = ConnectionId::from_str("connection-0").unwrap();
-	let connection_id_b = ConnectionId::from_str("connection-0").unwrap();
+	// let connection_id_a = ConnectionId::from_str("connection-0").unwrap();
+	// let connection_id_b = ConnectionId::from_str("connection-0").unwrap();
 
-	let channel_a = ChannelId::from_str("channel-0").unwrap();
-	let channel_b = ChannelId::from_str("channel-0").unwrap();
+	// let channel_a = ChannelId::from_str("channel-0").unwrap();
+	// let channel_b = ChannelId::from_str("channel-0").unwrap();
 
 	log::info!("Channel A: {:?}", channel_a);
 	log::info!("Channel B: {:?}", channel_b);

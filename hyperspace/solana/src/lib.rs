@@ -190,13 +190,13 @@ impl IbcProvider for SolanaClient {
 		};
 		log::info!("This is client state {:?}", client_state);
 		let latest_cp_client_height = u64::from(client_state.0.latest_height);
-		let prev_block_header = events::get_header_from_height(
-			self.rpc_client(),
-			self.solana_ibc_program_id,
-			latest_cp_client_height,
-		)
-		.await
-		.expect(&format!("No block header found for height {:?}", latest_cp_client_height));
+		// let prev_block_header = events::get_header_from_height(
+		// 	self.rpc_client(),
+		// 	self.solana_ibc_program_id,
+		// 	latest_cp_client_height,
+		// )
+		// .await
+		// .expect(&format!("No block header found for height {:?}", latest_cp_client_height));
 
 		println!("This is counterparty client height {:?}", latest_cp_client_height);
 		let (all_signatures, new_block_events) = events::get_signatures_upto_height(
@@ -205,6 +205,9 @@ impl IbcProvider for SolanaClient {
 			latest_cp_client_height + 1,
 		)
 		.await;
+
+		let earliest_block_header = all_signatures.last().unwrap().1.clone();
+
 		log::info!("This is all events {:?}", new_block_events);
 		let block_events: Vec<IbcEvent> = new_block_events
 			.iter()
@@ -335,7 +338,7 @@ impl IbcProvider for SolanaClient {
 
 			let update = if u64::from(block_header.block_height) == finality_height {
 				let time_since_last_update = u64::from(block_header.timestamp_ns)
-					- u64::from(prev_block_header.timestamp_ns);
+					- u64::from(earliest_block_header.timestamp_ns);
 				log::info!(
 					"TIme since last update on solana {}",
 					time_since_last_update / 1_000_000_000

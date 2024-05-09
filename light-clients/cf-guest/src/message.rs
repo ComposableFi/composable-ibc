@@ -1,5 +1,4 @@
 use guestchain::PubKey;
-use ibc::protobuf::Protobuf;
 use prost::Message as _;
 
 use crate::proto;
