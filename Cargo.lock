@@ -370,6 +370,7 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "6c4fd6e43b2ca6220d2ef1641539e678bfc31b6cc393cf892b373b5997b6a39a"
 dependencies = [
  "anchor-lang",
+ "mpl-token-metadata",
  "solana-program",
  "spl-associated-token-account",
  "spl-token",
@@ -1656,7 +1657,7 @@ dependencies = [
 [[package]]
 name = "cf-guest"
 version = "0.0.0"
-source = "git+https://github.com/ComposableFi/emulated-light-client/#a643e322ff263e4f6044fdcbdaff7e6c43c081cc"
+source = "git+https://github.com/ComposableFi/emulated-light-client/#0c0f4b1f034639854a50217fd777d0a13a2dc55a"
 dependencies = [
  "borsh 0.10.3",
  "bytemuck",
@@ -5002,7 +5003,7 @@ dependencies = [
 [[package]]
 name = "guestchain"
 version = "0.0.0"
-source = "git+https://github.com/ComposableFi/emulated-light-client/#a643e322ff263e4f6044fdcbdaff7e6c43c081cc"
+source = "git+https://github.com/ComposableFi/emulated-light-client/#0c0f4b1f034639854a50217fd777d0a13a2dc55a"
 dependencies = [
  "borsh 0.10.3",
  "bytemuck",
@@ -7312,7 +7313,7 @@ checksum = "830d08ce1d1d941e6b30645f1a0eb5643013d835ce3779a5fc208261dbe10f55"
 [[package]]
 name = "lib"
 version = "0.0.0"
-source = "git+https://github.com/ComposableFi/emulated-light-client/#a643e322ff263e4f6044fdcbdaff7e6c43c081cc"
+source = "git+https://github.com/ComposableFi/emulated-light-client/#0c0f4b1f034639854a50217fd777d0a13a2dc55a"
 dependencies = [
  "base64 0.21.7",
  "borsh 0.10.3",
@@ -8213,7 +8214,7 @@ dependencies = [
 [[package]]
 name = "memory"
 version = "0.0.0"
-source = "git+https://github.com/ComposableFi/emulated-light-client/#a643e322ff263e4f6044fdcbdaff7e6c43c081cc"
+source = "git+https://github.com/ComposableFi/emulated-light-client/#0c0f4b1f034639854a50217fd777d0a13a2dc55a"
 dependencies = [
  "derive_more",
  "stdx",
@@ -8392,6 +8393,19 @@ dependencies = [
  "tracing",
  "tracing-subscriber 0.3.16",
  "ureq",
+]
+
+[[package]]
+name = "mpl-token-metadata"
+version = "3.2.3"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "ba8ee05284d79b367ae8966d558e1a305a781fc80c9df51f37775169117ba64f"
+dependencies = [
+ "borsh 0.10.3",
+ "num-derive 0.3.3",
+ "num-traits",
+ "solana-program",
+ "thiserror",
 ]
 
 [[package]]
@@ -12296,7 +12310,7 @@ dependencies = [
 [[package]]
 name = "proto-utils"
 version = "0.0.0"
-source = "git+https://github.com/ComposableFi/emulated-light-client/#a643e322ff263e4f6044fdcbdaff7e6c43c081cc"
+source = "git+https://github.com/ComposableFi/emulated-light-client/#0c0f4b1f034639854a50217fd777d0a13a2dc55a"
 dependencies = [
  "const_format",
  "derive_more",
@@ -14712,7 +14726,7 @@ dependencies = [
 [[package]]
 name = "sealable-trie"
 version = "0.0.0"
-source = "git+https://github.com/ComposableFi/emulated-light-client/#a643e322ff263e4f6044fdcbdaff7e6c43c081cc"
+source = "git+https://github.com/ComposableFi/emulated-light-client/#0c0f4b1f034639854a50217fd777d0a13a2dc55a"
 dependencies = [
  "ascii 1.1.0",
  "base64 0.21.7",
@@ -15297,7 +15311,7 @@ dependencies = [
 [[package]]
 name = "solana-allocator"
 version = "0.0.0"
-source = "git+https://github.com/ComposableFi/emulated-light-client/#a643e322ff263e4f6044fdcbdaff7e6c43c081cc"
+source = "git+https://github.com/ComposableFi/emulated-light-client/#0c0f4b1f034639854a50217fd777d0a13a2dc55a"
 dependencies = [
  "bytemuck",
  "solana-program",
@@ -15434,7 +15448,7 @@ dependencies = [
 [[package]]
 name = "solana-ibc"
 version = "0.1.0"
-source = "git+https://github.com/ComposableFi/emulated-light-client/#a643e322ff263e4f6044fdcbdaff7e6c43c081cc"
+source = "git+https://github.com/ComposableFi/emulated-light-client/#0c0f4b1f034639854a50217fd777d0a13a2dc55a"
 dependencies = [
  "anchor-lang",
  "anchor-spl",
@@ -15856,7 +15870,7 @@ checksum = "468aa43b7edb1f9b7b7b686d5c3aeb6630dc1708e86e31343499dd5c4d775183"
 [[package]]
 name = "solana-signature-verifier"
 version = "0.0.0"
-source = "git+https://github.com/ComposableFi/emulated-light-client/#a643e322ff263e4f6044fdcbdaff7e6c43c081cc"
+source = "git+https://github.com/ComposableFi/emulated-light-client/#0c0f4b1f034639854a50217fd777d0a13a2dc55a"
 dependencies = [
  "base64 0.21.7",
  "borsh 0.10.3",
@@ -15968,7 +15982,7 @@ dependencies = [
 [[package]]
 name = "solana-trie"
 version = "0.0.0"
-source = "git+https://github.com/ComposableFi/emulated-light-client/#a643e322ff263e4f6044fdcbdaff7e6c43c081cc"
+source = "git+https://github.com/ComposableFi/emulated-light-client/#0c0f4b1f034639854a50217fd777d0a13a2dc55a"
 dependencies = [
  "bytemuck",
  "lib",
@@ -16034,7 +16048,7 @@ dependencies = [
 [[package]]
 name = "solana-write-account"
 version = "0.0.0"
-source = "git+https://github.com/ComposableFi/emulated-light-client/#a643e322ff263e4f6044fdcbdaff7e6c43c081cc"
+source = "git+https://github.com/ComposableFi/emulated-light-client/#0c0f4b1f034639854a50217fd777d0a13a2dc55a"
 dependencies = [
  "solana-program",
  "stdx",
@@ -17556,7 +17570,7 @@ dependencies = [
 [[package]]
 name = "stdx"
 version = "0.0.0"
-source = "git+https://github.com/ComposableFi/emulated-light-client/#a643e322ff263e4f6044fdcbdaff7e6c43c081cc"
+source = "git+https://github.com/ComposableFi/emulated-light-client/#0c0f4b1f034639854a50217fd777d0a13a2dc55a"
 
 [[package]]
 name = "strsim"
@@ -18819,7 +18833,7 @@ dependencies = [
 [[package]]
 name = "trie-ids"
 version = "0.0.0"
-source = "git+https://github.com/ComposableFi/emulated-light-client/#a643e322ff263e4f6044fdcbdaff7e6c43c081cc"
+source = "git+https://github.com/ComposableFi/emulated-light-client/#0c0f4b1f034639854a50217fd777d0a13a2dc55a"
 dependencies = [
  "ascii 1.1.0",
  "base64 0.21.7",
@@ -19282,7 +19296,7 @@ checksum = "9c8d87e72b64a3b4db28d11ce29237c246188f4f51057d65a7eab63b7987e423"
 [[package]]
 name = "wasm"
 version = "0.0.0"
-source = "git+https://github.com/ComposableFi/emulated-light-client/#a643e322ff263e4f6044fdcbdaff7e6c43c081cc"
+source = "git+https://github.com/ComposableFi/emulated-light-client/#0c0f4b1f034639854a50217fd777d0a13a2dc55a"
 dependencies = [
  "const_format",
  "derive_more",
