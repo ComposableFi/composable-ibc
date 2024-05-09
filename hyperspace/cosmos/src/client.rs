@@ -550,7 +550,7 @@ fn is_validators_equal(set_a: &ValidatorSet, set_b: &ValidatorSet) -> bool {
 }
 
 #[tokio::test]
-pub fn testing() {
+pub async fn testing() {
 	let payload = Any {
 		type_url: "/ibc.core.client.v1.MsgUpdateClient".to_string(),
 		value: vec![
@@ -692,7 +692,7 @@ pub fn testing() {
 	.unwrap();
 	let cosmos = CosmosClient::<()>::new(banksy_config).await.unwrap();
 	let tx_id = cosmos.submit(vec![payload]).await.unwrap();
-	println!("This is tx id ", tx_id);
+	println!("This is tx id {:?}", tx_id);
 }
 
 #[cfg(test)]

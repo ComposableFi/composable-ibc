@@ -198,6 +198,7 @@ impl IbcProvider for SolanaClient {
 		)
 		.await;
 
+		log::info!("All signatures {:?}", all_signatures);
 		let earliest_block_header = all_signatures.last().unwrap().1.clone();
 
 		log::info!("This is all events {:?}", new_block_events);
@@ -210,15 +211,26 @@ impl IbcProvider for SolanaClient {
 
 		let chain_account = self.get_chain_storage().await;
 		let mut updates = Vec::new();
-		for (signatures, block_header, epoch) in all_signatures {
-			if epoch.is_none() && u64::from(block_header.block_height) != finality_height {
+		let mut rev_all_signatures = all_signatures.clone();
+		rev_all_signatures.reverse();
+		rev_all_signatures.iter().for_each(|(signatures, block_header, epoch)| {
+			log::info!("This is block header {:?}", block_header);
+			log::info!("This is epoch {:?}", epoch);
+		});
+		for (signatures, block_header, epoch) in rev_all_signatures {
+			if (block_header.next_epoch_commitment.is_none()
+				&& u64::from(block_header.block_height) != finality_height)
+				|| epoch.is_none()
+			{
 				continue;
 			}
 
 			let block_hash = block_header.calc_hash();
 			let block_height: u64 = block_header.block_height.into();
-			let validators = if let Some(epoch) = epoch {
-				epoch.validators().to_vec()
+			let validators = if let Some(x) = block_header.clone().next_epoch_commitment {
+				log::info!("Next epoch commitment {:?}", x);
+				log::info!("From epoch value {:?}", epoch.clone().unwrap().calc_commitment());
+				epoch.unwrap().validators().to_vec()
 			} else {
 				chain_account.validators().unwrap()
 			};
@@ -321,7 +333,7 @@ impl IbcProvider for SolanaClient {
 			updates.push(update);
 		}
 		// Reversing so that updates are sent in ascending order of their height.
-		updates.reverse();
+		// updates.reverse();
 		Ok(updates)
 	}
 

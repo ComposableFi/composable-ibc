@@ -582,7 +582,11 @@ pub async fn get_signatures_upto_height(
 	program_id: Pubkey,
 	upto_height: u64,
 ) -> (
-	Vec<(Vec<(Pubkey, Signature)>, BlockHeader, Option<guestchain::Epoch<sigverify::ed25519::PubKey>>)>,
+	Vec<(
+		Vec<(Pubkey, Signature)>,
+		BlockHeader,
+		Option<guestchain::Epoch<sigverify::ed25519::PubKey>>,
+	)>,
 	Vec<ibc_core_handler_types::events::IbcEvent>,
 ) {
 	let mut current_height = upto_height;
@@ -702,11 +706,7 @@ pub async fn get_previous_transactions(
 	let url = rpc.url();
 	tokio::task::spawn_blocking(move || {
 		for _ in 0..5 {
-			let response =
-				reqwest::blocking::Client::new()
-					.post(url.clone())
-					.json(&body)
-					.send();
+			let response = reqwest::blocking::Client::new().post(url.clone()).json(&body).send();
 			let response = skip_fail!(response);
 			let response: std::result::Result<Vec<Response>, reqwest::Error> = response.json();
 			let transactions = skip_fail!(response);
