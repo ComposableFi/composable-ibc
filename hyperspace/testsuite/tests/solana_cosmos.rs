@@ -114,6 +114,8 @@ async fn setup_clients() -> (AnyChain, AnyChain) {
 		common_state_config: CommonClientConfig {
 			skip_optional_client_updates: true,
 			max_packets_to_process: 1,
+			client_update_interval_sec: 10,
+    	handshake_completed: false,
 		},
 		channel_whitelist: vec![],
 		commitment_level: "confirmed".to_string(),
@@ -123,7 +125,7 @@ async fn setup_clients() -> (AnyChain, AnyChain) {
 			153, 230, 192, 225, 51, 119, 216, 14, 69, 225, 73, 7, 204, 144, 39, 213, 91, 255, 136,
 			38, 95, 131, 197, 4, 101, 186,
 		],
-		solana_ibc_program_id: "9FeHRJLHJSEw4dYZrABHWTRKruFjxDmkLtPmhM5WFYL7".to_string(),
+		solana_ibc_program_id: "2HLLVco5HvwWriNbUhmVwA2pCetRkpgrqwnjcsZdyTKT".to_string(),
 		write_program_id: "FufGpHqMQgGVjtMH9AV8YMrJYq8zaK6USRsJkZP4yDjo".to_string(),
 		signature_verifier_program_id: 
 			"C6r1VEbn3mSpecgrZ7NdBvWUtYVJWrDPv4uU9Xs956gc".to_string(),
@@ -147,14 +149,14 @@ async fn setup_clients() -> (AnyChain, AnyChain) {
         mnemonic:
         // centauri1g5r2vmnp6lta9cpst4lzc4syy3kcj2ljte3tlh
         "decorate bright ozone fork gallery riot bus exhaust worth way bone indoor calm squirrel merry zero scheme cotton until shop any excess stage laundry"
-				// "peace cash suffer celery broken blade fame fiscal lesson fancy virus bless recipe inherit reason cart mask mask absurd venture culture problem reward crew"
-				// "scissors enroll comfort wrist eight catch decide stage squirrel phrase close december staff baby stable mirror hand allow sort dish wrist gas quantum puppy"
             .to_string(),
         wasm_code_id: None,
         channel_whitelist: vec![],
         common: CommonClientConfig {
             skip_optional_client_updates: true,
             max_packets_to_process: 200,
+    				client_update_interval_sec: 10,
+						handshake_completed: false,
         },
         skip_tokens_list: Some(vec!["uosmo".to_string()]),
     };
@@ -202,12 +204,12 @@ async fn setup_clients() -> (AnyChain, AnyChain) {
 	// 	return (chain_a_wrapped, chain_b_wrapped)
 	// }
 
-	let (client_a, client_b) =
-		create_clients(&mut chain_a_wrapped, &mut chain_b_wrapped).await.unwrap();
-	chain_a_wrapped.set_client_id(client_a);
-	chain_b_wrapped.set_client_id(client_b);
-	// chain_b_wrapped.set_client_id(ClientId::new("07-tendermint", 0).unwrap());
-	// chain_a_wrapped.set_client_id(ClientId::new("08-wasm", 2).unwrap());
+	// let (client_a, client_b) =
+	// 	create_clients(&mut chain_a_wrapped, &mut chain_b_wrapped).await.unwrap();
+	// chain_a_wrapped.set_client_id(client_a);
+	// chain_b_wrapped.set_client_id(client_b);
+	chain_b_wrapped.set_client_id(ClientId::new("07-tendermint", 0).unwrap());
+	chain_a_wrapped.set_client_id(ClientId::new("08-wasm", 0).unwrap());
 	(chain_a_wrapped, chain_b_wrapped)
 }
 
@@ -227,11 +229,11 @@ async fn solana_to_cosmos_ibc_messaging_full_integration_test() {
 
 	handle.abort();
 
-	// let connection_id_a = ConnectionId::from_str("connection-1").unwrap();
-	// let connection_id_b = ConnectionId::from_str("connection-1").unwrap();
+	let connection_id_a = ConnectionId::from_str("connection-0").unwrap();
+	let connection_id_b = ConnectionId::from_str("connection-0").unwrap();
 
-	// let channel_a = ChannelId::from_str("channel-1").unwrap();
-	// let channel_b = ChannelId::from_str("channel-1").unwrap();
+	let channel_a = ChannelId::from_str("channel-0").unwrap();
+	let channel_b = ChannelId::from_str("channel-0").unwrap();
 
 	log::info!("Channel A: {:?}", channel_a);
 	log::info!("Channel B: {:?}", channel_b);

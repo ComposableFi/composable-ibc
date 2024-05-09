@@ -30,7 +30,6 @@ use crate::packets::utils::{
 	get_timeout_proof_height, verify_delay_passed, VerifyDelayOn,
 };
 use ibc::{
-	applications::transfer::packet::PacketData,
 	core::{
 		ics02_client::client_state::ClientState as ClientStateT,
 		ics03_connection::connection::ConnectionEnd,
@@ -194,10 +193,9 @@ pub async fn query_ready_and_timed_out_packets(
 		.take(max_packets_to_process)
 		.collect::<Vec<_>>();
 
-		log::info!(target: "hyperspace", "Found {} undelivered packets for {:?}/{:?} for {seqs:?}", seqs.len(), channel_id, port_id.clone());
+		log::debug!(target: "hyperspace", "Found {} undelivered packets for {:?}/{:?} for {seqs:?}", seqs.len(), channel_id, port_id.clone());
 
 		let mut send_packets = source.query_send_packets(channel_id, port_id.clone(), seqs).await?;
-		log::info!("This is send packets {:?}", send_packets);
 		log::trace!(target: "hyperspace", "SendPackets count before deduplication: {}", send_packets.len());
 		send_packets.sort();
 		send_packets.dedup();
@@ -207,6 +205,7 @@ pub async fn query_ready_and_timed_out_packets(
 		let sink = Arc::new(sink.clone());
 		let timeout_packets_count = Arc::new(AtomicUsize::new(0));
 		let send_packets_count = Arc::new(AtomicUsize::new(0));
+		let acks_packets_count = Arc::new(AtomicUsize::new(0));
 		for send_packets in send_packets.chunks(PROCESS_PACKETS_BATCH_SIZE) {
 			for send_packet in send_packets.iter().cloned() {
 				let source_connection_end = source_connection_end.clone();
@@ -228,13 +227,13 @@ pub async fn query_ready_and_timed_out_packets(
 					let packet_height = send_packet.height.ok_or_else(|| {
 						Error::Custom(format!("Packet height not found for packet {packet:?}"))
 					})?;
-					// let packet_height = latest_source_height_on_sink.revision_height - 1;
-					println!("I am here in packets with {:?} {:?}", sink_timestamp, sink_height);
-					println!("height: {:?} {:?} timestamp: {:?} {:?}", packet.timeout_height, sink_height, packet.timeout_timestamp, sink_timestamp);
-					println!("Latest source height on sink {:?} and packet height {:?}", latest_source_height_on_sink.revision_height, packet_height);
+
+				    log::info!("sink_height = {sink_height:?}, timeout_height = {:?}, timeout_timestamp = {}, seq = {}", packet.timeout_height, packet.timeout_timestamp, packet.sequence);
 
 					if packet.timed_out(&sink_timestamp, sink_height) {
-						timeout_packets_count.fetch_add(1, Ordering::SeqCst);
+						source.common_state().ignored_timeouted_sequences.lock().await.insert(
+							packet.sequence.0
+						);
 						// so we know this packet has timed out on the sink, we need to find the maximum
 						// consensus state height at which we can generate a non-membership proof of the
 						// packet for the sink's client on the source.
@@ -243,6 +242,7 @@ pub async fn query_ready_and_timed_out_packets(
 								&**source,
 								&**sink,
 								source_height,
+								source_timestamp,
 								sink_height,
 								sink_timestamp,
 								latest_sink_height_on_source,
@@ -253,7 +253,8 @@ pub async fn query_ready_and_timed_out_packets(
 						{
 							proof_height
 						} else {
-							log::info!(target: "hyperspace", "Skipping packet as no timeout proof height could be found: {:?}", packet);
+							timeout_packets_count.fetch_add(1, Ordering::SeqCst);
+							log::trace!(target: "hyperspace", "Skipping packet as no timeout proof height could be found: {:?}", packet);
 							return Ok(None)
 						};
 
@@ -271,7 +272,7 @@ pub async fn query_ready_and_timed_out_packets(
 						)
 							.await?
 						{
-							log::info!(target: "hyperspace", "Skipping packet as connection delay has not passed {:?}", packet);
+							log::trace!(target: "hyperspace", "Skipping packet as connection delay has not passed {:?}", packet);
 							return Ok(None)
 						}
 
@@ -294,14 +295,13 @@ pub async fn query_ready_and_timed_out_packets(
 					// Since we have no reference point for when this channel was closed so we can't
 					// calculate connection delays yet
 					if sink_channel_end.state == State::Closed {
-						log::info!(target: "hyperspace", "Skipping packet as channel is closed on sink: {:?}", packet);
+						log::debug!(target: "hyperspace", "Skipping packet as channel is closed on sink: {:?}", packet);
 						return Ok(None)
 					}
 
 					#[cfg(feature = "testing")]
 					// If packet relay status is paused skip
 					if !packet_relay_status() {
-						log::info!("skipping due to Packet relay status");
 						return Ok(None)
 					}
 
@@ -309,19 +309,22 @@ pub async fn query_ready_and_timed_out_packets(
 					// If sink does not have a client height that is equal to or greater than the packet
 					// creation height, we can't send it yet, packet_info.height should represent the packet
 					// creation height on source chain
-					if packet_height > latest_source_height_on_sink.revision_height {
+					
+					if source.get_proof_height(Height::new(source_height.revision_number, packet_height)).await.revision_height > latest_source_height_on_sink.revision_height {
 						// Sink does not have client update required to prove recv packet message
-						log::info!(target: "hyperspace", "Skipping packet {:?} as sink does not have client update required to prove recv packet message", packet);
+						log::info!(target: "hyperspace", "Skipping packet as sink does not have client update required to prove recv packet message: {:?}", packet);
 						recv_packets_count.fetch_add(1, Ordering::SeqCst);
 						return Ok(None)
 					}
 
+					let start_height = Height::new(latest_source_height_on_sink.revision_number, packet_height);
 					let proof_height = if let Some(proof_height) = find_suitable_proof_height_for_client(
 						&**source,
 						&**sink,
 						sink_height,
 						source.client_id(),
-						Height::new(latest_source_height_on_sink.revision_number, packet_height),
+						start_height,
+						Some(start_height),
 						None,
 						latest_source_height_on_sink,
 					)
@@ -329,7 +332,7 @@ pub async fn query_ready_and_timed_out_packets(
 					{
 						proof_height
 					} else {
-						log::info!(target: "hyperspace", "Skipping packet {:?} as no proof height could be found", packet);
+						log::info!(target: "hyperspace", "Skipping packet as no proof height could be found: {:?}", packet);
 						return Ok(None)
 					};
 
@@ -351,26 +354,13 @@ pub async fn query_ready_and_timed_out_packets(
 					}
 
 					if packet.timeout_height.is_zero() && packet.timeout_timestamp.nanoseconds() == 0 {
-						log::info!(target: "hyperspace", "Skipping packet as packet timeout is zero: {}", packet.sequence);
-						return Ok(None)
-					}
-
-					let list = &source.common_state().skip_tokens_list;
-
-					let decoded_dara: PacketData = serde_json::from_str(&String::from_utf8_lossy(packet.data.as_ref())).map_err(|e| {
-						Error::Custom(format!(
-						"Failed to decode packet data for packet {:?}: {:?}",
-						packet, e
-						))
-					})?;
-
-					if list.iter().any(|skiped_denom| decoded_dara.token.denom.base_denom.as_str() == skiped_denom) {
-						log::info!(target: "hyperspace", "Skipping packet with ignored token: {:?}", packet);
+						log::warn!(target: "hyperspace", "Skipping packet as packet timeout is zero: {}", packet.sequence);
 						return Ok(None)
 					}
 
 					let msg = construct_recv_message(&**source, &**sink, packet, proof_height).await?;
 					Ok(Some(Right(msg)))
+					// return Ok(None)
 				});
 			}
 		}
@@ -413,13 +403,11 @@ pub async fn query_ready_and_timed_out_packets(
 		.take(max_packets_to_process)
 		.collect::<Vec<_>>();
 
-		log::info!("THese are acks {:?}", acks);
 		let acknowledgements =
 			source.query_received_packets(channel_id, port_id.clone(), acks).await?;
-		log::info!(target: "hyperspace", "Got acknowledgements for channel {:?}: {:?}", channel_id, acknowledgements);
+		log::trace!(target: "hyperspace", "Got acknowledgements for channel {:?}: {:?}", channel_id, acknowledgements);
 		let mut acknowledgements_join_set: JoinSet<Result<_, anyhow::Error>> = JoinSet::new();
-		sink.on_undelivered_sequences(!acknowledgements.is_empty(), UndeliveredType::Acks)
-			.await;
+
 		for acknowledgements in acknowledgements.chunks(PROCESS_PACKETS_BATCH_SIZE) {
 			for acknowledgement in acknowledgements.iter().cloned() {
 				let source_connection_end = source_connection_end.clone();
@@ -428,6 +416,7 @@ pub async fn query_ready_and_timed_out_packets(
 				let duration1 = Duration::from_millis(
 					rand::thread_rng().gen_range(1..source.rpc_call_delay().as_millis() as u64),
 				);
+				let acks_packets_count = acks_packets_count.clone();
 				acknowledgements_join_set.spawn(async move {
 					sleep(duration1).await;
 					let source = &source;
@@ -437,7 +426,7 @@ pub async fn query_ready_and_timed_out_packets(
 						ack
 					} else {
 						// Packet has no valid acknowledgement, skip
-						log::info!(target: "hyperspace", "Skipping acknowledgement for packet {:?} as packet has no valid acknowledgement", packet);
+						log::trace!(target: "hyperspace", "Skipping acknowledgement for packet {:?} as packet has no valid acknowledgement", packet);
 						return Ok(None)
 					};
 
@@ -446,23 +435,26 @@ pub async fn query_ready_and_timed_out_packets(
 					// creation height, we can't send it yet packet_info.height should represent the
 					// acknowledgement creation height on source chain
 					let ack_height = acknowledgement.height.ok_or_else(|| {
-						log::info!("No height found");
 						Error::Custom(format!("Packet height not found for packet {packet:?}"))
 					})?;
-					if ack_height > latest_source_height_on_sink.revision_height {
+
+					if source.get_proof_height(Height::new(source_height.revision_number, ack_height)).await.revision_height > latest_source_height_on_sink.revision_height {
 						// Sink does not have client update required to prove acknowledgement packet message
-						log::info!(target: "hyperspace", "Skipping acknowledgement for packet {:?} as sink does not have client update required to prove acknowledgement packet message", packet);
+						log::trace!(target: "hyperspace", "Skipping acknowledgement for packet {:?} as sink does not have client update required to prove acknowledgement packet message", packet);
+						acks_packets_count.fetch_add(1, Ordering::SeqCst);
 						return Ok(None)
 					}
 
-					log::info!(target: "hyperspace", "sink_height: {:?}, latest_source_height_on_sink: {:?}, acknowledgement.height: {}", sink_height, latest_source_height_on_sink, ack_height);
+					log::trace!(target: "hyperspace", "sink_height: {:?}, latest_source_height_on_sink: {:?}, acknowledgement.height: {}", sink_height, latest_source_height_on_sink, ack_height);
 
+					let start_height = Height::new(latest_source_height_on_sink.revision_number, ack_height);
 					let proof_height = if let Some(proof_height) = find_suitable_proof_height_for_client(
 						&**source,
 						&**sink,
 						sink_height,
 						source.client_id(),
-						Height::new(latest_source_height_on_sink.revision_number, ack_height),
+						start_height,
+						Some(start_height),
 						None,
 						latest_source_height_on_sink,
 					)
@@ -471,8 +463,7 @@ pub async fn query_ready_and_timed_out_packets(
 						log::trace!(target: "hyperspace", "Using proof height: {}", proof_height);
 						proof_height
 					} else {
-						log::trace!(target: "hyperspace", "Skipping acknowledgement for packet {:?} as no proof height could be found", packet);
-						return Ok(None)
+						log::trace!(target: "hyperspace", "Skipping acknowledgement for packet {:?} as no proof height could be found", packet); 	return Ok(None)
 					};
 
 					if !verify_delay_passed(
@@ -502,6 +493,12 @@ pub async fn query_ready_and_timed_out_packets(
 			let Some(msg) = result?? else { continue };
 			messages.push(msg)
 		}
+
+		sink.on_undelivered_sequences(
+			acks_packets_count.load(Ordering::SeqCst) != 0,
+			UndeliveredType::Acks,
+		)
+		.await;
 	}
 
 	Ok((messages, timeout_messages))

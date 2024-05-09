@@ -83,9 +83,17 @@ use tendermint_rpc::{
 };
 use tokio::{task::JoinSet, time::sleep};
 
+use tendermint::{
+	account::Id as TMAccountId, block::signed_header::SignedHeader,
+	validator::Set as TMValidatorSet,
+};
+use tendermint_light_client::components::io::{AtHeight, IoError};
+use tendermint_light_client_verifier::types::{LightBlock, PeerId};
+use tendermint_rpc::Paging;
+
 // At least one *mandatory* update should happen during that period
 // TODO: make it configurable
-pub const NUMBER_OF_BLOCKS_TO_PROCESS_PER_ITER: u64 = 500;
+// pub const NUMBER_OF_BLOCKS_TO_PROCESS_PER_ITER: u64 = 500;
 
 #[derive(Clone, Debug)]
 pub enum FinalityEvent {
@@ -119,7 +127,7 @@ where
 			FinalityEvent::Tendermint { from: _, to } => to,
 		};
 		let client_id = self.client_id();
-		let latest_cp_height = counterparty.latest_height_and_timestamp().await?.0;
+		let (latest_cp_height, latest_cp_time) = counterparty.latest_height_and_timestamp().await?;
 		let latest_cp_client_state =
 			counterparty.query_client_state(latest_cp_height, client_id.clone()).await?;
 		let client_state_response = latest_cp_client_state
@@ -139,12 +147,44 @@ where
 		let latest_height = self.latest_height_and_timestamp().await?.0;
 		let latest_revision = latest_height.revision_number;
 
+		let trusted_latest_h = client_state.latest_height();
+
+		// let (_, last_update_time) = counterparty
+		// 	.query_client_update_time_and_height(client_id.clone(), trusted_latest_h)
+		// 	.await?;
+
 		let from = TmHeight::try_from(latest_cp_client_height).unwrap();
-		let to = finality_event_height.min(
-			TmHeight::try_from(latest_cp_client_height + NUMBER_OF_BLOCKS_TO_PROCESS_PER_ITER)
-				.expect("should not overflow"),
-		);
+		let to = finality_event_height;
 		log::info!(target: "hyperspace_cosmos", "--------------------------Getting blocks {}..{}----------------------", from, to);
+
+		// let time_passed_since_last_update =
+		// latest_cp_time.duration_since(&last_update_time).unwrap_or_else(|| { 	log::warn!(target:
+		// "hyperspace_cosmos", "Last update time {last_update_time} > {latest_cp_time} (current
+		// time on the counterparty chain)", ); 	Duration::from_secs(0)
+		// });
+		log::info!("Latest height {:?} and trusted height {:?}", latest_height, trusted_latest_h);
+		let time_passed_since_last_update = Duration::from_secs(
+			(latest_height.revision_height - trusted_latest_h.revision_height) *
+				self.expected_block_time().as_secs(),
+		);
+		log::info!("Time passed since last update on cosmos {:?}", time_passed_since_last_update.as_secs());
+		let mut force_update_at = None;
+		// Force update if the finality event height is reached and the client was not
+		// updated for the trusting period / 2 to avoid client expiration
+		if time_passed_since_last_update > Duration::from_secs(30 * 60) {
+			// This fixation on the block is needed to wait for the proof for the same block
+			// in the next iterations, instead of requesting a new proof for another block
+			// and never using it
+			let fixed_update_height = finality_event_height.value();
+
+			log::debug!(target: "hyperspace_cosmos", "Time passed since last update: {}, trusting period: {}", time_passed_since_last_update.as_secs(), client_state.trusting_period.as_secs());
+
+			force_update_at = Some(Height::new(latest_height.revision_number, fixed_update_height));
+		}
+
+		if let Some(height) = force_update_at {
+			log::info!(target: "hyperspace_cosmos", "Forcing update at height: {height}");
+		}
 
 		// query (exclusively) up to `to`, because the proof for the event at `to - 1` will be
 		// contained at `to` and will be fetched below by `msg_update_client_header`
@@ -193,9 +233,9 @@ where
 			.zip(update_headers)
 			.enumerate()
 		{
-			if i == NUMBER_OF_BLOCKS_TO_PROCESS_PER_ITER as usize - 1 {
-				update_type = UpdateType::Mandatory;
-			}
+			// if i == NUMBER_OF_BLOCKS_TO_PROCESS_PER_ITER as usize - 1 {
+			// 	update_type = UpdateType::Mandatory;
+			// }
 			let height = update_header.height();
 			let update_client_header = {
 				let msg = MsgUpdateAnyClient::<LocalClientTypes> {
@@ -210,6 +250,12 @@ where
 				})?;
 				Any { value, type_url: msg.type_url() }
 			};
+
+			if Some(height) == force_update_at {
+				update_type = UpdateType::Mandatory;
+				log::info!(target: "hyperspace_cosmos", "Forcing update to mandatory at height: {:?}", height);
+			}
+
 			// println!("These are events caught query latest events {:?}", events);
 			updates.push((update_client_header, height, events, update_type));
 		}
@@ -1352,6 +1398,60 @@ impl<H> CosmosClient<H>
 where
 	H: 'static + Clone + Send + Sync,
 {
+	async fn fetch_validator_set(
+		&self,
+		height: AtHeight,
+		proposer_address: Option<TMAccountId>,
+	) -> Result<TMValidatorSet, IoError> {
+		let height = match height {
+			AtHeight::Highest => return Err(IoError::invalid_height()),
+			AtHeight::At(height) => height,
+		};
+
+		let client = &self.rpc_client;
+		let response = client.validators(height, Paging::All).await.map_err(IoError::rpc)?;
+
+		let validator_set = match proposer_address {
+			Some(proposer_address) =>
+				TMValidatorSet::with_proposer(response.validators, proposer_address)
+					.map_err(IoError::invalid_validator_set)?,
+			None => TMValidatorSet::without_proposer(response.validators),
+		};
+
+		Ok(validator_set)
+	}
+
+	async fn fetch_signed_header(&self, height: AtHeight) -> Result<SignedHeader, IoError> {
+		let client = self.rpc_client.clone();
+		let res = match height {
+			AtHeight::Highest => client.latest_commit().await,
+			AtHeight::At(height) => client.commit(height).await,
+		};
+
+		match res {
+			Ok(response) => Ok(response.signed_header),
+			Err(err) => Err(IoError::rpc(err)),
+		}
+	}
+
+	pub async fn fetch_light_block(
+		&self,
+		height: AtHeight,
+		peer_id: PeerId,
+	) -> Result<LightBlock, IoError> {
+		let signed_header = self.fetch_signed_header(height).await?;
+		let height = signed_header.header.height;
+		let proposer_address = signed_header.header.proposer_address;
+
+		let validator_set = self.fetch_validator_set(height.into(), Some(proposer_address)).await?;
+		let next_validator_set = self.fetch_validator_set(height.increment().into(), None).await?;
+
+		let light_block =
+			LightBlock::new(signed_header, validator_set, next_validator_set, peer_id);
+
+		Ok(light_block)
+	}
+
 	async fn parse_ibc_events_at<C: Chain>(
 		&self,
 		counterparty: &C,

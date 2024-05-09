@@ -67,7 +67,14 @@ pub async fn parse_events(
 ) -> Result<Vec<Any>, anyhow::Error> {
 	let mut messages = vec![];
 	// 1. translate events to messages
+	let mut is_connection_delay = false;
 	for event in events {
+		if matches!(event, IbcEvent::SendPacket(_)) ||
+			matches!(event, IbcEvent::WriteAcknowledgement(_)) && is_connection_delay
+		{
+			log::info!("Skipping due to connection delay {:?}", event);
+			continue
+		}
 		match event {
 			IbcEvent::OpenInitConnection(open_init) => {
 				if let Some(connection_id) = open_init.connection_id() {
@@ -528,6 +535,7 @@ pub async fn parse_events(
 						"Skipping packet relay because of connection delays {:?}",
 						connection_end.delay_period()
 					);
+					is_connection_delay = true;
 					continue
 				}
 				let seq = u64::from(send_packet.packet.sequence);
@@ -593,6 +601,7 @@ pub async fn parse_events(
 					log::debug!(target: "hyperspace", "Skipping write acknowledgement because of
 				connection delay {:?}", 		connection_end.delay_period());
 					// We can't send this packet immediately because of connection delays
+					is_connection_delay = true;
 					continue
 				}
 				let seq = u64::from(write_ack.packet.sequence);

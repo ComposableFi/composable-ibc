@@ -38,7 +38,7 @@ use std::{
 	collections::HashSet,
 	str::FromStr,
 	sync::{Arc, Mutex},
-	time::Duration,
+	time::{Duration, SystemTime},
 };
 use tendermint::{block::Height as TmHeight, Hash};
 use tendermint_light_client::components::io::{AtHeight, Io};
@@ -275,7 +275,7 @@ where
 		})
 		.map_err(|e| e.to_string())?;
 
-		let rpc_call_delay = Duration::from_millis(1000);
+		let rpc_call_delay = Duration::from_millis(50);
 		Ok(Self {
 			name: config.name,
 			chain_id,
@@ -306,7 +306,11 @@ where
 				initial_rpc_call_delay: rpc_call_delay,
 				misbehaviour_client_msg_queue: Arc::new(AsyncMutex::new(vec![])),
 				max_packets_to_process: config.common.max_packets_to_process as usize,
-				skip_tokens_list: config.skip_tokens_list.unwrap_or_default(),
+				// skip_tokens_list: config.skip_tokens_list.unwrap_or_default(),
+				ignored_timeouted_sequences: Arc::new(AsyncMutex::new(HashSet::new())),
+				client_update_interval: Duration::from_secs(1),
+				last_client_update_time: SystemTime::now(),
+				handshake_completed: false,
 			},
 			join_handles: Arc::new(TokioMutex::new(vec![ws_driver_jh])),
 		})
@@ -389,12 +393,14 @@ where
 	) -> Result<LightBlock, Error> {
 		let fut = async move {
 			sleep(sleep_duration).await;
-			self.light_client.io.fetch_light_block(AtHeight::At(height)).map_err(|e| {
-				Error::from(format!(
-					"Failed to fetch light block for chain {:?} with error {:?}",
-					self.name, e
-				))
-			})
+			self.fetch_light_block(AtHeight::At(height), self.light_client.peer_id.clone())
+				.await
+				.map_err(|e| {
+					Error::from(format!(
+						"Failed to fetch light block for chain {:?} with error {:?}",
+						self.name, e
+					))
+				})
 		};
 		self.light_block_cache.get_or_insert_async(&height, fut).await
 	}
@@ -410,7 +416,7 @@ where
 		let heightss = (from.value()..=to.value()).collect::<Vec<_>>();
 		let client = Arc::new(self.clone());
 		let delay_to = self.rpc_call_delay().as_millis();
-		for heights in heightss.chunks(5) {
+		for heights in heightss.chunks(100) {
 			let mut join_set = JoinSet::<Result<Result<_, Error>, Elapsed>>::new();
 			for height in heights.to_owned() {
 				let client = client.clone();

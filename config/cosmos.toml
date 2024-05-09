@@ -1,17 +1,20 @@
+type = "cosmos"
 name = "centauri"
-rpc_url = "http://127.0.0.1:26657"
-grpc_url = "http://127.0.0.1:9090"
-websocket_url = "ws://127.0.0.1:26657/websocket"
+rpc_url = "http://192.168.1.101:26657/"
+grpc_url = "http://192.168.1.101:9090/"
+websocket_url = "ws://192.168.1.101:26657/websocket"
 chain_id = "test-1"
-# client_id: None,
-# connection_id: None,
+client_id = "07-tendermint-27"
+connection_id = "connection-0"
 account_prefix = "centauri"
 fee_denom = "stake"
-fee_amount = "4000"
-gas_limit: 9_223_372_036_854_775_807,
+fee_amount = "10000000"
+gas_limit = 100000000
 store_prefix = "ibc"
-max_tx_size: 200000,
-mnemonic:
-	"decorate bright ozone fork gallery riot bus exhaust worth way bone indoor calm squirrel merry zero scheme cotton until shop any excess stage laundry"
-# wasm_code_id: None,
-channel_whitelist: [],
+max_tx_size = 200000
+wasm_code_id = "f7c074381015210b47c1bdf57acf25c11f86068b752332374e0ed3f01226be96"
+channel_whitelist = [["channel-0", "transfer"]]
+mnemonic = "decorate bright ozone fork gallery riot bus exhaust worth way bone indoor calm squirrel merry zero scheme cotton until shop any excess stage laundry"
+skip_optional_client_updates = true
+max_packets_to_process = 50
+client_update_interval_sec = 0
