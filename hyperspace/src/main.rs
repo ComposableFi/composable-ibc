@@ -20,6 +20,7 @@ use hyperspace_core::{
 
 #[tokio::main]
 async fn main() -> Result<()> {
+
 	logging::setup_logging();
 	let cli = Cli::parse();
 
@@ -44,3 +45,13 @@ async fn main() -> Result<()> {
 		Subcommand::Fish(cmd) => cmd.fish().await,
 	}
 }
+
+// #[tokio::main]
+// pub async fn submit_tx() {
+// 	let payload = Any {};
+// 	let banksy_config = toml::from_str::<CosmosClientConfig>(
+// 		&std::fs::read_to_string("../../config/centauri-mainnet.toml").unwrap(),
+// 	)
+// 	.unwrap();
+// 	let cosmos = CosmosClient::<()>::new(banksy_config).await.unwrap();
+// }
