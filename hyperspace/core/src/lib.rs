@@ -504,8 +504,8 @@ async fn process_updates<A: Chain, B: Chain>(
 			msg_update_client.type_url,
 			msg_update_client.value.len()
 		);
-		if source.name() != "solana" &&
-			(height.revision_height != update_max_height.revision_height && messages.is_empty())
+		if 
+			(height.revision_height != update_max_height.revision_height && messages.is_empty() && update_type.is_optional())
 		{
 			log::info!(
 				"Skipping update for {} at height {} because it is not the latest update",
