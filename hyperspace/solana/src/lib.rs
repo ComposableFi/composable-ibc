@@ -190,14 +190,6 @@ impl IbcProvider for SolanaClient {
 		};
 		log::info!("This is client state {:?}", client_state);
 		let latest_cp_client_height = u64::from(client_state.0.latest_height);
-		// let prev_block_header = events::get_header_from_height(
-		// 	self.rpc_client(),
-		// 	self.solana_ibc_program_id,
-		// 	latest_cp_client_height,
-		// )
-		// .await
-		// .expect(&format!("No block header found for height {:?}", latest_cp_client_height));
-
 		println!("This is counterparty client height {:?}", latest_cp_client_height);
 		let (all_signatures, new_block_events) = events::get_signatures_upto_height(
 			self.rpc_client(),
@@ -215,52 +207,8 @@ impl IbcProvider for SolanaClient {
 				convert_new_event_to_old(event.clone(), Height::new(1, u64::from(finality_height)))
 			})
 			.collect();
-		// let sigs = rpc_client
-		// 	.get_signatures_for_address(&self.solana_ibc_program_id)
-		// 	.await
-		// 	.map_err(|e| Error::RpcError(format!("{:?}", e)))?;
-		// for sig in sigs {
-		// 	if sig.slot < u64::from(prev_block_header.host_height) {
-		// 		break;
-		// 	}
-		// 	let signature = Signature::from_str(&sig.signature).unwrap();
-		// 	let tx = rpc_client
-		// 		.get_transaction(&signature, UiTransactionEncoding::Json)
-		// 		.await
-		// 		.unwrap();
-		// 	let logs = match tx.transaction.meta.unwrap().log_messages {
-		// 		solana_transaction_status::option_serializer::OptionSerializer::Some(logs) => logs,
-		// 		solana_transaction_status::option_serializer::OptionSerializer::None => {
-		// 			return Err(Error::Custom(String::from("No logs found")).into())
-		// 		},
-		// 		solana_transaction_status::option_serializer::OptionSerializer::Skip => {
-		// 			return Err(
-		// 				Error::Custom(String::from("Logs were skipped, so not available")).into()
-		// 			)
-		// 		},
-		// 	};
-		// 	let (events, _proof_height) = events::get_ibc_events_from_logs(logs);
-		// 	let converted_events: Vec<IbcEvent> = events
-		// 		.iter()
-		// 		.filter_map(|event| {
-		// 			convert_new_event_to_old(
-		// 				event.clone(),
-		// 				Height::new(1, u64::from(finality_height)),
-		// 			)
-		// 		})
-		// 		.collect();
-		// 	log::info!("These are events fetched {:?}", converted_events);
-		// 	block_events.extend(converted_events);
-		// }
 
 		let chain_account = self.get_chain_storage().await;
-		// let (signatures, block_header) = events::get_signatures_for_blockhash(
-		// 	rpc_client,
-		// 	self.solana_ibc_program_id,
-		// 	finality_blockhash,
-		// )
-		// .await
-		// .unwrap();
 		let mut updates = Vec::new();
 		for (signatures, block_header, epoch) in all_signatures {
 			if epoch.is_none() && u64::from(block_header.block_height) != finality_height {
@@ -371,6 +319,8 @@ impl IbcProvider for SolanaClient {
 			};
 			updates.push(update);
 		}
+		// Reversing so that updates are sent in ascending order of their height.
+		updates.reverse();
 		Ok(updates)
 	}
 
