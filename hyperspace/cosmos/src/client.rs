@@ -691,7 +691,8 @@ pub fn testing() {
 	)
 	.unwrap();
 	let cosmos = CosmosClient::<()>::new(banksy_config).await.unwrap();
-	cosmos.submit(vec![payload]);
+	let tx_id = cosmos.submit(vec![payload]).await.unwrap();
+	println!("This is tx id ", tx_id);
 }
 
 #[cfg(test)]

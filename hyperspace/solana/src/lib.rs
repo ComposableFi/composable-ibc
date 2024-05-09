@@ -247,20 +247,21 @@ impl IbcProvider for SolanaClient {
 					(validator_idx as u16, signature.clone())
 				})
 				.collect();
+			let current_epoch = Epoch::new_with(all_validators, |total| {
+				let quorum = NonZeroU128::new(total.get() / 2 + 1).unwrap();
+				// min_quorum_stake may be greater than total_stake so we’re not
+				// using .clamp to make sure we never return value higher than
+				// total_stake.
+				println!("THis is total {:?} and quorum {:?}", total, quorum);
+				quorum.max(NonZeroU128::new(1000).unwrap()).min(total)
+			})
+			.unwrap();
 			let guest_header = cf_guest_og::Header {
 				genesis_hash: chain_account.genesis().unwrap().clone(),
 				block_hash,
 				block_header: block_header.clone(),
-				epoch_commitment: block_header.epoch_id.clone(),
-				epoch: Epoch::new_with(all_validators, |total| {
-					let quorum = NonZeroU128::new(total.get() / 2 + 1).unwrap();
-					// min_quorum_stake may be greater than total_stake so we’re not
-					// using .clamp to make sure we never return value higher than
-					// total_stake.
-					println!("THis is total {:?} and quorum {:?}", total, quorum);
-					quorum.max(NonZeroU128::new(1000).unwrap()).min(total)
-				})
-				.unwrap(),
+				epoch_commitment: current_epoch.calc_commitment(),
+				epoch: current_epoch,
 				signatures: final_signatures,
 			};
 			log::info!(
@@ -1863,19 +1864,20 @@ impl LightClientSync for SolanaClient {
 					})
 					.collect();
 				log::info!("Final validator in fetch mandatory updates {:?}", final_signatures);
+				let current_epoch = Epoch::new_with(all_validators, |total| {
+					let quorum = NonZeroU128::new(total.get() / 2 + 1).unwrap();
+					// min_quorum_stake may be greater than total_stake so we’re not
+					// using .clamp to make sure we never return value higher than
+					// total_stake.
+					quorum.max(NonZeroU128::new(1000).unwrap()).min(total)
+				})
+				.unwrap();
 				let guest_header = cf_guest_og::Header {
 					genesis_hash: chain_account.genesis().unwrap().clone(),
 					block_hash: block_header.calc_hash(),
 					block_header: block_header.clone(),
-					epoch_commitment: block_header.epoch_id.clone(),
-					epoch: Epoch::new_with(all_validators, |total| {
-						let quorum = NonZeroU128::new(total.get() / 2 + 1).unwrap();
-						// min_quorum_stake may be greater than total_stake so we’re not
-						// using .clamp to make sure we never return value higher than
-						// total_stake.
-						quorum.max(NonZeroU128::new(1000).unwrap()).min(total)
-					})
-					.unwrap(),
+					epoch_commitment: current_epoch.calc_commitment(),
+					epoch: current_epoch,
 					signatures: final_signatures,
 				};
 				let msg = MsgUpdateAnyClient::<LocalClientTypes> {
