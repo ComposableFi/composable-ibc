@@ -237,7 +237,7 @@ impl SolanaClient {
 		require_proof: bool,
 	) -> solana_trie::TrieAccount<Vec<u8>> {
 		let connection = self.get_db();
-		if !require_proof {
+		if require_proof {
 			let row = connection.query_row("SELECT * FROM Trie WHERE height=?1", [at], |row| {
 				Ok(Trie {
 					id: row.get(0)?,
