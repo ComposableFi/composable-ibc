@@ -130,7 +130,7 @@ pub const WRITE_ACCOUNT_SEED: &[u8] = b"write";
 pub const SIGNATURE_ACCOUNT_SEED: &[u8] = b"signature";
 
 pub const BLOCK_ENGINE_URL: &str = "https://mainnet.block-engine.jito.wtf";
-pub const TRANSACTION_TYPE: &str = "RPC"; // JITO/RPC
+pub const TRANSACTION_TYPE: &str = "JITO"; // JITO/RPC
 
 pub const MIN_TIME_UNTIL_UPDATE: u64 = 30 * 60; // 30 mins
 
