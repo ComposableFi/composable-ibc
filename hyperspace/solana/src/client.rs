@@ -295,7 +295,7 @@ impl SolanaClient {
 	}
 
 	pub fn get_db(&self) -> rusqlite::Connection {
-		let db_url = "../../../solana-ibc-indexer/indexer.db3";
+		let db_url = "../solana-ibc-indexer/indexer.db3";
 		rusqlite::Connection::open(db_url).unwrap()
 	}
 
@@ -306,7 +306,7 @@ impl SolanaClient {
 
 	#[allow(dead_code)]
 	pub async fn new(config: SolanaClientConfig) -> Result<Self, Error> {
-		let db_url = "../../../solana-ibc-indexer/indexer.db3";
+		let db_url = "../solana-ibc-indexer/indexer.db3";
 		let conn = rusqlite::Connection::open(db_url).unwrap();
 		let count = conn.query_row("SELECT COUNT(*) FROM Trie", [], |row| {
 			log::info!("This is row");

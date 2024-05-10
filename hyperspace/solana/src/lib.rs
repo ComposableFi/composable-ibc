@@ -787,7 +787,6 @@ deserialize client state"
 		log::info!("This is proof {:?}", proof);
 		let chain_account = self.get_chain_storage().await;
 		let block_header_og = chain_account.head().unwrap();
-		let result = proof.verify(&block_header_og.state_root, &trie_key, val.as_ref());
 		let (sigs, _) = events::get_signatures_upto_height(
 			self.rpc_client(),
 			self.solana_ibc_program_id,
@@ -803,16 +802,17 @@ deserialize client state"
 		let block_header = events::get_header_from_height(
 			self.rpc_client(),
 			self.solana_ibc_program_id,
-			u64::from(block_header_og.block_height) - 1,
+			at.revision_height,
 		)
 		.await
 		.expect(&format!("No block header found for height {:?}", at.revision_height));
+		let result = proof.verify(&block_header.state_root, &trie_key, val.as_ref());
 		// let block_header_another =
 		// 	events::get_header_from_height(self.rpc_client(), self.solana_ibc_program_id,
 		// u64::from(block_header_og.block_height) - 1) 		.await
 		// 		.expect(&format!("No block header found for height {:?}", at.revision_height));
-		log::info!("latest Block header height {}", block_header_og.block_height);
-		log::info!("state root {:?}", &block_header_og.state_root);
+		log::info!("latest Block header height {}", block_header.block_height);
+		log::info!("state root {:?}", &block_header.state_root);
 		log::info!("trie key {:?}", trie_key);
 		log::info!("Value {:?}", val.as_ref());
 		// let result_1 = proof.verify(&block_header.state_root, &trie_key, val.as_ref());
@@ -833,7 +833,7 @@ deserialize client state"
 		// 	block_header_og.state_root,
 		// 	block_header.state_root
 		// );
-		Ok(borsh::to_vec(&(block_header_og.clone(), &proof)).unwrap())
+		Ok(borsh::to_vec(&(block_header.clone(), &proof)).unwrap())
 	}
 
 	async fn query_packet_commitment(
