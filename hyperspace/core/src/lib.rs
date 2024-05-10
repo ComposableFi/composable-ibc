@@ -382,11 +382,11 @@ async fn process_updates<A: Chain, B: Chain>(
 				);
 				if latest_height_on_solana.revision_height > largest_height.revision_height {
 					log::info!("Latest height is finalized and sleeping for 5 seconds");
-					sleep(core::time::Duration::from_secs(5));
+					std::thread::sleep(core::time::Duration::from_secs(5));
 					break
 				}
 				log::info!("Waiting for next block {:?} to be finalized", latest_height_on_solana);
-				sleep(core::time::Duration::from_secs(1));
+				std::thread::sleep(core::time::Duration::from_secs(1));
 			}
 			let (mandatory_updates, heights) = source.fetch_mandatory_updates(sink).await.unwrap();
 			// log::info!("Height is greater than timeout height {:?}", );
