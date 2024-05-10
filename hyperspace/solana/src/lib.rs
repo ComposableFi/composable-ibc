@@ -130,7 +130,7 @@ pub const WRITE_ACCOUNT_SEED: &[u8] = b"write";
 pub const SIGNATURE_ACCOUNT_SEED: &[u8] = b"signature";
 
 pub const BLOCK_ENGINE_URL: &str = "https://mainnet.block-engine.jito.wtf";
-pub const TRANSACTION_TYPE: &str = "RPC"; // JITO/RPC
+pub const TRANSACTION_TYPE: &str = "JITO"; // JITO/RPC
 
 pub const MIN_TIME_UNTIL_UPDATE: u64 = 30 * 60; // 30 mins
 
@@ -1643,7 +1643,7 @@ deserialize client state"
 		let client_state = cf_guest::ClientState::new(
 			chain_account.genesis().unwrap(),
 			header.block_height,
-			64000 * 10_u64.pow(9),
+			640000 * 10_u64.pow(9),
 			epoch.calc_commitment(),
 			None,
 			false,
