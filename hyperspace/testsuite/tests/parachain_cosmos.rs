@@ -111,6 +111,8 @@ async fn setup_clients() -> (AnyChain, AnyChain) {
 		common: CommonClientConfig {
 			skip_optional_client_updates: true,
 			max_packets_to_process: 200,
+			handshake_completed: false,
+			client_update_interval_sec: 100,
 		},
 		skip_tokens_list: None,
 	};

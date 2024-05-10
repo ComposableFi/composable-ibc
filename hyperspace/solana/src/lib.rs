@@ -787,6 +787,19 @@ deserialize client state"
 		log::info!("This is proof {:?}", proof);
 		let chain_account = self.get_chain_storage().await;
 		let block_header_og = chain_account.head().unwrap();
+		let result = proof.verify(&block_header_og.state_root, &trie_key, val.as_ref());
+		let (sigs, _) = events::get_signatures_upto_height(
+			self.rpc_client(),
+			self.solana_ibc_program_id,
+			u64::from(block_header_og.block_height) - 3,
+		)
+		.await;
+		sigs.iter().for_each(|(_sig, block_header, _epoch)| {
+			log::info!("Block header height {}", block_header_og.block_height);
+			log::info!("state root {:?}", &block_header.state_root);
+			let result = proof.verify(&block_header.state_root, &trie_key, val.as_ref());
+			log::info!("This is result of time out packet proof verify lts {:?}", result);
+		});
 		// let block_header = events::get_header_from_height(
 		// 	self.rpc_client(),
 		// 	self.solana_ibc_program_id,
@@ -798,7 +811,7 @@ deserialize client state"
 		// 	events::get_header_from_height(self.rpc_client(), self.solana_ibc_program_id,
 		// u64::from(block_header_og.block_height) - 1) 		.await
 		// 		.expect(&format!("No block header found for height {:?}", at.revision_height));
-		let result = proof.verify(&block_header_og.state_root, &trie_key, val.as_ref());
+		log::info!("latest Block header height {}", block_header_og.block_height);
 		log::info!("state root {:?}", &block_header_og.state_root);
 		log::info!("trie key {:?}", trie_key);
 		log::info!("Value {:?}", val.as_ref());
@@ -814,10 +827,7 @@ deserialize client state"
 		// 	}
 		// }
 		log::info!("This is value in proof verify {:?}", val);
-		log::info!(
-			"This is result of time out packet proof verify lts {:?}",
-			result,
-		);
+		log::info!("This is result of time out packet proof verify lts {:?}", result,);
 		// log::info!(
 		// 	"State root at lts {:?}, state root at proof height {:?}",
 		// 	block_header_og.state_root,
