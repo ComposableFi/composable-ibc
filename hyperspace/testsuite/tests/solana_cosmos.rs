@@ -204,12 +204,12 @@ async fn setup_clients() -> (AnyChain, AnyChain) {
 	// 	return (chain_a_wrapped, chain_b_wrapped)
 	// }
 
-	// let (client_a, client_b) =
-	// 	create_clients(&mut chain_a_wrapped, &mut chain_b_wrapped).await.unwrap();
-	// chain_a_wrapped.set_client_id(client_a);
-	// chain_b_wrapped.set_client_id(client_b);
-	chain_b_wrapped.set_client_id(ClientId::new("07-tendermint", 2).unwrap());
-	chain_a_wrapped.set_client_id(ClientId::new("08-wasm", 2).unwrap());
+	let (client_a, client_b) =
+		create_clients(&mut chain_a_wrapped, &mut chain_b_wrapped).await.unwrap();
+	chain_a_wrapped.set_client_id(client_a);
+	chain_b_wrapped.set_client_id(client_b);
+	// chain_b_wrapped.set_client_id(ClientId::new("07-tendermint", 2).unwrap());
+	// chain_a_wrapped.set_client_id(ClientId::new("08-wasm", 2).unwrap());
 	(chain_a_wrapped, chain_b_wrapped)
 }
 
@@ -224,16 +224,16 @@ async fn solana_to_cosmos_ibc_messaging_full_integration_test() {
 	let asset_id_a = AnyAssetId::Solana("33WVSef9zaw49KbNdPGTmACVRnAXzN3o1fsqbUrLp2mh".to_string());
 	let asset_id_b = AnyAssetId::Cosmos("stake".to_string());
 	let (mut chain_a, mut chain_b) = setup_clients().await;
-	// let (handle, channel_a, channel_b, connection_id_a, connection_id_b) =
-	// 	setup_connection_and_channel(&mut chain_a, &mut chain_b, Duration::from_secs(10)).await;
+	let (handle, channel_a, channel_b, connection_id_a, connection_id_b) =
+		setup_connection_and_channel(&mut chain_a, &mut chain_b, Duration::from_secs(10)).await;
 
-	// handle.abort();
+	handle.abort();
 
-	let connection_id_a = ConnectionId::from_str("connection-2").unwrap();
-	let connection_id_b = ConnectionId::from_str("connection-1").unwrap();
+	// let connection_id_a = ConnectionId::from_str("connection-2").unwrap();
+	// let connection_id_b = ConnectionId::from_str("connection-1").unwrap();
 
-	let channel_a = ChannelId::from_str("channel-1").unwrap();
-	let channel_b = ChannelId::from_str("channel-1").unwrap();
+	// let channel_a = ChannelId::from_str("channel-1").unwrap();
+	// let channel_b = ChannelId::from_str("channel-1").unwrap();
 
 	log::info!("Channel A: {:?}", channel_a);
 	log::info!("Channel B: {:?}", channel_b);

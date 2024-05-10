@@ -168,6 +168,16 @@ pub enum FinalityEvent {
 	Guest { blockhash: CryptoHash, block_height: u64 },
 }
 
+#[derive(Debug)]
+struct Trie {
+	#[allow(dead_code)]
+	id: i32,
+	height: i32,
+	data: Vec<u8>,
+	state_root: Vec<u8>,
+	match_block_state_root: bool,
+}
+
 #[derive(Clone)]
 pub struct KeyEntry {
 	pub public_key: Pubkey,
@@ -221,7 +231,26 @@ impl SolanaClient {
 		fee_collector
 	}
 
-	pub async fn get_trie(&self) -> solana_trie::TrieAccount<Vec<u8>> {
+	pub async fn get_trie(
+		&self,
+		at: u64,
+		require_proof: bool,
+	) -> solana_trie::TrieAccount<Vec<u8>> {
+		let connection = self.get_db();
+		if !require_proof {
+			let row = connection.query_row("SELECT * FROM Trie WHERE height=?1", [at], |row| {
+				Ok(Trie {
+					id: row.get(0)?,
+					height: row.get(1)?,
+					data: row.get(2)?,
+					state_root: row.get(3)?,
+					match_block_state_root: row.get(4)?,
+				})
+			});
+			if let Ok(trie) = row {
+				return solana_trie::TrieAccount::new(trie.data).unwrap();
+			}
+		}
 		let trie_key = self.get_trie_key();
 		let rpc_client = self.rpc_client();
 		let trie_account = rpc_client
@@ -265,6 +294,11 @@ impl SolanaClient {
 		client
 	}
 
+	pub fn get_db(&self) -> rusqlite::Connection {
+		let db_url = "../../../solana-ibc-indexer/indexer.db3";
+		rusqlite::Connection::open(db_url).unwrap()
+	}
+
 	pub fn program(&self) -> Program<Arc<Keypair>> {
 		let anchor_client = self.client();
 		anchor_client.program(self.solana_ibc_program_id).unwrap()
@@ -272,6 +306,13 @@ impl SolanaClient {
 
 	#[allow(dead_code)]
 	pub async fn new(config: SolanaClientConfig) -> Result<Self, Error> {
+		let db_url = "../../../solana-ibc-indexer/indexer.db3";
+		let conn = rusqlite::Connection::open(db_url).unwrap();
+		let count = conn.query_row("SELECT COUNT(*) FROM Trie", [], |row| {
+			log::info!("This is row");
+			Ok(())
+		});
+		log::info!("This is count {:?}", count);
 		Ok(Self {
 			name: config.name,
 			rpc_url: config.rpc_url.to_string(),
@@ -1019,7 +1060,7 @@ pub async fn get_accounts(
 		let receiver_address = get_associated_token_address(&receiver_account, &token_mint);
 		let token_mint_info = rpc.get_token_supply(&token_mint).await;
 		if token_mint_info.is_err() {
-			return Err(ParsePubkeyError::Invalid)
+			return Err(ParsePubkeyError::Invalid);
 		}
 		Ok((Some(program_id), Some(token_mint), Some(receiver_account), Some(receiver_address)))
 	}

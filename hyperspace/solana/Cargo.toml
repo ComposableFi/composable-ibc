@@ -48,6 +48,7 @@ jito-searcher-client = { path = "../../../searcher-examples/searcher_client" }
 jito-protos = { path = "../../../searcher-examples/jito_protos" }
 prost-types = "0.12"
 solana-metrics = "=1.17.30"
+rusqlite = { version = "0.29.0", features = ["bundled"] }
 
 bs58 = { version = "0.5.0", features = ["alloc"] }
 bincode = { version = "1.3.3" }
@@ -67,6 +68,8 @@ ibc-client-wasm-types = { git = "https://github.com/mina86/ibc-rs", rev = "6015a
 ibc-proto-new = { version = "0.41.0", default-features = false, package="ibc-proto" }
 
 ics23 = { version = "0.11.1" }
+
+
 
 # Old IBC
 ibc = { path = "../../ibc/modules", features = [] }
