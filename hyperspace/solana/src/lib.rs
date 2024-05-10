@@ -198,7 +198,6 @@ impl IbcProvider for SolanaClient {
 		)
 		.await;
 
-		log::info!("All signatures {:?}", all_signatures);
 		let earliest_block_header = all_signatures.last();
 
 		log::info!("This is all events {:?}", new_block_events);
@@ -212,11 +211,8 @@ impl IbcProvider for SolanaClient {
 		let chain_account = self.get_chain_storage().await;
 		let mut updates = Vec::new();
 		let mut rev_all_signatures = all_signatures.clone();
+		// Reversing so that updates are sent in ascending order of their height.
 		rev_all_signatures.reverse();
-		rev_all_signatures.iter().for_each(|(signatures, block_header, epoch)| {
-			log::info!("This is block header {:?}", block_header);
-			log::info!("This is epoch {:?}", epoch);
-		});
 		for (signatures, block_header, epoch) in rev_all_signatures {
 			if (block_header.next_epoch_commitment.is_none()
 				&& u64::from(block_header.block_height) != finality_height)
@@ -337,8 +333,6 @@ impl IbcProvider for SolanaClient {
 			};
 			updates.push(update);
 		}
-		// Reversing so that updates are sent in ascending order of their height.
-		// updates.reverse();
 		Ok(updates)
 	}
 
