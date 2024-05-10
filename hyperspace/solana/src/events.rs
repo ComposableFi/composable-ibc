@@ -594,6 +594,7 @@ pub async fn get_signatures_upto_height(
 	let mut all_signatures = Vec::new();
 	let mut all_block_headers = Vec::new();
 	let mut all_ibc_events = Vec::new();
+	// let mut finalized_heights = Vec::new();
 	log::info!("This is upto height {:?}", upto_height);
 	while current_height >= upto_height {
 		let (transactions, last_searched_hash) =
@@ -621,15 +622,20 @@ pub async fn get_signatures_upto_height(
 						);
 						let block_height = u64::from(e.block_header.0.block_height);
 						current_height = block_height;
-						if block_height >= upto_height {
+						if block_height >= upto_height 
+						{
 							all_block_headers.push((e.block_header.0.clone(), e.epoch));
 						} else {
 							log::info!("breaking out of upto height");
 						}
 					},
 					solana_ibc::events::Event::BlockSigned(e) => {
-						all_signatures.push(e);
+							all_signatures.push(e);
 					},
+					// solana_ibc::events::Event::BlockFinalised(e) => {
+					// 	let block_height = u64::from(e.block_height);
+					// 	finalized_heights.push(block_height);
+					// },
 					_ => (),
 				}
 			}
