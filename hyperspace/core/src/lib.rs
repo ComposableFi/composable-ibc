@@ -366,7 +366,7 @@ async fn process_updates<A: Chain, B: Chain>(
 			};
 			timeout_heights.push(height);
 		}
-		let latest_update_height = updates.last().map_or(0, |(_, height, _)| height.revision_height);
+		let latest_update_height = updates.last().map_or(0, |(_, height, _, _)| height.revision_height);
 		let height_is_greater = timeout_heights
 			.iter()
 			.any(|height| height.revision_height > latest_update_height);
