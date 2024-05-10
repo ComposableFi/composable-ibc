@@ -1846,9 +1846,9 @@ impl LightClientSync for SolanaClient {
 		let mut heights = Vec::new();
 		let updates: Vec<Any> = signatures
 			.iter()
-			.map(|(sig, block_header, _epoch)| {
+			.map(|(sig, block_header, epoch)| {
 				log::info!("This is sig {:?} and block header {:?}", sig, block_header);
-				let validators = chain_account.validators().unwrap();
+				let validators = epoch.clone().unwrap().validators().to_vec();
 				let all_validators: Vec<Validator<pallet_ibc::light_clients::PubKey>> = validators
 					.iter()
 					.map(|validator| {
