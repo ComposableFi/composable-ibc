@@ -199,7 +199,7 @@ impl IbcProvider for SolanaClient {
 		.await;
 
 		log::info!("All signatures {:?}", all_signatures);
-		let earliest_block_header = all_signatures.last().unwrap().1.clone();
+		let earliest_block_header = all_signatures.last();
 
 		log::info!("This is all events {:?}", new_block_events);
 		let block_events: Vec<IbcEvent> = new_block_events
@@ -298,8 +298,13 @@ impl IbcProvider for SolanaClient {
 			log::info!("This is wihle update {:?}", value);
 
 			let update = if u64::from(block_header.block_height) == finality_height {
-				let time_since_last_update = u64::from(block_header.timestamp_ns)
-					- u64::from(earliest_block_header.timestamp_ns);
+				let time_since_last_update =
+					if let Some(earliest_block_header) = earliest_block_header {
+						u64::from(block_header.timestamp_ns)
+							- u64::from(earliest_block_header.1.timestamp_ns)
+					} else {
+						0
+					};
 				log::info!(
 					"TIme since last update on solana {}",
 					time_since_last_update / 1_000_000_000
