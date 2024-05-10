@@ -813,6 +813,7 @@ deserialize client state"
 		// 		.expect(&format!("No block header found for height {:?}", at.revision_height));
 		log::info!("latest Block header height {}", block_header.block_height);
 		log::info!("state root {:?}", &block_header.state_root);
+		log::info!("trie root {:?}", &trie.hash());
 		log::info!("trie key {:?}", trie_key);
 		log::info!("Value {:?}", val.as_ref());
 		// let result_1 = proof.verify(&block_header.state_root, &trie_key, val.as_ref());
