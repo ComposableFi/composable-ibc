@@ -231,11 +231,12 @@ impl SolanaClient {
 		fee_collector
 	}
 
+	/// Returns trie at a particular height or the latest one if not available
 	pub async fn get_trie(
 		&self,
 		at: u64,
 		require_proof: bool,
-	) -> solana_trie::TrieAccount<Vec<u8>> {
+	) -> (solana_trie::TrieAccount<Vec<u8>>, bool) {
 		let connection = self.get_db();
 		if require_proof {
 			let row = connection.query_row("SELECT * FROM Trie WHERE height=?1", [at], |row| {
@@ -248,7 +249,7 @@ impl SolanaClient {
 				})
 			});
 			if let Ok(trie) = row {
-				return solana_trie::TrieAccount::new(trie.data).unwrap();
+				return (solana_trie::TrieAccount::new(trie.data).unwrap(), true);
 			}
 		}
 		let trie_key = self.get_trie_key();
@@ -260,7 +261,7 @@ impl SolanaClient {
 			.value
 			.unwrap();
 		let trie = solana_trie::TrieAccount::new(trie_account.data).unwrap();
-		trie
+		(trie, false)
 	}
 
 	pub async fn get_ibc_storage(&self) -> PrivateStorage {

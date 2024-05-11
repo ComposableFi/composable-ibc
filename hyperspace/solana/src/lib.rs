@@ -390,7 +390,7 @@ impl IbcProvider for SolanaClient {
 		consensus_height: Height,
 	) -> Result<QueryConsensusStateResponse, Self::Error> {
 		use ibc_proto_new::Protobuf;
-		let trie = self.get_trie(at.revision_height, true).await;
+		let (trie, at_height) = self.get_trie(at.revision_height, true).await;
 		let storage = self.get_ibc_storage().await;
 		let revision_height = consensus_height.revision_height;
 		let revision_number = consensus_height.revision_number;
@@ -466,7 +466,7 @@ deserialize consensus state"
 		client_id: ClientId,
 	) -> Result<QueryClientStateResponse, Self::Error> {
 		log::info!("Quering solana client state at height {:?} {:?}", at, client_id);
-		let trie = self.get_trie(at.revision_height, true).await;
+		let (trie, at_height) = self.get_trie(at.revision_height, true).await;
 		let storage = self.get_ibc_storage().await;
 		let new_client_id =
 			ibc_core_host_types::identifiers::ClientId::from_str(client_id.as_str()).unwrap();
@@ -531,7 +531,7 @@ deserialize client state"
 		connection_id: ConnectionId,
 	) -> Result<QueryConnectionResponse, Self::Error> {
 		use ibc_proto_new::Protobuf;
-		let trie = self.get_trie(at.revision_height, true).await;
+		let (trie, at_height) = self.get_trie(at.revision_height, true).await;
 		let storage = self.get_ibc_storage().await;
 		let connection_idx = ConnectionIdx::try_from(
 			ibc_core_host_types::identifiers::ConnectionId::from_str(connection_id.as_str())
@@ -622,7 +622,7 @@ deserialize client state"
 		channel_id: ibc::core::ics24_host::identifier::ChannelId,
 		port_id: ibc::core::ics24_host::identifier::PortId,
 	) -> Result<QueryChannelResponse, Self::Error> {
-		let trie = self.get_trie(at.revision_height, true).await;
+		let (trie, at_height) = self.get_trie(at.revision_height, true).await;
 		let storage = self.get_ibc_storage().await;
 		let new_port_id =
 			ibc_core_host_types::identifiers::PortId::from_str(port_id.as_str()).unwrap();
@@ -780,61 +780,32 @@ deserialize client state"
 				return Err(Error::Custom("Invalid key".to_owned()));
 			},
 		};
-		let trie = self.get_trie(at.revision_height, true).await;
+		let (trie, at_height) = self.get_trie(at.revision_height, true).await;
 		let (val, proof) = trie
 			.prove(&trie_key)
 			.map_err(|_| Error::Custom("value is sealed and cannot be fetched".to_owned()))?;
 		log::info!("This is proof {:?}", proof);
 		let chain_account = self.get_chain_storage().await;
-		let block_header_og = chain_account.head().unwrap();
-		let (sigs, _) = events::get_signatures_upto_height(
-			self.rpc_client(),
-			self.solana_ibc_program_id,
-			u64::from(block_header_og.block_height) - 3,
-		)
-		.await;
-		// sigs.iter().for_each(|(_sig, block_header, _epoch)| {
-		// 	log::info!("Block header height {}", block_header.block_height);
-		// 	log::info!("state root {:?}", &block_header.state_root);
-		// 	let result = proof.verify(&block_header.state_root, &trie_key, val.as_ref());
-		// 	log::info!("This is result of time out packet proof verify lts {:?}", result);
-		// });
-		let block_header = events::get_header_from_height(
-			self.rpc_client(),
-			self.solana_ibc_program_id,
-			at.revision_height,
-		)
-		.await
-		.expect(&format!("No block header found for height {:?}", at.revision_height));
-		let result = proof.verify(&block_header.state_root, &trie_key, val.as_ref());
-		// let block_header_another =
-		// 	events::get_header_from_height(self.rpc_client(), self.solana_ibc_program_id,
-		// u64::from(block_header_og.block_height) - 1) 		.await
-		// 		.expect(&format!("No block header found for height {:?}", at.revision_height));
-		log::info!("latest Block header height {}", block_header.block_height);
-		log::info!("state root {:?}", &block_header.state_root);
+		let block_header_at_height = if at_height {
+			events::get_header_from_height(
+				self.rpc_client(),
+				self.solana_ibc_program_id,
+				at.revision_height,
+			)
+			.await
+			.expect(&format!("No block header found for height {:?}", at.revision_height))
+		} else {
+			chain_account.head().unwrap().clone()
+		};
+		let result = proof.verify(&block_header_at_height.state_root, &trie_key, val.as_ref());
+		log::info!("latest Block header height {}", block_header_at_height.block_height);
+		log::info!("state root {:?}", &block_header_at_height.state_root);
 		log::info!("trie root {:?}", &trie.hash());
 		log::info!("trie key {:?}", trie_key);
 		log::info!("Value {:?}", val.as_ref());
-		// let result_1 = proof.verify(&block_header.state_root, &trie_key, val.as_ref());
-		// let block_height = block_header_og.block_height;
-		// loop {
-		// 	sleep(Duration::from_millis(500));
-		// 	let chain_account = self.get_chain_storage().await;
-		// 	let block_header_og = chain_account.head().unwrap();
-		// 	if block_header_og.block_height > block_height {
-		// 		log::info!("Got higher height");
-		// 		break
-		// 	}
-		// }
 		log::info!("This is value in proof verify {:?}", val);
-		log::info!("This is result of time out packet proof verify lts {:?}", result,);
-		// log::info!(
-		// 	"State root at lts {:?}, state root at proof height {:?}",
-		// 	block_header_og.state_root,
-		// 	block_header.state_root
-		// );
-		Ok(borsh::to_vec(&(block_header.clone(), &proof)).unwrap())
+		log::info!("This is result of time out packet proof verify lts {:?}", result);
+		Ok(borsh::to_vec(&(block_header_at_height.clone(), &proof)).unwrap())
 	}
 
 	async fn query_packet_commitment(
@@ -844,7 +815,7 @@ deserialize client state"
 		channel_id: &ibc::core::ics24_host::identifier::ChannelId,
 		seq: u64,
 	) -> Result<QueryPacketCommitmentResponse, Self::Error> {
-		let trie = self.get_trie(at.revision_height, true).await;
+		let (trie, at_height) = self.get_trie(at.revision_height, true).await;
 		let new_port_id =
 			ibc_core_host_types::identifiers::PortId::from_str(port_id.as_str()).unwrap();
 		let new_channel_id =
@@ -883,7 +854,7 @@ deserialize client state"
 		channel_id: &ibc::core::ics24_host::identifier::ChannelId,
 		seq: u64,
 	) -> Result<QueryPacketAcknowledgementResponse, Self::Error> {
-		let trie = self.get_trie(at.revision_height, true).await;
+		let (trie, at_height) = self.get_trie(at.revision_height, true).await;
 		let new_port_id =
 			ibc_core_host_types::identifiers::PortId::from_str(port_id.as_str()).unwrap();
 		let new_channel_id =
@@ -924,7 +895,7 @@ deserialize client state"
 		port_id: &ibc::core::ics24_host::identifier::PortId,
 		channel_id: &ibc::core::ics24_host::identifier::ChannelId,
 	) -> Result<QueryNextSequenceReceiveResponse, Self::Error> {
-		let trie = self.get_trie(at.revision_height, true).await;
+		let (trie, at_height) = self.get_trie(at.revision_height, true).await;
 		let storage = self.get_ibc_storage().await;
 		let new_port_id =
 			ibc_core_host_types::identifiers::PortId::from_str(port_id.as_str()).unwrap();
@@ -958,7 +929,7 @@ deserialize client state"
 		channel_id: &ibc::core::ics24_host::identifier::ChannelId,
 		seq: u64,
 	) -> Result<QueryPacketReceiptResponse, Self::Error> {
-		let trie = self.get_trie(at.revision_height, true).await;
+		let (trie, at_height) = self.get_trie(at.revision_height, true).await;
 		let new_port_id =
 			ibc_core_host_types::identifiers::PortId::from_str(port_id.as_str()).unwrap();
 		let new_channel_id =
@@ -997,7 +968,7 @@ deserialize client state"
 		channel_id: ibc::core::ics24_host::identifier::ChannelId,
 		port_id: ibc::core::ics24_host::identifier::PortId,
 	) -> Result<Vec<u64>, Self::Error> {
-		let trie = self.get_trie(at.revision_height, false).await;
+		let (trie, at_height) = self.get_trie(at.revision_height, false).await;
 		let new_port_id =
 			ibc_core_host_types::identifiers::PortId::from_str(port_id.as_str()).unwrap();
 		let new_channel_id =
@@ -1023,7 +994,7 @@ deserialize client state"
 		channel_id: ibc::core::ics24_host::identifier::ChannelId,
 		port_id: ibc::core::ics24_host::identifier::PortId,
 	) -> Result<Vec<u64>, Self::Error> {
-		let trie = self.get_trie(at.revision_height, false).await;
+		let (trie, at_height) = self.get_trie(at.revision_height, false).await;
 		let new_port_id =
 			ibc_core_host_types::identifiers::PortId::from_str(port_id.as_str()).unwrap();
 		let new_channel_id =
@@ -1051,7 +1022,7 @@ deserialize client state"
 		seqs: Vec<u64>,
 	) -> Result<Vec<u64>, Self::Error> {
 		log::info!("----------Unreceived packets seqs on solana {:?} ", seqs);
-		let trie = self.get_trie(at.revision_height, false).await;
+		let (trie, at_height) = self.get_trie(at.revision_height, false).await;
 		let new_port_id =
 			ibc_core_host_types::identifiers::PortId::from_str(port_id.as_str()).unwrap();
 		let new_channel_id =
@@ -1086,7 +1057,7 @@ deserialize client state"
 		port_id: ibc::core::ics24_host::identifier::PortId,
 		seqs: Vec<u64>,
 	) -> Result<Vec<u64>, Self::Error> {
-		let trie = self.get_trie(at.revision_height, false).await;
+		let (trie, at_height) = self.get_trie(at.revision_height, false).await;
 		let new_port_id =
 			ibc_core_host_types::identifiers::PortId::from_str(port_id.as_str()).unwrap();
 		let new_channel_id =
@@ -1419,7 +1390,7 @@ deserialize client state"
 		client_state: &pallet_ibc::light_clients::AnyClientState,
 	) -> Result<Option<Vec<u8>>, Self::Error> {
 		let height = client_state.latest_height();
-		let trie = self.get_trie(height.revision_height, true).await;
+		let (trie, at_height) = self.get_trie(height.revision_height, true).await;
 		let client_id = self.client_id();
 		let new_client_id =
 			ibc_core_host_types::identifiers::ClientId::from_str(client_id.as_str()).unwrap();
