@@ -129,6 +129,8 @@ async fn setup_clients() -> (AnyChain, AnyChain) {
 		write_program_id: "FufGpHqMQgGVjtMH9AV8YMrJYq8zaK6USRsJkZP4yDjo".to_string(),
 		signature_verifier_program_id: 
 			"C6r1VEbn3mSpecgrZ7NdBvWUtYVJWrDPv4uU9Xs956gc".to_string(),
+    trie_db_path: "../../../solana-ibc-indexer/indexer.db3".to_string(),
+    transaction_sender: hyperspace_solana::client::TransactionSender::JITO,
 	};
 
 	let mut config_b = CosmosClientConfig {

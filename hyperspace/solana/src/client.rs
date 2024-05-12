@@ -116,11 +116,10 @@ pub struct SolanaClient {
 	pub commitment_prefix: CommitmentPrefix,
 	/// Channels cleared for packet relay
 	pub channel_whitelist: Arc<Mutex<HashSet<(ChannelId, PortId)>>>,
-	/// Flag which provides information if handshake is completed
-	///
-	/// Used to prevent finding proof for client state, connection state and channel state
-	/// once the handshake is completed.
-	pub handshake_completed: Arc<Mutex<bool>>,
+	// Trie db path
+	pub trie_db_path: String,
+	// Sets whether to use JITO or RPC for submitting transactions
+	pub transaction_sender: TransactionSender,
 }
 
 #[derive(std::fmt::Debug, Serialize, Deserialize, Clone)]
@@ -161,6 +160,14 @@ pub struct SolanaClientConfig {
 	pub solana_ibc_program_id: String,
 	pub write_program_id: String,
 	pub signature_verifier_program_id: String,
+	pub trie_db_path: String,
+	pub transaction_sender: String,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub enum TransactionSender {
+	JITO,
+	RPC,
 }
 
 #[derive(Debug, Clone)]
@@ -249,7 +256,10 @@ impl SolanaClient {
 				})
 			});
 			if let Ok(trie) = row {
-				return (solana_trie::TrieAccount::new(trie.data).unwrap(), true);
+				return (
+					solana_trie::TrieAccount::new(trie.data).unwrap(),
+					trie.match_block_state_root,
+				);
 			}
 		}
 		let trie_key = self.get_trie_key();
@@ -296,7 +306,7 @@ impl SolanaClient {
 	}
 
 	pub fn get_db(&self) -> rusqlite::Connection {
-		let db_url = "../solana-ibc-indexer/indexer.db3";
+		let db_url = self.trie_db_path.as_str();
 		rusqlite::Connection::open(db_url).unwrap()
 	}
 
@@ -307,13 +317,19 @@ impl SolanaClient {
 
 	#[allow(dead_code)]
 	pub async fn new(config: SolanaClientConfig) -> Result<Self, Error> {
-		let db_url = "../solana-ibc-indexer/indexer.db3";
+		let db_url = config.trie_db_path.as_str();
 		let conn = rusqlite::Connection::open(db_url).unwrap();
 		let count = conn.query_row("SELECT COUNT(*) FROM Trie", [], |row| {
 			log::info!("This is row");
 			Ok(())
 		});
 		log::info!("This is count {:?}", count);
+		let transaction_sender_str = config.transaction_sender.to_ascii_uppercase();
+		let transaction_sender = match transaction_sender_str.as_str() {
+			"JITO" => TransactionSender::JITO,
+			"RPC" => TransactionSender::RPC,
+			_ => panic!("Invalid param transaction sender: Expected JITO/RPC"),
+		};
 		Ok(Self {
 			name: config.name,
 			rpc_url: config.rpc_url.to_string(),
@@ -343,7 +359,8 @@ impl SolanaClient {
 			),
 			commitment_prefix: CommitmentPrefix::try_from(config.commitment_prefix).unwrap(),
 			channel_whitelist: Arc::new(Mutex::new(config.channel_whitelist.into_iter().collect())),
-			handshake_completed: Arc::new(Mutex::new(false)),
+			trie_db_path: config.trie_db_path,
+			transaction_sender,
 		})
 	}
 

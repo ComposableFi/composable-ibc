@@ -105,7 +105,7 @@ use solana_ibc::storage::{SequenceKind, Serialised};
 
 use trie_ids::{ClientIdx, ConnectionIdx, PortChannelPK, Tag, TrieKey};
 
-use crate::events::get_events_from_logs;
+use crate::{client::TransactionSender, events::get_events_from_logs};
 pub use crate::{
 	client::{DeliverIxType, SolanaClient, SolanaClientConfig},
 	events::convert_new_event_to_old,
@@ -130,7 +130,6 @@ pub const WRITE_ACCOUNT_SEED: &[u8] = b"write";
 pub const SIGNATURE_ACCOUNT_SEED: &[u8] = b"signature";
 
 pub const BLOCK_ENGINE_URL: &str = "https://mainnet.block-engine.jito.wtf";
-pub const TRANSACTION_TYPE: &str = "JITO"; // JITO/RPC
 
 pub const MIN_TIME_UNTIL_UPDATE: u64 = 30 * 60; // 30 mins
 
@@ -786,15 +785,18 @@ deserialize client state"
 			.map_err(|_| Error::Custom("value is sealed and cannot be fetched".to_owned()))?;
 		log::info!("This is proof {:?}", proof);
 		let chain_account = self.get_chain_storage().await;
-		let block_header_at_height = if at_height {
-			events::get_header_from_height(
-				self.rpc_client(),
-				self.solana_ibc_program_id,
-				at.revision_height,
-			)
-			.await
-			.expect(&format!("No block header found for height {:?}", at.revision_height))
+		let block_header = events::get_header_from_height(
+			self.rpc_client(),
+			self.solana_ibc_program_id,
+			at.revision_height,
+		)
+		.await
+		.expect(&format!("No block header found for height {:?}", at.revision_height));
+		let block_header_at_height = if &block_header.state_root == trie.hash() {
+			log::info!("Block header found at height");
+			block_header
 		} else {
+			log::info!("Block header not found at height, so fetching latest height");
 			chain_account.head().unwrap().clone()
 		};
 		let result = proof.verify(&block_header_at_height.state_root, &trie_key, val.as_ref());
@@ -2155,163 +2157,83 @@ impl Chain for SolanaClient {
 
 		let total_transactions_length = all_transactions.iter().fold(0, |acc, tx| acc + tx.len());
 
-		if TRANSACTION_TYPE == "RPC" {
-			let length = all_transactions.len();
-			log::info!("Total transactions {:?}", length);
-			let start_time = Instant::now();
-			for transactions_iter in all_transactions {
-				let mut tries = 0;
-				let before_time = Instant::now();
-				for mut transaction in transactions_iter {
-					loop {
-						sleep(Duration::from_secs(1));
-						log::info!("Current Try: {}", tries);
-						let blockhash = rpc.get_latest_blockhash().await.unwrap();
-						transaction.sign(&[&*authority], blockhash);
-						let sig = rpc
-							.send_transaction_with_config(
-								&transaction,
-								RpcSendTransactionConfig {
-									skip_preflight: true,
-									max_retries: Some(0),
-									..RpcSendTransactionConfig::default()
-								},
-							)
-							.await;
+		match self.transaction_sender {
+			TransactionSender::RPC => {
+				let length = all_transactions.len();
+				log::info!("Total transactions {:?}", length);
+				let start_time = Instant::now();
+				for transactions_iter in all_transactions {
+					let mut tries = 0;
+					let before_time = Instant::now();
+					for mut transaction in transactions_iter {
+						loop {
+							sleep(Duration::from_secs(1));
+							log::info!("Current Try: {}", tries);
+							let blockhash = rpc.get_latest_blockhash().await.unwrap();
+							transaction.sign(&[&*authority], blockhash);
+							let sig = rpc
+								.send_transaction_with_config(
+									&transaction,
+									RpcSendTransactionConfig {
+										skip_preflight: true,
+										max_retries: Some(0),
+										..RpcSendTransactionConfig::default()
+									},
+								)
+								.await;
 
-						if let Ok(si) = sig {
-							signature = si.to_string();
-							// Wait for finalizing the transaction
-							let mut success = false;
-							// let blockhash = rpc.get_latest_blockhash().await.unwrap();
-							for status_retry in 0..usize::MAX {
-								match rpc.get_signature_status(&si).await.unwrap() {
-									Some(Ok(_)) => {
-										log::info!("  Signature {:?}", si);
-										success = true;
-										break;
-									},
-									Some(Err(e)) => {
-										log::error!("Error while sending the transaction {:?}", e);
-										success = true;
-										break;
-									},
-									None => {
-										if !rpc
-											.is_blockhash_valid(
-												&blockhash,
-												CommitmentConfig::processed(),
-											)
-											.await
-											.unwrap()
-										{
-											// Block hash is not found by some reason
-											log::error!("Blockhash not found");
-											success = false;
+							if let Ok(si) = sig {
+								signature = si.to_string();
+								// Wait for finalizing the transaction
+								let mut success = false;
+								// let blockhash = rpc.get_latest_blockhash().await.unwrap();
+								for status_retry in 0..usize::MAX {
+									match rpc.get_signature_status(&si).await.unwrap() {
+										Some(Ok(_)) => {
+											log::info!("  Signature {:?}", si);
+											success = true;
 											break;
-										} else if status_retry < usize::MAX {
-											// Retry twice a second
-											sleep(Duration::from_millis(500));
-											continue;
-										}
-									},
+										},
+										Some(Err(e)) => {
+											log::error!(
+												"Error while sending the transaction {:?}",
+												e
+											);
+											success = true;
+											break;
+										},
+										None => {
+											if !rpc
+												.is_blockhash_valid(
+													&blockhash,
+													CommitmentConfig::processed(),
+												)
+												.await
+												.unwrap()
+											{
+												// Block hash is not found by some reason
+												log::error!("Blockhash not found");
+												success = false;
+												break;
+											} else if status_retry < usize::MAX {
+												// Retry twice a second
+												sleep(Duration::from_millis(500));
+												continue;
+											}
+										},
+									}
 								}
-							}
-							if !success {
+								if !success {
+									tries += 1;
+									continue;
+								}
+								break;
+							} else {
+								log::error!("Error {:?}", sig);
 								tries += 1;
 								continue;
 							}
-							break;
-						} else {
-							log::error!("Error {:?}", sig);
-							tries += 1;
-							continue;
 						}
-					}
-					let after_time = Instant::now();
-					let diff = after_time - before_time;
-					let success_rate = 100 / (tries + 1);
-					log::info!("Time taken {}", diff.as_millis());
-					log::info!("Success rate {}", success_rate);
-				}
-			}
-			let end_time = Instant::now();
-			let diff = end_time - start_time;
-			log::info!("Time taken for all transactions {}", diff.as_millis());
-			log::info!("Average time for 1 transaction {}", (diff.as_millis() / length as u128));
-		} else if TRANSACTION_TYPE == "JITO" {
-			log::info!("Total transactions {:?}", all_transactions.len());
-			let start_time = Instant::now();
-			for transactions_iter in all_transactions {
-				log::info!("Transactions to be sent {:?}", transactions_iter.len());
-
-				for transactions in transactions_iter.chunks(4) {
-					let mut tries = 0;
-
-					let before_time = Instant::now();
-					while tries < 5 {
-						println!("Try For Tx: {}", tries);
-						let mut current_transactions = Vec::new();
-
-						let mut client = jito_searcher_client::get_searcher_client(
-							&BLOCK_ENGINE_URL,
-							&authority,
-						)
-						.await
-						.expect("connects to searcher client");
-						let mut bundle_results_subscription = client
-							.subscribe_bundle_results(SubscribeBundleResultsRequest {})
-							.await
-							.expect("subscribe to bundle results")
-							.into_inner();
-
-						let jito_address =
-							Pubkey::from_str("96gYZGLnJYVFmbjzopPSU6QiEV5fGqZNyN9nmNhvrZU5")
-								.unwrap();
-						let ix = anchor_lang::solana_program::system_instruction::transfer(
-							&authority.pubkey(),
-							&jito_address,
-							400000,
-						);
-						let rpc_client = self.rpc_client();
-						let blockhash = rpc.get_latest_blockhash().await.unwrap();
-						let tx = Transaction::new_with_payer(&[ix], Some(&authority.pubkey()));
-
-						current_transactions.push(tx);
-						current_transactions.extend(transactions.to_vec());
-
-						let versioned_transactions: Vec<VersionedTransaction> =
-							current_transactions
-								.into_iter()
-								.map(|mut tx| {
-									tx.sign(&[&*authority], blockhash);
-									tx.clone().into()
-								})
-								.collect();
-
-						let signatures = jito_searcher_client::send_bundle_with_confirmation(
-							&versioned_transactions,
-							&rpc_client,
-							&mut client,
-							&mut bundle_results_subscription,
-						)
-						.await
-						.or_else(|e| {
-							println!("This is error {:?}", e);
-							ibc::prelude::Err("Error".to_owned())
-						});
-
-						if let Ok(sigs) = signatures {
-							signature = sigs.last().unwrap().to_string();
-							break;
-						} else {
-							tries += 1;
-							continue;
-						}
-					}
-					if tries == 5 {
-						log::error!("Failed to send transaction");
-					} else {
 						let after_time = Instant::now();
 						let diff = after_time - before_time;
 						let success_rate = 100 / (tries + 1);
@@ -2319,15 +2241,104 @@ impl Chain for SolanaClient {
 						log::info!("Success rate {}", success_rate);
 					}
 				}
-			}
-			let end_time = Instant::now();
-			let diff = end_time - start_time;
-			log::info!("Time taken for all transactions {}", diff.as_millis());
-			log::info!(
-				"Average time for 1 transaction {}",
-				(diff.as_millis() / total_transactions_length as u128)
-			);
-		}
+				let end_time = Instant::now();
+				let diff = end_time - start_time;
+				log::info!("Time taken for all transactions {}", diff.as_millis());
+				log::info!(
+					"Average time for 1 transaction {}",
+					(diff.as_millis() / length as u128)
+				);
+			},
+			TransactionSender::JITO => {
+				log::info!("Total transactions {:?}", all_transactions.len());
+				let start_time = Instant::now();
+				for transactions_iter in all_transactions {
+					log::info!("Transactions to be sent {:?}", transactions_iter.len());
+
+					for transactions in transactions_iter.chunks(4) {
+						let mut tries = 0;
+
+						let before_time = Instant::now();
+						while tries < 5 {
+							println!("Try For Tx: {}", tries);
+							let mut current_transactions = Vec::new();
+
+							let mut client = jito_searcher_client::get_searcher_client(
+								&BLOCK_ENGINE_URL,
+								&authority,
+							)
+							.await
+							.expect("connects to searcher client");
+							let mut bundle_results_subscription = client
+								.subscribe_bundle_results(SubscribeBundleResultsRequest {})
+								.await
+								.expect("subscribe to bundle results")
+								.into_inner();
+
+							let jito_address =
+								Pubkey::from_str("96gYZGLnJYVFmbjzopPSU6QiEV5fGqZNyN9nmNhvrZU5")
+									.unwrap();
+							let ix = anchor_lang::solana_program::system_instruction::transfer(
+								&authority.pubkey(),
+								&jito_address,
+								400000,
+							);
+							let rpc_client = self.rpc_client();
+							let blockhash = rpc.get_latest_blockhash().await.unwrap();
+							let tx = Transaction::new_with_payer(&[ix], Some(&authority.pubkey()));
+
+							current_transactions.push(tx);
+							current_transactions.extend(transactions.to_vec());
+
+							let versioned_transactions: Vec<VersionedTransaction> =
+								current_transactions
+									.into_iter()
+									.map(|mut tx| {
+										tx.sign(&[&*authority], blockhash);
+										tx.clone().into()
+									})
+									.collect();
+
+							let signatures = jito_searcher_client::send_bundle_with_confirmation(
+								&versioned_transactions,
+								&rpc_client,
+								&mut client,
+								&mut bundle_results_subscription,
+							)
+							.await
+							.or_else(|e| {
+								println!("This is error {:?}", e);
+								ibc::prelude::Err("Error".to_owned())
+							});
+
+							if let Ok(sigs) = signatures {
+								signature = sigs.last().unwrap().to_string();
+								break;
+							} else {
+								tries += 1;
+								continue;
+							}
+						}
+						if tries == 5 {
+							log::error!("Failed to send transaction");
+						} else {
+							let after_time = Instant::now();
+							let diff = after_time - before_time;
+							let success_rate = 100 / (tries + 1);
+							log::info!("Time taken {}", diff.as_millis());
+							log::info!("Success rate {}", success_rate);
+						}
+					}
+				}
+				let end_time = Instant::now();
+				let diff = end_time - start_time;
+				log::info!("Time taken for all transactions {}", diff.as_millis());
+				log::info!(
+					"Average time for 1 transaction {}",
+					(diff.as_millis() / total_transactions_length as u128)
+				);
+			},
+		};
 
 		let blockhash = rpc.get_latest_blockhash().await.unwrap();
 		// Wait for finalizing the transaction

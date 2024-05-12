@@ -18,6 +18,8 @@ private_key = [48, 123, 8, 80, 248, 0, 217, 142, 124, 193, 95, 24, 168, 139, 214
 solana_ibc_program_id = "FeFjYj2YuMsk87Cp48ubzQPtW4MWDaKJrCs1TcdgosZJ"
 write_program_id = "FufGpHqMQgGVjtMH9AV8YMrJYq8zaK6USRsJkZP4yDjo"
 signature_verifier_program_id = "C6r1VEbn3mSpecgrZ7NdBvWUtYVJWrDPv4uU9Xs956gc"
+trie_db_path = "../solana-ibc-indexer/indexer.db3"
+transaction_sender = "JITO"
 
 [common_state_config]
 skip_optional_client_updates = true
