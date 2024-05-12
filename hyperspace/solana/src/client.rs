@@ -256,10 +256,12 @@ impl SolanaClient {
 				})
 			});
 			if let Ok(trie) = row {
-				return (
-					solana_trie::TrieAccount::new(trie.data).unwrap(),
-					trie.match_block_state_root,
-				);
+				if trie.match_block_state_root {
+					return (
+						solana_trie::TrieAccount::new(trie.data).unwrap(),
+						trie.match_block_state_root,
+					);
+				}
 			}
 		}
 		let trie_key = self.get_trie_key();
