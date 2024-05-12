@@ -785,16 +785,15 @@ deserialize client state"
 			.map_err(|_| Error::Custom("value is sealed and cannot be fetched".to_owned()))?;
 		log::info!("This is proof {:?}", proof);
 		let chain_account = self.get_chain_storage().await;
-		let block_header = events::get_header_from_height(
-			self.rpc_client(),
-			self.solana_ibc_program_id,
-			at.revision_height,
-		)
-		.await
-		.expect(&format!("No block header found for height {:?}", at.revision_height));
-		let block_header_at_height = if &block_header.state_root == trie.hash() {
-			log::info!("Block header found at height");
-			block_header
+		let block_header_at_height = if at_height {
+			log::info!("Fetching block header at height");
+			events::get_header_from_height(
+				self.rpc_client(),
+				self.solana_ibc_program_id,
+				at.revision_height,
+			)
+			.await
+			.expect(&format!("No block header found for height {:?}", at.revision_height))
 		} else {
 			log::info!("Block header not found at height, so fetching latest height");
 			chain_account.head().unwrap().clone()
