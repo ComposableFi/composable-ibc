@@ -844,7 +844,9 @@ deserialize consensus state"
 				let blockhash = rpc.get_latest_blockhash().await.unwrap();
 				let transactions =
 					Transaction::new_with_payer(ix.as_slice(), Some(&authority.pubkey()));
-				let serialized_tx = bincode::serialize(&transactions).unwrap();
+				let mut cloned_tx = transactions.clone();
+				cloned_tx.sign(&[&*authority], blockhash);
+				let serialized_tx = bincode::serialize(&cloned_tx).unwrap();
 				// encode in base 58
 				let encoded_tx = bs58::encode(serialized_tx).into_string();
 				log::info!("Encoded tx {:?}", encoded_tx);

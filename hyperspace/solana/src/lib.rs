@@ -2297,6 +2297,8 @@ impl Chain for SolanaClient {
 										tx.clone().into()
 									})
 									.collect();
+							
+							
 
 							let signatures = jito_searcher_client::send_bundle_with_confirmation(
 								&versioned_transactions,
