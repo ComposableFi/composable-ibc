@@ -2294,11 +2294,13 @@ impl Chain for SolanaClient {
 									.into_iter()
 									.map(|mut tx| {
 										tx.sign(&[&*authority], blockhash);
+										let serialized_tx = bincode::serialize(&tx).unwrap();
+										// encode in base 58
+										let encoded_tx = bs58::encode(serialized_tx).into_string();
+										log::info!("Encoded tx {:?}", encoded_tx);
 										tx.clone().into()
 									})
 									.collect();
-							
-							
 
 							let signatures = jito_searcher_client::send_bundle_with_confirmation(
 								&versioned_transactions,
