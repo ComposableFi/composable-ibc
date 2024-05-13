@@ -2258,7 +2258,7 @@ impl Chain for SolanaClient {
 				for transactions_iter in all_transactions {
 					log::info!("Transactions to be sent {:?}", transactions_iter.len());
 
-					for transactions in transactions_iter.chunks(1) {
+					for transactions in transactions_iter.chunks(4) {
 						let mut tries = 0;
 
 						let before_time = Instant::now();
