@@ -2080,9 +2080,13 @@ impl Chain for SolanaClient {
 				} else if let MsgEnvelope::Packet(PacketMsg::Ack(e)) = message {
 					let packet_data: ibc_app_transfer_types::packet::PacketData =
 						serde_json::from_slice(&e.packet.data).unwrap();
-					let sender_account = Pubkey::from_str(&packet_data.sender.as_ref()).unwrap();
 					self.send_deliver(
-						DeliverIxType::Acknowledgement { sender: sender_account },
+						DeliverIxType::Timeout {
+							token: packet_data.token,
+							port_id: e.packet.port_id_on_a,
+							channel_id: e.packet.chan_id_on_a,
+							sender_account: packet_data.sender.to_string(),
+						},
 						chunk_account,
 						max_tries,
 					)
