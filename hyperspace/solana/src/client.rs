@@ -844,12 +844,11 @@ deserialize consensus state"
 				let blockhash = rpc.get_latest_blockhash().await.unwrap();
 				let transactions =
 					Transaction::new_with_payer(ix.as_slice(), Some(&authority.pubkey()));
-				let mut i = 0;
-				while i < 10 {
-					let result = rpc.simulate_transaction(&transactions).await;
-					log::info!("result {:?}", result);
-					sleep(Duration::from_secs(2));
-				}
+				// while i < 10 {
+				// 	let result = rpc.simulate_transaction(&transactions).await;
+				// 	log::info!("result {:?}", result);
+				// 	sleep(Duration::from_secs(2));
+				// }
 				Ok((vec![], vec![transactions]))
 				// .send()
 				// .await
