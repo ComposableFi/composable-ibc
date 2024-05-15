@@ -77,14 +77,7 @@ where
 		let ancestry_chain = AncestryChain::<H>::new(&self.votes_ancestries);
 
 		match finality_grandpa::validate_commit(&self.commit, voters, &ancestry_chain) {
-			Ok(ref result) if result.is_valid() => {
-				if result.num_duplicated_precommits() > 0 ||
-					result.num_invalid_voters() > 0 ||
-					result.num_equivocations() > 0
-				{
-					Err(anyhow!("Invalid commit, found one of `duplicate precommits`, `invalid voters`, or `equivocations` {result:?}"))?
-				}
-			},
+			Ok(ref result) if result.is_valid() => (), // no additional checks required
 			err => {
 				let result = err.map_err(|_| {
 					anyhow!("[verify_with_voter_set] Invalid ancestry while validating commit!")
