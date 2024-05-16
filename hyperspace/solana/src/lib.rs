@@ -694,7 +694,8 @@ deserialize client state"
 	}
 
 	async fn query_proof(&self, at: Height, keys: Vec<Vec<u8>>) -> Result<Vec<u8>, Self::Error> {
-		log::info!("This is the bytes for keys {:?}", keys);
+		log::info!("Querying proof at {:?}", at.revision_height);
+		log::info!("This is the bytes for keys {:?} ", keys);
 		let key_str = String::from_utf8(keys[0].clone())
 			.map_err(|_| Error::Custom("Invalid key".to_owned()))?;
 		log::info!("This is the keys in string{:?}", key_str);

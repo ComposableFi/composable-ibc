@@ -256,6 +256,7 @@ impl SolanaClient {
 				})
 			});
 			if let Ok(trie) = row {
+				log::info!("Does block state roots match {}", trie.match_block_state_root);
 				if trie.match_block_state_root {
 					return (
 						solana_trie::TrieAccount::new(trie.data).unwrap(),
@@ -1082,8 +1083,7 @@ pub async fn get_accounts(
 		Ok((Some(escrow_account), Some(token_mint), Some(receiver_account), Some(receiver_address)))
 	} else {
 		log::info!("Not receiver chain source");
-		let mut full_token = denom.clone();
-		full_token.add_trace_prefix(TracePrefix::new(port_id.clone(), channel_id.clone()));
+		let full_token = denom.clone();
 		let hashed_denom = CryptoHash::digest(full_token.to_string().as_bytes());
 		let token_mint_seeds = ["mint".as_bytes(), hashed_denom.as_ref()];
 		let token_mint = Pubkey::find_program_address(&token_mint_seeds, &program_id).0;
