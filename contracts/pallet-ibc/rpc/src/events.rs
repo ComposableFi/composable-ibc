@@ -16,7 +16,7 @@ where
 	C: Send + Sync + 'static + ProvideRuntimeApi<Block> + HeaderBackend<Block>,
 	C::Api: IbcRuntimeApi<Block, AssetId>,
 	Block: BlockT,
-	AssetId: codec::Codec,
+	AssetId: parity_scale_codec::Codec,
 {
 	let mut event: RawIbcEvent = ev.try_into().ok()?;
 	match &mut event {

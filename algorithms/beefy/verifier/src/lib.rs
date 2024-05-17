@@ -28,11 +28,12 @@ use beefy_light_client_primitives::{
 	MmrUpdateProof, NodesUtils, ParachainsUpdateProof, SignatureWithAuthorityIndex, HASH_LENGTH,
 };
 use beefy_primitives::{known_payloads::MMR_ROOT_ID, mmr::MmrLeaf};
-use codec::{Decode, Encode};
-use frame_support::sp_runtime::{app_crypto::ByteArray, traits::Convert};
+use parity_scale_codec::{Decode, Encode};
 use sp_core::H256;
+use sp_runtime::traits::Convert;
 
 use alloc::{format, string::ToString};
+use sp_core::ByteArray;
 use sp_runtime::{generic::Header, traits::BlakeTwo256};
 use sp_std::{prelude::*, vec};
 use sp_trie::LayoutV0;
@@ -222,7 +223,7 @@ where
 		// Verify timestamp extrinsic
 		// Timestamp extrinsic should be the first inherent and hence the first extrinsic
 		// https://github.com/paritytech/substrate/blob/d602397a0bbb24b5d627795b797259a44a5e29e9/primitives/trie/src/lib.rs#L99-L101
-		let timestamp_ext_key = codec::Compact(0u64).encode();
+		let timestamp_ext_key = parity_scale_codec::Compact(0u64).encode();
 		sp_trie::verify_trie_proof::<LayoutV0<H::BlakeTwo256>, _, _, _>(
 			&decoded_para_header.extrinsics_root,
 			&&*parachain_header.extrinsic_proof,

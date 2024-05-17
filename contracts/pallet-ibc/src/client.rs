@@ -181,7 +181,7 @@ where
 		client_state: &AnyClientState,
 	) -> Result<AnyConsensusState, ICS02Error> {
 		log::trace!(target: "pallet_ibc", "in client: [host_consensus_state] height = {:?}", height);
-		use codec::Compact;
+		use parity_scale_codec::Compact;
 		use sp_core::H256;
 		use sp_runtime::traits::{BlakeTwo256, Header};
 		use sp_trie::LayoutV0;
@@ -207,7 +207,7 @@ where
 		}
 
 		let connection_proof: HostConsensusProof =
-			codec::Decode::decode(&mut &proof[..]).map_err(|e| {
+			parity_scale_codec::Decode::decode(&mut &proof[..]).map_err(|e| {
 				ICS02Error::implementation_specific(format!(
 					"[host_consensus_state]: Failed to decode proof: {e}"
 				))
@@ -231,7 +231,7 @@ where
 				.expect("header has been verified; qed");
 			// Timestamp extrinsic should be the first inherent and hence the first extrinsic
 			// https://github.com/paritytech/substrate/blob/d602397a0bbb24b5d627795b797259a44a5e29e9/primitives/trie/src/lib.rs#L99-L101
-			let key = codec::Compact(0u32).encode();
+			let key = parity_scale_codec::Compact(0u32).encode();
 			sp_trie::verify_trie_proof::<LayoutV0<BlakeTwo256>, _, _, _>(
 				&H256::from(extrinsic_root),
 				proof,
@@ -241,10 +241,12 @@ where
 				ICS02Error::implementation_specific(format!("Invalid extrinsic proof"))
 			})?;
 
-			let (_, _, timestamp): (u8, u8, Compact<u64>) = codec::Decode::decode(&mut &ext[2..])
-				.map_err(|err| {
-				ICS02Error::implementation_specific(format!("Failed to decode extrinsic: {err:?}"))
-			})?;
+			let (_, _, timestamp): (u8, u8, Compact<u64>) =
+				parity_scale_codec::Decode::decode(&mut &ext[2..]).map_err(|err| {
+					ICS02Error::implementation_specific(format!(
+						"Failed to decode extrinsic: {err:?}"
+					))
+				})?;
 
 			let duration = core::time::Duration::from_millis(timestamp.into());
 			Timestamp::from_nanoseconds(duration.as_nanos().saturated_into::<u64>())

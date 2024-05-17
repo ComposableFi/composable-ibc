@@ -15,7 +15,7 @@ tokio = { version = "1.32.0", features = ["macros", "rt-multi-thread"] }
 
 [dependencies]
 sp-std = { git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.43" }
-sp-runtime = { git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.43" }
+sp-runtime = { workspace = true }
 sp-core =  { git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.43" }
 sp-io = { git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.43" }
 sp-core-hashing = { git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.43" }
@@ -24,7 +24,7 @@ beefy-mmr = { package = "pallet-beefy-mmr", git = "https://github.com/paritytech
 pallet-mmr = { package = "pallet-mmr", git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.43" }
 pallet-mmr-primitives = { package = "sp-mmr-primitives", git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.43" }
 beefy-primitives = { package = "sp-consensus-beefy", git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.43" }
-codec = { package = "parity-scale-codec", version = "3.0.0", features = ["derive"] }
+parity-scale-codec = { workspace = true }
 rs_merkle = "1.2.0"
 derive_more = { version = "0.99.17", features = ["from"]  }
 light-client-common = { path = "../../../light-clients/common", features = ["enable-subxt"] }
@@ -35,7 +35,7 @@ subxt = { git = "https://github.com/paritytech/subxt",  tag = "v0.29.0", feature
 hex-literal = { version = "0.3.4" }
 serde_json = { version = "1.0.74" }
 pallet-mmr-rpc = { package = "mmr-rpc", git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.43" }
-sp-trie = { git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.43" }
+sp-trie = { workspace = true }
 hex = { version = "0.4.3" }
 beefy-light-client-primitives = {  path = "../primitives" }
 

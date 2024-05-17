@@ -44,7 +44,6 @@ use crate::{
 };
 use beefy_light_client_primitives::{ClientState, MmrUpdateProof};
 use beefy_prover::Prover;
-use codec::Decode;
 use grandpa_light_client_primitives::ParachainHeaderProofs;
 use grandpa_prover::GrandpaProver;
 use ibc::{
@@ -63,6 +62,7 @@ use jsonrpsee_ws_client::WsClientBuilder;
 use light_client_common::config::{AsInner, RuntimeStorage};
 use pallet_ibc::light_clients::{AnyClientState, AnyConsensusState, HostFunctionsManager};
 use pallet_mmr_primitives::Proof;
+use parity_scale_codec::Decode;
 use primitives::{CommonClientState, KeyProvider};
 use sc_keystore::LocalKeystore;
 use sp_core::{ecdsa, ed25519, sr25519, Bytes, Pair, H256};
@@ -366,7 +366,9 @@ where
 			.into_iter()
 			.map(|para_header| {
 				Ok(ParachainHeader {
-					parachain_header: codec::Decode::decode(&mut &*para_header.parachain_header)?,
+					parachain_header: parity_scale_codec::Decode::decode(
+						&mut &*para_header.parachain_header,
+					)?,
 					partial_mmr_leaf: para_header.partial_mmr_leaf,
 					parachain_heads_proof: para_header.parachain_heads_proof,
 					heads_leaf_index: para_header.heads_leaf_index,
@@ -375,7 +377,7 @@ where
 					timestamp_extrinsic: para_header.timestamp_extrinsic,
 				})
 			})
-			.collect::<Result<Vec<_>, codec::Error>>()?;
+			.collect::<Result<Vec<_>, parity_scale_codec::Error>>()?;
 
 		Ok((parachain_headers, batch_proof))
 	}

@@ -23,9 +23,9 @@ jsonrpsee = { version = "0.16.2", features = [
 ] }
 frame-metadata = { version = "15.0.0", features = ["v14", "std"] }
 syn = { version = "2.0.15", features = ["full", "extra-traits"] }
-codec = { package = "parity-scale-codec", version = "3.6.1", default-features = false, features = [
+parity-scale-codec = { workspace = true, default-features = false, features = [
     "derive",
     "max-encoded-len",
 ] }
-hex = "0.4.3"
+hex = { workspace = true }
 wasm-testbed = { git = "https://github.com/chevdor/subwasm", rev = "1c8446be5cff9e04cbb7b41acc136f22eddd5eac" }

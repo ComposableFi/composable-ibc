@@ -17,8 +17,8 @@
 
 #![allow(missing_docs)]
 
-use codec::{Compact, Decode, Input};
 use light_client_common::config::Config;
+use parity_scale_codec::{Compact, Decode, Input};
 
 pub struct UncheckedExtrinsic<T: Config> {
 	pub signature:
@@ -28,7 +28,7 @@ pub struct UncheckedExtrinsic<T: Config> {
 
 // the code was taken from https://github.com/paritytech/substrate/blob/0c1ccdaa53556a106aa69c23f19527e435970237/primitives/runtime/src/generic/unchecked_extrinsic.rs#L233
 impl<T: Config> Decode for UncheckedExtrinsic<T> {
-	fn decode<I: Input>(input: &mut I) -> Result<Self, codec::Error> {
+	fn decode<I: Input>(input: &mut I) -> Result<Self, parity_scale_codec::Error> {
 		const EXTRINSIC_FORMAT_VERSION: u8 = 4;
 
 		// This is a little more complicated than usual since the binary format must be compatible

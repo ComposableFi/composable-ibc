@@ -20,10 +20,10 @@
 use anyhow::anyhow;
 pub use beefy_prover;
 use beefy_prover::helpers::{fetch_timestamp_extrinsic_with_proof, TimeStampExtWithProof};
-use codec::{Decode, Encode};
 use finality_grandpa_rpc::GrandpaApiClient;
 use jsonrpsee::{async_client::Client, tracing::log, ws_client::WsClientBuilder};
 use light_client_common::config::{AsInner, RuntimeStorage};
+use parity_scale_codec::{Decode, Encode};
 use primitives::{
 	parachain_header_storage_key, ClientState, FinalityProof, ParachainHeaderProofs,
 	ParachainHeadersWithFinalityProof,
@@ -76,7 +76,7 @@ pub type Commit = finality_grandpa::Commit<H256, u32, AuthoritySignature, Author
 /// Justification
 #[cfg_attr(any(feature = "std", test), derive(Debug))]
 #[derive(Clone, Encode, Decode)]
-pub struct GrandpaJustification<H: Header + codec::Decode> {
+pub struct GrandpaJustification<H: Header + parity_scale_codec::Decode> {
 	/// Current voting round number, monotonically increasing
 	pub round: u64,
 	/// Contains block hash & number that's being finalized and the signatures.
@@ -243,7 +243,7 @@ where
 		header_numbers: Vec<<<T as subxt::Config>::Header as Header>::Number>,
 	) -> Result<ParachainHeadersWithFinalityProof<H>, anyhow::Error>
 	where
-		H: Header + codec::Decode + Send + 'static,
+		H: Header + parity_scale_codec::Decode + Send + 'static,
 		u32: From<<H as Header>::Number>,
 		<H::Hasher as subxt::config::Hasher>::Output: From<T::Hash>,
 		T::Hash: From<<H::Hasher as subxt::config::Hasher>::Output>,

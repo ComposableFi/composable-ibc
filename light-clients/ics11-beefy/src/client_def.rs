@@ -16,9 +16,9 @@
 use beefy_light_client_primitives::{
 	ClientState as LightClientState, ParachainHeader, ParachainsUpdateProof,
 };
-use codec::{Decode, Encode};
 use core::{fmt::Debug, marker::PhantomData};
 use pallet_mmr_primitives::Proof;
+use parity_scale_codec::{Decode, Encode};
 use sp_core::H256;
 use tendermint_proto::Protobuf;
 
@@ -422,7 +422,7 @@ where
 		client_state.verify_height(height)?;
 		verify_delay_passed::<H, _>(ctx, height, connection_end).map_err(Error::Anyhow)?;
 
-		let seq_bytes = codec::Encode::encode(&u64::from(sequence));
+		let seq_bytes = parity_scale_codec::Encode::encode(&u64::from(sequence));
 
 		let seq_path = SeqRecvsPath(port_id.clone(), *channel_id);
 		verify_membership::<H::BlakeTwo256, _>(

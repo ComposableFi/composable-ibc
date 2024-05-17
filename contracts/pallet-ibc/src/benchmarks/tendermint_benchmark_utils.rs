@@ -71,7 +71,7 @@ use tendermint_proto::Protobuf;
 
 pub const TENDERMINT_TIMESTAMP: u64 = 1650894363;
 
-#[derive(codec::Encode)]
+#[derive(parity_scale_codec::Encode)]
 struct ConsensusProofwithHostConsensusStateProof {
 	host_proof: Vec<u8>,
 	connection_proof: Vec<u8>,

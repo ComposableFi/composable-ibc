@@ -30,7 +30,6 @@ mod weights;
 pub mod xcm_config;
 
 use alloc::string::ToString;
-use codec::{Decode, Encode};
 use core::str::FromStr;
 use cumulus_pallet_parachain_system::RelayNumberStrictlyIncreases;
 use ibc::core::{
@@ -43,6 +42,7 @@ use pallet_ibc::{
 	ics20::SubstrateMultihopXcmHandlerNone, ics20_fee::NonFlatFeeConverter,
 	light_client_common::RelayChain, LightClientProtocol,
 };
+use parity_scale_codec::{Decode, Encode};
 use smallvec::smallvec;
 use sp_api::impl_runtime_apis;
 use sp_core::{crypto::KeyTypeId, OpaqueMetadata};
@@ -698,7 +698,14 @@ impl DenomToAssetId<Runtime> for IbcDenomToAssetIdConversion {
 }
 
 #[derive(
-	Debug, codec::Encode, Clone, codec::Decode, PartialEq, Eq, scale_info::TypeInfo, Default,
+	Debug,
+	parity_scale_codec::Encode,
+	Clone,
+	parity_scale_codec::Decode,
+	PartialEq,
+	Eq,
+	scale_info::TypeInfo,
+	Default,
 )]
 pub struct MemoMessage;
 
@@ -1134,8 +1141,8 @@ impl_runtime_apis! {
 
 	impl<RuntimeCall, AccountId> simnode_apis::CreateTransactionApi<Block, AccountId, RuntimeCall> for Runtime
 		where
-			RuntimeCall: codec::Codec,
-			AccountId: codec::Codec + codec::EncodeLike<sp_runtime::AccountId32> + Into<sp_runtime::AccountId32> + Clone+ PartialEq + scale_info::TypeInfo + core::fmt::Debug,
+			RuntimeCall: parity_scale_codec::Codec,
+			AccountId: parity_scale_codec::Codec + parity_scale_codec::EncodeLike<sp_runtime::AccountId32> + Into<sp_runtime::AccountId32> + Clone+ PartialEq + scale_info::TypeInfo + core::fmt::Debug,
 			Block: sp_runtime::traits::Block
 	{
 		fn create_transaction(call: RuntimeCall, signer: AccountId) -> Vec<u8> {

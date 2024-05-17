@@ -12,17 +12,17 @@ build = "build.rs"
 [dependencies]
 clap = { version = "4.0.22", features = ["derive"] }
 derive_more = "0.99.2"
-log = "0.4.17"
+log = { workspace = true }
 codec = { package = "parity-scale-codec", version = "3.0.0" }
-serde = { version = "1.0.140", features = ["derive"] }
+serde = { workspace = true }
 jsonrpsee = { version = "0.16.2", features = ["server"] }
 
 # Local
 parachain-runtime = { path = "runtime" }
 ibc-primitives = { path = "../../contracts/pallet-ibc/primitives" }
-ibc-rpc = { path = "../../contracts/pallet-ibc/rpc" }
+ibc-rpc = { workspace = true }
 ibc-runtime-api = { path = "../../contracts/pallet-ibc/runtime-api" }
-pallet-ibc = { path = "../../contracts/pallet-ibc" }
+pallet-ibc = { workspace = true }
 
 # Substrate
 frame-benchmarking = { git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.43" }
@@ -50,11 +50,11 @@ sp-block-builder = { git = "https://github.com/paritytech/substrate", branch = "
 sp-blockchain = { git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.43" }
 sp-consensus = { git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.43" }
 sp-consensus-aura = { git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.43" }
-sp-core = { git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.43" }
+sp-core = { workspace = true }
 sp-inherents = { git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.43" }
-sp-keystore = { git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.43" }
+sp-keystore = { workspace = true }
 sp-offchain = { git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.43" }
-sp-runtime = { git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.43" }
+sp-runtime = { workspace = true }
 sp-session = { git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.43" }
 sp-timestamp = { git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.43" }
 sp-transaction-pool = { git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.43" }

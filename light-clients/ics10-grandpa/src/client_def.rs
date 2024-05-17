@@ -20,7 +20,6 @@ use ibc::core::ics02_client::{
 
 use crate::client_message::{ClientMessage, RelayChainHeader};
 use alloc::{format, string::ToString, vec, vec::Vec};
-use codec::Decode;
 use core::marker::PhantomData;
 use finality_grandpa::Chain;
 use grandpa_client_primitives::{
@@ -56,6 +55,7 @@ use ibc::{
 use light_client_common::{
 	state_machine, verify_delay_passed, verify_membership, verify_non_membership,
 };
+use parity_scale_codec::Decode;
 use sp_core::H256;
 use sp_runtime::traits::Header;
 use sp_trie::StorageProof;
@@ -401,7 +401,7 @@ where
 				.encode_to_vec()
 				.map_err(Ics02Error::encode)?;
 
-			let value = state_machine::read_proof_check::<H::BlakeTwo256, _>(
+			let value = sp_state_machine::read_proof_check::<H::BlakeTwo256, _>(
 				&root,
 				proof_upgrade_client,
 				vec![CLIENT_STATE_UPGRADE_PATH],
@@ -429,7 +429,7 @@ where
 				.encode_to_vec()
 				.map_err(Ics02Error::encode)?;
 
-			let value = state_machine::read_proof_check::<H::BlakeTwo256, _>(
+			let value = sp_state_machine::read_proof_check::<H::BlakeTwo256, _>(
 				&root,
 				proof_upgrade_consensus_state,
 				vec![CONSENSUS_STATE_UPGRADE_PATH],
@@ -631,7 +631,7 @@ where
 		client_state.verify_height(height)?;
 		verify_delay_passed::<H, _>(ctx, height, connection_end).map_err(Error::Anyhow)?;
 
-		let seq_bytes = codec::Encode::encode(&u64::from(sequence));
+		let seq_bytes = parity_scale_codec::Encode::encode(&u64::from(sequence));
 
 		let seq_path = SeqRecvsPath(port_id.clone(), *channel_id);
 		verify_membership::<H::BlakeTwo256, _>(

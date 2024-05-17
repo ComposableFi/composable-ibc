@@ -1,9 +1,7 @@
 use super::*;
 use ibc::core::ics26_routing::error::{Error as RoutingError, ErrorDetail};
 
-#[derive(
-	PartialEq, Eq, Clone, frame_support::RuntimeDebug, scale_info::TypeInfo, Encode, Decode,
-)]
+#[derive(PartialEq, Eq, Clone, Debug, scale_info::TypeInfo, Encode, Decode)]
 pub enum IbcError {
 	/// ICS02 client error
 	Ics02Client { message: Vec<u8> },

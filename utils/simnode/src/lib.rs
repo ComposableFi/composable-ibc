@@ -88,7 +88,7 @@ impl ChainInfo for ParachainRuntimeChainInfo {
 #[cfg(test)]
 mod tests {
 	use crate::ParachainRuntimeChainInfo;
-	use frame_benchmarking::frame_support::codec::Encode;
+	use frame_benchmarking::frame_support::parity_scale_codec::Encode;
 	use grandpa_client_primitives::{justification::GrandpaJustification, Commit, FinalityProof};
 	use ibc::{
 		core::{

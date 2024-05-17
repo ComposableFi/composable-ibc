@@ -6,13 +6,13 @@ edition = "2021"
 [dependencies]
 futures-util = { version = "0.3.19", default-features = false, features = ["io"] }
 hyper = { version = "0.14.16", default-features = false, features = ["http1", "server", "tcp"] }
-log = "0.4.17"
-prometheus = { version = "0.13.0", default-features = false }
+log = { workspace = true }
+prometheus = { workspace = true }
 thiserror = "1.0"
 tokio = { version = "1.32.0", features = ["parking_lot"] }
-anyhow = "1.0.65"
+anyhow = { workspace = true }
 
 # ibc
 ibc = { path = "../../ibc/modules" }
-ibc-proto = { path = "../../ibc/proto" }
-tendermint-proto = { git = "https://github.com/informalsystems/tendermint-rs", rev = "e81f7bf23d63ffbcd242381d1ce5e35da3515ff1", default-features = false }
+ibc-proto = { workspace = true }
+tendermint-proto = { workspace = true }

@@ -14,7 +14,6 @@ use crate::{
 	define_transfer_params, substrate::DummyBeefyAuthoritySet,
 };
 use async_trait::async_trait;
-use codec::{Compact, Decode, Encode};
 use ibc_proto::google::protobuf::Any;
 use light_client_common::config::{
 	EventRecordT, IbcEventsT, LocalAddress, ParaLifecycleT, RuntimeCall, RuntimeStorage,
@@ -23,6 +22,7 @@ use light_client_common::config::{
 use pallet_ibc::{events::IbcEvent as RawIbcEvent, MultiAddress, Timeout, TransferParams};
 use pallet_ibc_ping::SendPingParams;
 use parachain_subxt::api::runtime_types::ibc_primitives::Timeout as RawTimeout;
+use parity_scale_codec::{Compact, Decode, Encode};
 use relaychain::api::runtime_types::polkadot_runtime_parachains::paras::ParaLifecycle;
 use serde::{Serialize, Serializer};
 use sp_core::{crypto::AccountId32, H256};

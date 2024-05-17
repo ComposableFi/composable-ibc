@@ -16,9 +16,9 @@
 //! State verification functions
 
 use alloc::{boxed::Box, collections::BTreeMap, string::String, vec::Vec};
-use codec::Decode;
 use core::fmt::Debug;
 use hash_db::{HashDB, Hasher, EMPTY_PREFIX};
+use parity_scale_codec::Decode;
 use sp_storage::ChildInfo;
 use sp_trie::{KeySpacedDB, LayoutV0, StorageProof, Trie, TrieDBBuilder};
 
@@ -82,7 +82,7 @@ where
 	Ok(())
 }
 
-/// Lifted directly from [`sp_state_machine::read_proof_check`](https://github.com/paritytech/substrate/blob/b27c470eaff379f512d1dec052aff5d551ed3b03/primitives/state-machine/src/lib.rs#L1075-L1094)
+/// Lifted directly from [`sp_sp_state_machine::read_proof_check`](https://github.com/paritytech/substrate/blob/b27c470eaff379f512d1dec052aff5d551ed3b03/primitives/state-machine/src/lib.rs#L1075-L1094)
 pub fn read_proof_check<H, I>(
 	root: &H::Out,
 	proof: StorageProof,

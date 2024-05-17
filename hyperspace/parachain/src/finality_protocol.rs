@@ -17,7 +17,6 @@
 use crate::{error::Error, ParachainClient};
 use anyhow::anyhow;
 use beefy_light_client_primitives::{ClientState as BeefyPrimitivesClientState, NodesUtils};
-use codec::{Decode, Encode};
 use finality_grandpa::BlockNumberOps;
 use finality_grandpa_rpc::GrandpaApiClient;
 use grandpa_light_client_primitives::{
@@ -37,6 +36,7 @@ use ics11_beefy::client_message::{
 	BeefyHeader, ClientMessage as BeefyClientMessage, ParachainHeadersWithProof,
 };
 use pallet_ibc::light_clients::{AnyClientMessage, AnyClientState};
+use parity_scale_codec::{Decode, Encode};
 use primitives::{
 	filter_events_by_ids, mock::LocalClientTypes, query_maximum_height_for_timeout_proofs, Chain,
 	IbcProvider, KeyProvider, UpdateType,
@@ -675,7 +675,7 @@ where
 		};
 
 	let grandpa_header = GrandpaHeader {
-		finality_proof: codec::Decode::decode(&mut &*finality_proof.encode())
+		finality_proof: parity_scale_codec::Decode::decode(&mut &*finality_proof.encode())
 			.expect("Same struct from different crates,decode should not fail"),
 		parachain_headers: parachain_headers.into(),
 		height: Height::new(source.para_id as u64, finalized_para_height as u64),

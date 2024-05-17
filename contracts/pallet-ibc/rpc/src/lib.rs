@@ -2,7 +2,6 @@
 
 //! IBC RPC Implementation.
 
-use codec::Encode;
 use ibc::{
 	core::{
 		ics03_connection::connection::ConnectionEnd,
@@ -44,6 +43,7 @@ use pallet_ibc::{
 	events::IbcEvent,
 	light_clients::{AnyClientState, AnyConsensusState},
 };
+use parity_scale_codec::Encode;
 use sc_chain_spec::Properties;
 use sc_client_api::{BlockBackend, ProofProvider};
 use serde::{Deserialize, Serialize};
@@ -165,7 +165,7 @@ impl TryFrom<RawPacketInfo> for PacketInfo {
 pub trait IbcApi<BlockNumber, Hash, AssetId>
 where
 	Hash: PartialEq + Eq + std::hash::Hash,
-	AssetId: codec::Codec,
+	AssetId: parity_scale_codec::Codec,
 {
 	/// Query packet data
 	#[method(name = "ibc_querySendPackets")]
@@ -488,7 +488,7 @@ where
 		+ ProofProvider<Block>
 		+ BlockBackend<Block>,
 	C::Api: IbcRuntimeApi<Block, AssetId>,
-	AssetId: codec::Codec + Copy + Send + Sync + 'static,
+	AssetId: parity_scale_codec::Codec + Copy + Send + Sync + 'static,
 {
 	fn query_send_packets(
 		&self,
@@ -1779,7 +1779,7 @@ where
 		+ Send
 		+ Sync,
 	C::Api: IbcRuntimeApi<Block, AssetId>,
-	AssetId: codec::Codec + Copy,
+	AssetId: parity_scale_codec::Codec + Copy,
 {
 	fn ibc_event_by_tx_id(
 		&self,

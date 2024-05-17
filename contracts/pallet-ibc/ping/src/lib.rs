@@ -7,7 +7,7 @@ use alloc::{
 	string::{String, ToString},
 };
 use core::{fmt::Formatter, str::FromStr, write};
-use frame_support::dispatch::{DispatchResult, Weight};
+use frame_support::{dispatch::DispatchResult, weights::Weight};
 use ibc::{
 	core::{
 		ics04_channel::{
@@ -38,9 +38,9 @@ pub const VERSION: &str = "ping-1";
 	Clone,
 	PartialEq,
 	Eq,
-	codec::Encode,
-	codec::Decode,
-	frame_support::RuntimeDebug,
+	parity_scale_codec::Encode,
+	parity_scale_codec::Decode,
+	Debug,
 	scale_info::TypeInfo,
 )]
 pub struct SendPingParams {
@@ -76,11 +76,11 @@ pub mod pallet {
 		type IbcHandler: ibc_primitives::IbcHandler<<Self as frame_system::Config>::AccountId>;
 	}
 
-	// Simple declaration of the `Pallet` type. It is placeholder we use to implement traits and
-	// method.
+	/// The current storage version.
+	const STORAGE_VERSION: StorageVersion = StorageVersion::new(3);
+
 	#[pallet::pallet]
-	#[pallet::generate_store(pub(super) trait Store)]
-	#[pallet::without_storage_info]
+	#[pallet::storage_version(STORAGE_VERSION)]
 	pub struct Pallet<T>(_);
 
 	#[pallet::call]

@@ -15,7 +15,6 @@
 #[cfg(feature = "testing")]
 use crate::send_packet_relay::packet_relay_status;
 use crate::Mode;
-use codec::Encode;
 use ibc::{
 	core::{
 		ics02_client::client_state::ClientState as ClientStateT,
@@ -44,6 +43,7 @@ use ibc::{
 };
 use ibc_proto::google::protobuf::Any;
 use pallet_ibc::light_clients::AnyClientState;
+use parity_scale_codec::Encode;
 use primitives::{error::Error, mock::LocalClientTypes, Chain};
 use std::str::FromStr;
 use tendermint_proto::Protobuf;

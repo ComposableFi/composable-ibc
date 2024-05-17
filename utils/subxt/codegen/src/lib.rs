@@ -13,13 +13,13 @@
 // limitations under the License.
 
 use anyhow::anyhow;
-use codec::{Decode, Input};
 use jsonrpsee::{
 	async_client::ClientBuilder,
 	client_transport::ws::{Uri, WsTransportClientBuilder},
 	core::{client::ClientT, Error},
 	rpc_params,
 };
+use parity_scale_codec::{Decode, Input};
 use std::{env, fs, path::Path};
 use subxt_codegen::{CratePath, DerivesRegistry, TypeSubstitutes};
 

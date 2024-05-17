@@ -13,7 +13,6 @@ use crate::{
 	routing::Context,
 	Any, Config,
 };
-use codec::EncodeLike;
 use core::str::FromStr;
 use frame_benchmarking::{benchmarks, whitelisted_caller};
 use frame_support::traits::Currency;
@@ -73,6 +72,7 @@ use ibc::{
 };
 use ibc_primitives::{get_channel_escrow_address, IbcHandler};
 use pallet_membership::Instance2;
+use parity_scale_codec::EncodeLike;
 use scale_info::prelude::string::ToString;
 use sp_core::{crypto::AccountId32, Get};
 use sp_runtime::{traits::IdentifyAccount, DigestItem};

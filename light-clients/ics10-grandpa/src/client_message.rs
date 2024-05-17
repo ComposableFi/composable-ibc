@@ -22,9 +22,9 @@ use crate::{
 };
 use alloc::{collections::BTreeMap, vec::Vec};
 use anyhow::anyhow;
-use codec::{Decode, Encode};
 use grandpa_client_primitives::{FinalityProof, ParachainHeaderProofs};
 use ibc::Height;
+use parity_scale_codec::{Decode, Encode};
 use sp_core::H256;
 use sp_runtime::traits::BlakeTwo256;
 use tendermint_proto::Protobuf;
@@ -121,7 +121,7 @@ impl TryFrom<RawHeader> for Header {
 			.unknown_headers
 			.into_iter()
 			.map(|h| {
-				let header = codec::Decode::decode(&mut &h[..])?;
+				let header = parity_scale_codec::Decode::decode(&mut &h[..])?;
 				Ok(header)
 			})
 			.collect::<Result<_, Error>>()?;

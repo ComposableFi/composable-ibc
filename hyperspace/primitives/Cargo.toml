@@ -7,25 +7,25 @@ authors = ["Seun Lanlege <seunlanlege@gmail.com>", "David Salami <wizdave97@gmai
 
 [dependencies]
 # crates.io
-anyhow = "1.0.65"
-futures = "0.3.21"
-async-trait = "0.1.53"
-hex = "0.4.3"
-codec = { package = "parity-scale-codec", version = "3.0.0", features = ["derive"] }
+anyhow = { workspace = true }
+futures = { workspace = true }
+async-trait = { workspace = true }
+hex = { workspace = true }
+parity-scale-codec = { workspace = true }
 tokio = { version = "1.32.0", features = ["macros", "sync", "time"] }
-thiserror = "1.0.31"
-log = "0.4.17"
-rand = "0.8.5"
-serde = "1.0.163"
+thiserror = { workspace = true }
+log = { workspace = true }
+rand = { workspace = true }
+serde = { workspace = true }
 
 # substrate
 subxt = { git = "https://github.com/paritytech/subxt",  tag = "v0.29.0", features = ["substrate-compat"] }
 
 # ibc
-ibc = { path = "../../ibc/modules", features = [] }
-ibc-proto = { path = "../../ibc/proto" }
-pallet-ibc = { path = "../../contracts/pallet-ibc" }
-ibc-rpc = { path = "../../contracts/pallet-ibc/rpc" }
+ibc = { workspace = true, features = [] }
+ibc-proto = { workspace = true }
+pallet-ibc = { workspace = true }
+ibc-rpc = { workspace = true }
 ics08-wasm = { path = "../../light-clients/ics08-wasm" }
 
 [features]

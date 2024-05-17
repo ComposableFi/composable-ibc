@@ -16,9 +16,7 @@ use ibc::{
 	Height,
 };
 
-#[derive(
-	Encode, Decode, Clone, PartialEq, Eq, frame_support::RuntimeDebug, scale_info::TypeInfo,
-)]
+#[derive(Encode, Decode, Clone, PartialEq, Eq, Debug, scale_info::TypeInfo)]
 /// IBC events
 // Using Vec<u8> instead of String because Encode and Decode are not implemented for Strings in
 // no-std environment.

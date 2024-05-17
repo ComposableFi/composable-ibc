@@ -16,7 +16,7 @@ use crate::{
 	substrate::dali::relaychain::api::runtime_types::sp_beefy::mmr::BeefyAuthoritySet,
 };
 use async_trait::async_trait;
-use codec::{Compact, Decode, Encode};
+use parity_scale_codec::{Compact, Decode, Encode};
 use ibc_proto::google::protobuf::Any;
 use light_client_common::config::{
 	BeefyAuthoritySetT, EventRecordT, IbcEventsT, LocalAddress, ParaLifecycleT, RuntimeCall,

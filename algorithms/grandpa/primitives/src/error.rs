@@ -21,5 +21,5 @@ pub enum Error {
 	/// Anyhow error
 	Anyhow(anyhow::Error),
 	/// scale codec error
-	Codec(codec::Error),
+	Codec(parity_scale_codec::Error),
 }

@@ -3,8 +3,7 @@
 extern crate alloc;
 
 use alloc::string::{String, ToString};
-use codec::{Decode, Encode};
-use frame_support::{weights::Weight, RuntimeDebug};
+use frame_support::weights::Weight;
 use ibc::{
 	applications::transfer::{error::Error as Ics20Error, PrefixedCoin, VERSION},
 	core::{
@@ -19,6 +18,7 @@ use ibc::{
 	timestamp::Timestamp,
 	Height,
 };
+use parity_scale_codec::{Decode, Encode};
 use scale_info::{prelude::format, TypeInfo};
 use sp_runtime::traits::IdentifyAccount;
 use sp_std::{prelude::*, str::FromStr};
@@ -26,9 +26,7 @@ use sp_std::{prelude::*, str::FromStr};
 pub mod runtime_interface;
 
 /// Packet timeout, could be an offset, or absolute value.
-#[derive(
-	frame_support::RuntimeDebug, PartialEq, Eq, scale_info::TypeInfo, Encode, Decode, Clone,
-)]
+#[derive(Debug, PartialEq, Eq, scale_info::TypeInfo, Encode, Decode, Clone)]
 pub enum Timeout {
 	Offset {
 		/// Timestamp at which this packet should timeout in counterparty in seconds
@@ -83,10 +81,10 @@ pub enum HandlerMessage<AccountId> {
 }
 
 #[derive(
-	codec::Encode,
+	parity_scale_codec::Encode,
 	Default,
 	Debug,
-	codec::Decode,
+	parity_scale_codec::Decode,
 	Clone,
 	PartialEq,
 	Eq,
@@ -157,7 +155,16 @@ impl From<Packet> for PacketInfo {
 	}
 }
 
-#[derive(Clone, codec::Encode, codec::Decode, PartialEq, Eq, Ord, PartialOrd, TypeInfo)]
+#[derive(
+	Clone,
+	parity_scale_codec::Encode,
+	parity_scale_codec::Decode,
+	PartialEq,
+	Eq,
+	Ord,
+	PartialOrd,
+	TypeInfo,
+)]
 pub struct IdentifiedChannel {
 	pub channel_id: Vec<u8>,
 	pub port_id: Vec<u8>,
@@ -165,21 +172,48 @@ pub struct IdentifiedChannel {
 	pub channel_end: Vec<u8>,
 }
 
-#[derive(Clone, codec::Encode, codec::Decode, PartialEq, Eq, Ord, PartialOrd, TypeInfo)]
+#[derive(
+	Clone,
+	parity_scale_codec::Encode,
+	parity_scale_codec::Decode,
+	PartialEq,
+	Eq,
+	Ord,
+	PartialOrd,
+	TypeInfo,
+)]
 pub struct IdentifiedClientState {
 	pub client_id: Vec<u8>,
 	/// Protobuf encoded `AnyClientState`
 	pub client_state: Vec<u8>,
 }
 
-#[derive(Clone, codec::Encode, codec::Decode, PartialEq, Eq, Ord, PartialOrd, TypeInfo)]
+#[derive(
+	Clone,
+	parity_scale_codec::Encode,
+	parity_scale_codec::Decode,
+	PartialEq,
+	Eq,
+	Ord,
+	PartialOrd,
+	TypeInfo,
+)]
 pub struct IdentifiedConnection {
 	pub connection_id: Vec<u8>,
 	/// Protobuf encoded `ibc::core::ics03_connection::connection::ConnectionEnd`
 	pub connection_end: Vec<u8>,
 }
 
-#[derive(Clone, codec::Encode, codec::Decode, PartialEq, Eq, Ord, PartialOrd, TypeInfo)]
+#[derive(
+	Clone,
+	parity_scale_codec::Encode,
+	parity_scale_codec::Decode,
+	PartialEq,
+	Eq,
+	Ord,
+	PartialOrd,
+	TypeInfo,
+)]
 pub struct QueryClientStateResponse {
 	/// Protobuf encoded `AnyClientState`
 	pub client_state: Vec<u8>,
@@ -187,21 +221,48 @@ pub struct QueryClientStateResponse {
 	pub trie_key: Vec<u8>,
 }
 
-#[derive(Clone, codec::Encode, codec::Decode, PartialEq, Eq, Ord, PartialOrd, TypeInfo)]
+#[derive(
+	Clone,
+	parity_scale_codec::Encode,
+	parity_scale_codec::Decode,
+	PartialEq,
+	Eq,
+	Ord,
+	PartialOrd,
+	TypeInfo,
+)]
 pub struct QueryClientStatesResponse {
 	pub client_states: Vec<Vec<u8>>,
 	pub height: u64,
 	pub trie_key: Vec<u8>,
 }
 
-#[derive(Clone, codec::Encode, codec::Decode, PartialEq, Eq, Ord, PartialOrd, TypeInfo)]
+#[derive(
+	Clone,
+	parity_scale_codec::Encode,
+	parity_scale_codec::Decode,
+	PartialEq,
+	Eq,
+	Ord,
+	PartialOrd,
+	TypeInfo,
+)]
 pub struct QueryConsensusStateResponse {
 	pub consensus_state: Vec<u8>,
 	pub height: u64,
 	pub trie_key: Vec<u8>,
 }
 
-#[derive(Clone, codec::Encode, codec::Decode, PartialEq, Eq, Ord, PartialOrd, TypeInfo)]
+#[derive(
+	Clone,
+	parity_scale_codec::Encode,
+	parity_scale_codec::Decode,
+	PartialEq,
+	Eq,
+	Ord,
+	PartialOrd,
+	TypeInfo,
+)]
 pub struct QueryConnectionResponse {
 	/// Protobuf encoded `ibc::core::ics03_connection::connection::ConnectionEnd`
 	pub connection: Vec<u8>,
@@ -209,7 +270,16 @@ pub struct QueryConnectionResponse {
 	pub trie_key: Vec<u8>,
 }
 
-#[derive(Clone, codec::Encode, codec::Decode, PartialEq, Eq, Ord, PartialOrd, TypeInfo)]
+#[derive(
+	Clone,
+	parity_scale_codec::Encode,
+	parity_scale_codec::Decode,
+	PartialEq,
+	Eq,
+	Ord,
+	PartialOrd,
+	TypeInfo,
+)]
 pub struct QueryChannelResponse {
 	/// Protobuf encoded `ibc::core::ics04_channel::connection::ChannelEnd`
 	pub channel: Vec<u8>,
@@ -217,33 +287,78 @@ pub struct QueryChannelResponse {
 	pub trie_key: Vec<u8>,
 }
 
-#[derive(Clone, codec::Encode, codec::Decode, PartialEq, Eq, Ord, PartialOrd, TypeInfo)]
+#[derive(
+	Clone,
+	parity_scale_codec::Encode,
+	parity_scale_codec::Decode,
+	PartialEq,
+	Eq,
+	Ord,
+	PartialOrd,
+	TypeInfo,
+)]
 pub struct QueryChannelsResponse {
 	pub channels: Vec<IdentifiedChannel>,
 	pub height: u64,
 }
 
-#[derive(Clone, codec::Encode, codec::Decode, PartialEq, Eq, Ord, PartialOrd, TypeInfo)]
+#[derive(
+	Clone,
+	parity_scale_codec::Encode,
+	parity_scale_codec::Decode,
+	PartialEq,
+	Eq,
+	Ord,
+	PartialOrd,
+	TypeInfo,
+)]
 pub struct QueryConnectionsResponse {
 	pub connections: Vec<IdentifiedConnection>,
 	pub height: u64,
 }
 
-#[derive(Clone, codec::Encode, codec::Decode, PartialEq, Eq, Ord, PartialOrd, TypeInfo)]
+#[derive(
+	Clone,
+	parity_scale_codec::Encode,
+	parity_scale_codec::Decode,
+	PartialEq,
+	Eq,
+	Ord,
+	PartialOrd,
+	TypeInfo,
+)]
 pub struct QueryNextSequenceReceiveResponse {
 	pub sequence: u64,
 	pub height: u64,
 	pub trie_key: Vec<u8>,
 }
 
-#[derive(Clone, codec::Encode, codec::Decode, PartialEq, Eq, Ord, PartialOrd, TypeInfo)]
+#[derive(
+	Clone,
+	parity_scale_codec::Encode,
+	parity_scale_codec::Decode,
+	PartialEq,
+	Eq,
+	Ord,
+	PartialOrd,
+	TypeInfo,
+)]
 pub struct QueryPacketCommitmentResponse {
 	pub commitment: Vec<u8>,
 	pub height: u64,
 	pub trie_key: Vec<u8>,
 }
 
-#[derive(Clone, codec::Encode, codec::Decode, PartialEq, Eq, Ord, PartialOrd, TypeInfo)]
+#[derive(
+	Clone,
+	parity_scale_codec::Encode,
+	parity_scale_codec::Decode,
+	PartialEq,
+	Eq,
+	Ord,
+	PartialOrd,
+	TypeInfo,
+)]
 pub struct PacketState {
 	pub port_id: Vec<u8>,
 	pub channel_id: Vec<u8>,
@@ -251,45 +366,108 @@ pub struct PacketState {
 	pub data: Vec<u8>,
 }
 
-#[derive(Clone, codec::Encode, codec::Decode, PartialEq, Eq, Ord, PartialOrd, TypeInfo)]
+#[derive(
+	Clone,
+	parity_scale_codec::Encode,
+	parity_scale_codec::Decode,
+	PartialEq,
+	Eq,
+	Ord,
+	PartialOrd,
+	TypeInfo,
+)]
 pub struct QueryPacketCommitmentsResponse {
 	pub commitments: Vec<PacketState>,
 	pub height: u64,
 }
 
-#[derive(Clone, codec::Encode, codec::Decode, PartialEq, Eq, Ord, PartialOrd, TypeInfo)]
+#[derive(
+	Clone,
+	parity_scale_codec::Encode,
+	parity_scale_codec::Decode,
+	PartialEq,
+	Eq,
+	Ord,
+	PartialOrd,
+	TypeInfo,
+)]
 pub struct QueryPacketAcknowledgementResponse {
 	pub ack: Vec<u8>,
 	pub height: u64,
 	pub trie_key: Vec<u8>,
 }
 
-#[derive(Clone, codec::Encode, codec::Decode, PartialEq, Eq, Ord, PartialOrd, TypeInfo)]
+#[derive(
+	Clone,
+	parity_scale_codec::Encode,
+	parity_scale_codec::Decode,
+	PartialEq,
+	Eq,
+	Ord,
+	PartialOrd,
+	TypeInfo,
+)]
 pub struct QueryPacketAcknowledgementsResponse {
 	pub acks: Vec<PacketState>,
 	pub height: u64,
 }
 
-#[derive(Clone, codec::Encode, codec::Decode, PartialEq, Eq, Ord, PartialOrd, TypeInfo)]
+#[derive(
+	Clone,
+	parity_scale_codec::Encode,
+	parity_scale_codec::Decode,
+	PartialEq,
+	Eq,
+	Ord,
+	PartialOrd,
+	TypeInfo,
+)]
 pub struct QueryPacketReceiptResponse {
 	pub receipt: bool,
 	pub height: u64,
 	pub trie_key: Vec<u8>,
 }
 
-#[derive(Clone, codec::Encode, codec::Decode, PartialEq, Eq, Ord, PartialOrd, TypeInfo)]
+#[derive(
+	Clone,
+	parity_scale_codec::Encode,
+	parity_scale_codec::Decode,
+	PartialEq,
+	Eq,
+	Ord,
+	PartialOrd,
+	TypeInfo,
+)]
 pub struct QueryDenomTraceResponse {
 	pub denom: Vec<u8>,
 }
 
-#[derive(Clone, codec::Encode, codec::Decode, PartialEq, Eq, Ord, PartialOrd, TypeInfo)]
+#[derive(
+	Clone,
+	parity_scale_codec::Encode,
+	parity_scale_codec::Decode,
+	PartialEq,
+	Eq,
+	Ord,
+	PartialOrd,
+	TypeInfo,
+)]
 pub struct QueryDenomTracesResponse {
 	pub denoms: Vec<Vec<u8>>,
 	pub next_key: Option<Vec<u8>>,
 	pub total: Option<u64>,
 }
 
-#[derive(Clone, codec::Encode, codec::Decode, PartialEq, Eq, Ord, PartialOrd, TypeInfo)]
+#[derive(
+	Clone,
+	parity_scale_codec::Encode,
+	parity_scale_codec::Decode,
+	PartialEq,
+	Eq,
+	Ord,
+	PartialOrd,
+	TypeInfo,
+)]
 pub struct ConnectionHandshake {
 	pub client_state: Vec<u8>,
 	pub trie_keys: Vec<Vec<u8>>,
@@ -335,7 +513,7 @@ pub enum Error {
 	Other { msg: Option<String> },
 }
 
-#[derive(Clone, PartialEq, Eq, Encode, Decode, RuntimeDebug, TypeInfo)]
+#[derive(Clone, PartialEq, Eq, Encode, Decode, Debug, TypeInfo)]
 /// Captures all parameters needed to initialize a channel
 pub struct OpenChannelParams {
 	/// channel order

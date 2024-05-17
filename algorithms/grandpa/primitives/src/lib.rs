@@ -22,10 +22,10 @@
 extern crate alloc;
 
 use alloc::collections::BTreeMap;
-use codec::{Decode, Encode};
 use core::fmt::Debug;
+use parity_scale_codec::{Decode, Encode};
 use sp_consensus_grandpa::{AuthorityId, AuthorityList, AuthoritySignature};
-use sp_core::{ed25519, sp_std, H256};
+use sp_core::{ed25519, H256};
 use sp_runtime::traits::Header;
 use sp_std::prelude::*;
 use sp_storage::StorageKey;
@@ -48,7 +48,7 @@ pub type Commit<H> = finality_grandpa::Commit<
 /// 1) the justification for the descendant block F;
 /// 2) headers sub-chain (B; F] if B != F;
 #[derive(Debug, PartialEq, Encode, Decode, Clone)]
-pub struct FinalityProof<H: codec::Codec> {
+pub struct FinalityProof<H: parity_scale_codec::Codec> {
 	/// The hash of block F for which justification is provided.
 	pub block: Hash,
 	/// Justification of the block F.
@@ -87,7 +87,7 @@ pub struct ParachainHeaderProofs {
 
 /// Parachain headers with a Grandpa finality proof.
 #[derive(Clone, Encode, Decode)]
-pub struct ParachainHeadersWithFinalityProof<H: codec::Codec> {
+pub struct ParachainHeadersWithFinalityProof<H: parity_scale_codec::Codec> {
 	/// The grandpa finality proof: contains relay chain headers from the
 	/// last known finalized grandpa block.
 	pub finality_proof: FinalityProof<H>,

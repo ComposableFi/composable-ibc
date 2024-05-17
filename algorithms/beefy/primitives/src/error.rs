@@ -15,7 +15,7 @@
 
 //! Light client error definition
 
-use codec::alloc::string::String;
+use parity_scale_codec::alloc::string::String;
 use sp_core::H256;
 use sp_std::prelude::*;
 
@@ -90,7 +90,7 @@ pub enum BeefyClientError {
 	/// Mmr Error
 	MmrVerificationError(mmr_lib::Error),
 	/// Codec error
-	Codec(codec::Error),
+	Codec(parity_scale_codec::Error),
 	/// Custom error
 	Custom(String),
 }

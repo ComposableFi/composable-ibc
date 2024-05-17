@@ -10,40 +10,40 @@ authors = [
 
 [dependencies]
 tokio = { version = "1.32.0", features = ["macros", "sync", "time"] }
-log = "0.4.17"
+log = { workspace = true }
 anyhow = "1.0.66"
 async-trait = "0.1.58"
 futures = "0.3.24"
 json = { version = "1.0.85", package = "serde_json" }
-codec = { package = "parity-scale-codec", version = "3.0.0", features = ["derive"] }
+parity-scale-codec = { workspace = true }
 subxt = { git = "https://github.com/paritytech/subxt",  tag = "v0.29.0", features = ["substrate-compat"] }
 
 ibc = { path = "../../ibc/modules" }
-ibc-proto = { path = "../../ibc/proto" }
-tendermint-proto = { git = "https://github.com/informalsystems/tendermint-rs", rev = "e81f7bf23d63ffbcd242381d1ce5e35da3515ff1", default-features = false }
+ibc-proto = { workspace = true }
+tendermint-proto = { workspace = true }
 
 hyperspace-core = { path = "../core", features = ["testing"] }
 hyperspace-parachain = { path = "../parachain", features = ["testing"] }
 hyperspace-primitives = { path = "../primitives", features = ["testing"] }
-pallet-ibc = { path = "../../contracts/pallet-ibc" }
-pallet-ibc-ping = { path = "../../contracts/pallet-ibc/ping" }
-ics10-grandpa = { path = "../../light-clients/ics10-grandpa" }
+pallet-ibc = { workspace = true }
+pallet-ibc-ping = { workspace = true }
+ics10-grandpa = { workspace = true }
 
 # substrate
 polkadot-core-primitives = { git = "https://github.com/paritytech/polkadot", branch = "release-v0.9.43" }
 grandpa-client-primitives = { package = "grandpa-light-client-primitives", path = "../../algorithms/grandpa/primitives", default-features = false }
 finality-grandpa = { version = "0.16.2", features = ["derive-codec"], default-features = false }
 sp-consensus-grandpa = { git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.43" }
-sp-keyring = { git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.43" }
+sp-keyring = { workspace = true }
 sp-core = { git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.43", features = ["full_crypto"] }
-sp-trie = { git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.43" }
-sp-keystore = { git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.43" }
-sp-runtime = { git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.43" }
+sp-trie = { workspace = true }
+sp-keystore = { workspace = true }
+sp-runtime = { workspace = true }
 sp-state-machine = { git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.43" }
-light-client-common = { path = "../../light-clients/common" }
+light-client-common = { workspace = true }
 grandpa-light-client = { path = "../../algorithms/grandpa/verifier", package = "grandpa-light-client-verifier" }
-hex = "0.4.3"
-rand = "0.8.5"
+hex = { workspace = true }
+rand = { workspace = true }
 toml = "0.7.4"
 
 [dev-dependencies]

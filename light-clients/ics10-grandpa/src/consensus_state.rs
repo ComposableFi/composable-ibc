@@ -15,8 +15,8 @@
 
 use alloc::{format, vec, vec::Vec};
 use anyhow::anyhow;
-use codec::Decode;
 use core::{convert::Infallible, fmt::Debug};
+use parity_scale_codec::Decode;
 use serde::{Deserialize, Serialize};
 use tendermint::time::Time;
 use tendermint_proto::{google::protobuf as tpb, Protobuf};
@@ -63,7 +63,7 @@ impl ConsensusState {
 	{
 		let key = parachain_header_storage_key(para_id);
 		let proof = StorageProof::new(parachain_header_proof.state_proof);
-		let parachain_header_bytes = state_machine::read_proof_check::<H::BlakeTwo256, _>(
+		let parachain_header_bytes = sp_state_machine::read_proof_check::<H::BlakeTwo256, _>(
 			&relay_state_root,
 			proof,
 			vec![parachain_header_storage_key(para_id)],

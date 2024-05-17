@@ -14,9 +14,9 @@
 
 use anyhow::anyhow;
 use clap::Parser;
-use codec::Encode;
 use codegen::{codegen, fetch_metadata_ws};
 use http::uri::{Authority, Uri};
+use parity_scale_codec::Encode;
 use std::{path::PathBuf, str::FromStr};
 use wasm_testbed::WasmTestBed;
 

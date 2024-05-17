@@ -4,7 +4,7 @@ use sp_core::{crypto::ByteArray, H256};
 use sp_runtime::AccountId32;
 use sp_std::prelude::*;
 
-#[derive(codec::Encode, codec::Decode, frame_support::RuntimeDebug)]
+#[derive(parity_scale_codec::Encode, parity_scale_codec::Decode, Debug)]
 pub enum SS58CodecError {
 	/// Invalid SS58 String
 	InvalidString,

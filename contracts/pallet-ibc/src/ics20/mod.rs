@@ -674,7 +674,7 @@ pub struct IbcMemoHandler<H, T> {
 	pub _phantom: PhantomData<T>,
 }
 
-use codec::Decode;
+use parity_scale_codec::Decode;
 impl<T, H: HandleMemo<T>> HandleMemo<T> for IbcMemoHandler<H, T>
 where
 	T: Config + Send + Sync + pallet_timestamp::Config,

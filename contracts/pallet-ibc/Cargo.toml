@@ -23,31 +23,31 @@ normal = [
 [dependencies]
 # crates.io
 log = { version = "0.4.0", default-features = false }
-serde = { version = "1.0.136", default-features = false, features = ["derive"] }
+serde = { workspace = true }
 scale-info = { version = "2.1.1", default-features = false, features = [
 	"derive",
 ] }
-serde_json = { version = "1.0.45", default-features = false }
+serde_json = { workspace = true }
 sha2 = { version = "0.10.2", default-features = false }
 derive_more = { version = "0.99.17", default-features = false, features = [
 	"from",
 	"display",
 ] }
 # substrate
-frame-support = { git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.43", default-features = false }
-frame-system = { git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.43", default-features = false }
+frame-support = { workspace = true }
+frame-system = { workspace = true }
 parachain-info = { git = "https://github.com/paritytech/cumulus", branch = "polkadot-v0.9.43", default-features = false }
 cumulus-primitives-core = { git = "https://github.com/paritytech/cumulus", branch = "polkadot-v0.9.43", default-features = false }
-sp-core = { git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.43", default-features = false }
+sp-core = { workspace = true }
 sp-io = { git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.43", default-features = false }
-sp-runtime = { git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.43", default-features = false }
-sp-std = { git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.43", default-features = false }
-sp-trie = { git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.43", default-features = false }
+sp-runtime = { workspace = true }
+sp-std = { workspace = true }
+sp-trie = { workspace = true }
 # ibc
 ibc-proto = { path = "../../ibc/proto", default-features = false }
 tendermint = { git = "https://github.com/informalsystems/tendermint-rs", rev = "e81f7bf23d63ffbcd242381d1ce5e35da3515ff1", default-features = false }       # cannot be defined as optional in workspace
-tendermint-proto = { git = "https://github.com/informalsystems/tendermint-rs", rev = "e81f7bf23d63ffbcd242381d1ce5e35da3515ff1", default-features = false }
-ics23 = { git = "https://github.com/cosmos/ics23", rev = "74ce807b7be39a7e0afb4e2efb8e28a57965f57b", default-features = false }
+tendermint-proto = { workspace = true }
+ics23 = { workspace = true }
 
 grandpa-client-primitives = { package = "grandpa-light-client-primitives", path = "../../algorithms/grandpa/primitives", default-features = false }
 beefy-client-primitives = { package = "beefy-light-client-primitives", path = "../../algorithms/beefy/primitives", default-features = false }
@@ -62,7 +62,7 @@ ibc-primitives = { path = "primitives", default-features = false }
 
 # optional
 hex-literal = { version = "0.3.4", default-features = false, optional = true }
-prost = { version = "0.11", default-features = false }
+prost = { workspace = true }
 frame-benchmarking = { git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.43", default-features = false, optional = true }
 pallet-ibc-ping = { path = "ping", default-features = false, optional = true }
 pallet-timestamp = { git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.43", default-features = false }
@@ -78,19 +78,10 @@ finality-grandpa = { version = "0.16.2", features = [
 	"derive-codec",
 ], default-features = false, optional = true }
 
-[dependencies.ibc]
-path = "../../ibc/modules"
-default-features = false
+parity-scale-codec = { workspace = true, features = ["derive", "full"] }
+ibc = { workspace = true }
+ibc-derive = { workspace = true }
 
-[dependencies.ibc-derive]
-path = "../../ibc/derive"
-default-features = false
-
-[dependencies.codec]
-package = "parity-scale-codec"
-version = "3.0.0"
-features = ["derive", "full"]
-default-features = false
 
 [dependencies.tendermint-light-client-verifier]
 git = "https://github.com/informalsystems/tendermint-rs"
@@ -99,21 +90,21 @@ default-features = false
 
 [dev-dependencies]
 chrono = "0.4.19"
-hex = "0.4.3"
+hex = { workspace = true }
 hex-literal = { version = "0.3.4" }
 orml-tokens = { git = "https://github.com/open-web3-stack/open-runtime-module-library", branch = "polkadot-v0.9.43" }
 orml-traits = { git = "https://github.com/open-web3-stack/open-runtime-module-library", branch = "polkadot-v0.9.43" }
 pallet-aura = { git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.43" }
 pallet-membership = { git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.43" }
-frame-support = { git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.43" }
+frame-support = { workspace = true }
 sp-consensus-slots = { git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.43" }
 sp-consensus-aura = { git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.43" }
 prost = { version = "0.11" }
 #simple-iavl = { path = "simple-iavl" }
-sp-keyring = { git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.43" }
+sp-keyring = { workspace = true }
 tendermint = { git = "https://github.com/informalsystems/tendermint-rs", rev = "e81f7bf23d63ffbcd242381d1ce5e35da3515ff1", default-features = false }
 pallet-ibc-ping = { path = "ping", default-features = false }
-sp-keystore = { git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.43" }
+sp-keystore = { workspace = true }
 env_logger = "0.10.0"
 
 [dev-dependencies.ibc]
@@ -124,7 +115,7 @@ features = ["mocks"]
 default = ["std"]
 testing = []
 std = [
-	"codec/std",
+	"parity-scale-codec/std",
 	"log/std",
 	"scale-info/std",
 	"serde/std",

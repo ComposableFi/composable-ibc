@@ -27,10 +27,10 @@ use ibc::Height;
 #[derive(Debug)]
 pub struct ConversionError(String);
 
-#[derive(Debug, Clone, PartialEq, Eq, codec::Encode, codec::Decode)]
+#[derive(Debug, Clone, PartialEq, Eq, parity_scale_codec::Encode, parity_scale_codec::Decode)]
 pub struct PublicKey(pub [u8; 32]);
 
-#[derive(Debug, Clone, PartialEq, Eq, codec::Encode, codec::Decode)]
+#[derive(Debug, Clone, PartialEq, Eq, parity_scale_codec::Encode, parity_scale_codec::Decode)]
 pub enum Signature {
 	Ed25519(Ed25519Signature),
 }
@@ -46,8 +46,8 @@ pub enum Signature {
 	Copy,
 	BorshSerialize,
 	BorshDeserialize,
-	codec::Encode,
-	codec::Decode,
+	parity_scale_codec::Encode,
+	parity_scale_codec::Decode,
 )]
 pub struct CryptoHash(pub [u8; 32]);
 

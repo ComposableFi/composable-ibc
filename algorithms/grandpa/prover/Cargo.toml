@@ -5,24 +5,24 @@ edition = "2021"
 authors = ["Seun Lanlege <seunlanlege@gmail.com>"]
 
 [dependencies]
-hex = "0.4.3"
+hex = { workspace = true }
 anyhow = "1.0.64"
-serde = "1.0.144"
+serde = { workspace = true }
 subxt = { git = "https://github.com/paritytech/subxt", tag = "v0.29.0", features = ["substrate-compat"] }
-codec = { package = "parity-scale-codec", version = "3.0.0", features = ["derive"] }
+parity-scale-codec = { workspace = true }
 derive_more = "0.99.17"
 downcast-rs = "1.2.0"
 jsonrpsee = { version = "0.16.2", features = ["async-client", "jsonrpsee-ws-client"] }
 jsonrpsee-ws-client = "0.16.2"
 finality-grandpa = "0.16.2"
-rand = "0.8.5"
+rand = { workspace = true }
 
 finality-grandpa-rpc = { package = "sc-consensus-grandpa-rpc", git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.43" }
-sp-runtime = { git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.43" }
-sp-core = { git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.43" }
-sp-trie = { git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.43" }
+sp-runtime = { workspace = true }
+sp-core = { workspace = true }
+sp-trie = { workspace = true }
 sp-state-machine = { git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.43" }
-sp-consensus-grandpa = { git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.43", default-features = false }
+sp-consensus-grandpa = { workspace = true }
 
 beefy-prover = { path = "../../beefy/prover" }
 primitives = { package = "grandpa-light-client-primitives", path = "../primitives" }

@@ -321,7 +321,14 @@ impl crate::ics20_fee::Config for Test {
 }
 
 #[derive(
-	Debug, codec::Encode, Clone, codec::Decode, PartialEq, Eq, scale_info::TypeInfo, Default,
+	Debug,
+	parity_scale_codec::Encode,
+	Clone,
+	parity_scale_codec::Decode,
+	PartialEq,
+	Eq,
+	scale_info::TypeInfo,
+	Default,
 )]
 pub struct MemoMessage;
 

@@ -24,7 +24,7 @@ std = [
 	"ics23/std",
 	"clock",
 	"sp-std/std",
-	"codec/std",
+	"parity-scale-codec/std",
 	"scale-info/std",
 	"log/std",
 	"hex/std",
@@ -53,13 +53,13 @@ mocks = ["clock", "std", "sha2"]
 # Proto definitions for all IBC-related interfaces, e.g., connections or channels.
 ibc-proto = { version = "0.18.0", path = "../proto", default-features = false }
 derive = { path = "../derive", package = "ibc-derive", default-features = false }
-ics23 = { git = "https://github.com/cosmos/ics23", rev = "74ce807b7be39a7e0afb4e2efb8e28a57965f57b", default-features = false }
-time = { version = "0.3", default-features = false }
-serde_derive = { version = "1.0.104", default-features = false }
-serde = { version = "1.0", default-features = false }
-serde_json = { version = "1", default-features = false }
-tracing = { version = "0.1.34", default-features = false }
-prost = { version = "0.11", default-features = false }
+ics23 = { workspace = true }
+time = { workspace = true }
+serde_derive = { workspace = true }
+serde = { workspace = true }
+serde_json = { workspace = true }
+tracing = { workspace = true }
+prost = { workspace = true }
 safe-regex = { version = "0.2.5", default-features = false }
 subtle-encoding = { version = "0.5", default-features = false }
 flex-error = { version = "0.4.4", default-features = false }
@@ -68,22 +68,22 @@ derive_more = { version = "0.99.17", default-features = false, features = ["from
 uint = { version = "0.9", default-features = false }
 hex = { version = "0.4.3", default-features = false }
 primitive-types = { version = "0.12.0", default-features = false, features = ["serde_no_std"] }
-codec = { package = "parity-scale-codec", version = "3.0.0", default-features = false, features = ["derive"] }
+parity-scale-codec = { workspace = true }
 sha2 = { version = "0.10.2", optional = true }
 tendermint = { git = "https://github.com/informalsystems/tendermint-rs", rev = "e81f7bf23d63ffbcd242381d1ce5e35da3515ff1", default-features = false }
-tendermint-proto = { git = "https://github.com/informalsystems/tendermint-rs", rev = "e81f7bf23d63ffbcd242381d1ce5e35da3515ff1", default-features = false }
-scale-info = { version = "2.1.1", default-features = false, features = ["derive"] }
+tendermint-proto = { workspace = true }
+scale-info = { workspace = true }
 log = { version = "0.4.0", default-features = false }
 cosmwasm-schema = { version = "1.1.3", default-features = false, optional = true }
 
 [dev-dependencies]
-env_logger = "0.9.0"
+env_logger = { workspace = true }
 tracing-subscriber = { version = "0.3.11", features = ["fmt", "env-filter", "json"]}
 test-log = { version = "0.2.10", features = ["trace"] }
 modelator = "0.4.2"
 sha2 = { version = "0.10.2" }
 tokio = { version = "1.32.0", features = ["full"] }
-serde_json = "1.0.74"
+serde_json = { workspace = true }
 sha3 = { version = "0.10.1" }
 sp-core = { git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.43"}
 sp-std = { git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.43" }

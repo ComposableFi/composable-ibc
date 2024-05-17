@@ -30,7 +30,6 @@ use beefy_prover::{
 	helpers::{fetch_timestamp_extrinsic_with_proof, TimeStampExtWithProof},
 	Prover,
 };
-use codec::{Decode, Encode};
 use futures::stream::StreamExt;
 use hyperspace_core::substrate::DefaultConfig as PolkadotConfig;
 use ibc::{
@@ -52,6 +51,7 @@ use ibc::{
 	Height,
 };
 use light_client_common::config::RuntimeStorage;
+use parity_scale_codec::{Decode, Encode};
 use std::time::Duration;
 use subxt::rpc::{rpc_params, Subscription};
 
@@ -192,7 +192,7 @@ async fn test_continuous_update_of_beefy_client() {
 		let beefy_version_finality_proof: VersionedFinalityProof<
 			u32,
 			beefy_primitives::crypto::Signature,
-		> = codec::Decode::decode(&mut &*encoded_versioned_finality_proof.0 .0).unwrap();
+		> = parity_scale_codec::Decode::decode(&mut &*encoded_versioned_finality_proof.0 .0).unwrap();
 
 		let signed_commitment = match beefy_version_finality_proof {
 			VersionedFinalityProof::V1(commitment) => commitment,

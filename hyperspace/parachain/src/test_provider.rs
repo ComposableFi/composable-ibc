@@ -13,7 +13,6 @@
 // limitations under the License.
 
 use crate::{signer::ExtrinsicSigner, Error, ParachainClient};
-use codec::Decode;
 use finality_grandpa::BlockNumberOps;
 use futures::{Stream, StreamExt};
 use grandpa_light_client_primitives::ParachainHeaderProofs;
@@ -27,6 +26,7 @@ use jsonrpsee::{core::client::SubscriptionClientT, rpc_params};
 use light_client_common::config::RuntimeTransactions;
 use pallet_ibc::{MultiAddress, Timeout, TransferParams};
 use pallet_ibc_ping::SendPingParams;
+use parity_scale_codec::Decode;
 use primitives::{KeyProvider, TestProvider};
 use sp_core::{
 	crypto::{AccountId32, Ss58Codec},

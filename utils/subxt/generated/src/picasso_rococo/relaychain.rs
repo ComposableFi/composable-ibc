@@ -1325,7 +1325,7 @@ pub mod api {
 	}
 	pub mod runtime_apis {
 		use super::{root_mod, runtime_types};
-		use ::subxt::ext::codec::Encode;
+		use ::subxt::ext::parity_scale_codec::Encode;
 		pub struct RuntimeApi;
 		impl RuntimeApi {}
 	}

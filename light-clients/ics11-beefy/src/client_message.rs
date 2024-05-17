@@ -36,8 +36,8 @@ use beefy_primitives::{
 	mmr::{MmrLeaf, MmrLeafVersion},
 	Commitment, Payload,
 };
-use codec::{Decode, Encode};
 use pallet_mmr_primitives::Proof;
+use parity_scale_codec::{Decode, Encode};
 use sp_core::H256;
 use sp_runtime::{
 	generic::Header as SubstrateHeader,
@@ -78,7 +78,7 @@ impl ibc::core::ics02_client::client_message::ClientMessage for ClientMessage {
 	}
 }
 
-#[derive(Clone, PartialEq, Eq, Debug, codec::Encode, codec::Decode)]
+#[derive(Clone, PartialEq, Eq, Debug, parity_scale_codec::Encode, parity_scale_codec::Decode)]
 pub struct ParachainHeader {
 	pub parachain_header: SubstrateHeader<u32, BlakeTwo256>,
 	/// Reconstructed mmr leaf

@@ -15,9 +15,9 @@
 
 use crate::error::Error;
 use beefy_primitives::{SignedCommitment, VersionedFinalityProof};
-use codec::{Decode, Encode};
 use light_client_common::config::{AsInner, ParaLifecycleT, RuntimeStorage};
 use pallet_mmr_rpc::LeavesProof;
+use parity_scale_codec::{Decode, Encode};
 use sp_core::{hexdisplay::AsBytesRef, storage::StorageKey, H256};
 use sp_runtime::traits::Zero;
 use std::collections::{BTreeMap, BTreeSet};

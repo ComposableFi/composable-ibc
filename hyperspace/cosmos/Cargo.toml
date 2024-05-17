@@ -8,19 +8,19 @@ authors = ["Composable Developers"]
 primitives = { path = "../primitives", package = "hyperspace-primitives" }
 
 # crates.io
-anyhow = "1.0.65"
-futures = "0.3.21"
-async-trait = "0.1.53"
-log = "0.4.17"
-hex = "0.4.3"
+anyhow = { workspace = true }
+futures = { workspace = true }
+async-trait = { workspace = true }
+log = { workspace = true }
+hex = { workspace = true }
 tokio = { version = "1.32.0", features = ["macros", "sync"] }
 rs_merkle = "1.2.0"
-codec = { package = "parity-scale-codec", version = "3.0.0", features = ["derive"] }
-serde_json = "1.0.74"
+parity-scale-codec = { workspace = true }
+serde_json = { workspace = true }
 derive_more = { version = "0.99", features = ["from"]  }
-serde = {version="1.0.137", features = ["derive"]}
+serde = { workspace = true }
 tokio-stream = { version = "0.1.14", features = ["sync"]}
-thiserror = "1.0.31"
+thiserror = { workspace = true }
 itertools = "0.10.3"
 prost = { version = "0.11" }
 k256 = { version = "0.11.6", features = ["ecdsa-core", "ecdsa", "sha256"] }
@@ -33,16 +33,16 @@ sha2 = "0.10.6"
 ripemd = "0.1.3"
 digest = "0.10.6"
 quick_cache = "0.3.0"
-rand = "0.8.5"
+rand = { workspace = true }
 
 # composable
-ibc = { path = "../../ibc/modules", features = [] }
-ibc-proto = { path = "../../ibc/proto" }
+ibc = { workspace = true, features = [] }
+ibc-proto = { workspace = true }
 ibc-primitives = { path = "../../contracts/pallet-ibc/primitives" }
 ics07-tendermint = { path = "../../light-clients/ics07-tendermint" }
 ics08-wasm = { path = "../../light-clients/ics08-wasm" }
-ibc-rpc = { path = "../../contracts/pallet-ibc/rpc" }
-pallet-ibc = { path = "../../contracts/pallet-ibc" }
+ibc-rpc = { workspace = true }
+pallet-ibc = { workspace = true }
 
 tracing = "0.1.36"
 
@@ -50,7 +50,7 @@ tracing = "0.1.36"
 tendermint = { git = "https://github.com/informalsystems/tendermint-rs", rev = "e81f7bf23d63ffbcd242381d1ce5e35da3515ff1", default-features = false, features = [
     "secp256k1",
 ] }
-tendermint-proto = { git = "https://github.com/informalsystems/tendermint-rs", rev = "e81f7bf23d63ffbcd242381d1ce5e35da3515ff1", default-features = false }
+tendermint-proto = { workspace = true }
 tendermint-rpc = { git = "https://github.com/informalsystems/tendermint-rs", rev = "e81f7bf23d63ffbcd242381d1ce5e35da3515ff1", default-features = false, features = [
     "http-client",
     "websocket-client",

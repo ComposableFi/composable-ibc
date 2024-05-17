@@ -29,7 +29,7 @@ pub enum Error {
 	Custom(String),
 	/// Scale codec error
 	#[error("Scale decoding error")]
-	Codec(#[from] codec::Error),
+	Codec(#[from] parity_scale_codec::Error),
 	/// Ibc client error
 	#[error("Ibc client error")]
 	IbcClientError(#[from] ibc::core::ics02_client::error::Error),

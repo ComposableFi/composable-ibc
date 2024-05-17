@@ -30,11 +30,11 @@
 extern crate alloc;
 
 use crate::ics20::ValidateMemo;
-use codec::{Decode, Encode};
 use core::fmt::Debug;
 use cumulus_primitives_core::ParaId;
 use frame_support::weights::Weight;
 pub use pallet::*;
+use parity_scale_codec::{Decode, Encode};
 use scale_info::{
 	prelude::{
 		format,
@@ -43,7 +43,7 @@ use scale_info::{
 	},
 	TypeInfo,
 };
-use sp_runtime::{Either, RuntimeDebug};
+use sp_runtime::Either;
 use sp_std::{marker::PhantomData, prelude::*, str::FromStr};
 
 mod channel;
@@ -62,7 +62,7 @@ pub use light_client_common;
 
 pub const MODULE_ID: &str = "pallet_ibc";
 
-#[derive(Clone, PartialEq, Eq, Encode, Decode, RuntimeDebug, TypeInfo)]
+#[derive(Clone, PartialEq, Eq, Encode, Decode, Debug, TypeInfo)]
 pub struct Any {
 	pub type_url: String,
 	pub value: Vec<u8>,
@@ -81,9 +81,7 @@ impl From<Any> for ibc_proto::google::protobuf::Any {
 }
 
 /// Params needed to upgrade clients for all connected chains.
-#[derive(
-	frame_support::RuntimeDebug, PartialEq, Eq, scale_info::TypeInfo, Encode, Decode, Clone,
-)]
+#[derive(Debug, PartialEq, Eq, scale_info::TypeInfo, Encode, Decode, Clone)]
 pub struct UpgradeParams {
 	/// Protobuf encoded client state
 	pub client_state: Vec<u8>,
@@ -91,17 +89,13 @@ pub struct UpgradeParams {
 	pub consensus_state: Vec<u8>,
 }
 
-#[derive(
-	frame_support::RuntimeDebug, PartialEq, Eq, scale_info::TypeInfo, Encode, Decode, Clone,
-)]
+#[derive(Debug, PartialEq, Eq, scale_info::TypeInfo, Encode, Decode, Clone)]
 pub enum MultiAddress<AccountId> {
 	Id(AccountId),
 	Raw(Vec<u8>),
 }
 
-#[derive(
-	frame_support::RuntimeDebug, PartialEq, Eq, scale_info::TypeInfo, Encode, Decode, Clone,
-)]
+#[derive(Debug, PartialEq, Eq, scale_info::TypeInfo, Encode, Decode, Clone)]
 pub struct TransferParams<AccountId> {
 	/// Account id or valid utf8 string bytes
 	pub to: MultiAddress<AccountId>,
@@ -111,9 +105,7 @@ pub struct TransferParams<AccountId> {
 	pub timeout: Timeout,
 }
 
-#[derive(
-	frame_support::RuntimeDebug, PartialEq, Eq, scale_info::TypeInfo, Encode, Decode, Clone,
-)]
+#[derive(Debug, PartialEq, Eq, scale_info::TypeInfo, Encode, Decode, Clone)]
 pub enum LightClientProtocol {
 	Beefy,
 	Grandpa,
@@ -265,7 +257,7 @@ pub mod pallet {
 		/// Handle Ics20 Memo
 		type HandleMemo: HandleMemo<Self> + Default;
 		/// Memo Message types supported by the runtime
-		type MemoMessage: codec::Codec
+		type MemoMessage: parity_scale_codec::Codec
 			+ FromStr
 			+ ToString
 			+ Debug

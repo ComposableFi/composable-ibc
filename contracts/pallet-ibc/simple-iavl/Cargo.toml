@@ -13,7 +13,7 @@ description = """
 
 [dependencies]
 bytes = { version = "1.1.0", default-features = false }
-ics23 = { git = "https://github.com/cosmos/ics23", rev = "74ce807b7be39a7e0afb4e2efb8e28a57965f57b", default-features = false }
+ics23 = { workspace = true }
 sha2 = { version = "0.10.2", default-features = false }
 tendermint = { git = "https://github.com/informalsystems/tendermint-rs", rev = "e81f7bf23d63ffbcd242381d1ce5e35da3515ff1", default-features = false }
 

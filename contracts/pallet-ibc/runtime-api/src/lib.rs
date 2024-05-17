@@ -7,7 +7,7 @@ use sp_std::vec::Vec;
 
 sp_api::decl_runtime_apis! {
 	/// IBC Runtime Apis
-	pub trait IbcRuntimeApi<AssetId: codec::Codec> {
+	pub trait IbcRuntimeApi<AssetId: parity_scale_codec::Codec> {
 		/// Get Ibc child trie prefix
 		fn child_trie_key() -> Vec<u8>;
 		/// Get parachain id

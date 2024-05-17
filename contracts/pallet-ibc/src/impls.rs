@@ -14,7 +14,6 @@ use crate::{
 	IbcAssets, Pallet, PendingRecvPacketSeqs, PendingSendPacketSeqs, RecvPackets, SendPackets,
 	MODULE_ID,
 };
-use codec::{Decode, Encode};
 use frame_support::traits::{fungibles::Inspect, Currency};
 use ibc::{
 	applications::transfer::{
@@ -58,6 +57,7 @@ use ibc_primitives::{
 	QueryPacketCommitmentResponse, QueryPacketCommitmentsResponse, QueryPacketReceiptResponse,
 	Timeout,
 };
+use parity_scale_codec::{Decode, Encode};
 use scale_info::prelude::string::ToString;
 use sp_core::crypto::AccountId32;
 use sp_runtime::{

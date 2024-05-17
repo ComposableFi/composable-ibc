@@ -22,8 +22,8 @@
 pub mod error;
 use beefy_primitives::mmr::MmrLeafVersion;
 pub use beefy_primitives::mmr::{BeefyNextAuthoritySet, MmrLeaf};
-use codec::{Decode, Encode};
 use core::marker::PhantomData;
+use parity_scale_codec::{Decode, Encode};
 use sp_core::H256;
 use sp_std::prelude::*;
 

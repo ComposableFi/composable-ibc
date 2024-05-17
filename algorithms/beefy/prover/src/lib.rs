@@ -29,7 +29,6 @@ use beefy_light_client_primitives::{
 	ClientState, HostFunctions, MmrUpdateProof, ParachainHeader, PartialMmrLeaf,
 };
 use beefy_primitives::mmr::{BeefyNextAuthoritySet, MmrLeaf};
-use codec::Decode;
 use error::Error;
 use helpers::{
 	fetch_timestamp_extrinsic_with_proof, prove_parachain_headers, ParaHeadsProof,
@@ -37,6 +36,7 @@ use helpers::{
 };
 use hex_literal::hex;
 use pallet_mmr_primitives::Proof;
+use parity_scale_codec::Decode;
 use sp_core::{hexdisplay::AsBytesRef, keccak_256, H256};
 use sp_io::crypto;
 use sp_runtime::traits::BlakeTwo256;
@@ -332,10 +332,10 @@ where
 		let leaf_proof =
 			fetch_mmr_proof(&self.relay_client, vec![block_number.into()], Some(block_hash))
 				.await?;
-		let leaves: Vec<Vec<u8>> = codec::Decode::decode(&mut &*leaf_proof.leaves.0)?;
-		let latest_leaf: MmrLeaf<u32, H256, H256, H256> = codec::Decode::decode(&mut &*leaves[0])?;
+		let leaves: Vec<Vec<u8>> = parity_scale_codec::Decode::decode(&mut &*leaf_proof.leaves.0)?;
+		let latest_leaf: MmrLeaf<u32, H256, H256, H256> = parity_scale_codec::Decode::decode(&mut &*leaves[0])?;
 		let mmr_proof: pallet_mmr_primitives::Proof<H256> =
-			codec::Decode::decode(&mut &*leaf_proof.proof.0)?;
+			parity_scale_codec::Decode::decode(&mut &*leaf_proof.proof.0)?;
 
 		let authority_address_hashes = hash_authority_addresses(
 			current_authorities.into_iter().map(|x| x.encode()).collect(),

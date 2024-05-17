@@ -15,8 +15,8 @@
 
 use crate::{error::Error, Crypto};
 use beefy_light_client_primitives::{MerkleHasher, SignatureWithAuthorityIndex};
-use codec::{Decode, Encode};
 use frame_support::sp_runtime::traits::Convert;
+use parity_scale_codec::{Decode, Encode};
 use sp_core::keccak_256;
 use sp_runtime::traits::BlakeTwo256;
 use sp_trie::{generate_trie_proof, TrieDBMutBuilder, TrieMut};
@@ -80,12 +80,12 @@ pub async fn fetch_timestamp_extrinsic_with_proof<T: Config>(
 			let mut trie =
 				<TrieDBMutBuilder<sp_trie::LayoutV0<BlakeTwo256>>>::new(&mut db, &mut root).build();
 			for (i, ext) in extrinsics.into_iter().enumerate() {
-				let key = codec::Compact(i as u64).encode();
+				let key = parity_scale_codec::Compact(i as u64).encode();
 				trie.insert(&key, &ext)?;
 			}
 			*trie.root()
 		};
-		let key = codec::Compact::<u32>(0u32).encode();
+		let key = parity_scale_codec::Compact::<u32>(0u32).encode();
 
 		let extrinsic_proof =
 			generate_trie_proof::<sp_trie::LayoutV0<BlakeTwo256>, _, _, _>(&db, root, vec![&key])?;
@@ -196,7 +196,7 @@ pub fn hash_authority_addresses(encoded_public_keys: Vec<Vec<u8>>) -> Result<Vec
 			beefy_primitives::crypto::AuthorityId::decode(&mut &*x)
 				.map(|id| keccak_256(&beefy_mmr::BeefyEcdsaToEthereum::convert(id)))
 		})
-		.collect::<Result<Vec<_>, codec::Error>>()?;
+		.collect::<Result<Vec<_>, parity_scale_codec::Error>>()?;
 	Ok(authority_address_hashes)
 }
 

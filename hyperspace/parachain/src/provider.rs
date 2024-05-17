@@ -15,7 +15,6 @@
 use super::{error::Error, ParachainClient};
 use crate::{finality_protocol::FinalityEvent, FinalityProtocol, GrandpaClientState};
 use beefy_prover::helpers::fetch_timestamp_extrinsic_with_proof;
-use codec::{Decode, Encode};
 use finality_grandpa::BlockNumberOps;
 use futures::Stream;
 use grandpa_light_client_primitives::ParachainHeaderProofs;
@@ -51,6 +50,7 @@ use pallet_ibc::{
 	light_clients::{AnyClientState, AnyConsensusState, HostFunctionsManager},
 	HostConsensusProof,
 };
+use parity_scale_codec::{Decode, Encode};
 use primitives::{apply_prefix, Chain, IbcProvider, KeyProvider, UpdateType};
 use sp_core::H256;
 use sp_runtime::{

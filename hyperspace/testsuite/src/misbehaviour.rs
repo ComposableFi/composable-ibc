@@ -18,8 +18,8 @@ use polkadot_core_primitives::Header;
 use sp_consensus_grandpa::{AuthorityId, AuthoritySignature};
 use sp_core::{Decode, Encode, Pair};
 use sp_keyring::ed25519::Keyring;
-use sp_runtime::{codec::Compact, traits::BlakeTwo256};
-use sp_state_machine::{prove_read_on_trie_backend, TrieBackendBuilder};
+use sp_runtime::{parity_scale_codec::Compact, traits::BlakeTwo256};
+use sp_sp_state_machine::{prove_read_on_trie_backend, TrieBackendBuilder};
 use sp_trie::{generate_trie_proof, LayoutV0, MemoryDB, TrieDBMutBuilder, TrieMut};
 use std::{
 	collections::BTreeMap,

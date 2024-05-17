@@ -8,17 +8,12 @@ authors = ["David Salami <wizdave97@gmail.com>"]
 targets = ["x86_64-unknown-linux-gnu"]
 
 [dependencies]
-ibc-primitives = { path = "../primitives", default-features = false }
+ibc-primitives = { workspace = true }
 pallet-ibc = { path = "..", default-features = false }
-sp-api = { git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.43", default-features = false }
-sp-std = { git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.43", default-features = false }
-
-[dependencies.codec]
-package = "parity-scale-codec"
-version = "3.0.0"
-features = ["derive"]
-default-features = false
+sp-api = { workspace = true }
+sp-std = { workspace = true }
+parity-scale-codec = { workspace = true }
 
 [features]
 default = ['std']
-std = ['sp-api/std', 'sp-std/std', 'ibc-primitives/std', 'pallet-ibc/std', 'codec/std']
+std = ['sp-api/std', 'sp-std/std', 'ibc-primitives/std', 'pallet-ibc/std', 'parity-scale-codec/std']

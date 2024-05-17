@@ -8,33 +8,33 @@ authors = ["Composable Developers"]
 primitives = { path = "../primitives", package = "hyperspace-primitives" }
 
 # crates.io
-anyhow = "1.0.65"
-futures = "0.3.21"
-async-trait = "0.1.53"
-log = "0.4.17"
-env_logger = "0.9.0"
-hex = "0.4.3"
+anyhow = { workspace = true }
+futures = { workspace = true }
+async-trait = { workspace = true }
+log = { workspace = true }
+env_logger = { workspace = true }
+hex = { workspace = true }
 tokio = { version = "1.32.0", features = ["macros", "sync"] }
 rs_merkle = "1.2.0"
-codec = { package = "parity-scale-codec", version = "3.0.0", features = ["derive"] }
+parity-scale-codec = { workspace = true }
 hex-literal = "0.3.4"
-serde_json = "1.0.74"
+serde_json = { workspace = true }
 derive_more = { version = "0.99", features = ["from"]  }
-serde = { version="1.0.137", features = ["derive"]}
+serde = { workspace = true, features = ["derive"]}
 tokio-stream = { version = "0.1.14", features = ["sync"]}
-thiserror = "1.0.31"
+thiserror = { workspace = true }
 jsonrpsee = { version = "0.16.2", features = ["async-client", "jsonrpsee-client-transport", "client-ws-transport", "http-client"] }
 openssl-probe = "0.1.2"
 
 # substrate
-sp-core = { git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.43" }
-sp-runtime = { git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.43" }
+sp-core = { workspace = true }
+sp-runtime = { workspace = true }
 sp-keystore = "0.12.0"
 
 # ibc
-ibc = { path = "../../ibc/modules", features = [] }
-ibc-proto = { path = "../../ibc/proto" }
-tendermint-proto = { git = "https://github.com/informalsystems/tendermint-rs", rev = "e81f7bf23d63ffbcd242381d1ce5e35da3515ff1", default-features = false }
+ibc = { workspace = true, features = [] }
+ibc-proto = { workspace = true }
+tendermint-proto = { workspace = true }
 
 # near
 near-crypto = "0.14.0"

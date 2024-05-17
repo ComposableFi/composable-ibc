@@ -15,9 +15,9 @@
 
 use alloc::borrow::Cow;
 use async_trait::async_trait;
-use codec::{Decode, Encode};
 use ibc::events::IbcEvent;
 use ibc_proto::google::protobuf::Any;
+use parity_scale_codec::{Decode, Encode};
 use sp_core::H256;
 use subxt::{
 	client::OnlineClient,
@@ -292,11 +292,11 @@ pub trait IbcEventsT {
 #[async_trait]
 pub trait Config: subxt::Config + Sized {
 	/// Asset Id type used by the parachain runtime
-	type AssetId: codec::Codec + serde::Serialize + Send + Sync + 'static;
+	type AssetId: parity_scale_codec::Codec + serde::Serialize + Send + Sync + 'static;
 	/// the signature type of the runtime
 	type Signature: sp_runtime::traits::Verify + From<<Self as subxt::Config>::Signature> + Decode;
 	/// Address type used by the runtime;
-	type Address: codec::Codec + From<<Self as subxt::Config>::Address>;
+	type Address: parity_scale_codec::Codec + From<<Self as subxt::Config>::Address>;
 	/// Tip
 	type Tip: Default + From<u128> + Send;
 	/// Runtime call

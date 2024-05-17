@@ -16,9 +16,9 @@ use core::str::FromStr;
 
 use crate::prelude::*;
 
-use codec::{Decode, Encode};
 use derive_more::Display;
 use flex_error::define_error;
+use parity_scale_codec::{Decode, Encode};
 use serde::{Deserialize, Serialize};
 
 define_error! {

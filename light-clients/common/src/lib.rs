@@ -23,7 +23,6 @@ extern crate core;
 
 use alloc::{string::ToString, vec, vec::Vec};
 use anyhow::anyhow;
-use codec::Compact;
 use core::{
 	fmt,
 	fmt::{Debug, Display, Formatter},
@@ -39,6 +38,7 @@ use ibc::{
 	},
 	Height,
 };
+use parity_scale_codec::Compact;
 use serde::{Deserialize, Serialize};
 use sp_core::H256;
 use sp_storage::ChildInfo;
@@ -73,7 +73,7 @@ where
 	let path = path.to_string();
 	let mut key = prefix.as_bytes().to_vec();
 	key.extend(path.as_bytes());
-	let trie_proof: Vec<Vec<u8>> = codec::Decode::decode(&mut &*proof.as_bytes())
+	let trie_proof: Vec<Vec<u8>> = parity_scale_codec::Decode::decode(&mut &*proof.as_bytes())
 		.map_err(|err| anyhow!("Failed to decode proof nodes for path: {path}: {err:#?}"))?;
 	let proof = StorageProof::new(trie_proof);
 	let root = H256::from_slice(root.as_bytes());
@@ -107,7 +107,7 @@ where
 	let mut key = prefix.as_bytes().to_vec();
 	key.extend(path.as_bytes());
 	let trie_proof: Vec<Vec<u8>> =
-		codec::Decode::decode(&mut &*proof.as_bytes()).map_err(anyhow::Error::msg)?;
+		parity_scale_codec::Decode::decode(&mut &*proof.as_bytes()).map_err(anyhow::Error::msg)?;
 	let proof = StorageProof::new(trie_proof);
 	let root = H256::from_slice(root.as_bytes());
 	let child_info = ChildInfo::new_default(prefix.as_bytes());
@@ -194,8 +194,9 @@ pub fn decode_timestamp_extrinsic(ext: &Vec<u8>) -> Result<u64, anyhow::Error> {
 	// https://github.com/paritytech/substrate/blob/d602397a0bbb24b5d627795b797259a44a5e29e9/primitives/trie/src/lib.rs#L99-L101
 	// Decoding from the [2..] because the timestamp inmherent has two extra bytes before the call
 	// that represents the call length and the extrinsic version.
-	let (_, _, timestamp): (u8, u8, Compact<u64>) = codec::Decode::decode(&mut &ext[2..])
-		.map_err(|err| anyhow!("Failed to decode extrinsic: {err}"))?;
+	let (_, _, timestamp): (u8, u8, Compact<u64>) =
+		parity_scale_codec::Decode::decode(&mut &ext[2..])
+			.map_err(|err| anyhow!("Failed to decode extrinsic: {err}"))?;
 	Ok(timestamp.into())
 }
 

@@ -15,7 +15,6 @@
 use super::{error::Error, signer::ExtrinsicSigner, ParachainClient};
 use crate::{parachain::UncheckedExtrinsic, provider::TransactionId, FinalityProtocol};
 use anyhow::anyhow;
-use codec::{Decode, Encode};
 use finality_grandpa::BlockNumberOps;
 use finality_grandpa_rpc::GrandpaApiClient;
 use futures::{Stream, StreamExt, TryFutureExt};
@@ -38,6 +37,7 @@ use itertools::Itertools;
 use jsonrpsee_ws_client::WsClientBuilder;
 use light_client_common::config::{EventRecordT, RuntimeCall, RuntimeTransactions};
 use pallet_ibc::light_clients::AnyClientMessage;
+use parity_scale_codec::{Decode, Encode};
 use primitives::{
 	mock::LocalClientTypes, Chain, CommonClientState, IbcProvider, MisbehaviourHandler,
 };
@@ -491,7 +491,7 @@ where
 							})?;
 						trusted_finality_proof
 							.unknown_headers
-							.push(codec::Decode::decode(&mut &*unknown_header.encode()).expect(
+							.push(parity_scale_codec::Decode::decode(&mut &*unknown_header.encode()).expect(
 							"Same header struct defined in different crates, decoding cannot panic",
 						));
 					}

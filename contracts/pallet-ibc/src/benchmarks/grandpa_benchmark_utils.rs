@@ -1,6 +1,5 @@
 use crate::light_clients::{AnyClientMessage, HostFunctionsManager};
 use alloc::{collections::BTreeMap, format};
-use codec::{Compact, Encode};
 use finality_grandpa::{Precommit, SignedPrecommit};
 use grandpa_client_primitives::{
 	justification::GrandpaJustification, parachain_header_storage_key, Commit, FinalityProof,
@@ -12,6 +11,7 @@ use ics10_grandpa::{
 	client_state::ClientState,
 	consensus_state::ConsensusState,
 };
+use parity_scale_codec::{Compact, Encode};
 use sp_consensus_grandpa::{AuthorityId, AuthoritySignature, KEY_TYPE};
 use sp_core::H256;
 use sp_runtime::{traits::BlakeTwo256, SaturatedConversion};

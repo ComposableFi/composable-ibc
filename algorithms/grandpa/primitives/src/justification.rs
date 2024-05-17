@@ -16,9 +16,8 @@
 use crate::{error, Commit, HostFunctions};
 use alloc::collections::{BTreeMap, BTreeSet};
 use anyhow::anyhow;
-use codec::{Decode, Encode};
 use finality_grandpa::voter_set::VoterSet;
-use frame_support::log;
+use parity_scale_codec::{Decode, Encode};
 use sp_consensus_grandpa::{
 	AuthorityId, AuthorityList, AuthoritySignature, ConsensusLog, Equivocation, RoundNumber,
 	ScheduledChange, SetId, GRANDPA_ENGINE_ID,

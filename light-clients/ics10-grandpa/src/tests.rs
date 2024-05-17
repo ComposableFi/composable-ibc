@@ -22,7 +22,6 @@ use crate::{
 	},
 };
 use beefy_prover::helpers::{fetch_timestamp_extrinsic_with_proof, TimeStampExtWithProof};
-use codec::{Decode, Encode};
 use finality_grandpa_rpc::GrandpaApiClient;
 use futures::stream::StreamExt;
 use grandpa_client_primitives::{
@@ -50,6 +49,7 @@ use ibc::{
 	Height,
 };
 use light_client_common::config::RuntimeStorage;
+use parity_scale_codec::{Decode, Encode};
 use sp_core::{hexdisplay::AsBytesRef, H256};
 use std::time::Duration;
 use subxt::config::substrate::{BlakeTwo256, SubstrateHeader};

@@ -23,10 +23,10 @@ extern crate alloc;
 
 use alloc::vec;
 use anyhow::anyhow;
-use codec::{Decode, Encode};
 use finality_grandpa::Chain;
 use hash_db::Hasher;
 use light_client_common::state_machine;
+use parity_scale_codec::{Decode, Encode};
 use primitives::{
 	error,
 	justification::{find_scheduled_change, AncestryChain, GrandpaJustification},
@@ -115,7 +115,7 @@ where
 		let proof = StorageProof::new(state_proof);
 		let key = parachain_header_storage_key(client_state.para_id);
 		// verify patricia-merkle state proofs
-		let header = state_machine::read_proof_check::<Host::BlakeTwo256, _>(
+		let header = sp_state_machine::read_proof_check::<Host::BlakeTwo256, _>(
 			relay_chain_header.state_root(),
 			proof,
 			&[key.as_ref()],
@@ -128,7 +128,7 @@ where
 		para_heights.push(parachain_header.number().clone().into());
 		// Timestamp extrinsic should be the first inherent and hence the first extrinsic
 		// https://github.com/paritytech/substrate/blob/d602397a0bbb24b5d627795b797259a44a5e29e9/primitives/trie/src/lib.rs#L99-L101
-		let key = codec::Compact(0u64).encode();
+		let key = parity_scale_codec::Compact(0u64).encode();
 		// verify extrinsic proof for timestamp extrinsic
 		sp_trie::verify_trie_proof::<LayoutV0<Host::BlakeTwo256>, _, _, _>(
 			parachain_header.extrinsics_root(),

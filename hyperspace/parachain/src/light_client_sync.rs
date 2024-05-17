@@ -1,4 +1,4 @@
-use codec::{Decode, Encode};
+use parity_scale_codec::{Decode, Encode};
 use std::{
 	collections::{BTreeMap, BTreeSet, HashMap},
 	fmt::Display,
@@ -340,7 +340,7 @@ where
 		.await?;
 
 	let grandpa_header = GrandpaHeader {
-		finality_proof: codec::Decode::decode(&mut &*finality_proof.encode())
+		finality_proof: parity_scale_codec::Decode::decode(&mut &*finality_proof.encode())
 			.expect("Same struct from different crates,decode should not fail"),
 		parachain_headers: parachain_headers.into(),
 		height: Height::new(para_id as u64, finalized_para_height as u64),

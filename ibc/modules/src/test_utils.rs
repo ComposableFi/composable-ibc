@@ -224,7 +224,7 @@ impl HostFunctionsProvider for Crypto {
 		value: &[u8],
 	) -> Result<(), Ics02Error> {
 		let root = sp_core::H256::from_slice(root);
-		let key = codec::Compact(0u32).encode();
+		let key = parity_scale_codec::Compact(0u32).encode();
 		sp_io::trie::blake2_256_verify_proof(
 			root,
 			proof,

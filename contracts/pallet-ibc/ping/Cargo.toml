@@ -6,29 +6,25 @@ authors = ["David Salami <wizdave97@gmail.com>"]
 
 [dependencies]
 log = { version = "0.4.0", default-features = false }
-scale-info = { version = "2.1.1", default-features = false, features = ["derive"] }
-serde = { version = "1.0.136", default-features = false, features = ["derive"] }
+scale-info = { workspace = true }
+serde = { workspace = true }
 
-frame-support = { git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.43", default-features = false }
-frame-system = { git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.43", default-features = false }
-sp-core = { git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.43", default-features = false }
-sp-runtime = { git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.43", default-features = false }
-sp-std = { git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.43", default-features = false }
+frame-support = { workspace = true }
+frame-system = { workspace = true }
+sp-core = { workspace = true }
+sp-runtime = { workspace = true }
+sp-std = { workspace = true }
 ibc = { path = "../../../ibc/modules", default-features = false }
 
-ibc-primitives = { path = "../primitives", default-features = false }
+ibc-primitives = { workspace = true }
 
-[dependencies.codec]
-package = "parity-scale-codec"
-version = "3.0.0"
-features = ["derive"]
-default-features = false
+parity-scale-codec = { workspace = true }
 
 
 [features]
 default = ['std']
 std = [
-  "codec/std",
+  "parity-scale-codec/std",
   "log/std",
   "serde/std",
   "scale-info/std",

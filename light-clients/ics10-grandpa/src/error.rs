@@ -23,7 +23,7 @@ use prost::DecodeError;
 
 #[derive(derive_more::From, derive_more::Display, Debug)]
 pub enum Error {
-	Codec(codec::Error),
+	Codec(parity_scale_codec::Error),
 	TimeStamp(TimestampOverflowError),
 	ParseTimeStamp(ParseTimestampError),
 	ValidationError(ValidationError),

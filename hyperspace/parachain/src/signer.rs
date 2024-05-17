@@ -12,7 +12,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-use codec::Decode;
+use parity_scale_codec::Decode;
 use primitives::KeyProvider;
 use sp_keystore::{Keystore, KeystorePtr};
 use sp_runtime::{

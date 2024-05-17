@@ -23,5 +23,5 @@ pub enum Error {
 	/// Custom
 	Custom(String),
 	/// Codec error
-	Codec(codec::Error),
+	Codec(parity_scale_codec::Error),
 }

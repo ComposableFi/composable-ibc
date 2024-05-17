@@ -29,8 +29,8 @@ use tendermint_proto::Protobuf;
 	Hash,
 	Serialize,
 	Deserialize,
-	codec::Encode,
-	codec::Decode,
+	parity_scale_codec::Encode,
+	parity_scale_codec::Decode,
 	scale_info::TypeInfo,
 )]
 #[cfg_attr(feature = "cosmwasm", derive(JsonSchema))]

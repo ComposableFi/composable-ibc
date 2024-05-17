@@ -27,7 +27,7 @@ pub enum Error {
 	RpcError(String),
 	/// Scale codec error
 	#[error("Scale decoding error: {0}")]
-	Codec(#[from] codec::Error),
+	Codec(#[from] parity_scale_codec::Error),
 	/// Update pallet name in call definition
 	#[error("Pallet '{0}' not found in metadata, update static definition of call")]
 	PalletNotFound(&'static str),
