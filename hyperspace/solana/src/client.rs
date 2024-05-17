@@ -244,27 +244,27 @@ impl SolanaClient {
 		at: u64,
 		require_proof: bool,
 	) -> (solana_trie::TrieAccount<Vec<u8>>, bool) {
-		// let connection = self.get_db();
-		// if require_proof {
-		// 	let row = connection.query_row("SELECT * FROM Trie WHERE height=?1", [at], |row| {
-		// 		Ok(Trie {
-		// 			id: row.get(0)?,
-		// 			height: row.get(1)?,
-		// 			data: row.get(2)?,
-		// 			state_root: row.get(3)?,
-		// 			match_block_state_root: row.get(4)?,
-		// 		})
-		// 	});
-		// 	if let Ok(trie) = row {
-		// 		log::info!("Does block state roots match {}", trie.match_block_state_root);
-		// 		if trie.match_block_state_root {
-		// 			return (
-		// 				solana_trie::TrieAccount::new(trie.data).unwrap(),
-		// 				trie.match_block_state_root,
-		// 			);
-		// 		}
-		// 	}
-		// }
+		let connection = self.get_db();
+		if require_proof {
+			let row = connection.query_row("SELECT * FROM Trie WHERE height=?1", [at], |row| {
+				Ok(Trie {
+					id: row.get(0)?,
+					height: row.get(1)?,
+					data: row.get(2)?,
+					state_root: row.get(3)?,
+					match_block_state_root: row.get(4)?,
+				})
+			});
+			if let Ok(trie) = row {
+				log::info!("Does block state roots match {}", trie.match_block_state_root);
+				if trie.match_block_state_root {
+					return (
+						solana_trie::TrieAccount::new(trie.data).unwrap(),
+						trie.match_block_state_root,
+					);
+				}
+			}
+		}
 		let trie_key = self.get_trie_key();
 		let rpc_client = self.rpc_client();
 		let trie_account = rpc_client
