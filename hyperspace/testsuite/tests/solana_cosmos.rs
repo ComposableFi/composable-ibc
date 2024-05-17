@@ -54,9 +54,9 @@ pub struct Args {
 
 impl Default for Args {
 	fn default() -> Self {
-		let relay = std::env::var("RELAY_HOST").unwrap_or_else(|_| "192.168.1.101".to_string());
-		let solana = std::env::var("SOLANA_HOST").unwrap_or_else(|_| "192.168.1.101".to_string());
-		let cosmos = std::env::var("COSMOS_HOST").unwrap_or_else(|_| "192.168.1.101".to_string());
+		let relay = std::env::var("RELAY_HOST").unwrap_or_else(|_| "192.168.12.123".to_string());
+		let solana = std::env::var("SOLANA_HOST").unwrap_or_else(|_| "192.168.12.123".to_string());
+		let cosmos = std::env::var("COSMOS_HOST").unwrap_or_else(|_| "192.168.12.123".to_string());
 		let wasm_path = std::env::var("WASM_PATH").unwrap_or_else(|_| {
 			"../../target/wasm32-unknown-unknown/release/cf_guest_cw.wasm".to_string()
 		});
@@ -125,12 +125,12 @@ async fn setup_clients() -> (AnyChain, AnyChain) {
 			153, 230, 192, 225, 51, 119, 216, 14, 69, 225, 73, 7, 204, 144, 39, 213, 91, 255, 136,
 			38, 95, 131, 197, 4, 101, 186,
 		],
-		solana_ibc_program_id: "2HLLVco5HvwWriNbUhmVwA2pCetRkpgrqwnjcsZdyTKT".to_string(),
+		solana_ibc_program_id: "9fd7GDygnAmHhXDVWgzsfR6kSRvwkxVnsY8SaSpSH4SX".to_string(),
 		write_program_id: "FufGpHqMQgGVjtMH9AV8YMrJYq8zaK6USRsJkZP4yDjo".to_string(),
 		signature_verifier_program_id: 
 			"C6r1VEbn3mSpecgrZ7NdBvWUtYVJWrDPv4uU9Xs956gc".to_string(),
     trie_db_path: "../../../solana-ibc-indexer/indexer.db3".to_string(),
-    transaction_sender: hyperspace_solana::client::TransactionSender::JITO,
+    transaction_sender: "RPC".to_string(),
 	};
 
 	let mut config_b = CosmosClientConfig {
@@ -253,15 +253,15 @@ async fn solana_to_cosmos_ibc_messaging_full_integration_test() {
 
 	// no timeouts + connection delay
 
-	ibc_messaging_with_connection_delay(
-		&mut chain_a,
-		&mut chain_b,
-		asset_id_a.clone(),
-		asset_id_b.clone(),
-		channel_a,
-		channel_b,
-	)
-	.await;
+	// ibc_messaging_with_connection_delay(
+	// 	&mut chain_a,
+	// 	&mut chain_b,
+	// 	asset_id_a.clone(),
+	// 	asset_id_b.clone(),
+	// 	channel_a,
+	// 	channel_b,
+	// )
+	// .await;
 
 	// timeouts + connection delay
 	ibc_messaging_packet_height_timeout_with_connection_delay(

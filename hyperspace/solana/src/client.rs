@@ -244,27 +244,27 @@ impl SolanaClient {
 		at: u64,
 		require_proof: bool,
 	) -> (solana_trie::TrieAccount<Vec<u8>>, bool) {
-		let connection = self.get_db();
-		if require_proof {
-			let row = connection.query_row("SELECT * FROM Trie WHERE height=?1", [at], |row| {
-				Ok(Trie {
-					id: row.get(0)?,
-					height: row.get(1)?,
-					data: row.get(2)?,
-					state_root: row.get(3)?,
-					match_block_state_root: row.get(4)?,
-				})
-			});
-			if let Ok(trie) = row {
-				log::info!("Does block state roots match {}", trie.match_block_state_root);
-				if trie.match_block_state_root {
-					return (
-						solana_trie::TrieAccount::new(trie.data).unwrap(),
-						trie.match_block_state_root,
-					);
-				}
-			}
-		}
+		// let connection = self.get_db();
+		// if require_proof {
+		// 	let row = connection.query_row("SELECT * FROM Trie WHERE height=?1", [at], |row| {
+		// 		Ok(Trie {
+		// 			id: row.get(0)?,
+		// 			height: row.get(1)?,
+		// 			data: row.get(2)?,
+		// 			state_root: row.get(3)?,
+		// 			match_block_state_root: row.get(4)?,
+		// 		})
+		// 	});
+		// 	if let Ok(trie) = row {
+		// 		log::info!("Does block state roots match {}", trie.match_block_state_root);
+		// 		if trie.match_block_state_root {
+		// 			return (
+		// 				solana_trie::TrieAccount::new(trie.data).unwrap(),
+		// 				trie.match_block_state_root,
+		// 			);
+		// 		}
+		// 	}
+		// }
 		let trie_key = self.get_trie_key();
 		let rpc_client = self.rpc_client();
 		let trie_account = rpc_client
@@ -690,6 +690,7 @@ deserialize consensus state"
 						port_id,
 						channel_id,
 						&self.rpc_client(),
+						false,
 					)
 					.await
 					.map_or(
@@ -761,6 +762,7 @@ deserialize consensus state"
 					port_id,
 					channel_id,
 					&self.rpc_client(),
+					true,
 				)
 				.await
 				.map_or(
@@ -1071,6 +1073,7 @@ pub async fn get_accounts(
 	port_id: &ibc_core_host_types::identifiers::PortId,
 	channel_id: &ibc_core_host_types::identifiers::ChannelId,
 	rpc: &AsyncRpcClient,
+	refund: bool,
 ) -> Result<(Option<Pubkey>, Option<Pubkey>, Option<Pubkey>, Option<Pubkey>), ParsePubkeyError> {
 	if Pubkey::from_str(&denom.base_denom.to_string()).is_ok() {
 		log::info!("Receiver chain source");
@@ -1083,7 +1086,10 @@ pub async fn get_accounts(
 		Ok((Some(escrow_account), Some(token_mint), Some(receiver_account), Some(receiver_address)))
 	} else {
 		log::info!("Not receiver chain source");
-		let full_token = denom.clone();
+		let mut full_token = denom.clone();
+		if !refund {
+			full_token.add_trace_prefix(TracePrefix::new(port_id.clone(), channel_id.clone()));
+		}
 		let hashed_denom = CryptoHash::digest(full_token.to_string().as_bytes());
 		let token_mint_seeds = ["mint".as_bytes(), hashed_denom.as_ref()];
 		let token_mint = Pubkey::find_program_address(&token_mint_seeds, &program_id).0;
