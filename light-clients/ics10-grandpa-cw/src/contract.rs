@@ -44,7 +44,7 @@ use ibc::core::{
 	ics24_host::identifier::ClientId,
 };
 use ibc_proto::google::protobuf::Any;
-use ics08_wasm::{instantiate::InstantiateMessage, SUBJECT_PREFIX, SUBSTITUTE_PREFIX};
+use ics08_wasm::{instantiate::InstantiateMessage, migrate::MigrateMsg, SUBJECT_PREFIX, SUBSTITUTE_PREFIX};
 use ics10_grandpa::{
 	client_def::GrandpaClient,
 	client_message::{ClientMessage, RelayChainHeader},
@@ -63,6 +63,8 @@ use tendermint_proto::Protobuf;
 const CONTRACT_NAME: &str = "crates.io:ics10-grandpa-cw";
 const CONTRACT_VERSION: &str = env!("CARGO_PKG_VERSION");
 */
+
+
 
 pub const CHANNELS_CONNECTION: Map<Bytes, Vec<(Bytes, Bytes)>> = Map::new("channels_connection");
 pub const CLIENT_UPDATE_TIME: Map<(Bytes, Bytes), u64> = Map::new("client_update_time");
@@ -115,6 +117,13 @@ impl grandpa_light_client_primitives::HostFunctions for HostFunctions {
 		// implementation of this method is in `Context`
 		true
 	}
+}
+
+
+#[entry_point]
+pub fn migrate(_deps: DepsMut, _env: Env, _msg: MigrateMsg) -> Result<Response, ContractError> {
+    // No state migrations performed, just returned a Response
+    Ok(Response::default())
 }
 
 fn process_instantiate_msg(
