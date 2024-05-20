@@ -110,6 +110,9 @@ pub struct ClientStateCallResponse {
 }
 
 #[cw_serde]
+pub struct MigrateMsg {}
+
+#[cw_serde]
 pub struct InstantiateMsg {}
 
 #[cw_serde]
