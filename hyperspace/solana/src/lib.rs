@@ -1160,6 +1160,8 @@ deserialize client state"
 		}
 		let mut total_packets = Vec::new();
 		let mut before_hash = None;
+		let maximum_sequence_number = seqs.iter().max().unwrap();
+		let mut is_sequence_greater = false;
 		while total_packets.len() < seqs.len() {
 			let (transactions, last_searched_hash) = events::get_previous_transactions(
 				&rpc_client,
@@ -1209,6 +1211,9 @@ deserialize client state"
 											let height = height_str.parse::<u64>().unwrap();
 											return Some((packet.clone(), height + 1));
 										}
+										if *maximum_sequence_number > packet.seq_on_a().value() {
+											is_sequence_greater = true;
+										}
 										None
 									},
 									_ => None,
@@ -1222,6 +1227,10 @@ deserialize client state"
 						send_packet
 					})
 					.collect();
+			if is_sequence_greater {
+				log::info!("Sequence number found in logs is lesser than the set of sequence which we are looking for");
+				return Ok(Vec::new());
+			}
 			let packets: Vec<_> = send_packet_events
 				.iter()
 				.map(|(packet, proof_height)| ibc_rpc::PacketInfo {
@@ -1259,6 +1268,7 @@ deserialize client state"
 		if seqs.is_empty() {
 			return Ok(Vec::new());
 		}
+		let maximum_sequence_number = seqs.iter().max().unwrap();
 		let mut before_hash = None;
 		let mut total_packets = Vec::new();
 		while total_packets.len() < seqs.len() {
@@ -1272,6 +1282,7 @@ deserialize client state"
 				anchor_client::solana_sdk::signature::Signature::from_str(&last_searched_hash)
 					.unwrap(),
 			);
+			let mut is_sequence_greater = false;
 			let recv_packet_events: Vec<_> = transactions
 			.iter()
 			.filter_map(|tx| {
@@ -1298,6 +1309,9 @@ deserialize client state"
 								log::info!("Found receive packet");
 								Some((e.clone(), proof_height + 1))
 							} else {
+								if *maximum_sequence_number > packet.seq_on_a().value() {
+									is_sequence_greater = true;
+								}
 								log::info!("Receive Ids dont match expected channel id: {:?} got channel id: {:?} expect port id: {:?} got port id: {:?} expected seq: {:?} got seq: {:?}", packet.chan_id_on_b(), channel_id, packet.port_id_on_b(), port_id, seqs, packet.seq_on_a().value());
 								None
 							},
@@ -1307,6 +1321,10 @@ deserialize client state"
 				}
 			})
 			.collect();
+			if is_sequence_greater {
+				log::info!("Sequence number found in logs is lesser than the set of sequence which we are looking for");
+				return Ok(Vec::new());
+			}
 			let packets: Vec<_> = recv_packet_events
 				.iter()
 				.map(|(recv_packet, height)| match recv_packet {
