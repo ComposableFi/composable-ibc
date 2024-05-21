@@ -1,4 +1,4 @@
-# This workflow pushes new parachain-node docker images on every new push on master.
+# This workflow pushes new parachain-node docker images on every new push on main.
 #
 # All the images above have support for linux/amd64 and linux/arm64.
 #
@@ -9,7 +9,7 @@ name: "Build and publish Parachain-node Docker image"
 on:
   push:
     branches:
-      - master
+      - main
 
 jobs:
   build-and-publish:
