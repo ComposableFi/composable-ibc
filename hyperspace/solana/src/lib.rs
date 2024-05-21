@@ -1162,6 +1162,7 @@ deserialize client state"
 		let mut before_hash = None;
 		let maximum_sequence_number = seqs.iter().max().unwrap();
 		let mut is_sequence_greater = false;
+		let mut is_maximum_seq_found = false;
 		while total_packets.len() < seqs.len() {
 			let (transactions, last_searched_hash) = events::get_previous_transactions(
 				&rpc_client,
@@ -1196,6 +1197,10 @@ deserialize client state"
 												.find(|&&seq| packet.seq_on_a().value() == seq)
 												.is_some()
 										{
+											if *maximum_sequence_number == packet.seq_on_a().value()
+											{
+												is_maximum_seq_found = true;
+											}
 											log::info!(
 												"These are logs for send packet transaction {:?}",
 												logs
@@ -1227,7 +1232,7 @@ deserialize client state"
 						send_packet
 					})
 					.collect();
-			if is_sequence_greater {
+			if is_sequence_greater && !is_maximum_seq_found {
 				log::info!("Sequence number found in logs is lesser than the set of sequence which we are looking for");
 				return Ok(Vec::new());
 			}
@@ -1283,6 +1288,7 @@ deserialize client state"
 					.unwrap(),
 			);
 			let mut is_sequence_greater = false;
+			let mut is_maximum_seq_found = false;
 			let recv_packet_events: Vec<_> = transactions
 			.iter()
 			.filter_map(|tx| {
@@ -1306,6 +1312,9 @@ deserialize client state"
 									.find(|&&seq| packet.seq_on_a().value() == seq)
 									.is_some()
 							{
+								if *maximum_sequence_number == packet.seq_on_a().value() {
+									is_maximum_seq_found = true;
+								}
 								log::info!("Found receive packet");
 								Some((e.clone(), proof_height + 1))
 							} else {
@@ -1321,7 +1330,7 @@ deserialize client state"
 				}
 			})
 			.collect();
-			if is_sequence_greater {
+			if is_sequence_greater && !is_maximum_seq_found  {
 				log::info!("Sequence number found in logs is lesser than the set of sequence which we are looking for");
 				return Ok(Vec::new());
 			}
