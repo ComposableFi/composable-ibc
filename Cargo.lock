@@ -6801,6 +6801,7 @@ checksum = "49f1f14873335454500d59611f1cf4a4b0f786f9ac11f4312a78e4cf2566695b"
 [[package]]
 name = "jito-protos"
 version = "0.1.0"
+source = "git+https://github.com/dhruvja/searcher-examples#addf5b4ae654d79e4eaaa42131d2a05210980c59"
 dependencies = [
  "bincode",
  "bytes",
@@ -6815,6 +6816,7 @@ dependencies = [
 [[package]]
 name = "jito-searcher-client"
 version = "0.1.0"
+source = "git+https://github.com/dhruvja/searcher-examples#addf5b4ae654d79e4eaaa42131d2a05210980c59"
 dependencies = [
  "futures-util",
  "jito-protos",
