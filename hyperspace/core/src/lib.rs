@@ -221,10 +221,13 @@ async fn process_some_finality_event<A: Chain, B: Chain>(
 	log::trace!(target: "hyperspace", "Received updates count: {}", updates.len());
 	// query packets that can now be sent, at this sink height because of connection
 	// delay.
-	let (ready_packets, mut timeout_msgs) =
-		packets::query_ready_and_timed_out_packets(&*source, &*sink)
-			.await
-			.map_err(|e| anyhow!("Failed to parse events: {:?}", e))?;
+	// let (ready_packets, mut timeout_msgs) =
+	// 	packets::query_ready_and_timed_out_packets(&*source, &*sink)
+	// 		.await
+	// 		.map_err(|e| anyhow!("Failed to parse events: {:?}", e))?;
+
+	let ready_packet = Vec::new();
+	let timeout_msgs = Vec::new();
 
 	let mut msgs = Vec::new();
 
