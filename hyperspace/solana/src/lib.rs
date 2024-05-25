@@ -14,7 +14,6 @@ use anchor_spl::associated_token::get_associated_token_address;
 use client::FinalityEvent;
 use client_state::convert_new_client_state_to_old;
 use consensus_state::convert_new_consensus_state_to_old;
-use itertools::Itertools;
 use core::{pin::Pin, str::FromStr, time::Duration};
 use futures::future::join_all;
 use guestchain::{BlockHeader, Epoch, PubKey, Validator};
@@ -25,6 +24,7 @@ use ics07_tendermint::{
 	client_message::ClientMessage, client_state::ClientState as TmClientState,
 	consensus_state::ConsensusState as TmConsensusState,
 };
+use itertools::Itertools;
 use msgs::convert_old_msgs_to_new;
 use serde::{Deserialize, Serialize};
 use solana_transaction_status::UiTransactionEncoding;
@@ -211,7 +211,7 @@ impl IbcProvider for SolanaClient {
 		let chain_account = self.get_chain_storage().await;
 		let mut updates = Vec::new();
 		let mut rev_all_signatures = all_signatures.clone();
-		let mut update_heights = Vec::new();
+		// let mut update_heights = Vec::new();
 		// Reversing so that updates are sent in ascending order of their height.
 		rev_all_signatures.reverse();
 		for (signatures, block_header, epoch) in rev_all_signatures {
@@ -223,10 +223,10 @@ impl IbcProvider for SolanaClient {
 				continue;
 			}
 
-			if update_heights.contains(&block_height) {
-				println!("Update height already exists so skipping {}", block_height);
-				continue;
-			}
+			// if update_heights.contains(&block_height) {
+			// 	println!("Update height already exists so skipping {}", block_height);
+			// 	continue;
+			// }
 
 			let block_hash = block_header.calc_hash();
 			let validators = epoch.unwrap().validators().to_vec();
@@ -332,8 +332,9 @@ impl IbcProvider for SolanaClient {
 				)
 			};
 			updates.push(update);
-			update_heights.push(block_height);
+			// update_heights.push(block_height);
 		}
+		updates[0].3 = UpdateType::Optional;
 		Ok(updates)
 	}
 
@@ -1332,7 +1333,7 @@ deserialize client state"
 				}
 			})
 			.collect();
-			if is_sequence_greater && !is_maximum_seq_found  {
+			if is_sequence_greater && !is_maximum_seq_found {
 				log::info!("Sequence number found in logs is lesser than the set of sequence which we are looking for");
 				return Ok(Vec::new());
 			}
