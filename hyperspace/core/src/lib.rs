@@ -227,7 +227,7 @@ async fn process_some_finality_event<A: Chain, B: Chain>(
 	// 		.map_err(|e| anyhow!("Failed to parse events: {:?}", e))?;
 
 	let ready_packets = Vec::new();
-	let mut timeout_msgs = Vec::new();
+	let mut timeout_msgs: Vec<Any> = Vec::new();
 
 	let mut msgs = Vec::new();
 
