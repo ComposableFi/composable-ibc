@@ -222,13 +222,7 @@ impl IbcProvider for SolanaClient {
 
 			let block_hash = block_header.calc_hash();
 			let block_height: u64 = block_header.block_height.into();
-			let validators = if let Some(x) = block_header.clone().next_epoch_commitment {
-				log::info!("Next epoch commitment {:?}", x);
-				log::info!("From epoch value {:?}", epoch.clone().unwrap().calc_commitment());
-				epoch.unwrap().validators().to_vec()
-			} else {
-				chain_account.validators().unwrap()
-			};
+			let validators = epoch.unwrap().validators().to_vec();
 			let all_validators: Vec<Validator<pallet_ibc::light_clients::PubKey>> = validators
 				.iter()
 				.map(|validator| {
