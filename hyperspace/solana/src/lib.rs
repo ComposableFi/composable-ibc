@@ -14,6 +14,7 @@ use anchor_spl::associated_token::get_associated_token_address;
 use client::FinalityEvent;
 use client_state::convert_new_client_state_to_old;
 use consensus_state::convert_new_consensus_state_to_old;
+use itertools::Itertools;
 use core::{pin::Pin, str::FromStr, time::Duration};
 use futures::future::join_all;
 use guestchain::{BlockHeader, Epoch, PubKey, Validator};
@@ -210,9 +211,11 @@ impl IbcProvider for SolanaClient {
 		let chain_account = self.get_chain_storage().await;
 		let mut updates = Vec::new();
 		let mut rev_all_signatures = all_signatures.clone();
+		let mut update_heights = Vec::new();
 		// Reversing so that updates are sent in ascending order of their height.
 		rev_all_signatures.reverse();
 		for (signatures, block_header, epoch) in rev_all_signatures {
+			let block_height: u64 = block_header.block_height.into();
 			if (block_header.next_epoch_commitment.is_none()
 				&& u64::from(block_header.block_height) != finality_height)
 				|| epoch.is_none()
@@ -220,8 +223,12 @@ impl IbcProvider for SolanaClient {
 				continue;
 			}
 
+			if update_heights.contains(&block_height) {
+				println!("Update height already exists so skipping {}", block_height);
+				continue;
+			}
+
 			let block_hash = block_header.calc_hash();
-			let block_height: u64 = block_header.block_height.into();
 			let validators = epoch.unwrap().validators().to_vec();
 			let all_validators: Vec<Validator<pallet_ibc::light_clients::PubKey>> = validators
 				.iter()
@@ -325,6 +332,7 @@ impl IbcProvider for SolanaClient {
 				)
 			};
 			updates.push(update);
+			update_heights.push(block_height);
 		}
 		Ok(updates)
 	}
