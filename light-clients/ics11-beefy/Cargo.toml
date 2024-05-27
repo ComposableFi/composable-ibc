@@ -81,4 +81,4 @@ sp-trie = { git = "https://github.com/paritytech/substrate", branch = "polkadot-
 sp-core = { git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.43" }
 json = { package = "serde_json", version = "1.0.85" }
 frame-support = { git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.43" }
-hyperspace-core = { path = "../../hyperspace/core", features = ["testing", "build-metadata-from-ws"] }
+hyperspace-core = { path = "../../hyperspace/core", features = ["testing"] }

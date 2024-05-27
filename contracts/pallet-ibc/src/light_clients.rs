@@ -48,7 +48,7 @@ use prost::Message;
 use sp_core::{crypto::ByteArray, ed25519, H256};
 use sp_runtime::{
 	app_crypto::RuntimePublic,
-	traits::{BlakeTwo256, ConstU32, Header},
+	traits::{BlakeTwo256, ConstU32},
 	BoundedBTreeSet, BoundedVec,
 };
 use tendermint::{
@@ -160,39 +160,6 @@ impl grandpa_client_primitives::HostFunctions for HostFunctionsManager {
 
 	fn ed25519_verify(sig: &ed25519::Signature, msg: &[u8], pub_key: &ed25519::Public) -> bool {
 		pub_key.verify(&msg, sig)
-	}
-
-	fn insert_relay_header_hashes(new_hashes: &[<Self::Header as Header>::Hash]) {
-		if new_hashes.is_empty() {
-			return
-		}
-
-		GrandpaHeaderHashesSetStorage::mutate(|hashes_set| {
-			GrandpaHeaderHashesStorage::mutate(|hashes| {
-				for hash in new_hashes {
-					match hashes.try_push(*hash) {
-						Ok(_) => {},
-						Err(_) => {
-							let old_hash = hashes.remove(0);
-							hashes_set.remove(&old_hash);
-							hashes.try_push(*hash).expect(
-								"we just removed an element, so there is space for this one; qed",
-							);
-						},
-					}
-					match hashes_set.try_insert(*hash) {
-						Ok(_) => {},
-						Err(_) => {
-							log::warn!("duplicated value in GrandpaHeaderHashesStorage or the storage is corrupted");
-						},
-					}
-				}
-			});
-		});
-	}
-
-	fn contains_relay_header_hash(hash: <Self::Header as Header>::Hash) -> bool {
-		GrandpaHeaderHashesSetStorage::get().contains(&hash)
 	}
 }
 
