@@ -193,7 +193,7 @@ pub async fn query_ready_and_timed_out_packets(
 		.take(max_packets_to_process)
 		.collect::<Vec<_>>();
 
-		log::debug!(target: "hyperspace", "Found {} undelivered packets for {:?}/{:?} for {seqs:?}", seqs.len(), channel_id, port_id.clone());
+		log::info!(target: "hyperspace", "Found {} undelivered packets for {:?}/{:?} for {seqs:?}", seqs.len(), channel_id, port_id.clone());
 
 		let mut send_packets = source.query_send_packets(channel_id, port_id.clone(), seqs).await?;
 		log::trace!(target: "hyperspace", "SendPackets count before deduplication: {}", send_packets.len());
@@ -440,12 +440,12 @@ pub async fn query_ready_and_timed_out_packets(
 
 					if source.get_proof_height(Height::new(source_height.revision_number, ack_height)).await.revision_height > latest_source_height_on_sink.revision_height {
 						// Sink does not have client update required to prove acknowledgement packet message
-						log::trace!(target: "hyperspace", "Skipping acknowledgement for packet {:?} as sink does not have client update required to prove acknowledgement packet message", packet);
+						log::info!(target: "hyperspace", "Skipping acknowledgement for packet {:?} as sink does not have client update required to prove acknowledgement packet message", packet);
 						acks_packets_count.fetch_add(1, Ordering::SeqCst);
 						return Ok(None)
 					}
 
-					log::trace!(target: "hyperspace", "sink_height: {:?}, latest_source_height_on_sink: {:?}, acknowledgement.height: {}", sink_height, latest_source_height_on_sink, ack_height);
+					log::info!(target: "hyperspace", "sink_height: {:?}, latest_source_height_on_sink: {:?}, acknowledgement.height: {}", sink_height, latest_source_height_on_sink, ack_height);
 
 					let start_height = Height::new(latest_source_height_on_sink.revision_number, ack_height);
 					let proof_height = if let Some(proof_height) = find_suitable_proof_height_for_client(
@@ -460,10 +460,10 @@ pub async fn query_ready_and_timed_out_packets(
 					)
 						.await
 					{
-						log::trace!(target: "hyperspace", "Using proof height: {}", proof_height);
+						log::info!(target: "hyperspace", "Using proof height: {}", proof_height);
 						proof_height
 					} else {
-						log::trace!(target: "hyperspace", "Skipping acknowledgement for packet {:?} as no proof height could be found", packet); 	return Ok(None)
+						log::info!(target: "hyperspace", "Skipping acknowledgement for packet {:?} as no proof height could be found", packet); 	return Ok(None)
 					};
 
 					if !verify_delay_passed(
@@ -479,7 +479,7 @@ pub async fn query_ready_and_timed_out_packets(
 					)
 						.await?
 					{
-						log::trace!(target: "hyperspace", "Skipping acknowledgement for packet as connection delay has not passed {:?}", packet);
+						log::info!(target: "hyperspace", "Skipping acknowledgement for packet as connection delay has not passed {:?}", packet);
 						return Ok(None)
 					}
 
