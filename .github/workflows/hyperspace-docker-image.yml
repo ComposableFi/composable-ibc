@@ -11,7 +11,7 @@ on:
 
 env:
   REGISTRY: ghcr.io
-  IMAGE_NAME: composablefi/composable-ibc-private/hyperspace
+  IMAGE_NAME: composablefi/composable-ibc/hyperspace
 
 jobs:
 
