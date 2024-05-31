@@ -105,7 +105,7 @@ use solana_ibc::storage::{SequenceKind, Serialised};
 
 use trie_ids::{ClientIdx, ConnectionIdx, PortChannelPK, Tag, TrieKey};
 
-use crate::{client::TransactionSender, events::get_events_from_logs};
+use crate::{client::TransactionSender, events::{get_events_from_logs, SearchIn}};
 pub use crate::{
 	client::{DeliverIxType, SolanaClient, SolanaClientConfig},
 	events::convert_new_event_to_old,
@@ -1162,6 +1162,7 @@ deserialize client state"
 				&rpc_client,
 				self.solana_ibc_program_id,
 				before_hash,
+				SearchIn::IBC
 			)
 			.await;
 			before_hash = Some(
@@ -1275,6 +1276,7 @@ deserialize client state"
 				&rpc_client,
 				self.solana_ibc_program_id,
 				before_hash,
+				SearchIn::IBC
 			)
 			.await;
 			before_hash = Some(

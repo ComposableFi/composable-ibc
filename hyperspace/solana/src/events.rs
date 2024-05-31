@@ -406,7 +406,7 @@ pub async fn get_client_state_at_height(
 	let mut current_height = upto_height;
 	while current_height >= upto_height {
 		let (transactions, last_searched_hash) =
-			get_previous_transactions(&rpc, program_id, before_hash).await;
+			get_previous_transactions(&rpc, program_id, before_hash, SearchIn::IBC).await;
 		if transactions.is_empty() {
 			break;
 		}
@@ -480,12 +480,13 @@ pub fn get_events_from_logs(logs: Vec<String>) -> (Vec<solana_ibc::events::Event
 	(events, height)
 }
 
-pub async fn get_signatures_for_blockhash(
+pub async fn _get_signatures_for_blockhash(
 	rpc: RpcClient,
 	program_id: Pubkey,
 	blockhash: CryptoHash,
 ) -> Result<(Vec<(Pubkey, Signature)>, BlockHeader), String> {
-	let (transactions, _) = get_previous_transactions(&rpc, program_id, None).await;
+	let (transactions, _) =
+		get_previous_transactions(&rpc, program_id, None, SearchIn::GuestChain).await;
 
 	let mut signatures = Vec::new();
 	// let mut index = 0;
@@ -539,7 +540,7 @@ pub async fn get_header_from_height(
 	let mut block_header = None;
 	while block_header.is_none() {
 		let (transactions, last_searched_hash) =
-			get_previous_transactions(&rpc, program_id, before_hash).await;
+			get_previous_transactions(&rpc, program_id, before_hash, SearchIn::GuestChain).await;
 		if transactions.is_empty() {
 			break;
 		}
@@ -598,7 +599,7 @@ pub async fn get_signatures_upto_height(
 	log::info!("This is upto height {:?}", upto_height);
 	while current_height >= upto_height {
 		let (transactions, last_searched_hash) =
-			get_previous_transactions(&rpc, program_id, before_hash).await;
+			get_previous_transactions(&rpc, program_id, before_hash, SearchIn::GuestChain).await;
 		if transactions.is_empty() {
 			break;
 		}
@@ -622,15 +623,14 @@ pub async fn get_signatures_upto_height(
 						);
 						let block_height = u64::from(e.block_header.0.block_height);
 						current_height = block_height;
-						if block_height >= upto_height 
-						{
+						if block_height >= upto_height {
 							all_block_headers.push((e.block_header.0.clone(), e.epoch));
 						} else {
 							log::info!("breaking out of upto height");
 						}
 					},
 					solana_ibc::events::Event::BlockSigned(e) => {
-							all_signatures.push(e);
+						all_signatures.push(e);
 					},
 					// solana_ibc::events::Event::BlockFinalised(e) => {
 					// 	let block_height = u64::from(e.block_height);
@@ -676,10 +676,18 @@ pub async fn get_previous_transactions(
 	rpc: &RpcClient,
 	program_id: Pubkey,
 	before_hash: Option<anchor_client::solana_sdk::signature::Signature>,
+	search_in: SearchIn,
 ) -> (Vec<Response>, String) {
+	let search_address = match search_in {
+		SearchIn::IBC => {
+			let storage_seeds = &[solana_ibc::SOLANA_IBC_STORAGE_SEED];
+			Pubkey::find_program_address(storage_seeds, &program_id).0
+		},
+		SearchIn::GuestChain => program_id,
+	};
 	let transaction_signatures = rpc
 		.get_signatures_for_address_with_config(
-			&program_id,
+			&search_address, // Since ibc storage is only used for ibc and not for guest chain
 			GetConfirmedSignaturesForAddress2Config {
 				limit: Some(200),
 				before: before_hash,
@@ -739,6 +747,11 @@ pub struct Param {
 	maxSupportedTransactionVersion: u16,
 }
 
+pub enum SearchIn {
+	IBC,
+	GuestChain,
+}
+
 #[derive(Debug, Serialize, Deserialize)]
 pub struct Response {
 	pub jsonrpc: String,
@@ -755,6 +768,7 @@ pub async fn testing_events_final() {
 			&rpc,
 			Pubkey::from_str("9FeHRJLHJSEw4dYZrABHWTRKruFjxDmkLtPmhM5WFYL7").unwrap(),
 			last_hash,
+			SearchIn::IBC,
 		)
 		.await;
 		if events.is_empty() {
