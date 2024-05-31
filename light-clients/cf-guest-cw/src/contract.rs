@@ -23,6 +23,7 @@ use crate::{
 		QueryMsg, QueryResponse, StatusMsg, UpdateStateMsg, UpdateStateOnMisbehaviourMsg,
 		VerifyClientMessage, VerifyMembershipMsg, VerifyNonMembershipMsg,
 		VerifyUpgradeAndUpdateStateMsg,
+		MigrateMsg
 	},
 	state::{get_client_state, get_consensus_state},
 };
@@ -42,6 +43,12 @@ use ibc::core::{
 };
 use ics08_wasm::SUBJECT_PREFIX;
 use std::str::FromStr;
+
+#[entry_point]
+pub fn migrate(_deps: DepsMut, _env: Env, _msg: MigrateMsg) -> Result<Response, ContractError> {
+    // No state migrations performed, just returned a Response
+    Ok(Response::default())
+}
 
 #[cfg_attr(not(feature = "library"), entry_point)]
 pub fn instantiate(

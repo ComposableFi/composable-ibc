@@ -135,6 +135,9 @@ pub struct StatusMsg {}
 pub struct ExportMetadataMsg {}
 
 #[cw_serde]
+pub struct MigrateMsg {}
+
+#[cw_serde]
 pub struct MerklePath {
 	pub key_path: Vec<String>,
 }

@@ -123,6 +123,7 @@ where
 	where
 		C: Chain,
 	{
+		log::info!("Fetching latest cosmos ibc events");
 		let finality_event_height = match finality_event {
 			FinalityEvent::Tendermint { from: _, to } => to,
 		};
