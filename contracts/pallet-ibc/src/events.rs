@@ -194,6 +194,7 @@ pub enum IbcEvent {
 		dest_port: Vec<u8>,
 		dest_channel: Vec<u8>,
 		sequence: u64,
+		acks_str: String,
 	},
 	/// Timeout packet
 	TimeoutPacket {
@@ -400,6 +401,7 @@ impl From<RawIbcEvent> for IbcEvent {
 				dest_port: ev.dst_port_id().as_bytes().to_vec(),
 				dest_channel: ev.dst_channel_id().to_string().into_bytes(),
 				sequence: ev.packet.sequence.into(),
+				acks_str: String::from_utf8_lossy(&ev.ack).to_string(),
 			},
 			RawIbcEvent::AcknowledgePacket(ev) => IbcEvent::AcknowledgePacket {
 				revision_height: ev.height().revision_height,
@@ -954,6 +956,7 @@ impl TryFrom<IbcEvent> for RawIbcEvent {
 				dest_port,
 				dest_channel,
 				sequence,
+				acks_str: _,
 			} => Ok(RawIbcEvent::WriteAcknowledgement(ChannelEvents::WriteAcknowledgement {
 				height: Height::new(revision_number, revision_height),
 				packet: Packet {
