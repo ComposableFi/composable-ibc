@@ -9,6 +9,7 @@ use lib::hash::CryptoHash;
 use serde::{Deserialize, Serialize};
 use solana_ibc::events::Epoch;
 use solana_transaction_status::EncodedConfirmedTransactionWithStatusMeta;
+use tokio::runtime::Runtime;
 use std::str::FromStr;
 
 use base64::Engine;
@@ -607,6 +608,16 @@ pub async fn get_signatures_upto_height(
 			anchor_client::solana_sdk::signature::Signature::from_str(&last_searched_hash).unwrap(),
 		);
 		for tx in transactions {
+			let transaction_err = tx.result.transaction.meta.clone().unwrap().err;
+			if transaction_err.is_some() {
+				// match tx.result.transaction.transaction {
+				// 	solana_transaction_status::EncodedTransaction::Json(e) => {
+				// 		println!("Error in transaction {:?}", e.signatures);
+				// 	},
+				//   _ => panic!("WTF")	
+				// }
+				continue;
+			}
 			let logs = match tx.result.transaction.meta.clone().unwrap().log_messages {
 				solana_transaction_status::option_serializer::OptionSerializer::Some(e) => e,
 				_ => Vec::new(),
@@ -757,6 +768,19 @@ pub struct Response {
 	pub jsonrpc: String,
 	pub id: u64,
 	pub result: EncodedConfirmedTransactionWithStatusMeta,
+}
+
+#[test]
+pub fn testing_signatures() {
+	println!("I am testing signatures");
+	let rpc = RpcClient::new("https://mainnet.helius-rpc.com/?api-key=65520d87-04b2-43a5-b5d5-35d5db0601b3".to_string());
+	let program_id = Pubkey::from_str("2HLLVco5HvwWriNbUhmVwA2pCetRkpgrqwnjcsZdyTKT").unwrap();
+	let upto_height = 116806;
+	println!("I am testing signatures");
+	let signatures = Runtime::new().unwrap().block_on(get_signatures_upto_height(rpc, program_id, upto_height));
+	signatures.0.iter().for_each(|sig| {
+		println!("Height {}", sig.1.block_height);
+	})
 }
 
 #[tokio::test]
