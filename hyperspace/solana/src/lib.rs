@@ -1949,7 +1949,7 @@ impl Chain for SolanaClient {
 			let (_logs_subscription, receiver) = PubsubClient::logs_subscribe(
 				&ws_url,
 				RpcTransactionLogsFilter::Mentions(vec![program_id.to_string()]),
-				RpcTransactionLogsConfig { commitment: Some(CommitmentConfig::confirmed()) },
+				RpcTransactionLogsConfig { commitment: Some(CommitmentConfig::finalized()) },
 			)
 			.unwrap();
 
