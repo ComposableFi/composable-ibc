@@ -576,7 +576,7 @@ deserialize consensus state"
 					let ix = program
 						.request()
 						.instruction(ComputeBudgetInstruction::set_compute_unit_limit(300_000))
-						.instruction(ComputeBudgetInstruction::set_compute_unit_price(50_000))
+						// .instruction(ComputeBudgetInstruction::set_compute_unit_price(50_000))
 						.instruction(new_instruction(entries.as_slice()).unwrap())
 						.instruction(instruction)
 						.instructions()
