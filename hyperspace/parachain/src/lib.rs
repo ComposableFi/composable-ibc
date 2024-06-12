@@ -61,7 +61,6 @@ use ics11_beefy::{
 use jsonrpsee_ws_client::WsClientBuilder;
 use light_client_common::config::{AsInner, RuntimeStorage};
 use pallet_ibc::light_clients::{AnyClientState, AnyConsensusState, HostFunctionsManager};
-use sp_sp_mmr_primitives::Proof;
 use parity_scale_codec::Decode;
 use primitives::{CommonClientState, KeyProvider};
 use sc_keystore::LocalKeystore;
@@ -71,6 +70,7 @@ use sp_runtime::{
 	traits::{IdentifyAccount, One, Verify},
 	KeyTypeId, MultiSignature, MultiSigner,
 };
+use sp_sp_mmr_primitives::Proof;
 use ss58_registry::Ss58AddressFormat;
 use subxt::{
 	config::{Header as HeaderT, Header},

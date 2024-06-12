@@ -28,18 +28,18 @@ pub mod relay_chain_queries;
 use beefy_light_client_primitives::{
 	ClientState, HostFunctions, MmrUpdateProof, ParachainHeader, PartialMmrLeaf,
 };
-use sp_beefy_primitives::mmr::{BeefyNextAuthoritySet, MmrLeaf};
 use error::Error;
 use helpers::{
 	fetch_timestamp_extrinsic_with_proof, prove_parachain_headers, ParaHeadsProof,
 	TimeStampExtWithProof,
 };
 use hex_literal::hex;
-use sp_sp_mmr_primitives::Proof;
 use parity_scale_codec::Decode;
+use sp_beefy_primitives::mmr::{BeefyNextAuthoritySet, MmrLeaf};
 use sp_core::{hexdisplay::AsBytesRef, keccak_256, H256};
 use sp_io::crypto;
 use sp_runtime::traits::BlakeTwo256;
+use sp_sp_mmr_primitives::Proof;
 use subxt::{
 	config::{Header as HeaderT, Header},
 	rpc::rpc_params,

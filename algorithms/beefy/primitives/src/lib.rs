@@ -20,10 +20,10 @@
 #![deny(missing_docs)]
 
 pub mod error;
-use sp_beefy_primitives::mmr::MmrLeafVersion;
-pub use sp_beefy_primitives::mmr::{BeefyNextAuthoritySet, MmrLeaf};
 use core::marker::PhantomData;
 use parity_scale_codec::{Decode, Encode};
+use sp_beefy_primitives::mmr::MmrLeafVersion;
+pub use sp_beefy_primitives::mmr::{BeefyNextAuthoritySet, MmrLeaf};
 use sp_core::H256;
 use sp_std::prelude::*;
 

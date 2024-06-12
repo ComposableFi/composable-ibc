@@ -25,7 +25,6 @@ use crate::{
 	},
 };
 use beefy_light_client_primitives::{EncodedVersionedFinalityProof, NodesUtils, PartialMmrLeaf};
-use sp_beefy_primitives::VersionedFinalityProof;
 use beefy_prover::{
 	helpers::{fetch_timestamp_extrinsic_with_proof, TimeStampExtWithProof},
 	Prover,
@@ -52,6 +51,7 @@ use ibc::{
 };
 use light_client_common::config::RuntimeStorage;
 use parity_scale_codec::{Decode, Encode};
+use sp_beefy_primitives::VersionedFinalityProof;
 use std::time::Duration;
 use subxt::rpc::{rpc_params, Subscription};
 

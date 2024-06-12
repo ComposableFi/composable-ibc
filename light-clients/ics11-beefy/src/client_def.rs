@@ -17,9 +17,9 @@ use beefy_light_client_primitives::{
 	ClientState as LightClientState, ParachainHeader, ParachainsUpdateProof,
 };
 use core::{fmt::Debug, marker::PhantomData};
-use sp_sp_mmr_primitives::Proof;
 use parity_scale_codec::{Decode, Encode};
 use sp_core::H256;
+use sp_sp_mmr_primitives::Proof;
 use tendermint_proto::Protobuf;
 
 use crate::{

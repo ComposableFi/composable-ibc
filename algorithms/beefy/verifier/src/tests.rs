@@ -17,16 +17,16 @@ use beefy_light_client_primitives::{
 	error::BeefyClientError, EncodedVersionedFinalityProof, MmrUpdateProof, ParachainsUpdateProof,
 	SignatureWithAuthorityIndex, SignedCommitment,
 };
+use beefy_prover::{Crypto, Prover};
+use futures::stream::StreamExt;
+use hyperspace_core::substrate::DefaultConfig as PolkadotConfig;
 use sp_beefy_primitives::{
 	known_payloads::MMR_ROOT_ID,
 	mmr::{BeefyNextAuthoritySet, MmrLeaf},
 	Payload, VersionedFinalityProof,
 };
-use beefy_prover::{Crypto, Prover};
-use futures::stream::StreamExt;
-use hyperspace_core::substrate::DefaultConfig as PolkadotConfig;
-use sp_sp_mmr_primitives::Proof;
 use sp_core::bytes::to_hex;
+use sp_sp_mmr_primitives::Proof;
 use subxt::rpc::{rpc_params, Subscription};
 
 #[tokio::test]

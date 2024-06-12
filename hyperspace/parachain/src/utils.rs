@@ -14,10 +14,10 @@
 
 use crate::Error;
 use beefy_light_client_primitives::{ClientState, MmrUpdateProof};
-use sp_beefy_primitives::known_payloads::MMR_ROOT_ID;
 use frame_support::pallet_prelude::{DispatchClass, Weight};
 use frame_system::limits::BlockWeights;
 use parity_scale_codec::Decode;
+use sp_beefy_primitives::known_payloads::MMR_ROOT_ID;
 use sp_core::H256;
 
 pub fn get_updated_client_state(

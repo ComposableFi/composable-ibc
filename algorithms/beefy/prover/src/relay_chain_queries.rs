@@ -14,10 +14,10 @@
 // limitations under the License.
 
 use crate::error::Error;
-use sp_beefy_primitives::{SignedCommitment, VersionedFinalityProof};
 use light_client_common::config::{AsInner, ParaLifecycleT, RuntimeStorage};
 use pallet_mmr_rpc::LeavesProof;
 use parity_scale_codec::{Decode, Encode};
+use sp_beefy_primitives::{SignedCommitment, VersionedFinalityProof};
 use sp_core::{hexdisplay::AsBytesRef, storage::StorageKey, H256};
 use sp_runtime::traits::Zero;
 use std::collections::{BTreeMap, BTreeSet};

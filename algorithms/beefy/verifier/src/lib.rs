@@ -27,8 +27,8 @@ use beefy_light_client_primitives::{
 	error::BeefyClientError, BeefyNextAuthoritySet, ClientState, HostFunctions, MerkleHasher,
 	MmrUpdateProof, NodesUtils, ParachainsUpdateProof, SignatureWithAuthorityIndex, HASH_LENGTH,
 };
-use sp_beefy_primitives::{known_payloads::MMR_ROOT_ID, mmr::MmrLeaf};
 use parity_scale_codec::{Decode, Encode};
+use sp_beefy_primitives::{known_payloads::MMR_ROOT_ID, mmr::MmrLeaf};
 use sp_core::H256;
 use sp_runtime::traits::Convert;
 
@@ -160,8 +160,10 @@ where
 	let node = mmr_update.latest_mmr_leaf.using_encoded(|leaf| H::keccak_256(leaf));
 
 	let mmr_size = NodesUtils::new(mmr_update.mmr_proof.leaf_count).size();
-	let proof =
-		ckb_merkle_mountain_range::MerkleProof::<_, MerkleHasher<H>>::new(mmr_size, mmr_update.mmr_proof.items);
+	let proof = ckb_merkle_mountain_range::MerkleProof::<_, MerkleHasher<H>>::new(
+		mmr_size,
+		mmr_update.mmr_proof.items,
+	);
 
 	// We are trying to verify the proof for the latest mmr leaf so we expect the proof to contain a
 	// singular leaf index
@@ -259,7 +261,10 @@ where
 	}
 
 	let mmr_size = NodesUtils::new(mmr_proof.leaf_count).size();
-	let proof = ckb_merkle_mountain_range::MerkleProof::<_, MerkleHasher<H>>::new(mmr_size, mmr_proof.items);
+	let proof = ckb_merkle_mountain_range::MerkleProof::<_, MerkleHasher<H>>::new(
+		mmr_size,
+		mmr_proof.items,
+	);
 
 	let root = proof.calculate_root(mmr_leaves)?;
 	if root != trusted_client_state.mmr_root_hash {
