@@ -20,8 +20,8 @@ use crate::{
 	msg::{
 		CheckForMisbehaviourMsg, CheckSubstituteAndUpdateStateMsg, ContractResult, ExecuteMsg,
 		ExportMetadataMsg, InstantiateMsg, QueryMsg, QueryResponse, StatusMsg, UpdateStateMsg,
-		UpdateStateOnMisbehaviourMsg, VerifyClientMessage, VerifyMembershipMsg,
-		VerifyNonMembershipMsg, VerifyUpgradeAndUpdateStateMsg,
+		UpdateStateOnMisbehaviourMsg, VerifyClientMessage, VerifyMembershipMsg, MigrateMsg,
+		VerifyNonMembershipMsg, VerifyUpgradeAndUpdateStateMsg
 	},
 	state::{get_client_state, get_consensus_state},
 	Bytes,
@@ -111,6 +111,12 @@ impl grandpa_light_client_primitives::HostFunctions for HostFunctions {
 		// implementation of this method is in `Context`
 		true
 	}
+}
+
+#[entry_point]
+pub fn migrate(_deps: DepsMut, _env: Env, _msg: MigrateMsg) -> Result<Response, ContractError> {
+    // No state migrations performed, just returned a Response
+    Ok(Response::default())
 }
 
 #[cfg_attr(not(feature = "library"), entry_point)]

@@ -3,7 +3,7 @@ name: "Build and publish Hyperspace Docker image"
 on:
   push:
     branches:
-      - 'master'
+      - 'main'
       - 'develop'
       - 'release*'
     tags:
