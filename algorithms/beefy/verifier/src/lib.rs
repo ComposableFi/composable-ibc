@@ -27,7 +27,7 @@ use beefy_light_client_primitives::{
 	error::BeefyClientError, BeefyNextAuthoritySet, ClientState, HostFunctions, MerkleHasher,
 	MmrUpdateProof, NodesUtils, ParachainsUpdateProof, SignatureWithAuthorityIndex, HASH_LENGTH,
 };
-use beefy_primitives::{known_payloads::MMR_ROOT_ID, mmr::MmrLeaf};
+use sp_beefy_primitives::{known_payloads::MMR_ROOT_ID, mmr::MmrLeaf};
 use parity_scale_codec::{Decode, Encode};
 use sp_core::H256;
 use sp_runtime::traits::Convert;
@@ -99,7 +99,7 @@ where
 		.map(|SignatureWithAuthorityIndex { index, signature }| {
 			H::secp256k1_ecdsa_recover_compressed(&signature, &commitment_hash)
 				.and_then(|public_key_bytes| {
-					beefy_primitives::crypto::AuthorityId::from_slice(&public_key_bytes).ok()
+					sp_beefy_primitives::crypto::AuthorityId::from_slice(&public_key_bytes).ok()
 				})
 				.map(|pub_key| {
 					authority_indices.push(index as usize);
@@ -161,7 +161,7 @@ where
 
 	let mmr_size = NodesUtils::new(mmr_update.mmr_proof.leaf_count).size();
 	let proof =
-		mmr_lib::MerkleProof::<_, MerkleHasher<H>>::new(mmr_size, mmr_update.mmr_proof.items);
+		ckb_merkle_mountain_range::MerkleProof::<_, MerkleHasher<H>>::new(mmr_size, mmr_update.mmr_proof.items);
 
 	// We are trying to verify the proof for the latest mmr leaf so we expect the proof to contain a
 	// singular leaf index
@@ -171,7 +171,7 @@ where
 		.get(0)
 		.ok_or(BeefyClientError::ExpectedSingleLeafIndex)?;
 
-	let leaf_pos = mmr_lib::leaf_index_to_pos(*leaf_index);
+	let leaf_pos = ckb_merkle_mountain_range::leaf_index_to_pos(*leaf_index);
 
 	let root = proof.calculate_root(vec![(leaf_pos, node.into())])?;
 	if root != mmr_root_hash {
@@ -254,12 +254,12 @@ where
 
 		let node = mmr_leaf.using_encoded(|leaf| H::keccak_256(leaf));
 		let leaf_index = mmr_proof.leaf_indices[index];
-		let leaf_pos = mmr_lib::leaf_index_to_pos(leaf_index);
+		let leaf_pos = ckb_merkle_mountain_range::leaf_index_to_pos(leaf_index);
 		mmr_leaves.push((leaf_pos, H256::from_slice(&node)));
 	}
 
 	let mmr_size = NodesUtils::new(mmr_proof.leaf_count).size();
-	let proof = mmr_lib::MerkleProof::<_, MerkleHasher<H>>::new(mmr_size, mmr_proof.items);
+	let proof = ckb_merkle_mountain_range::MerkleProof::<_, MerkleHasher<H>>::new(mmr_size, mmr_proof.items);
 
 	let root = proof.calculate_root(mmr_leaves)?;
 	if root != trusted_client_state.mmr_root_hash {

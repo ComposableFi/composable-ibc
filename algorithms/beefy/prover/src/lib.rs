@@ -28,14 +28,14 @@ pub mod relay_chain_queries;
 use beefy_light_client_primitives::{
 	ClientState, HostFunctions, MmrUpdateProof, ParachainHeader, PartialMmrLeaf,
 };
-use beefy_primitives::mmr::{BeefyNextAuthoritySet, MmrLeaf};
+use sp_beefy_primitives::mmr::{BeefyNextAuthoritySet, MmrLeaf};
 use error::Error;
 use helpers::{
 	fetch_timestamp_extrinsic_with_proof, prove_parachain_headers, ParaHeadsProof,
 	TimeStampExtWithProof,
 };
 use hex_literal::hex;
-use pallet_mmr_primitives::Proof;
+use sp_sp_mmr_primitives::Proof;
 use parity_scale_codec::Decode;
 use sp_core::{hexdisplay::AsBytesRef, keccak_256, H256};
 use sp_io::crypto;
@@ -298,9 +298,9 @@ where
 	/// mmr root hash.
 	pub async fn fetch_mmr_update_proof_for(
 		&self,
-		_signed_commitment: beefy_primitives::SignedCommitment<
+		_signed_commitment: sp_beefy_primitives::SignedCommitment<
 			u32,
-			beefy_primitives::crypto::Signature,
+			sp_beefy_primitives::crypto::Signature,
 		>,
 	) -> Result<MmrUpdateProof, Error> {
 		todo!("fetch beefy authorities")
@@ -334,7 +334,7 @@ where
 				.await?;
 		let leaves: Vec<Vec<u8>> = parity_scale_codec::Decode::decode(&mut &*leaf_proof.leaves.0)?;
 		let latest_leaf: MmrLeaf<u32, H256, H256, H256> = parity_scale_codec::Decode::decode(&mut &*leaves[0])?;
-		let mmr_proof: pallet_mmr_primitives::Proof<H256> =
+		let mmr_proof: sp_sp_mmr_primitives::Proof<H256> =
 			parity_scale_codec::Decode::decode(&mut &*leaf_proof.proof.0)?;
 
 		let authority_address_hashes = hash_authority_addresses(

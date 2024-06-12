@@ -88,7 +88,7 @@ pub enum BeefyClientError {
 	/// Invalid merkle proof
 	InvalidMerkleProof,
 	/// Mmr Error
-	MmrVerificationError(mmr_lib::Error),
+	MmrVerificationError(ckb_merkle_mountain_range::Error),
 	/// Codec error
 	Codec(parity_scale_codec::Error),
 	/// Custom error

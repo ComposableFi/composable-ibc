@@ -5,7 +5,7 @@ version = "0.0.1"
 authors = ["David Salami <wizdave97@gmail.com>"]
 
 [dependencies]
-log = { version = "0.4.0", default-features = false }
+log = { workspace = true }
 scale-info = { workspace = true }
 serde = { workspace = true }
 

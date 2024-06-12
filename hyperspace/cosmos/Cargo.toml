@@ -14,7 +14,7 @@ async-trait = { workspace = true }
 log = { workspace = true }
 hex = { workspace = true }
 tokio = { version = "1.32.0", features = ["macros", "sync"] }
-rs_merkle = "1.2.0"
+rs_merkle = { workspace = true }
 parity-scale-codec = { workspace = true }
 serde_json = { workspace = true }
 derive_more = { version = "0.99", features = ["from"]  }

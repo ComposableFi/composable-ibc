@@ -15,7 +15,7 @@ log = { workspace = true }
 env_logger = { workspace = true }
 hex = { workspace = true }
 tokio = { version = "1.32.0", features = ["macros", "sync"] }
-rs_merkle = "1.2.0"
+rs_merkle = { workspace = true }
 parity-scale-codec = { workspace = true }
 hex-literal = "0.3.4"
 serde_json = { workspace = true }

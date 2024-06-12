@@ -15,7 +15,7 @@ std = [
 	"beefy-client/std",
 	"beefy-light-client-primitives/std",
 	"light-client-common/std",
-	"pallet-mmr-primitives/std",
+	"sp-mmr-primitives/std",
 	"beefy-primitives/std",
 	"sp-runtime/std",
 	"sp-storage/std",
@@ -39,8 +39,8 @@ prost-build = "0.11.1"
 
 [dependencies]
 # ibc deps
-ibc = { path = "../../ibc/modules", default-features = false }
-ibc-proto = { path = "../../ibc/proto", default-features = false }
+ibc = { workspace = true, default-features = false }
+ibc-proto = { workspace = true, default-features = false }
 
 # beefy deps
 beefy-client = { package = "beefy-light-client", path = "../../algorithms/beefy/verifier",  default-features = false }
@@ -48,7 +48,7 @@ beefy-light-client-primitives = {  path = "../../algorithms/beefy/primitives", d
 light-client-common = { path = "../common", default-features = false }
 
 # substrate deps
-pallet-mmr-primitives = { package = "sp-mmr-primitives", git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.43", default-features = false }
+sp-mmr-primitives = { workspace = true }
 beefy-primitives = { git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.43", default-features = false, package = "sp-consensus-beefy" }
 sp-runtime = { workspace = true }
 sp-storage = { git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.43", default-features = false }
@@ -60,9 +60,9 @@ parity-scale-codec = { workspace = true }
 prost = { workspace = true }
 prost-types = { version = "0.11", default-features = false }
 serde = { workspace = true }
-bytes = { version = "1.1.0", default-features = false }
+bytes = { workspace = true }
 derive_more = { version = "0.99.17", default-features = false, features = ["from"] }
-tendermint = { git = "https://github.com/informalsystems/tendermint-rs", rev = "e81f7bf23d63ffbcd242381d1ce5e35da3515ff1", default-features = false }
+tendermint = { workspace = true }
 tendermint-proto = { workspace = true }
 
 #substrate

@@ -223,8 +223,6 @@ pub mod ibc {
 }
 
 pub mod base64 {
-	use alloc::{string::String, vec::Vec};
-
 	use serde::{Deserialize, Deserializer, Serialize, Serializer};
 
 	pub fn serialize<S: Serializer>(v: &[u8], serializer: S) -> Result<S::Ok, S::Error> {

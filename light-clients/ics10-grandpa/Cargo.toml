@@ -42,7 +42,7 @@ ibc-proto = { workspace = true, default-features = false }
 
 # local deps
 grandpa-client = { package = "grandpa-light-client-verifier", path = "../../algorithms/grandpa/verifier",  default-features = false }
-grandpa-client-primitives = { package = "grandpa-light-client-primitives", path = "../../algorithms/grandpa/primitives", default-features = false }
+grandpa-client-primitives = { workspace = true }
 light-client-common = { path = "../common", default-features = false }
 
 # crates.io
@@ -60,7 +60,7 @@ sp-trie = { workspace = true }
 sp-consensus-grandpa = { workspace = true }
 finality-grandpa = { version = "0.16.2", default-features = false }
 
-tendermint = { git = "https://github.com/informalsystems/tendermint-rs", rev = "e81f7bf23d63ffbcd242381d1ce5e35da3515ff1", default-features = false }
+tendermint = { workspace = true }
 tendermint-proto = { workspace = true }
 
 [dev-dependencies]

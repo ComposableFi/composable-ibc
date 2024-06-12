@@ -31,7 +31,7 @@ ics10-grandpa = { workspace = true }
 
 # substrate
 polkadot-core-primitives = { git = "https://github.com/paritytech/polkadot", branch = "release-v0.9.43" }
-grandpa-client-primitives = { package = "grandpa-light-client-primitives", path = "../../algorithms/grandpa/primitives", default-features = false }
+grandpa-client-primitives = { workspace = true }
 finality-grandpa = { version = "0.16.2", features = ["derive-codec"], default-features = false }
 sp-consensus-grandpa = { git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.43" }
 sp-keyring = { workspace = true }

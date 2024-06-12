@@ -98,7 +98,7 @@ benchmarks! {
 					parachain_info::Config +
 					Config +
 					pallet_aura::Config +
-					balances::Config +
+					pallet_balances::Config +
 					pallet_membership::Config<Instance2>,
 		AccountId32: From<<T as frame_system::Config>::AccountId>,
 		<T as Config>::AssetId: From<u128>,

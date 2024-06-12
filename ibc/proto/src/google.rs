@@ -17,7 +17,7 @@ pub mod protobuf {
 	include_proto!("google.protobuf.rs");
 
 	// source: https://github.com/tokio-rs/prost/blob/master/prost-types/src/lib.rs
-	use core::{convert::TryFrom, i32, i64, time};
+	use core::{i32, i64, time};
 
 	// The Protobuf `Duration` and `Timestamp` types can't delegate to the standard library
 	// equivalents because the Protobuf versions are signed. To make them easier to work with,

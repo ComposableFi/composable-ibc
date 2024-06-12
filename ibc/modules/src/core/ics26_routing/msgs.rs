@@ -95,7 +95,7 @@ where
 			},
 			upgrade_client::TYPE_URL => {
 				let domain_msg =
-					upgrade_client::MsgUpgradeAnyClient::<C>::decode_vec(&any_msg.value)
+					MsgUpgradeAnyClient::<C>::decode_vec(&any_msg.value)
 						.map_err(Error::malformed_message_bytes)?;
 				Ok(Ics26Envelope::Ics2Msg(ClientMsg::UpgradeClient(domain_msg)))
 			},

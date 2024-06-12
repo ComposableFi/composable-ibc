@@ -14,21 +14,21 @@ subxt-codegen = { package = "codegen", path = "../../../utils/subxt/codegen" }
 tokio = { version = "1.32.0", features = ["macros", "rt-multi-thread"] }
 
 [dependencies]
-sp-std = { git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.43" }
+sp-std = { workspace = true }
 sp-runtime = { workspace = true }
-sp-core =  { git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.43" }
-sp-io = { git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.43" }
-sp-core-hashing = { git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.43" }
-frame-support = { git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.43"}
-beefy-mmr = { package = "pallet-beefy-mmr", git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.43" }
-pallet-mmr = { package = "pallet-mmr", git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.43" }
-pallet-mmr-primitives = { package = "sp-mmr-primitives", git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.43" }
-beefy-primitives = { package = "sp-consensus-beefy", git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.43" }
+sp-core =  { workspace = true }
+sp-io = { workspace = true }
+sp-core-hashing = { workspace = true }
+frame-support = { workspace = true }
+pallet-beefy-mmr = { workspace = true }
+pallet-mmr = { workspace = true }
+sp-mmr-primitives = { workspace = true }
+sp-beefy-primitives = { workspace = true }
 parity-scale-codec = { workspace = true }
-rs_merkle = "1.2.0"
-derive_more = { version = "0.99.17", features = ["from"]  }
-light-client-common = { path = "../../../light-clients/common", features = ["enable-subxt"] }
-jsonrpsee-core = { version = "0.16.2", features = ["async-client"] }
+rs_merkle = { workspace = true }
+derive_more = { workspace = true, features = ["from"]  }
+light-client-common = { workspace = true, features = ["enable-subxt"] }
+jsonrpsee-core = { workspace = true, features = ["async-client"] }
 
 # Optional deps
 subxt = { git = "https://github.com/paritytech/subxt",  tag = "v0.29.0", features = ["substrate-compat"] }

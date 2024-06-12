@@ -61,7 +61,7 @@ use ics11_beefy::{
 use jsonrpsee_ws_client::WsClientBuilder;
 use light_client_common::config::{AsInner, RuntimeStorage};
 use pallet_ibc::light_clients::{AnyClientState, AnyConsensusState, HostFunctionsManager};
-use pallet_mmr_primitives::Proof;
+use sp_sp_mmr_primitives::Proof;
 use parity_scale_codec::Decode;
 use primitives::{CommonClientState, KeyProvider};
 use sc_keystore::LocalKeystore;
@@ -385,9 +385,9 @@ where
 	/// Queries for the BEEFY mmr update proof for the given signed commitment height.
 	pub async fn query_beefy_mmr_update_proof(
 		&self,
-		signed_commitment: beefy_primitives::SignedCommitment<
+		signed_commitment: sp_beefy_primitives::SignedCommitment<
 			u32,
-			beefy_primitives::crypto::Signature,
+			sp_beefy_primitives::crypto::Signature,
 		>,
 	) -> Result<MmrUpdateProof, Error> {
 		let prover = Prover {

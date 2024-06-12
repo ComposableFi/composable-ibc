@@ -64,7 +64,7 @@ type GrandpaJustification = grandpa_light_client_primitives::justification::Gran
 >;
 
 type BeefyJustification =
-	beefy_primitives::SignedCommitment<u32, beefy_primitives::crypto::Signature>;
+	sp_beefy_primitives::SignedCommitment<u32, sp_beefy_primitives::crypto::Signature>;
 
 /// An encoded justification proving that the given header has been finalized
 #[derive(Clone, serde::Serialize, serde::Deserialize)]
