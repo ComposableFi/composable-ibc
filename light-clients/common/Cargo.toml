@@ -19,7 +19,7 @@ std = [
 	"sp-core/std",
 	"sp-runtime/std"
 ]
-enable-subxt = ["subxt"]
+enable-subxt = ["subxt", "subxt-core"]
 
 [dependencies]
 # crates.io
@@ -43,3 +43,4 @@ sp-trie = { workspace = true }
 sp-runtime = { workspace = true }
 sp-consensus-beefy = { workspace = true, default-features = false }
 subxt = { workspace = true, optional = true }
+subxt-core = { workspace = true, optional = true }

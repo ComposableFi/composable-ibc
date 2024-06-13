@@ -42,7 +42,6 @@ use sp_mmr_primitives::Proof;
 use sp_runtime::traits::BlakeTwo256;
 use subxt::{
 	config::{Header as HeaderT, Header},
-	rpc::rpc_params,
 	Config, OnlineClient,
 };
 
@@ -96,14 +95,14 @@ where
 				current_authorities: BeefyNextAuthoritySet {
 					id: 0,
 					len: 5,
-					root: H256::from(hex!(
+					keyset_commitment: H256::from(hex!(
 						"baa93c7834125ee3120bac6e3342bd3f28611110ad21ab6075367abdffefeb09"
 					)),
 				},
 				next_authorities: BeefyNextAuthoritySet {
 					id: 1,
 					len: 5,
-					root: H256::from(hex!(
+					keyset_commitment: H256::from(hex!(
 						"baa93c7834125ee3120bac6e3342bd3f28611110ad21ab6075367abdffefeb09"
 					)),
 				},
@@ -139,12 +138,12 @@ where
 			current_authorities: BeefyNextAuthoritySet {
 				id: validator_set_id,
 				len: next_val_set.len(),
-				root: next_val_set.root(),
+				keyset_commitment: next_val_set.root(),
 			},
 			next_authorities: BeefyNextAuthoritySet {
 				id: validator_set_id + 1,
 				len: next_val_set.len(),
-				root: next_val_set.root(),
+				keyset_commitment: next_val_set.root(),
 			},
 		}
 	}

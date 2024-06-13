@@ -3,7 +3,8 @@ use ibc::{core::ics04_channel::packet::Packet, events::IbcEvent as RawIbcEvent};
 use ibc_runtime_api::IbcRuntimeApi;
 use pallet_ibc::events::IbcEvent;
 use sc_client_api::HeaderBackend;
-use sp_api::{ApiRef, BlockT, ProvideRuntimeApi};
+use sp_api::{ApiRef, ProvideRuntimeApi};
+use sp_runtime::traits::Block as BlockT;
 
 /// Filter out none relayer events and modify
 /// Fetch actual packet and acknowledgements from off chain storage and modify packets

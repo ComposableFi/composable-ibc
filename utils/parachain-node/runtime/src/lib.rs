@@ -114,6 +114,9 @@ pub type Balance = u128;
 /// Index of a transaction in the chain.
 pub type Index = u32;
 
+/// The nonce type.
+pub type Nonce = u64;
+
 /// A hash of some data used by the chain.
 pub type Hash = sp_core::H256;
 
@@ -309,16 +312,12 @@ impl frame_system::Config for Runtime {
 	type RuntimeCall = RuntimeCall;
 	/// The lookup mechanism to get account ID from whatever is passed in dispatchers.
 	type Lookup = AccountIdLookup<AccountId, ()>;
-	/// The index type for storing how many extrinsics an account has signed.
-	type Index = Index;
-	/// The index type for blocks.
-	type BlockNumber = BlockNumber;
 	/// The type for hashing blocks and tries.
 	type Hash = Hash;
+	/// The nonce
+	type Nonce = Nonce;
 	/// The hashing algorithm used.
 	type Hashing = BlakeTwo256;
-	/// The header type.
-	type Header = generic::Header<BlockNumber, BlakeTwo256>;
 	/// The ubiquitous event type.
 	type RuntimeEvent = RuntimeEvent;
 	/// The ubiquitous origin type.
@@ -1139,7 +1138,7 @@ impl_runtime_apis! {
 		}
 	}
 
-	impl<RuntimeCall, AccountId> simnode_apis::CreateTransactionApi<Block, AccountId, RuntimeCall> for Runtime
+	impl<RuntimeCall, AccountId> simnode_api::CreateTransactionApi<Block, AccountId, RuntimeCall> for Runtime
 		where
 			RuntimeCall: parity_scale_codec::Codec,
 			AccountId: parity_scale_codec::Codec + parity_scale_codec::EncodeLike<sp_runtime::AccountId32> + Into<sp_runtime::AccountId32> + Clone+ PartialEq + scale_info::TypeInfo + core::fmt::Debug,

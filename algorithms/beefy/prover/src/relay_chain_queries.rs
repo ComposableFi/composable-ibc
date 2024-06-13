@@ -14,14 +14,14 @@
 // limitations under the License.
 
 use crate::error::Error;
-use light_client_common::config::{AsInner, ParaLifecycleT, RuntimeStorage};
+// use light_client_common::config::{AsInner, ParaLifecycleT, RuntimeStorage};
 use mmr_rpc::LeavesProof;
 use parity_scale_codec::{Decode, Encode};
 use sp_consensus_beefy::{SignedCommitment, VersionedFinalityProof};
 use sp_core::{hexdisplay::AsBytesRef, storage::StorageKey, H256};
 use sp_runtime::traits::Zero;
 use std::collections::{BTreeMap, BTreeSet};
-use subxt::{config::Header, rpc::rpc_params, Config, OnlineClient};
+use subxt::{config::Header, Config, OnlineClient};
 
 /// This contains the leaf indices of the relay chain blocks and a map of relay chain heights to a
 /// map of all parachain headers at those heights Used for generating [`ParaHeadsProof`]
