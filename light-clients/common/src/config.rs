@@ -27,6 +27,7 @@ use subxt::{
 	ext::{
 		scale_decode::DecodeAsType,
 		scale_encode::{EncodeAsFields, EncodeAsType},
+		scale_value::scale::PortableRegistry,
 		sp_runtime::scale_info::TypeDef,
 	},
 	metadata::{
@@ -37,12 +38,12 @@ use subxt::{
 	tx::{DefaultPayload, Payload},
 	utils::{Encoded, Static, Yes},
 };
+use subxt_core::storage::address::StorageHashersIter;
 
 // pub type LocalAddress<StorageKey, ReturnTy, Fetchable, Defaultable, Iterable> =
 // 	DefaultAddress<StorageKey, ReturnTy, Fetchable, Defaultable, Iterable>;
 
-pub type StaticStorageMapKey = StaticStorageKey<Vec<u8>>;
-// pub type StaticStorageMapKey = Static<Encoded>;
+pub type StaticStorageMapKey = StaticStorageKey<Static<Encoded>>;
 
 ///// This represents a statically generated storage lookup address.
 pub struct LocalAddress<StorageKey, ReturnTy, Fetchable, Defaultable, Iterable> {
@@ -166,7 +167,7 @@ where
 					let mut input = Vec::new();
 					let iter = self.storage_entry_keys.iter().zip(type_ids);
 					for (key, type_id) in iter {
-						key.encode_storage_key(&mut input, hashers.iter(), type_id)?;
+						key.encode_with_metadata(type_id, metadata, &mut input)?;
 					}
 					hash_bytes(&input, &hashers[0], bytes);
 					Ok(())
