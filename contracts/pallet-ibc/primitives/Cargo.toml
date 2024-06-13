@@ -19,9 +19,9 @@ base58 = "0.2.0"
 blake2 = { version = "0.10", default-features = false }
 
 sp-core = { workspace = true }
-sp-io = { git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.43", default-features = false }
+sp-io = { workspace = true, default-features = false }
 sp-runtime = { workspace = true }
-sp-runtime-interface = { git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.43", default-features = false }
+sp-runtime-interface = { workspace = true, default-features = false }
 sp-std = { workspace = true }
 sp-trie = { workspace = true }
 frame-support = { workspace = true }

@@ -2,10 +2,6 @@
 
 extern crate alloc;
 
-use alloc::{
-	format,
-	string::{String, ToString},
-};
 use core::{fmt::Formatter, str::FromStr, write};
 use frame_support::{dispatch::DispatchResult, weights::Weight};
 use ibc::{

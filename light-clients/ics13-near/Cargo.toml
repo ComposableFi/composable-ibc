@@ -41,10 +41,10 @@ mocks = ["clock", "std", "sha3", "ripemd", "ibc/mocks"]
 
 [dependencies]
 # Proto definitions for all IBC-related interfaces, e.g., connections or channels.
-borsh = { version = "0.10.3", default-features = false }
-ibc = { path = "../../ibc/modules", default-features = false }
+borsh = { workspace = true, default-features = false }
+ibc = { workspace = true, default-features = false }
 ibc-proto = { workspace = true }
-ibc-derive = { path = "../../ibc/derive", default-features = false }
+ibc-derive = { workspace = true, default-features = false }
 ics23 = { workspace = true }
 time = { workspace = true }
 serde_derive = { workspace = true }
@@ -53,32 +53,32 @@ serde_json = { workspace = true }
 tracing = { workspace = true }
 prost = { workspace = true }
 bytes = { workspace = true }
-safe-regex = { version = "0.2.5", default-features = false }
-subtle-encoding = { version = "0.5", default-features = false }
-sha2 = { version = "0.10.2", default-features = false }
-flex-error = { version = "0.4.4", default-features = false }
-num-traits = { version = "0.2.15", default-features = false }
-derive_more = { version = "0.99.17", default-features = false, features = ["from", "into", "display"] }
-uint = { version = "0.9", default-features = false }
+safe-regex = { workspace = true, default-features = false }
+subtle-encoding = { workspace = true, default-features = false }
+sha2 = { workspace = true, default-features = false }
+flex-error = { workspace = true, default-features = false }
+num-traits = { workspace = true, default-features = false }
+derive_more = { workspace = true, default-features = false, features = ["from", "into", "display"] }
+uint = { workspace = true, default-features = false }
 parity-scale-codec = { workspace = true }
 sp-core = { workspace = true }
-sha3 = { version = "0.10.1", optional = true }
-ripemd = { version = "0.1.1", optional = true }
+sha3 = { workspace = true, optional = true }
+ripemd = { workspace = true, optional = true }
 tendermint = { workspace = true }
 tendermint-proto = { workspace = true }
 
 [dev-dependencies]
-ibc = { path = "../../ibc/modules", features = ['mocks'] }
+ibc = { workspace = true, features = ['mocks'] }
 env_logger = { workspace = true }
-tracing-subscriber = { version = "0.3.11", features = ["fmt", "env-filter", "json"]}
-test-log = { version = "0.2.10", features = ["trace"] }
-modelator = "0.4.2"
-sha2 = { version = "0.10.2" }
-tendermint-rpc = { git = "https://github.com/informalsystems/tendermint-rs", rev = "e81f7bf23d63ffbcd242381d1ce5e35da3515ff1", features = ["http-client", "websocket-client"] }
-tendermint-testgen = { git = "https://github.com/informalsystems/tendermint-rs", rev = "e81f7bf23d63ffbcd242381d1ce5e35da3515ff1" } # Needed for generating (synthetic) light blocks.
-tokio = { version = "1.32.0", features = ["full"] }
+tracing-subscriber = { workspace = true, features = ["fmt", "env-filter", "json"]}
+test-log = { workspace = true, features = ["trace"] }
+modelator = { workspace = true }
+sha2 = { workspace = true }
+tendermint-rpc = { workspace = true, features = ["http-client", "websocket-client"] }
+tendermint-testgen = { workspace = true } # Needed for generating (synthetic) light blocks.
+tokio = { workspace = true, features = ["full"] }
 serde_json = { workspace = true }
-sha3 = { version = "0.10.1" }
-ripemd = { version = "0.1.1" }
+sha3 = { workspace = true }
+ripemd = { workspace = true }
 parity-scale-codec = { workspace = true }
 sp-core = { workspace = true }

@@ -32,17 +32,17 @@ use beefy_light_client_primitives::{
 	SignedCommitment,
 };
 use parity_scale_codec::{Decode, Encode};
-use sp_beefy_primitives::{
+use sp_consensus_beefy::{
 	known_payloads::MMR_ROOT_ID,
 	mmr::{MmrLeaf, MmrLeafVersion},
 	Commitment, Payload,
 };
 use sp_core::H256;
+use sp_mmr_primitives::Proof;
 use sp_runtime::{
 	generic::Header as SubstrateHeader,
 	traits::{BlakeTwo256, SaturatedConversion},
 };
-use sp_sp_mmr_primitives::Proof;
 
 /// Protobuf type url for Beefy header
 pub const BEEFY_CLIENT_MESSAGE_TYPE_URL: &str = "/ibc.lightclients.beefy.v1.ClientMessage";
@@ -136,7 +136,7 @@ impl TryFrom<RawClientMessage> for ClientMessage {
 									BeefyNextAuthoritySet {
 										id: next_set.id,
 										len: next_set.len,
-										root: H256::decode(
+										keyset_commitment: H256::decode(
 											&mut next_set.authority_root.as_slice(),
 										)?,
 									}
@@ -278,7 +278,7 @@ impl TryFrom<RawClientMessage> for ClientMessage {
 							beefy_next_authority_set: BeefyNextAuthoritySet {
 								id: beefy_next_authority_set.id,
 								len: beefy_next_authority_set.len,
-								root: H256::decode(
+								keyset_commitment: H256::decode(
 									&mut beefy_next_authority_set.authority_root.as_slice(),
 								)
 								.map_err(|e| Error::Custom(format!("{e}")))?,
@@ -365,7 +365,7 @@ impl From<ClientMessage> for RawClientMessage {
 										authority_root: para_header
 											.partial_mmr_leaf
 											.beefy_next_authority_set
-											.root
+											.keyset_commitment
 											.encode(),
 									}),
 								}),
@@ -407,7 +407,7 @@ impl From<ClientMessage> for RawClientMessage {
 									authority_root: mmr_update
 										.latest_mmr_leaf
 										.beefy_next_authority_set
-										.root
+										.keyset_commitment
 										.encode(),
 								}),
 								parachain_heads: mmr_update.latest_mmr_leaf.leaf_extra.encode(),

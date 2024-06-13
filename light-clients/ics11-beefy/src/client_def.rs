@@ -19,7 +19,7 @@ use beefy_light_client_primitives::{
 use core::{fmt::Debug, marker::PhantomData};
 use parity_scale_codec::{Decode, Encode};
 use sp_core::H256;
-use sp_sp_mmr_primitives::Proof;
+use sp_mmr_primitives::Proof;
 use tendermint_proto::Protobuf;
 
 use crate::{
@@ -84,8 +84,11 @@ where
 				// If mmr update exists verify it and return the new light client state
 				// or else return existing light client state
 				let light_client_state = if let Some(mmr_update) = header.mmr_update_proof {
-					beefy_client::verify_mmr_root_with_proof::<H>(light_client_state, mmr_update)
-						.map_err(Error::from)?
+					beefy_light_client::verify_mmr_root_with_proof::<H>(
+						light_client_state,
+						mmr_update,
+					)
+					.map_err(Error::from)?
 				} else {
 					light_client_state
 				};
@@ -122,7 +125,7 @@ where
 					};
 
 					// Perform the parachain header verification
-					beefy_client::verify_parachain_headers::<H>(
+					beefy_light_client::verify_parachain_headers::<H>(
 						light_client_state,
 						parachain_update_proof,
 					)

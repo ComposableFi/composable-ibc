@@ -13,10 +13,10 @@ tokio = { version = "1.32.0", features = ["macros", "sync", "time"] }
 log = { workspace = true }
 anyhow = "1.0.66"
 async-trait = "0.1.58"
-futures = "0.3.24"
+futures = { workspace = true }
 json = { version = "1.0.85", package = "serde_json" }
 parity-scale-codec = { workspace = true }
-subxt = { git = "https://github.com/paritytech/subxt",  tag = "v0.29.0", features = ["substrate-compat"] }
+subxt = { workspace = true }
 
 ibc = { path = "../../ibc/modules" }
 ibc-proto = { workspace = true }
@@ -30,16 +30,16 @@ pallet-ibc-ping = { workspace = true }
 ics10-grandpa = { workspace = true }
 
 # substrate
-polkadot-core-primitives = { git = "https://github.com/paritytech/polkadot", branch = "release-v0.9.43" }
+polkadot-core-primitives = { workspace = true }
 grandpa-client-primitives = { workspace = true }
 finality-grandpa = { version = "0.16.2", features = ["derive-codec"], default-features = false }
-sp-consensus-grandpa = { git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.43" }
+sp-consensus-grandpa = { workspace = true, default-features = false }
 sp-keyring = { workspace = true }
-sp-core = { git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.43", features = ["full_crypto"] }
+sp-core = { workspace = true, features = ["full_crypto"] }
 sp-trie = { workspace = true }
 sp-keystore = { workspace = true }
 sp-runtime = { workspace = true }
-sp-state-machine = { git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.43" }
+sp-state-machine = { workspace = true, default-features = false }
 light-client-common = { workspace = true }
 grandpa-light-client = { path = "../../algorithms/grandpa/verifier", package = "grandpa-light-client-verifier" }
 hex = { workspace = true }
@@ -47,7 +47,7 @@ rand = { workspace = true }
 toml = "0.7.4"
 
 [dev-dependencies]
-subxt = { git = "https://github.com/paritytech/subxt",  tag = "v0.29.0", features = ["substrate-compat"] }
+subxt = { workspace = true }
 hyperspace-core = { path = "../core", features = ["testing", "build-metadata-from-ws"] }
 hyperspace-parachain = { path = "../parachain", features = ["testing"] }
 hyperspace-cosmos = { path = "../cosmos", features = [] }

@@ -19,7 +19,7 @@ rand = { workspace = true }
 serde = { workspace = true }
 
 # substrate
-subxt = { git = "https://github.com/paritytech/subxt",  tag = "v0.29.0", features = ["substrate-compat"] }
+subxt = { workspace = true }
 
 # ibc
 ibc = { workspace = true, features = [] }

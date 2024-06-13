@@ -4,13 +4,9 @@ pub mod memo;
 use crate::{
 	routing::Context, ChannelIds, Config, DenomToAssetId, Event, Pallet, SequenceFee, WeightInfo,
 };
-use alloc::{
-	format,
-	str::FromStr,
-	string::{String, ToString},
-};
-
+use alloc::{format, str::FromStr};
 use frame_support::weights::Weight;
+use frame_system::{pallet_prelude::BlockNumberFor, RawOrigin};
 pub use ibc::applications::transfer::{MODULE_ID_STR, PORT_ID_STR};
 use ibc::{
 	applications::transfer::{
@@ -60,7 +56,7 @@ impl<T: Config> Default for IbcModule<T> {
 
 impl<T: Config + Send + Sync> Module for IbcModule<T>
 where
-	u32: From<<T as frame_system::Config>::BlockNumber>,
+	u32: From<BlockNumberFor<T>>,
 	AccountId32: From<<T as frame_system::Config>::AccountId>,
 {
 	fn on_chan_open_init(
@@ -406,7 +402,7 @@ where
 impl<T> IbcModule<T>
 where
 	T: Config + Send + Sync,
-	u32: From<<T as frame_system::Config>::BlockNumber>,
+	u32: From<BlockNumberFor<T>>,
 	AccountId32: From<<T as frame_system::Config>::AccountId>,
 {
 	/// Refunds the fee from the FeeAccount to the sender of the packet.
@@ -567,8 +563,6 @@ impl<T: Config> SubstrateMultihopXcmHandler for SubstrateMultihopXcmHandlerNone<
 	}
 }
 
-use frame_system::RawOrigin;
-use scale_info::prelude::boxed::Box;
 #[derive(serde::Serialize, serde::Deserialize, Debug)]
 pub struct Forward {
 	pub receiver: String,
@@ -678,7 +672,7 @@ use parity_scale_codec::Decode;
 impl<T, H: HandleMemo<T>> HandleMemo<T> for IbcMemoHandler<H, T>
 where
 	T: Config + Send + Sync + pallet_timestamp::Config,
-	u32: From<<T as frame_system::Config>::BlockNumber>,
+	u32: From<BlockNumberFor<T>>,
 	AccountId32: From<<T as frame_system::Config>::AccountId>,
 	u128: From<T::AssetId>,
 {
@@ -908,7 +902,7 @@ where
 impl<T> IbcModule<T>
 where
 	T: Config + Send + Sync,
-	u32: From<<T as frame_system::Config>::BlockNumber>,
+	u32: From<BlockNumberFor<T>>,
 	AccountId32: From<<T as frame_system::Config>::AccountId>,
 {
 	//function that takes account and memo and emit event that memo execution failed

@@ -73,7 +73,6 @@ use ibc::{
 use ibc_primitives::{get_channel_escrow_address, IbcHandler};
 use pallet_membership::Instance2;
 use parity_scale_codec::EncodeLike;
-use scale_info::prelude::string::ToString;
 use sp_core::{crypto::AccountId32, Get};
 use sp_runtime::{traits::IdentifyAccount, DigestItem};
 use sp_std::vec;
@@ -91,8 +90,8 @@ fn relayer_origin<T: pallet_membership::Config<Instance2> + frame_system::Config
 
 benchmarks! {
 	where_clause {
-		where u32: From<<T as frame_system::Config>::BlockNumber>,
-				<T as frame_system::Config>::BlockNumber: From<u32>,
+		where u32: From<BlockNumberFor<T>>,
+				BlockNumberFor<T>: From<u32>,
 				T: Send + Sync +
 					pallet_timestamp::Config<Moment = u64> +
 					parachain_info::Config +
@@ -1393,6 +1392,6 @@ fn set_timestamp<T: pallet_timestamp::Config + pallet_aura::Config>(
 	let timestamp_slot = Slot::from(timestamp_slot.saturated_into::<u64>());
 	let log = <DigestItem as CompatibleDigestItem<()>>::aura_pre_digest(timestamp_slot);
 	<frame_system::Pallet<T>>::deposit_log(log);
-	pallet_aura::Pallet::<T>::on_initialize(T::BlockNumber::zero()); // block number doesn't matter
+	pallet_aura::Pallet::<T>::on_initialize(BlockNumberFor::<T>::zero()); // block number doesn't matter
 	pallet_timestamp::Pallet::<T>::set_timestamp(time);
 }

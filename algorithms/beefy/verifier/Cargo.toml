@@ -10,9 +10,9 @@ targets = ["x86_64-unknown-linux-gnu"]
 [dependencies]
 # crates.io
 parity-scale-codec = { workspace = true }
-rs_merkle = { version = "1.2.0", default-features = false }
-mmr-lib= { package = "ckb-merkle-mountain-range", version = "0.3.2", default-features = false }
-derive_more = { version = "0.99.17", default-features = false, features = ["from"]  }
+rs_merkle = { workspace = true, default-features = false }
+ckb-merkle-mountain-range = { workspace = true, default-features = false }
+derive_more = { workspace = true, default-features = false, features = ["from"]  }
 
 # substrate
 sp-std = { workspace = true, default-features = false }
@@ -23,7 +23,7 @@ frame-support = { workspace = true }
 pallet-beefy-mmr = { workspace = true, default-features = false }
 pallet-mmr = { workspace = true, default-features = false }
 sp-mmr-primitives = { workspace = true }
-sp-beefy-primitives = { workspace = true, default-features = false }
+sp-consensus-beefy = { workspace = true, default-features = false }
 sp-trie = { workspace = true }
 
 # local
@@ -35,7 +35,7 @@ tokio = { workspace = true }
 subxt = { workspace = true }
 hex-literal = { workspace = true }
 serde_json = { workspace = true }
-pallet-mmr-rpc = { workspace = true }
+mmr-rpc = { workspace = true }
 frame-support = { workspace = true }
 sp-io = { workspace = true }
 sp-trie = { workspace = true }
@@ -43,7 +43,7 @@ beefy-prover = { workspace = true }
 hex = { workspace = true }
 futures = { workspace = true }
 sc-consensus-beefy = { workspace = true, default-features = false }
-hyperspace-core = { path = "../../../hyperspace/core", features = ["testing", "build-metadata-from-ws"] }
+hyperspace-core = { workspace = true, features = ["testing", "build-metadata-from-ws"] }
 
 
 [features]
@@ -56,11 +56,11 @@ std = [
 	"sp-core/std",
 	"sp-io/std",
 	"pallet-beefy-mmr/std",
-	"sp-beefy-primitives/std",
+	"sp-consensus-beefy/std",
 	"pallet-mmr/std",
 	"sp-mmr-primitives/std",
 	"rs_merkle/std",
-	"mmr-lib/std",
+	"ckb-merkle-mountain-range/std",
 	"frame-support/std",
 	"beefy-light-client-primitives/std",
 	"sp-trie/std",

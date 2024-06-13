@@ -35,11 +35,11 @@ use helpers::{
 };
 use hex_literal::hex;
 use parity_scale_codec::Decode;
-use sp_beefy_primitives::mmr::{BeefyNextAuthoritySet, MmrLeaf};
+use sp_consensus_beefy::mmr::{BeefyNextAuthoritySet, MmrLeaf};
 use sp_core::{hexdisplay::AsBytesRef, keccak_256, H256};
 use sp_io::crypto;
+use sp_mmr_primitives::Proof;
 use sp_runtime::traits::BlakeTwo256;
-use sp_sp_mmr_primitives::Proof;
 use subxt::{
 	config::{Header as HeaderT, Header},
 	rpc::rpc_params,
@@ -298,9 +298,9 @@ where
 	/// mmr root hash.
 	pub async fn fetch_mmr_update_proof_for(
 		&self,
-		_signed_commitment: sp_beefy_primitives::SignedCommitment<
+		_signed_commitment: sp_consensus_beefy::SignedCommitment<
 			u32,
-			sp_beefy_primitives::crypto::Signature,
+			sp_consensus_beefy::crypto::Signature,
 		>,
 	) -> Result<MmrUpdateProof, Error> {
 		todo!("fetch beefy authorities")
@@ -334,7 +334,7 @@ where
 				.await?;
 		let leaves: Vec<Vec<u8>> = parity_scale_codec::Decode::decode(&mut &*leaf_proof.leaves.0)?;
 		let latest_leaf: MmrLeaf<u32, H256, H256, H256> = parity_scale_codec::Decode::decode(&mut &*leaves[0])?;
-		let mmr_proof: sp_sp_mmr_primitives::Proof<H256> =
+		let mmr_proof: sp_mmr_primitives::Proof<H256> =
 			parity_scale_codec::Decode::decode(&mut &*leaf_proof.proof.0)?;
 
 		let authority_address_hashes = hash_authority_addresses(

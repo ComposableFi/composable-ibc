@@ -1,4 +1,4 @@
-use parachain_inherent::ParachainInherentData;
+use cumulus_primitives_parachain_inherent::ParachainInherentData;
 use sc_consensus_manual_seal::consensus::timestamp::SlotTimestampProvider;
 use sc_service::TFullBackend;
 use sp_runtime::generic::Era;

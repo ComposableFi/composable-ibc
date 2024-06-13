@@ -10,7 +10,7 @@ targets = ["x86_64-unknown-linux-gnu"]
 [dependencies]
 sp-std = { workspace = true }
 sp-core = { workspace = true }
-sp-beefy-primitives = { workspace = true }
+sp-consensus-beefy = { workspace = true }
 parity-scale-codec = { workspace = true }
 rs_merkle = { workspace = true }
 ckb-merkle-mountain-range = { workspace = true }
@@ -23,7 +23,7 @@ default = ["std"]
 std = [
 	"sp-std/std",
 	"sp-core/std",
-	"sp-beefy-primitives/std",
+	"sp-consensus-beefy/std",
 	"parity-scale-codec/std",
 	"rs_merkle/std",
 	"ckb-merkle-mountain-range/std",

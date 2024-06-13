@@ -28,11 +28,12 @@ use beefy_light_client_primitives::{
 	MmrUpdateProof, NodesUtils, ParachainsUpdateProof, SignatureWithAuthorityIndex, HASH_LENGTH,
 };
 use parity_scale_codec::{Decode, Encode};
-use sp_beefy_primitives::{known_payloads::MMR_ROOT_ID, mmr::MmrLeaf};
+use sp_consensus_beefy::{known_payloads::MMR_ROOT_ID, mmr::MmrLeaf};
 use sp_core::H256;
 use sp_runtime::traits::Convert;
 
 use alloc::{format, string::ToString};
+use sp_consensus_beefy::ecdsa_crypto::AuthorityId;
 use sp_core::ByteArray;
 use sp_runtime::{generic::Header, traits::BlakeTwo256};
 use sp_std::{prelude::*, vec};
@@ -99,11 +100,12 @@ where
 		.map(|SignatureWithAuthorityIndex { index, signature }| {
 			H::secp256k1_ecdsa_recover_compressed(&signature, &commitment_hash)
 				.and_then(|public_key_bytes| {
-					sp_beefy_primitives::crypto::AuthorityId::from_slice(&public_key_bytes).ok()
+					sp_consensus_beefy::ecdsa_crypto::AuthorityId::from_slice(&public_key_bytes)
+						.ok()
 				})
 				.map(|pub_key| {
 					authority_indices.push(index as usize);
-					H::keccak_256(&beefy_mmr::BeefyEcdsaToEthereum::convert(pub_key))
+					H::keccak_256(&pallet_beefy_mmr::BeefyEcdsaToEthereum::convert(pub_key))
 				})
 				.ok_or(BeefyClientError::InvalidSignature)
 		})
@@ -116,7 +118,7 @@ where
 	// Verify mmr_update.authority_proof against store root hash
 	match validator_set_id {
 		id if id == current_authority_set.id => {
-			let root_hash = current_authority_set.root;
+			let root_hash = current_authority_set.keyset_commitment;
 			if !authorities_merkle_proof.verify(
 				root_hash.into(),
 				&authority_indices,
@@ -127,7 +129,7 @@ where
 			}
 		},
 		id if id == next_authority_set.id => {
-			let root_hash = next_authority_set.root;
+			let root_hash = next_authority_set.keyset_commitment;
 			if !authorities_merkle_proof.verify(
 				root_hash.into(),
 				&authority_indices,

@@ -1,8 +1,5 @@
 use crate::{ics20::HandleMemo, Config};
-use alloc::{
-	format,
-	string::{String, ToString},
-};
+
 use core::{fmt::Debug, str::FromStr};
 use ibc::{
 	applications::transfer::{

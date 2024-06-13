@@ -66,11 +66,11 @@ use primitives::{CommonClientState, KeyProvider};
 use sc_keystore::LocalKeystore;
 use sp_core::{ecdsa, ed25519, sr25519, Bytes, Pair, H256};
 use sp_keystore::KeystorePtr;
+use sp_mmr_primitives::Proof;
 use sp_runtime::{
 	traits::{IdentifyAccount, One, Verify},
 	KeyTypeId, MultiSignature, MultiSigner,
 };
-use sp_sp_mmr_primitives::Proof;
 use ss58_registry::Ss58AddressFormat;
 use subxt::{
 	config::{Header as HeaderT, Header},
@@ -385,9 +385,9 @@ where
 	/// Queries for the BEEFY mmr update proof for the given signed commitment height.
 	pub async fn query_beefy_mmr_update_proof(
 		&self,
-		signed_commitment: sp_beefy_primitives::SignedCommitment<
+		signed_commitment: sp_consensus_beefy::SignedCommitment<
 			u32,
-			sp_beefy_primitives::crypto::Signature,
+			sp_consensus_beefy::crypto::Signature,
 		>,
 	) -> Result<MmrUpdateProof, Error> {
 		let prover = Prover {

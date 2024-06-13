@@ -3,6 +3,7 @@ use core::time::Duration;
 
 use crate::{ics23::connections::Connections, routing::Context};
 use frame_support::traits::Get;
+use frame_system::pallet_prelude::BlockNumberFor;
 use ibc::{
 	core::{
 		ics03_connection::{
@@ -19,7 +20,7 @@ use tendermint_proto::Protobuf;
 
 impl<T: Config + Sync + Send> ConnectionReader for Context<T>
 where
-	u32: From<<T as frame_system::Config>::BlockNumber>,
+	u32: From<BlockNumberFor<T>>,
 {
 	fn minimum_delay_period(&self) -> Duration {
 		Duration::from_secs(T::MinimumConnectionDelay::get())
@@ -71,7 +72,7 @@ where
 
 impl<T: Config + Sync + Send> ConnectionKeeper for Context<T>
 where
-	u32: From<<T as frame_system::Config>::BlockNumber>,
+	u32: From<BlockNumberFor<T>>,
 {
 	fn store_connection(
 		&mut self,

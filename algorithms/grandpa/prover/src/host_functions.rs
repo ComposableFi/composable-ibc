@@ -13,7 +13,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-use primitives::HostFunctions;
+use grandpa_light_client_primitives::HostFunctions;
 use sp_core::ed25519::{Public, Signature};
 use sp_runtime::{
 	app_crypto::RuntimePublic,

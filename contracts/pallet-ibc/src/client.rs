@@ -7,8 +7,8 @@ use crate::{
 	routing::Context,
 };
 
-use alloc::string::{String, ToString};
 use frame_support::traits::Get;
+use frame_system::pallet_prelude::{BlockNumberFor, HeaderFor};
 use ibc::{
 	core::{
 		ics02_client::{
@@ -35,8 +35,8 @@ pub struct HostConsensusProof {
 
 impl<T: Config + Send + Sync> ClientReader for Context<T>
 where
-	u32: From<<T as frame_system::Config>::BlockNumber>,
-	<T as frame_system::Config>::BlockNumber: From<u32>,
+	u32: From<BlockNumberFor<T>>,
+	BlockNumberFor<T>: From<u32>,
 {
 	fn client_type(&self, client_id: &ClientId) -> Result<ClientType, ICS02Error> {
 		log::trace!(target: "pallet_ibc", "in client : [client_type] >> client_id = {:?}", client_id);
@@ -196,9 +196,7 @@ where
 				"[host_consensus_state]: Can't fit height: {height} in u32"
 			))
 		})?;
-		let header_hash = frame_system::BlockHash::<T>::get(
-			<T as frame_system::Config>::BlockNumber::from(height),
-		);
+		let header_hash = frame_system::BlockHash::<T>::get(BlockNumberFor::<T>::from(height));
 		// we don't even have the hash for this height (anymore?)
 		if header_hash == <T as frame_system::Config>::Hash::default() {
 			Err(ICS02Error::implementation_specific(format!(
@@ -212,12 +210,11 @@ where
 					"[host_consensus_state]: Failed to decode proof: {e}"
 				))
 			})?;
-		let header = <T as frame_system::Config>::Header::decode(&mut &connection_proof.header[..])
-			.map_err(|e| {
-				ICS02Error::implementation_specific(format!(
-					"[host_consensus_state]: Failed to decode header: {e:?}"
-				))
-			})?;
+		let header = HeaderFor::<T>::decode(&mut &connection_proof.header[..]).map_err(|e| {
+			ICS02Error::implementation_specific(format!(
+				"[host_consensus_state]: Failed to decode header: {e:?}"
+			))
+		})?;
 		if header.hash() != header_hash {
 			Err(ICS02Error::implementation_specific(format!(
 				"[host_consensus_state]: Incorrect host consensus state for height {height}"
@@ -315,7 +312,7 @@ impl<T: Config> ClientTypes for Context<T> {
 
 impl<T: Config + Send + Sync> ClientKeeper for Context<T>
 where
-	u32: From<<T as frame_system::Config>::BlockNumber>,
+	u32: From<BlockNumberFor<T>>,
 {
 	fn store_client_type(
 		&mut self,
@@ -449,7 +446,7 @@ where
 			Err(ICS02Error::implementation_specific(format!("para-id mis-match")))?
 		}
 
-		let block_number: u32 = <frame_system::Pallet<T>>::block_number().into();
+		let block_number: u32 = <frame_system::Pallet<T>>::block_number().into().as_u32();
 
 		// this really shouldn't be possible
 		if latest_para_height >= block_number {

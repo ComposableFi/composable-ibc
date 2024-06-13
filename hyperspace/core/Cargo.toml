@@ -12,7 +12,7 @@ authors = [
 anyhow = { workspace = true }
 once_cell = "1.16.0"
 subxt-codegen = { package = "codegen", path = "../../utils/subxt/codegen" }
-tokio = { version = "1.32.0", features = ["macros", "rt-multi-thread"] }
+tokio = { workspace = true, features = ["macros", "rt-multi-thread"] }
 
 [package.metadata.cargo-udeps.ignore]
 normal = ["scale-encode"]
@@ -69,8 +69,8 @@ prost = { workspace = true }
 serde_json = { workspace = true }
 
 [dev-dependencies]
-derive_more = "0.99.17"
-prost = "0.11"
+derive_more = { workspace = true }
+prost = { workspace = true }
 parachain = { path = "../parachain", package = "hyperspace-parachain", features = [
     "testing",
 ] }

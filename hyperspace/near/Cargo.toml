@@ -14,14 +14,14 @@ async-trait = { workspace = true }
 log = { workspace = true }
 env_logger = { workspace = true }
 hex = { workspace = true }
-tokio = { version = "1.32.0", features = ["macros", "sync"] }
+tokio = { workspace = true, features = ["macros", "sync"] }
 rs_merkle = { workspace = true }
 parity-scale-codec = { workspace = true }
-hex-literal = "0.3.4"
+hex-literal = { workspace = true }
 serde_json = { workspace = true }
 derive_more = { version = "0.99", features = ["from"]  }
 serde = { workspace = true, features = ["derive"]}
-tokio-stream = { version = "0.1.14", features = ["sync"]}
+tokio-stream = { workspace = true, features = ["sync"]}
 thiserror = { workspace = true }
 jsonrpsee = { version = "0.16.2", features = ["async-client", "jsonrpsee-client-transport", "client-ws-transport", "http-client"] }
 openssl-probe = "0.1.2"

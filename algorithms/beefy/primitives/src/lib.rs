@@ -22,8 +22,8 @@
 pub mod error;
 use core::marker::PhantomData;
 use parity_scale_codec::{Decode, Encode};
-use sp_beefy_primitives::mmr::MmrLeafVersion;
-pub use sp_beefy_primitives::mmr::{BeefyNextAuthoritySet, MmrLeaf};
+use sp_consensus_beefy::mmr::MmrLeafVersion;
+pub use sp_consensus_beefy::mmr::{BeefyNextAuthoritySet, MmrLeaf};
 use sp_core::H256;
 use sp_std::prelude::*;
 
@@ -72,7 +72,7 @@ pub struct SignatureWithAuthorityIndex {
 /// Signed commitment
 pub struct SignedCommitment {
 	/// Commitment
-	pub commitment: sp_beefy_primitives::Commitment<u32>,
+	pub commitment: sp_consensus_beefy::Commitment<u32>,
 	/// Signatures for this commitment
 	pub signatures: Vec<SignatureWithAuthorityIndex>,
 }
@@ -85,7 +85,7 @@ pub struct MmrUpdateProof {
 	/// Latest leaf added to mmr
 	pub latest_mmr_leaf: MmrLeaf<u32, H256, H256, H256>,
 	/// Proof for the latest mmr leaf
-	pub mmr_proof: sp_sp_mmr_primitives::Proof<H256>,
+	pub mmr_proof: sp_mmr_primitives::Proof<H256>,
 	/// Proof for authorities in current session
 	pub authority_proof: Vec<Hash>,
 }
@@ -129,7 +129,7 @@ pub struct ParachainsUpdateProof {
 	/// Parachai headers
 	pub parachain_headers: Vec<ParachainHeader>,
 	/// Mmr Batch proof for parachain headers
-	pub mmr_proof: sp_sp_mmr_primitives::Proof<H256>,
+	pub mmr_proof: sp_mmr_primitives::Proof<H256>,
 }
 
 #[cfg(feature = "std")]

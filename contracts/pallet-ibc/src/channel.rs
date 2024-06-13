@@ -1,8 +1,8 @@
 use super::*;
-use core::{str::FromStr, time::Duration};
+use core::time::Duration;
 use frame_support::traits::Get;
+use frame_system::pallet_prelude::BlockNumberFor;
 use ibc_primitives::PacketInfo;
-use scale_info::prelude::string::ToString;
 use sp_core::crypto::AccountId32;
 
 use crate::{
@@ -34,7 +34,7 @@ use tendermint_proto::Protobuf;
 
 impl<T: Config + Sync + Send> ChannelReader for Context<T>
 where
-	u32: From<<T as frame_system::Config>::BlockNumber>,
+	u32: From<BlockNumberFor<T>>,
 {
 	/// Returns the ChannelEnd for the given `port_id` and `chan_id`.
 	fn channel_end(&self, port_channel_id: &(PortId, ChannelId)) -> Result<ChannelEnd, ICS04Error> {
@@ -261,7 +261,7 @@ where
 
 impl<T: Config + Sync + Send> ChannelKeeper for Context<T>
 where
-	u32: From<<T as frame_system::Config>::BlockNumber>,
+	u32: From<BlockNumberFor<T>>,
 	AccountId32: From<<T as frame_system::Config>::AccountId>,
 	Self: ChannelReader,
 {

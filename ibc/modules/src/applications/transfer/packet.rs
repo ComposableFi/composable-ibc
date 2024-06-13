@@ -12,8 +12,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-use alloc::string::{String, ToString};
-use core::{convert::TryFrom, str::FromStr};
+use core::str::FromStr;
 
 use ibc_proto::ibc::applications::transfer::v2::FungibleTokenPacketData as RawPacketData;
 use serde::{Deserialize, Serialize};

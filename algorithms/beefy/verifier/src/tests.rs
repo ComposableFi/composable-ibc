@@ -20,13 +20,13 @@ use beefy_light_client_primitives::{
 use beefy_prover::{Crypto, Prover};
 use futures::stream::StreamExt;
 use hyperspace_core::substrate::DefaultConfig as PolkadotConfig;
-use sp_beefy_primitives::{
+use sp_consensus_beefy::{
 	known_payloads::MMR_ROOT_ID,
 	mmr::{BeefyNextAuthoritySet, MmrLeaf},
 	Payload, VersionedFinalityProof,
 };
 use sp_core::bytes::to_hex;
-use sp_sp_mmr_primitives::Proof;
+use sp_mmr_primitives::Proof;
 use subxt::rpc::{rpc_params, Subscription};
 
 #[tokio::test]
@@ -66,7 +66,7 @@ async fn test_verify_mmr_with_proof() {
 	{
 		let beefy_version_finality_proof: VersionedFinalityProof<
 			u32,
-			sp_beefy_primitives::crypto::Signature,
+			sp_consensus_beefy::crypto::Signature,
 		> = parity_scale_codec::Decode::decode(&mut &*encoded_versioned_finality_proof.0 .0).unwrap();
 
 		let signed_commitment = match beefy_version_finality_proof {
@@ -120,7 +120,7 @@ async fn test_verify_mmr_with_proof() {
 async fn should_fail_with_incomplete_signature_threshold() {
 	let mmr_update = MmrUpdateProof {
 		signed_commitment: SignedCommitment {
-			commitment: sp_beefy_primitives::Commitment {
+			commitment: sp_consensus_beefy::Commitment {
 				payload: Payload::from_single_entry(MMR_ROOT_ID, vec![0u8; 32]),
 				block_number: Default::default(),
 				validator_set_id: 3,
@@ -159,7 +159,7 @@ async fn should_fail_with_incomplete_signature_threshold() {
 async fn should_fail_with_invalid_validator_set_id() {
 	let mmr_update = MmrUpdateProof {
 		signed_commitment: SignedCommitment {
-			commitment: sp_beefy_primitives::Commitment {
+			commitment: sp_consensus_beefy::Commitment {
 				payload: Payload::from_single_entry(MMR_ROOT_ID, vec![0u8; 32]),
 				block_number: Default::default(),
 				validator_set_id: 3,
@@ -241,7 +241,7 @@ async fn verify_parachain_headers() {
 	{
 		let beefy_version_finality_proof: VersionedFinalityProof<
 			u32,
-			sp_beefy_primitives::crypto::Signature,
+			sp_consensus_beefy::crypto::Signature,
 		> = parity_scale_codec::Decode::decode(&mut &*encoded_versioned_finality_proof.0 .0).unwrap();
 
 		let signed_commitment = match beefy_version_finality_proof {

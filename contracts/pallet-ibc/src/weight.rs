@@ -1,7 +1,7 @@
 use super::*;
 use crate::{light_clients::AnyClientMessage, routing::Context};
-use core::marker::PhantomData;
-use frame_support::{pallet_prelude::Weight, weights::constants::WEIGHT_REF_TIME_PER_MILLIS};
+use frame_support::weights::constants::WEIGHT_REF_TIME_PER_MILLIS;
+use frame_system::pallet_prelude::BlockNumberFor;
 use grandpa_client_primitives::justification::GrandpaJustification;
 use ibc::core::{
 	ics02_client::msgs::ClientMsg,
@@ -12,7 +12,6 @@ use ibc::core::{
 };
 use ibc_primitives::{client_id_from_bytes, CallbackWeight};
 use ics10_grandpa::client_message::{ClientMessage, RelayChainHeader};
-use scale_info::prelude::string::ToString;
 
 pub trait WeightInfo {
 	fn create_client() -> Weight;
@@ -182,7 +181,7 @@ pub fn channel_client<T: Config>(channel_id: &[u8], port_id: &[u8]) -> Result<Cl
 
 pub(crate) fn deliver<T: Config + Send + Sync>(msgs: &[Any]) -> Weight
 where
-	u32: From<<T as frame_system::Config>::BlockNumber>,
+	u32: From<BlockNumberFor<T>>,
 {
 	msgs.iter()
 		.filter_map(|msg| {

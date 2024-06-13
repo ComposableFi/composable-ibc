@@ -64,7 +64,7 @@ safe-regex = { version = "0.2.5", default-features = false }
 subtle-encoding = { version = "0.5", default-features = false }
 flex-error = { version = "0.4.4", default-features = false }
 num-traits = { version = "0.2.15", default-features = false }
-derive_more = { version = "0.99.17", default-features = false, features = ["from", "into", "display"] }
+derive_more = { workspace = true, default-features = false, features = ["from", "into", "display"] }
 uint = { version = "0.9", default-features = false }
 hex = { version = "0.4.3", default-features = false }
 primitive-types = { version = "0.12.0", default-features = false, features = ["serde_no_std"] }
@@ -74,16 +74,16 @@ tendermint = { workspace = true }
 tendermint-proto = { workspace = true }
 scale-info = { workspace = true }
 log = { workspace = true }
-cosmwasm-schema = { version = "1.1.3", default-features = false, optional = true }
+cosmwasm-schema = { workspace = true, default-features = false, optional = true }
 
 [dev-dependencies]
 env_logger = { workspace = true }
-tracing-subscriber = { version = "0.3.11", features = ["fmt", "env-filter", "json"]}
+tracing-subscriber = { workspace = true, features = ["fmt", "env-filter", "json"]}
 test-log = { version = "0.2.10", features = ["trace"] }
 modelator = "0.4.2"
-sha2 = { version = "0.10.2" }
-tokio = { version = "1.32.0", features = ["full"] }
+sha2 = { workspace = true }
+tokio = { workspace = true, features = ["full"] }
 serde_json = { workspace = true }
-sha3 = { version = "0.10.1" }
-sp-core = { git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.43"}
+sha3 = { workspace = true }
+sp-core = { workspace = true }
 sp-std = { workspace = true }

@@ -11,7 +11,7 @@ targets = ["x86_64-unknown-linux-gnu"]
 anyhow = "1.0.66"
 once_cell = "1.16.0"
 subxt-codegen = { package = "codegen", path = "../../../utils/subxt/codegen" }
-tokio = { version = "1.32.0", features = ["macros", "rt-multi-thread"] }
+tokio = { workspace = true, features = ["macros", "rt-multi-thread"] }
 
 [dependencies]
 sp-std = { workspace = true }
@@ -23,7 +23,7 @@ frame-support = { workspace = true }
 pallet-beefy-mmr = { workspace = true }
 pallet-mmr = { workspace = true }
 sp-mmr-primitives = { workspace = true }
-sp-beefy-primitives = { workspace = true }
+sp-consensus-beefy = { workspace = true }
 parity-scale-codec = { workspace = true }
 rs_merkle = { workspace = true }
 derive_more = { workspace = true, features = ["from"]  }
@@ -31,13 +31,13 @@ light-client-common = { workspace = true, features = ["enable-subxt"] }
 jsonrpsee-core = { workspace = true, features = ["async-client"] }
 
 # Optional deps
-subxt = { git = "https://github.com/paritytech/subxt",  tag = "v0.29.0", features = ["substrate-compat"] }
-hex-literal = { version = "0.3.4" }
-serde_json = { version = "1.0.74" }
-pallet-mmr-rpc = { package = "mmr-rpc", git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.43" }
+subxt = { workspace = true, features = ["substrate-compat"] }
+hex-literal = { workspace = true }
+serde_json = { workspace = true }
+mmr-rpc = { workspace = true }
 sp-trie = { workspace = true }
-hex = { version = "0.4.3" }
-beefy-light-client-primitives = {  path = "../primitives" }
+hex = { workspace = true }
+beefy-light-client-primitives = { workspace = true }
 
 [dev-dependencies]
 light-client-common = { path = "../../../light-clients/common" }

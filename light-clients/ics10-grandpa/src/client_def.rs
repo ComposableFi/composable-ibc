@@ -401,7 +401,7 @@ where
 				.encode_to_vec()
 				.map_err(Ics02Error::encode)?;
 
-			let value = sp_state_machine::read_proof_check::<H::BlakeTwo256, _>(
+			let value = state_machine::read_proof_check::<H::BlakeTwo256, _>(
 				&root,
 				proof_upgrade_client,
 				vec![CLIENT_STATE_UPGRADE_PATH],
@@ -429,7 +429,7 @@ where
 				.encode_to_vec()
 				.map_err(Ics02Error::encode)?;
 
-			let value = sp_state_machine::read_proof_check::<H::BlakeTwo256, _>(
+			let value = state_machine::read_proof_check::<H::BlakeTwo256, _>(
 				&root,
 				proof_upgrade_consensus_state,
 				vec![CONSENSUS_STATE_UPGRADE_PATH],

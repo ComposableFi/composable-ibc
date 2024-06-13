@@ -18,7 +18,7 @@ use core::{convert::TryFrom, fmt::Debug, marker::PhantomData, time::Duration};
 use ibc::prelude::*;
 use parity_scale_codec::{Decode, Encode};
 use serde::{Deserialize, Serialize};
-use sp_beefy_primitives::{known_payloads::MMR_ROOT_ID, mmr::BeefyNextAuthoritySet};
+use sp_consensus_beefy::{known_payloads::MMR_ROOT_ID, mmr::BeefyNextAuthoritySet};
 use sp_core::H256;
 use sp_runtime::SaturatedConversion;
 use tendermint_proto::Protobuf;
@@ -276,7 +276,7 @@ impl<H> TryFrom<RawClientState> for ClientState<H> {
 				Some(BeefyNextAuthoritySet {
 					id: set.id,
 					len: set.len,
-					root: H256::decode(&mut &*set.authority_root).ok()?,
+					keyset_commitment: H256::decode(&mut &*set.authority_root).ok()?,
 				})
 			})
 			.ok_or_else(|| Error::Custom(format!("Current authority set is missing")))?;
@@ -287,7 +287,7 @@ impl<H> TryFrom<RawClientState> for ClientState<H> {
 				Some(BeefyNextAuthoritySet {
 					id: set.id,
 					len: set.len,
-					root: H256::decode(&mut &*set.authority_root).ok()?,
+					keyset_commitment: H256::decode(&mut &*set.authority_root).ok()?,
 				})
 			})
 			.ok_or_else(|| Error::Custom(format!("Next authority set is missing")))?;
@@ -322,12 +322,12 @@ impl<H> From<ClientState<H>> for RawClientState {
 			authority: Some(BeefyAuthoritySet {
 				id: client_state.authority.id,
 				len: client_state.authority.len,
-				authority_root: client_state.authority.root.encode(),
+				authority_root: client_state.authority.keyset_commitment.encode(),
 			}),
 			next_authority_set: Some(BeefyAuthoritySet {
 				id: client_state.next_authority_set.id,
 				len: client_state.next_authority_set.len,
-				authority_root: client_state.next_authority_set.root.encode(),
+				authority_root: client_state.next_authority_set.keyset_commitment.encode(),
 			}),
 			relay_chain: client_state.relay_chain as i32,
 			para_id: client_state.para_id,

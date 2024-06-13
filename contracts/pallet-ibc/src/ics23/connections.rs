@@ -1,5 +1,4 @@
 use crate::{format, Config};
-use alloc::string::ToString;
 use frame_support::storage::{child, child::ChildInfo, ChildTriePrefixIterator};
 use ibc::core::{
 	ics03_connection::connection::ConnectionEnd,

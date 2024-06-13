@@ -20,15 +20,15 @@
 use anyhow::anyhow;
 pub use beefy_prover;
 use beefy_prover::helpers::{fetch_timestamp_extrinsic_with_proof, TimeStampExtWithProof};
-use finality_grandpa_rpc::GrandpaApiClient;
-use jsonrpsee::{async_client::Client, tracing::log, ws_client::WsClientBuilder};
-use light_client_common::config::{AsInner, RuntimeStorage};
-use parity_scale_codec::{Decode, Encode};
-use primitives::{
+use grandpa_light_client_primitives::{
 	parachain_header_storage_key, ClientState, FinalityProof, ParachainHeaderProofs,
 	ParachainHeadersWithFinalityProof,
 };
+use jsonrpsee::{async_client::Client, tracing::log, ws_client::WsClientBuilder};
+use light_client_common::config::{AsInner, RuntimeStorage};
+use parity_scale_codec::{Decode, Encode};
 use rand::Rng;
+use sc_consensus_grandpa_rpc::GrandpaApiClient;
 use serde::{Deserialize, Serialize};
 use sp_consensus_grandpa::{AuthorityId, AuthoritySignature};
 use sp_core::H256;

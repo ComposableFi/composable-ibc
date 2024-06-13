@@ -2,7 +2,6 @@
 
 extern crate alloc;
 
-use alloc::string::{String, ToString};
 use frame_support::weights::Weight;
 use ibc::{
 	applications::transfer::{error::Error as Ics20Error, PrefixedCoin, VERSION},

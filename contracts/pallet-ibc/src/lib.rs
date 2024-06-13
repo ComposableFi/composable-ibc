@@ -32,7 +32,7 @@ extern crate alloc;
 use crate::ics20::ValidateMemo;
 use core::fmt::Debug;
 use cumulus_primitives_core::ParaId;
-use frame_support::weights::Weight;
+use frame_support::{traits::GenesisBuild, weights::Weight};
 pub use pallet::*;
 use parity_scale_codec::{Decode, Encode};
 use scale_info::{
@@ -275,7 +275,7 @@ pub mod pallet {
 		type FeeAccount: Get<Self::AccountIdConversion>;
 		/// Cleanup packets period (in blocks)
 		#[pallet::constant]
-		type CleanUpPacketsPeriod: Get<Self::BlockNumber>;
+		type CleanUpPacketsPeriod: Get<BlockNumberFor<Self>>;
 
 		#[pallet::constant]
 		/// `ServiceChargeOut` represents the service charge rate applied to assets that will be
@@ -723,12 +723,12 @@ pub mod pallet {
 	#[pallet::hooks]
 	impl<T: Config> Hooks<BlockNumberFor<T>> for Pallet<T>
 	where
-		u32: From<<T as frame_system::Config>::BlockNumber>,
+		u32: From<BlockNumberFor<T>>,
 		T: Send + Sync,
 		AccountId32: From<<T as frame_system::Config>::AccountId>,
 	{
 		fn on_idle(n: BlockNumberFor<T>, remaining_weight: Weight) -> Weight {
-			if n % T::CleanUpPacketsPeriod::get() != T::BlockNumber::zero() {
+			if n % T::CleanUpPacketsPeriod::get() != BlockNumberFor::<T>::zero() {
 				return remaining_weight
 			}
 			log::trace!(target: "pallet_ibc", "Cleaning up packets");
@@ -752,7 +752,7 @@ pub mod pallet {
 	where
 		T: Send + Sync,
 		AccountId32: From<<T as frame_system::Config>::AccountId>,
-		u32: From<<T as frame_system::Config>::BlockNumber>,
+		u32: From<BlockNumberFor<T>>,
 	{
 		#[pallet::call_index(0)]
 		#[pallet::weight(crate::weight::deliver::< T > (messages))]

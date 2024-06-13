@@ -78,7 +78,7 @@ pub enum FinalityEvent {
 			polkadot_core_primitives::Header,
 		>,
 	),
-	Beefy(sp_beefy_primitives::SignedCommitment<u32, sp_beefy_primitives::crypto::Signature>),
+	Beefy(sp_consensus_beefy::SignedCommitment<u32, sp_consensus_beefy::crypto::Signature>),
 }
 
 impl FinalityProtocol {
