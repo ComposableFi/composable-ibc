@@ -640,7 +640,7 @@ macro_rules! define_runtime_storage {
 
 			fn beefy_authorities() -> LocalAddress<
 				StaticStorageMapKey,
-				Vec<sp_consensus_beefy::crypto::Public>,
+				Vec<sp_consensus_beefy::ecdsa_crypto::Public>,
 				Yes,
 				Yes,
 				(),

@@ -18,6 +18,7 @@ use async_trait::async_trait;
 use ibc::events::IbcEvent;
 use ibc_proto::google::protobuf::Any;
 use parity_scale_codec::{Decode, Encode};
+use scale_decode::visitor::IgnoreVisitor;
 use sp_core::H256;
 use subxt::{
 	client::OnlineClient,
@@ -38,164 +39,189 @@ use subxt::{
 	tx::{DefaultPayload, Payload},
 	utils::{Encoded, Static, Yes},
 };
-use subxt_core::storage::address::StorageHashersIter;
+use subxt_core::storage::address::{StorageHashers, StorageHashersIter};
 
-// pub type LocalAddress<StorageKey, ReturnTy, Fetchable, Defaultable, Iterable> =
-// 	DefaultAddress<StorageKey, ReturnTy, Fetchable, Defaultable, Iterable>;
+// Skip over the hash bytes (including any key at the end), returning bytes
+// representing the key if one exists, or None if the hasher has no key appended.
+fn consume_hash_returning_key_bytes<'a>(
+	bytes: &mut &'a [u8],
+	hasher: StorageHasher,
+	ty_id: u32,
+	types: &PortableRegistry,
+) -> Result<Option<&'a [u8]>, subxt_core::Error> {
+	// Strip the bytes off for the actual hash, consuming them.
+	let bytes_to_strip = hasher.len_excluding_key();
+	if bytes.len() < bytes_to_strip {
+		return Err(StorageAddressError::NotEnoughBytes.into());
+	}
+	*bytes = &bytes[bytes_to_strip..];
 
-pub type StaticStorageMapKey = StaticStorageKey<Static<Encoded>>;
+	// Now, find the bytes representing the key, consuming them.
+	let before_key = *bytes;
+	if hasher.ends_with_key() {
+		scale_decode::visitor::decode_with_visitor(
+			bytes,
+			ty_id,
+			types,
+			IgnoreVisitor::<PortableRegistry>::new(),
+		)
+		.map_err(|err| subxt_core::Error::Decode(err.into()))?;
+		// Return the key bytes, having advanced the input cursor past them.
+		let key_bytes = &before_key[..before_key.len() - bytes.len()];
 
-///// This represents a statically generated storage lookup address.
-pub struct LocalAddress<StorageKey, ReturnTy, Fetchable, Defaultable, Iterable> {
-	pub pallet_name: Cow<'static, str>,
-	pub entry_name: Cow<'static, str>,
-	// How to access the specific value at that storage address.
-	pub storage_entry_keys: Vec<StorageKey>,
-	// Hash provided from static code for validation.
-	pub validation_hash: Option<[u8; 32]>,
-	pub _marker: std::marker::PhantomData<(ReturnTy, Fetchable, Defaultable, Iterable)>,
-}
-
-impl<Key, ReturnTy, Fetchable, Defaultable, Iterable>
-	From<DefaultAddress<Key, ReturnTy, Fetchable, Defaultable, Iterable>>
-	for LocalAddress<Key, ReturnTy, Fetchable, Defaultable, Iterable>
-where
-	Key: StorageKey,
-{
-	fn from(address: DefaultAddress<Key, ReturnTy, Fetchable, Defaultable, Iterable>) -> Self {
-		// SAFETY: layout of the structs should be the same
-		unsafe { std::mem::transmute(address) }
+		Ok(Some(key_bytes))
+	} else {
+		// There are no key bytes, so return None.
+		Ok(None)
 	}
 }
+pub struct StaticStorageMapKey(pub StaticStorageKey<Static<Encoded>>);
 
-impl<ReturnTy: DecodeWithMetadata, Fetchable, Defaultable, Iterable>
-	LocalAddress<StaticStorageMapKey, ReturnTy, Fetchable, Defaultable, Iterable>
-{
-	pub fn new<NewReturnTy>(
-		storage: DefaultAddress<StaticStorageMapKey, ReturnTy, Fetchable, Defaultable, Iterable>,
-	) -> LocalAddress<StaticStorageMapKey, NewReturnTy, Fetchable, Defaultable, Iterable> {
-		let storage = LocalAddress::from(storage);
-		LocalAddress {
-			pallet_name: storage.pallet_name,
-			entry_name: storage.entry_name,
-			storage_entry_keys: storage.storage_entry_keys,
-			validation_hash: storage.validation_hash,
-			_marker: Default::default(),
-		}
-	}
-}
-
-fn hash_bytes(input: &[u8], hasher: &StorageHasher, bytes: &mut Vec<u8>) {
-	match hasher {
-		StorageHasher::Identity => bytes.extend(input),
-		StorageHasher::Blake2_128 => bytes.extend(sp_core::hashing::blake2_128(input)),
-		StorageHasher::Blake2_128Concat => {
-			bytes.extend(sp_core::hashing::blake2_128(input));
-			bytes.extend(input);
-		},
-		StorageHasher::Blake2_256 => bytes.extend(sp_core::hashing::blake2_256(input)),
-		StorageHasher::Twox128 => bytes.extend(sp_core::hashing::twox_128(input)),
-		StorageHasher::Twox256 => bytes.extend(sp_core::hashing::twox_256(input)),
-		StorageHasher::Twox64Concat => {
-			bytes.extend(sp_core::hashing::twox_64(input));
-			bytes.extend(input);
-		},
-	}
-}
-
-impl<ReturnTy, Fetchable, Defaultable, Iterable> Address
-	for LocalAddress<StaticStorageMapKey, ReturnTy, Fetchable, Defaultable, Iterable>
-where
-	// StorageKey: EncodeWithMetadata,
-	ReturnTy: DecodeWithMetadata,
-{
-	type Keys = StaticStorageMapKey;
-	type Target = ReturnTy;
-	type IsDefaultable = Defaultable;
-	type IsIterable = Iterable;
-	type IsFetchable = Fetchable;
-
-	fn pallet_name(&self) -> &str {
-		&self.pallet_name
-	}
-
-	fn entry_name(&self) -> &str {
-		&self.entry_name
-	}
-
-	fn append_entry_bytes(
+impl EncodeWithMetadata for StaticStorageMapKey {
+	fn encode_with_metadata(
 		&self,
+		type_id: u32,
 		metadata: &Metadata,
 		bytes: &mut Vec<u8>,
-	) -> Result<(), subxt_core::Error> {
-		let pallet = metadata.pallet_by_name_err(self.pallet_name())?;
-		let storage = pallet
-			.storage()
-			.ok_or_else(|| MetadataError::StorageNotFoundInPallet(self.pallet_name().to_owned()))?;
-		let entry = storage
-			.entry_by_name(self.entry_name())
-			.ok_or_else(|| MetadataError::StorageEntryNotFound(self.entry_name().to_owned()))?;
-
-		match entry.entry_type() {
-			StorageEntryType::Plain(_) =>
-				if !self.storage_entry_keys.is_empty() {
-					Err(StorageAddressError::TooManyKeys { expected: 0 }.into())
-				} else {
-					Ok(())
-				},
-			StorageEntryType::Map { hashers, key_ty, .. } => {
-				let ty = metadata
-					.types()
-					.resolve(*key_ty)
-					.ok_or(MetadataError::TypeNotFound(*key_ty))?;
-
-				// If the key is a tuple, we encode each value to the corresponding tuple type.
-				// If the key is not a tuple, encode a single value to the key type.
-				let type_ids = match &ty.type_def {
-					TypeDef::Tuple(tuple) =>
-						sp_runtime::Either::Left(tuple.fields.iter().map(|f| f.id)),
-					_other => sp_runtime::Either::Right(std::iter::once(*key_ty)),
-				};
-
-				if type_ids.len() != self.storage_entry_keys.len() {
-					return Err(StorageAddressError::TooManyKeys { expected: type_ids.len() }.into())
-				}
-
-				if hashers.len() == 1 {
-					// One hasher; hash a tuple of all SCALE encoded bytes with the one hash
-					// function.
-					let mut input = Vec::new();
-					let iter = self.storage_entry_keys.iter().zip(type_ids);
-					for (key, type_id) in iter {
-						key.encode_with_metadata(type_id, metadata, &mut input)?;
-					}
-					hash_bytes(&input, &hashers[0], bytes);
-					Ok(())
-				} else if hashers.len() == type_ids.len() {
-					let iter = self.storage_entry_keys.iter().zip(type_ids).zip(hashers);
-					// A hasher per field; encode and hash each field independently.
-					for ((key, type_id), hasher) in iter {
-						let mut input = Vec::new();
-						key.encode_with_metadata(type_id, metadata, &mut input)?;
-						hash_bytes(&input, hasher, bytes);
-					}
-					Ok(())
-				} else {
-					// Mismatch; wrong number of hashers/fields.
-					Err(StorageAddressError::WrongNumberOfHashers {
-						hashers: hashers.len(),
-						fields: type_ids.len(),
-					}
-					.into())
-				}
-			},
-		}
-	}
-
-	fn validation_hash(&self) -> Option<[u8; 32]> {
-		self.validation_hash
+	) -> Result<(), subxt::ext::scale_encode::Error> {
+		let out = self.0.bytes().encode_as_type(type_id, metadata.types())?;
+		bytes.extend(out);
+		Ok(())
 	}
 }
+
+impl StorageKey for StaticStorageMapKey {
+	fn encode_storage_key(
+		&self,
+		bytes: &mut Vec<u8>,
+		hashers: &mut StorageHashersIter,
+		types: &PortableRegistry,
+	) -> Result<(), subxt_core::Error> {
+		self.0.encode_storage_key(bytes, hashers, types)
+	}
+
+	fn decode_storage_key(
+		bytes: &mut &[u8],
+		hashers: &mut StorageHashersIter,
+		types: &PortableRegistry,
+	) -> Result<Self, subxt_core::Error>
+	where
+		Self: Sized + 'static,
+	{
+		let length = hashers.len();
+		let (hasher, ty_id) = hashers
+			.next()
+			.ok_or_else(|| StorageAddressError::TooManyKeys { expected: length })?;
+		let key_bytes = consume_hash_returning_key_bytes(bytes, hasher, ty_id, types)?;
+
+		// if the hasher had no key appended, we can't decode it into a `StaticStorageKey`.
+		let Some(key_bytes) = key_bytes else {
+			return Err(StorageAddressError::HasherCannotReconstructKey { ty_id, hasher }.into());
+		};
+
+		// Return the key bytes.
+		let key = StaticStorageKey::new(&Static(Encoded(key_bytes.to_vec())));
+		Ok(StaticStorageMapKey(key))
+	}
+}
+
+// ///// This represents a statically generated storage lookup address.
+// pub struct LocalAddress<Keys: StorageKey, ReturnTy, Fetchable, Defaultable, Iterable> {
+// 	pub pallet_name: Cow<'static, str>,
+// 	pub entry_name: Cow<'static, str>,
+// 	// How to access the specific value at that storage address.
+// 	pub keys: Keys,
+// 	// Hash provided from static code for validation.
+// 	pub validation_hash: Option<[u8; 32]>,
+// 	pub _marker: std::marker::PhantomData<(ReturnTy, Fetchable, Defaultable, Iterable)>,
+// }
+
+// impl<Key, ReturnTy, Fetchable, Defaultable, Iterable>
+// 	From<DefaultAddress<Key, ReturnTy, Fetchable, Defaultable, Iterable>>
+// 	for LocalAddress<Key, ReturnTy, Fetchable, Defaultable, Iterable>
+// where
+// 	Key: StorageKey,
+// {
+// 	fn from(address: DefaultAddress<Key, ReturnTy, Fetchable, Defaultable, Iterable>) -> Self {
+// 		// SAFETY: layout of the structs should be the same
+// 		unsafe { std::mem::transmute(address) }
+// 	}
+// }
+
+// impl<ReturnTy: DecodeWithMetadata, Fetchable, Defaultable, Iterable>
+// 	LocalAddress<StaticStorageMapKey, ReturnTy, Fetchable, Defaultable, Iterable>
+// {
+// 	pub fn new<NewReturnTy>(
+// 		storage: DefaultAddress<StaticStorageMapKey, ReturnTy, Fetchable, Defaultable, Iterable>,
+// 	) -> LocalAddress<StaticStorageMapKey, NewReturnTy, Fetchable, Defaultable, Iterable> {
+// 		let storage = LocalAddress::from(storage);
+// 		LocalAddress {
+// 			pallet_name: storage.pallet_name,
+// 			entry_name: storage.entry_name,
+// 			keys: storage.keys,
+// 			validation_hash: storage.validation_hash,
+// 			_marker: Default::default(),
+// 		}
+// 	}
+// }
+
+// fn hash_bytes(input: &[u8], hasher: &StorageHasher, bytes: &mut Vec<u8>) {
+// 	match hasher {
+// 		StorageHasher::Identity => bytes.extend(input),
+// 		StorageHasher::Blake2_128 => bytes.extend(sp_core::hashing::blake2_128(input)),
+// 		StorageHasher::Blake2_128Concat => {
+// 			bytes.extend(sp_core::hashing::blake2_128(input));
+// 			bytes.extend(input);
+// 		},
+// 		StorageHasher::Blake2_256 => bytes.extend(sp_core::hashing::blake2_256(input)),
+// 		StorageHasher::Twox128 => bytes.extend(sp_core::hashing::twox_128(input)),
+// 		StorageHasher::Twox256 => bytes.extend(sp_core::hashing::twox_256(input)),
+// 		StorageHasher::Twox64Concat => {
+// 			bytes.extend(sp_core::hashing::twox_64(input));
+// 			bytes.extend(input);
+// 		},
+// 	}
+// }
+
+// impl<ReturnTy, Fetchable, Defaultable, Iterable> Address
+// 	for LocalAddress<StaticStorageMapKey, ReturnTy, Fetchable, Defaultable, Iterable>
+// where
+// 	// StorageKey: EncodeWithMetadata,
+// 	ReturnTy: DecodeWithMetadata,
+// {
+// 	type Keys = StaticStorageMapKey;
+// 	type Target = ReturnTy;
+// 	type IsDefaultable = Defaultable;
+// 	type IsIterable = Iterable;
+// 	type IsFetchable = Fetchable;
+
+// 	fn pallet_name(&self) -> &str {
+// 		&self.pallet_name
+// 	}
+
+// 	fn entry_name(&self) -> &str {
+// 		&self.entry_name
+// 	}
+
+// 	fn append_entry_bytes(&self, metadata: &Metadata, bytes: &mut Vec<u8>) -> Result<(),
+// subxt_core::Error> {         let pallet = metadata.pallet_by_name_err(self.pallet_name())?;
+//         let storage = pallet
+//             .storage()
+//             .ok_or_else(||
+// MetadataError::StorageNotFoundInPallet(self.pallet_name().to_owned()))?;         let entry =
+// storage             .entry_by_name(self.entry_name())
+//             .ok_or_else(|| MetadataError::StorageEntryNotFound(self.entry_name().to_owned()))?;
+
+//         let hashers = StorageHashers::new(entry.entry_type(), metadata.types())?;
+//         self.keys
+//             .encode_storage_key(bytes, &mut hashers.iter(), metadata.types())?;
+//         Ok(())
+//     }
+
+// 	fn validation_hash(&self) -> Option<[u8; 32]> {
+// 		self.validation_hash
+// 	}
+// }
 
 pub trait RuntimeTransactions {
 	type Deliver: Encode + EncodeAsFields + Send + Sync;
@@ -251,20 +277,20 @@ pub trait RuntimeStorage {
 
 	fn paras_heads(
 		x: u32,
-	) -> LocalAddress<StaticStorageMapKey, <Self::HeadData as AsInner>::Inner, Yes, (), Yes>;
+	) -> DefaultAddress<StaticStorageMapKey, <Self::HeadData as AsInner>::Inner, Yes, (), Yes>;
 
 	fn paras_para_lifecycles(
 		x: u32,
-	) -> LocalAddress<StaticStorageMapKey, <Self::ParaLifecycle as AsInner>::Inner, Yes, (), Yes>;
+	) -> DefaultAddress<StaticStorageMapKey, <Self::ParaLifecycle as AsInner>::Inner, Yes, (), Yes>;
 
 	fn paras_parachains(
-	) -> LocalAddress<StaticStorageMapKey, Vec<Static<<Self::Id as AsInner>::Inner>>, Yes, Yes, ()>;
+	) -> DefaultAddress<StaticStorageMapKey, Vec<Static<<Self::Id as AsInner>::Inner>>, Yes, Yes, ()>;
 
 	fn grandpa_current_set_id() -> DefaultAddress<StaticStorageMapKey, u64, Yes, Yes, ()>;
 
 	fn beefy_validator_set_id() -> DefaultAddress<StaticStorageMapKey, u64, Yes, Yes, ()>;
 
-	fn beefy_authorities() -> LocalAddress<
+	fn beefy_authorities() -> DefaultAddress<
 		StaticStorageMapKey,
 		Vec<sp_consensus_beefy::ecdsa_crypto::Public>,
 		Yes,
@@ -272,8 +298,13 @@ pub trait RuntimeStorage {
 		(),
 	>;
 
-	fn mmr_leaf_beefy_next_authorities(
-	) -> LocalAddress<StaticStorageMapKey, <Self::BeefyAuthoritySet as AsInner>::Inner, Yes, Yes, ()>;
+	fn mmr_leaf_beefy_next_authorities() -> DefaultAddress<
+		StaticStorageMapKey,
+		<Self::BeefyAuthoritySet as AsInner>::Inner,
+		Yes,
+		Yes,
+		(),
+	>;
 
 	fn babe_epoch_start() -> DefaultAddress<StaticStorageMapKey, (u32, u32), Yes, Yes, ()>;
 }

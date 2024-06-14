@@ -40,10 +40,7 @@ use sp_core::{hexdisplay::AsBytesRef, keccak_256, H256};
 use sp_io::crypto;
 use sp_mmr_primitives::Proof;
 use sp_runtime::traits::BlakeTwo256;
-use subxt::{
-	config::{Header as HeaderT, Header},
-	Config, OnlineClient,
-};
+use subxt::{backend::rpc::RpcClient, config::Header, rpc_params, Config, OnlineClient};
 
 use crate::relay_chain_queries::parachain_header_storage_key;
 use light_client_common::config::{AsInner, BeefyAuthoritySetT, RuntimeStorage};
@@ -112,6 +109,7 @@ where
 		// In development mode validators are the same for all sessions only validator set_id
 		// changes
 		let client = client.expect("Client should be defined");
+		let rpc_client: RpcClient = client.backend();
 		let latest_beefy_finalized: <T as Config>::Hash =
 			client.rpc().request("beefy_getFinalizedHead", rpc_params!()).await.unwrap();
 		let header = client.rpc().header(Some(latest_beefy_finalized)).await.unwrap().unwrap();
@@ -299,7 +297,7 @@ where
 		&self,
 		_signed_commitment: sp_consensus_beefy::SignedCommitment<
 			u32,
-			sp_consensus_beefy::crypto::Signature,
+			sp_consensus_beefy::ecdsa_crypto::Signature,
 		>,
 	) -> Result<MmrUpdateProof, Error> {
 		todo!("fetch beefy authorities")

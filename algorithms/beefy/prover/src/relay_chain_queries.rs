@@ -15,13 +15,14 @@
 
 use crate::error::Error;
 // use light_client_common::config::{AsInner, ParaLifecycleT, RuntimeStorage};
+use light_client_common::config::{AsInner, ParaLifecycleT, RuntimeStorage};
 use mmr_rpc::LeavesProof;
 use parity_scale_codec::{Decode, Encode};
 use sp_consensus_beefy::{SignedCommitment, VersionedFinalityProof};
 use sp_core::{hexdisplay::AsBytesRef, storage::StorageKey, H256};
 use sp_runtime::traits::Zero;
 use std::collections::{BTreeMap, BTreeSet};
-use subxt::{config::Header, Config, OnlineClient};
+use subxt::{config::Header, rpc_params, Config, OnlineClient};
 
 /// This contains the leaf indices of the relay chain blocks and a map of relay chain heights to a
 /// map of all parachain headers at those heights Used for generating [`ParaHeadsProof`]
@@ -45,7 +46,8 @@ where
 	<<T as Config>::Header as Header>::Number: Ord + Zero,
 	<T as subxt::Config>::Header: Decode,
 {
-	let subxt_block_number: subxt::rpc::types::BlockNumber = commitment_block_number.into();
+	let subxt_block_number: subxt::backend::legacy::rpc_methods::BlockNumber =
+		commitment_block_number.into();
 	let block_hash = client.rpc().block_hash(Some(subxt_block_number)).await?.ok_or_else(|| {
 		Error::Custom(format!("Block hash not found for block number {}", commitment_block_number))
 	})?;
@@ -69,7 +71,7 @@ where
 			para_ids.push(id);
 		}
 	}
-	let previous_finalized_block_number: subxt::rpc::types::BlockNumber =
+	let previous_finalized_block_number: subxt::backend::legacy::rpc_methods::BlockNumber =
 		(latest_beefy_height + 1).into();
 	let previous_finalized_hash = client
 		.rpc()
@@ -131,7 +133,7 @@ where
 /// Get beefy justification for latest finalized beefy block
 pub async fn fetch_beefy_justification<T: Config>(
 	client: &OnlineClient<T>,
-) -> Result<(SignedCommitment<u32, sp_consensus_beefy::crypto::Signature>, T::Hash), Error> {
+) -> Result<(SignedCommitment<u32, sp_consensus_beefy::ecdsa_crypto::Signature>, T::Hash), Error> {
 	let latest_beefy_finalized: <T as Config>::Hash =
 		client.rpc().request("beefy_getFinalizedHead", rpc_params!()).await?;
 	let block = client
@@ -152,7 +154,7 @@ pub async fn fetch_beefy_justification<T: Config>(
 		.expect("Should have valid beefy justification");
 	let VersionedFinalityProof::V1(signed_commitment) = VersionedFinalityProof::<
 		u32,
-		sp_consensus_beefy::crypto::Signature,
+		sp_consensus_beefy::ecdsa_crypto::Signature,
 	>::decode(&mut &*beefy_justification)
 	.expect("Beefy justification should decode correctly");
 

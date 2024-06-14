@@ -28520,8 +28520,8 @@ pub mod api {
 					pub equivocation_proof: ::std::boxed::Box<
 						runtime_types::sp_consensus_beefy::EquivocationProof<
 							::core::primitive::u32,
-							runtime_types::sp_consensus_beefy::crypto::Public,
-							runtime_types::sp_consensus_beefy::crypto::Signature,
+							runtime_types::sp_consensus_beefy::ecdsa_crypto::Public,
+							runtime_types::sp_consensus_beefy::ecdsa_crypto::Signature,
 						>,
 					>,
 					pub key_owner_proof: runtime_types::sp_session::MembershipProof,
@@ -28544,8 +28544,8 @@ pub mod api {
 					pub equivocation_proof: ::std::boxed::Box<
 						runtime_types::sp_consensus_beefy::EquivocationProof<
 							::core::primitive::u32,
-							runtime_types::sp_consensus_beefy::crypto::Public,
-							runtime_types::sp_consensus_beefy::crypto::Signature,
+							runtime_types::sp_consensus_beefy::ecdsa_crypto::Public,
+							runtime_types::sp_consensus_beefy::ecdsa_crypto::Signature,
 						>,
 					>,
 					pub key_owner_proof: runtime_types::sp_session::MembershipProof,
@@ -28561,8 +28561,8 @@ pub mod api {
 					&self,
 					equivocation_proof: runtime_types::sp_consensus_beefy::EquivocationProof<
 						::core::primitive::u32,
-						runtime_types::sp_consensus_beefy::crypto::Public,
-						runtime_types::sp_consensus_beefy::crypto::Signature,
+						runtime_types::sp_consensus_beefy::ecdsa_crypto::Public,
+						runtime_types::sp_consensus_beefy::ecdsa_crypto::Signature,
 					>,
 					key_owner_proof: runtime_types::sp_session::MembershipProof,
 				) -> ::subxt::tx::Payload<types::ReportEquivocation> {
@@ -28584,8 +28584,8 @@ pub mod api {
 					&self,
 					equivocation_proof: runtime_types::sp_consensus_beefy::EquivocationProof<
 						::core::primitive::u32,
-						runtime_types::sp_consensus_beefy::crypto::Public,
-						runtime_types::sp_consensus_beefy::crypto::Signature,
+						runtime_types::sp_consensus_beefy::ecdsa_crypto::Public,
+						runtime_types::sp_consensus_beefy::ecdsa_crypto::Signature,
 					>,
 					key_owner_proof: runtime_types::sp_session::MembershipProof,
 				) -> ::subxt::tx::Payload<types::ReportEquivocationUnsigned> {
@@ -28614,7 +28614,7 @@ pub mod api {
 				) -> ::subxt::storage::address::Address<
 					::subxt::storage::address::StaticStorageMapKey,
 					runtime_types::bounded_collections::bounded_vec::BoundedVec<
-						runtime_types::sp_consensus_beefy::crypto::Public,
+						runtime_types::sp_consensus_beefy::ecdsa_crypto::Public,
 					>,
 					::subxt::storage::address::Yes,
 					::subxt::storage::address::Yes,
@@ -28657,7 +28657,7 @@ pub mod api {
 				) -> ::subxt::storage::address::Address<
 					::subxt::storage::address::StaticStorageMapKey,
 					runtime_types::bounded_collections::bounded_vec::BoundedVec<
-						runtime_types::sp_consensus_beefy::crypto::Public,
+						runtime_types::sp_consensus_beefy::ecdsa_crypto::Public,
 					>,
 					::subxt::storage::address::Yes,
 					::subxt::storage::address::Yes,
@@ -31314,8 +31314,8 @@ pub mod api {
 						equivocation_proof: ::std::boxed::Box<
 							runtime_types::sp_consensus_beefy::EquivocationProof<
 								::core::primitive::u32,
-								runtime_types::sp_consensus_beefy::crypto::Public,
-								runtime_types::sp_consensus_beefy::crypto::Signature,
+								runtime_types::sp_consensus_beefy::ecdsa_crypto::Public,
+								runtime_types::sp_consensus_beefy::ecdsa_crypto::Signature,
 							>,
 						>,
 						key_owner_proof: runtime_types::sp_session::MembershipProof,
@@ -31325,8 +31325,8 @@ pub mod api {
 						equivocation_proof: ::std::boxed::Box<
 							runtime_types::sp_consensus_beefy::EquivocationProof<
 								::core::primitive::u32,
-								runtime_types::sp_consensus_beefy::crypto::Public,
-								runtime_types::sp_consensus_beefy::crypto::Signature,
+								runtime_types::sp_consensus_beefy::ecdsa_crypto::Public,
+								runtime_types::sp_consensus_beefy::ecdsa_crypto::Signature,
 							>,
 						>,
 						key_owner_proof: runtime_types::sp_session::MembershipProof,
@@ -39089,7 +39089,7 @@ pub mod api {
 				pub para_validator: runtime_types::polkadot_primitives::v4::validator_app::Public,
 				pub para_assignment: runtime_types::polkadot_primitives::v4::assignment_app::Public,
 				pub authority_discovery: runtime_types::sp_authority_discovery::app::Public,
-				pub beefy: runtime_types::sp_consensus_beefy::crypto::Public,
+				pub beefy: runtime_types::sp_consensus_beefy::ecdsa_crypto::Public,
 			}
 		}
 		pub mod sp_arithmetic {

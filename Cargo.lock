@@ -5521,7 +5521,7 @@ dependencies = [
  "prometheus",
  "prost 0.11.9",
  "rand 0.8.5",
- "scale-encode 0.1.2",
+ "scale-encode",
  "serde",
  "serde_json",
  "sp-consensus-beefy",
@@ -7578,6 +7578,7 @@ dependencies = [
  "ibc",
  "ibc-proto",
  "parity-scale-codec",
+ "scale-decode",
  "serde",
  "sp-consensus-beefy",
  "sp-core 28.0.0",
@@ -14708,17 +14709,6 @@ dependencies = [
 
 [[package]]
 name = "scale-encode"
-version = "0.1.2"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "15546e5efbb45f0fc2291f7e202dee8623274c5d8bbfdf9c6886cc8b44a7ced3"
-dependencies = [
- "parity-scale-codec",
- "scale-info",
- "thiserror",
-]
-
-[[package]]
-name = "scale-encode"
 version = "0.7.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "4ba0b9c48dc0eb20c60b083c29447c0c4617cb7c4a4c9fef72aa5c5bc539e15e"
@@ -14808,7 +14798,7 @@ dependencies = [
  "parity-scale-codec",
  "scale-bits",
  "scale-decode",
- "scale-encode 0.7.1",
+ "scale-encode",
  "scale-info",
  "scale-type-resolver",
  "serde",
@@ -18397,7 +18387,7 @@ dependencies = [
  "reconnecting-jsonrpsee-ws-client",
  "scale-bits",
  "scale-decode",
- "scale-encode 0.7.1",
+ "scale-encode",
  "scale-info",
  "scale-value",
  "serde",
@@ -18468,7 +18458,7 @@ dependencies = [
  "primitive-types",
  "scale-bits",
  "scale-decode",
- "scale-encode 0.7.1",
+ "scale-encode",
  "scale-info",
  "scale-value",
  "serde",

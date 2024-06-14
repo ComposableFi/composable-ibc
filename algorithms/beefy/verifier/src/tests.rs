@@ -66,7 +66,7 @@ async fn test_verify_mmr_with_proof() {
 	{
 		let beefy_version_finality_proof: VersionedFinalityProof<
 			u32,
-			sp_consensus_beefy::crypto::Signature,
+			sp_consensus_beefy::ecdsa_crypto::Signature,
 		> = parity_scale_codec::Decode::decode(&mut &*encoded_versioned_finality_proof.0 .0).unwrap();
 
 		let signed_commitment = match beefy_version_finality_proof {
@@ -241,7 +241,7 @@ async fn verify_parachain_headers() {
 	{
 		let beefy_version_finality_proof: VersionedFinalityProof<
 			u32,
-			sp_consensus_beefy::crypto::Signature,
+			sp_consensus_beefy::ecdsa_crypto::Signature,
 		> = parity_scale_codec::Decode::decode(&mut &*encoded_versioned_finality_proof.0 .0).unwrap();
 
 		let signed_commitment = match beefy_version_finality_proof {

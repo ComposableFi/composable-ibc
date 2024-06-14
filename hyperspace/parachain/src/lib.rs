@@ -387,7 +387,7 @@ where
 		&self,
 		signed_commitment: sp_consensus_beefy::SignedCommitment<
 			u32,
-			sp_consensus_beefy::crypto::Signature,
+			sp_consensus_beefy::ecdsa_crypto::Signature,
 		>,
 	) -> Result<MmrUpdateProof, Error> {
 		let prover = Prover {

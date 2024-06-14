@@ -105,7 +105,9 @@ hyperspace-metrics                         = { path = "hyperspace/metrics" }
 subxt                                      = { git = "https://github.com/paritytech/subxt",  tag = "v0.37.0", features = ["substrate-compat"] }
 subxt-core                                 = { git = "https://github.com/paritytech/subxt",  tag = "v0.37.0", features = ["substrate-compat"] }
 subxt-generated                            = { path = "utils/subxt/generated" }
-
+scale-decode                               = { version = "0.13.0", default-features = false }
+scale-encode                               = { version = "0.7.0", default-features = false }
+scale-info                                 = { version = "2.11.0", default-features = false, features = ["derive"] }
 
 # orml
 # orml-tokens                                = { git = "https://github.com/open-web3-stack/open-runtime-module-library" }
@@ -330,8 +332,6 @@ rand                  = { version = "0.8.5" }
 ripemd                = { version = "0.1.3" }
 rs_merkle             = { version = "1.2.0" }
 safe-regex            = { version = "0.2.5", default-features = false }
-scale-info            = { version = "2.11.0", default-features = false, features = ["derive"] }
-scale-encode          = { version = "0.1.2", default-features = false }
 schemars              = { version = "0.8.10" }
 serde                 = { version = "1.0.193", features = ["derive"], default-features = false }
 serde_json            = { version = "1.0.109", default-features = false }
