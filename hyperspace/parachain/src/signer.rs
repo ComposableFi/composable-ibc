@@ -12,8 +12,8 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
+use hyperspace_primitives::KeyProvider;
 use parity_scale_codec::Decode;
-use primitives::KeyProvider;
 use sp_keystore::{Keystore, KeystorePtr};
 use sp_runtime::{
 	traits::{IdentifyAccount, Verify},

@@ -56,7 +56,7 @@ use sp_runtime::{
 };
 
 use frame_support::{
-	construct_runtime,
+	construct_runtime, derive_impl,
 	dispatch::DispatchClass,
 	parameter_types,
 	traits::{fungibles::metadata::Inspect as InspectMetadata, AsEnsureOriginWithArg, Everything},
@@ -304,7 +304,7 @@ parameter_types! {
 }
 
 // Configure FRAME pallets to include in runtime.
-
+#[derive_impl(frame_system::config_preludes::ParaChainDefaultConfig as frame_system::DefaultConfig)]
 impl frame_system::Config for Runtime {
 	/// The identifier used to distinguish between accounts.
 	type AccountId = AccountId;
@@ -314,8 +314,10 @@ impl frame_system::Config for Runtime {
 	type Lookup = AccountIdLookup<AccountId, ()>;
 	/// The type for hashing blocks and tries.
 	type Hash = Hash;
-	/// The nonce
+	/// The type of the nonce
 	type Nonce = Nonce;
+	/// The type of block
+	type Block = Block;
 	/// The hashing algorithm used.
 	type Hashing = BlakeTwo256;
 	/// The ubiquitous event type.

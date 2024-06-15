@@ -1127,7 +1127,7 @@ dependencies = [
  "frame-support 28.0.0",
  "hex",
  "hex-literal",
- "jsonrpsee-core 0.16.3",
+ "jsonrpsee-core 0.20.3",
  "light-client-common",
  "mmr-rpc",
  "once_cell",
@@ -1512,16 +1512,6 @@ dependencies = [
 ]
 
 [[package]]
-name = "bstr"
-version = "1.9.1"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "05efc5cfd9110c8416e471df0e96702d58690178e206e61b7173706673c93706"
-dependencies = [
- "memchr",
- "serde",
-]
-
-[[package]]
 name = "build-helper"
 version = "0.1.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -1894,7 +1884,7 @@ dependencies = [
  "frame-metadata 15.1.0",
  "hex",
  "http",
- "jsonrpsee 0.16.3",
+ "jsonrpsee 0.20.3",
  "parity-scale-codec",
  "serde_json",
  "subxt-codegen 0.29.0",
@@ -3156,9 +3146,9 @@ dependencies = [
 
 [[package]]
 name = "cxx"
-version = "1.0.123"
+version = "1.0.124"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "8194f089b6da4751d6c1da1ef37c17255df51f9346cdb160f8b096562ae4a85c"
+checksum = "273dcfd3acd4e1e276af13ed2a43eea7001318823e7a726a6b3ed39b4acc0b82"
 dependencies = [
  "cc",
  "cxxbridge-flags",
@@ -3168,9 +3158,9 @@ dependencies = [
 
 [[package]]
 name = "cxx-build"
-version = "1.0.123"
+version = "1.0.124"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "1e8df9a089caae66634d754672d5f909395f30f38af6ff19366980d8a8b57501"
+checksum = "d8b2766fbd92be34e9ed143898fce6c572dc009de39506ed6903e5a05b68914e"
 dependencies = [
  "cc",
  "codespan-reporting",
@@ -3183,15 +3173,15 @@ dependencies = [
 
 [[package]]
 name = "cxxbridge-flags"
-version = "1.0.123"
+version = "1.0.124"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "25290be4751803672a70b98c68b51c1e7d0a640ab5a4377f240f9d2e70054cd1"
+checksum = "839fcd5e43464614ffaa989eaf1c139ef1f0c51672a1ed08023307fa1b909ccd"
 
 [[package]]
 name = "cxxbridge-macro"
-version = "1.0.123"
+version = "1.0.124"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "b8cb317cb13604b4752416783bb25070381c36e844743e4146b7f8e55de7d140"
+checksum = "4b2c1c1776b986979be68bb2285da855f8d8a35851a769fca8740df7c3d07877"
 dependencies = [
  "proc-macro2",
  "quote",
@@ -4974,19 +4964,6 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "d2fabcfbdc87f4758337ca535fb41a6d701b65693ce38287d856d1674551ec9b"
 
 [[package]]
-name = "globset"
-version = "0.4.14"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "57da3b9b5b85bd66f31093f8c408b90a74431672542466497dcbdfdc02034be1"
-dependencies = [
- "aho-corasick",
- "bstr",
- "log",
- "regex-automata 0.4.7",
- "regex-syntax 0.8.4",
-]
-
-[[package]]
 name = "grandpa-light-client-primitives"
 version = "0.1.0"
 dependencies = [
@@ -5022,8 +4999,8 @@ dependencies = [
  "hex",
  "hex-literal",
  "hyperspace-core",
- "jsonrpsee-core 0.16.3",
- "jsonrpsee-ws-client 0.16.3",
+ "jsonrpsee-core 0.20.3",
+ "jsonrpsee-ws-client 0.20.3",
  "light-client-common",
  "log",
  "parity-scale-codec",
@@ -5052,8 +5029,8 @@ dependencies = [
  "finality-grandpa",
  "grandpa-light-client-primitives",
  "hex",
- "jsonrpsee 0.16.3",
- "jsonrpsee-ws-client 0.16.3",
+ "jsonrpsee 0.20.3",
+ "jsonrpsee-ws-client 0.20.3",
  "light-client-common",
  "parity-scale-codec",
  "rand 0.8.5",
@@ -5628,8 +5605,8 @@ dependencies = [
  "ics10-grandpa",
  "ics11-beefy",
  "itertools 0.10.5",
- "jsonrpsee 0.16.3",
- "jsonrpsee-ws-client 0.16.3",
+ "jsonrpsee 0.20.3",
+ "jsonrpsee-ws-client 0.20.3",
  "light-client-common",
  "log",
  "pallet-beefy-mmr",
@@ -5859,7 +5836,7 @@ dependencies = [
  "ibc-primitives",
  "ibc-proto",
  "ibc-runtime-api",
- "jsonrpsee 0.16.3",
+ "jsonrpsee 0.20.3",
  "pallet-ibc",
  "parity-scale-codec",
  "sc-chain-spec",
@@ -5982,7 +5959,7 @@ dependencies = [
  "ibc",
  "ibc-derive",
  "ibc-proto",
- "jsonrpsee-ws-client 0.16.3",
+ "jsonrpsee-ws-client 0.20.3",
  "light-client-common",
  "log",
  "parity-scale-codec",
@@ -6557,11 +6534,7 @@ dependencies = [
  "jsonrpsee-client-transport 0.16.3",
  "jsonrpsee-core 0.16.3",
  "jsonrpsee-http-client 0.16.3",
- "jsonrpsee-proc-macros 0.16.3",
- "jsonrpsee-server 0.16.3",
  "jsonrpsee-types 0.16.3",
- "jsonrpsee-ws-client 0.16.3",
- "tracing",
 ]
 
 [[package]]
@@ -6570,10 +6543,11 @@ version = "0.20.3"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "affdc52f7596ccb2d7645231fc6163bb314630c989b64998f3699a28b4d5d4dc"
 dependencies = [
+ "jsonrpsee-client-transport 0.20.3",
  "jsonrpsee-core 0.20.3",
  "jsonrpsee-http-client 0.20.3",
- "jsonrpsee-proc-macros 0.20.3",
- "jsonrpsee-server 0.20.3",
+ "jsonrpsee-proc-macros",
+ "jsonrpsee-server",
  "jsonrpsee-types 0.20.3",
  "jsonrpsee-ws-client 0.20.3",
  "tokio",
@@ -6662,22 +6636,17 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "2b5dde66c53d6dcdc8caea1874a45632ec0fcf5b437789f1e45766a1512ce803"
 dependencies = [
  "anyhow",
- "arrayvec 0.7.4",
  "async-lock 2.8.0",
  "async-trait",
  "beef",
  "futures-channel",
  "futures-timer",
  "futures-util",
- "globset",
  "hyper",
  "jsonrpsee-types 0.16.3",
- "parking_lot 0.12.3",
- "rand 0.8.5",
  "rustc-hash",
  "serde",
  "serde_json",
- "soketto",
  "thiserror",
  "tokio",
  "tracing",
@@ -6792,19 +6761,6 @@ dependencies = [
 
 [[package]]
 name = "jsonrpsee-proc-macros"
-version = "0.16.3"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "44e8ab85614a08792b9bff6c8feee23be78c98d0182d4c622c05256ab553892a"
-dependencies = [
- "heck 0.4.1",
- "proc-macro-crate 1.3.1",
- "proc-macro2",
- "quote",
- "syn 1.0.109",
-]
-
-[[package]]
-name = "jsonrpsee-proc-macros"
 version = "0.20.3"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "29110019693a4fa2dbda04876499d098fa16d70eba06b1e6e2b3f1b251419515"
@@ -6814,28 +6770,6 @@ dependencies = [
  "proc-macro2",
  "quote",
  "syn 1.0.109",
-]
-
-[[package]]
-name = "jsonrpsee-server"
-version = "0.16.3"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "cf4d945a6008c9b03db3354fb3c83ee02d2faa9f2e755ec1dfb69c3551b8f4ba"
-dependencies = [
- "futures-channel",
- "futures-util",
- "http",
- "hyper",
- "jsonrpsee-core 0.16.3",
- "jsonrpsee-types 0.16.3",
- "serde",
- "serde_json",
- "soketto",
- "tokio",
- "tokio-stream",
- "tokio-util",
- "tower",
- "tracing",
 ]
 
 [[package]]
@@ -6900,18 +6834,6 @@ dependencies = [
  "serde",
  "serde_json",
  "thiserror",
-]
-
-[[package]]
-name = "jsonrpsee-ws-client"
-version = "0.16.3"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "4e1b3975ed5d73f456478681a417128597acd6a2487855fdb7b4a3d4d195bf5e"
-dependencies = [
- "http",
- "jsonrpsee-client-transport 0.16.3",
- "jsonrpsee-core 0.16.3",
- "jsonrpsee-types 0.16.3",
 ]
 
 [[package]]
@@ -10261,7 +10183,7 @@ dependencies = [
  "ibc-primitives",
  "ibc-rpc",
  "ibc-runtime-api",
- "jsonrpsee 0.16.3",
+ "jsonrpsee 0.20.3",
  "log",
  "pallet-ibc",
  "pallet-transaction-payment-rpc",
@@ -16381,7 +16303,7 @@ dependencies = [
 [[package]]
 name = "sp-crypto-ec-utils"
 version = "0.10.0"
-source = "git+https://github.com/paritytech/polkadot-sdk#eca1052ea1eddeede91da8f9f7452ea8b57e7942"
+source = "git+https://github.com/paritytech/polkadot-sdk#ae0b3bf6733e7b9e18badb16128a6b25bef1923b"
 dependencies = [
  "ark-bls12-377",
  "ark-bls12-377-ext",
@@ -16489,7 +16411,7 @@ dependencies = [
 [[package]]
 name = "sp-debug-derive"
 version = "14.0.0"
-source = "git+https://github.com/paritytech/polkadot-sdk#eca1052ea1eddeede91da8f9f7452ea8b57e7942"
+source = "git+https://github.com/paritytech/polkadot-sdk#ae0b3bf6733e7b9e18badb16128a6b25bef1923b"
 dependencies = [
  "proc-macro2",
  "quote",
@@ -16521,7 +16443,7 @@ dependencies = [
 [[package]]
 name = "sp-externalities"
 version = "0.25.0"
-source = "git+https://github.com/paritytech/polkadot-sdk#eca1052ea1eddeede91da8f9f7452ea8b57e7942"
+source = "git+https://github.com/paritytech/polkadot-sdk#ae0b3bf6733e7b9e18badb16128a6b25bef1923b"
 dependencies = [
  "environmental",
  "parity-scale-codec",
@@ -17073,7 +16995,7 @@ dependencies = [
 [[package]]
 name = "sp-runtime-interface"
 version = "24.0.0"
-source = "git+https://github.com/paritytech/polkadot-sdk#eca1052ea1eddeede91da8f9f7452ea8b57e7942"
+source = "git+https://github.com/paritytech/polkadot-sdk#ae0b3bf6733e7b9e18badb16128a6b25bef1923b"
 dependencies = [
  "bytes",
  "impl-trait-for-tuples",
@@ -17157,7 +17079,7 @@ dependencies = [
 [[package]]
 name = "sp-runtime-interface-proc-macro"
 version = "17.0.0"
-source = "git+https://github.com/paritytech/polkadot-sdk#eca1052ea1eddeede91da8f9f7452ea8b57e7942"
+source = "git+https://github.com/paritytech/polkadot-sdk#ae0b3bf6733e7b9e18badb16128a6b25bef1923b"
 dependencies = [
  "Inflector",
  "expander 2.1.0",
@@ -17374,7 +17296,7 @@ source = "git+https://github.com/paritytech/polkadot-sdk?branch=release-polkadot
 [[package]]
 name = "sp-std"
 version = "14.0.0"
-source = "git+https://github.com/paritytech/polkadot-sdk#eca1052ea1eddeede91da8f9f7452ea8b57e7942"
+source = "git+https://github.com/paritytech/polkadot-sdk#ae0b3bf6733e7b9e18badb16128a6b25bef1923b"
 
 [[package]]
 name = "sp-storage"
@@ -17405,7 +17327,7 @@ dependencies = [
 [[package]]
 name = "sp-storage"
 version = "19.0.0"
-source = "git+https://github.com/paritytech/polkadot-sdk#eca1052ea1eddeede91da8f9f7452ea8b57e7942"
+source = "git+https://github.com/paritytech/polkadot-sdk#ae0b3bf6733e7b9e18badb16128a6b25bef1923b"
 dependencies = [
  "impl-serde",
  "parity-scale-codec",
@@ -17507,7 +17429,7 @@ dependencies = [
 [[package]]
 name = "sp-tracing"
 version = "16.0.0"
-source = "git+https://github.com/paritytech/polkadot-sdk#eca1052ea1eddeede91da8f9f7452ea8b57e7942"
+source = "git+https://github.com/paritytech/polkadot-sdk#ae0b3bf6733e7b9e18badb16128a6b25bef1923b"
 dependencies = [
  "parity-scale-codec",
  "tracing",
@@ -17806,7 +17728,7 @@ dependencies = [
 [[package]]
 name = "sp-wasm-interface"
 version = "20.0.0"
-source = "git+https://github.com/paritytech/polkadot-sdk#eca1052ea1eddeede91da8f9f7452ea8b57e7942"
+source = "git+https://github.com/paritytech/polkadot-sdk#ae0b3bf6733e7b9e18badb16128a6b25bef1923b"
 dependencies = [
  "impl-trait-for-tuples",
  "log",

@@ -91,14 +91,15 @@ async fn follow_grandpa_justifications() {
 	while let Some(Ok(JustificationNotification(sp_core::Bytes(_)))) = subscription.next().await {
 		let next_relay_height = client_state.latest_relay_height + 1;
 
-		let encoded = finality_grandpa_rpc::GrandpaApiClient::<JustificationNotification, H256, u32>::prove_finality(
-				&*prover.relay_ws_client.clone(),
-			next_relay_height,
-		)
-			.await
-			.unwrap()
-			.unwrap()
-			.0;
+		let encoded = sc_consensus_grandpa_rpc::GrandpaApiClient::<
+			JustificationNotification,
+			H256,
+			u32,
+		>::prove_finality(&*prover.relay_ws_client.clone(), next_relay_height)
+		.await
+		.unwrap()
+		.unwrap()
+		.0;
 
 		let finality_proof = FinalityProof::<Header>::decode(&mut &encoded[..]).unwrap();
 

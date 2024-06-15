@@ -53,7 +53,7 @@ use ics11_beefy::{
 	client_state::ClientState as BeefyClientState,
 	consensus_state::ConsensusState as BeefyConsensusState,
 };
-use scale_info::prelude::{format, string::ToString};
+use scale_info::prelude::format;
 use sp_consensus_grandpa::{AuthoritySignature, KEY_TYPE};
 use sp_core::crypto::{AccountId32, ByteArray};
 use sp_std::prelude::*;

@@ -8,7 +8,7 @@ use crate::{
 };
 
 use frame_support::traits::Get;
-use frame_system::pallet_prelude::{BlockNumberFor, HeaderFor};
+use frame_system::pallet_prelude::BlockNumberFor;
 use ibc::{
 	core::{
 		ics02_client::{
@@ -210,11 +210,13 @@ where
 					"[host_consensus_state]: Failed to decode proof: {e}"
 				))
 			})?;
-		let header = HeaderFor::<T>::decode(&mut &connection_proof.header[..]).map_err(|e| {
-			ICS02Error::implementation_specific(format!(
-				"[host_consensus_state]: Failed to decode header: {e:?}"
-			))
-		})?;
+		let header =
+			frame_system::pallet_prelude::HeaderFor::<T>::decode(&mut &connection_proof.header[..])
+				.map_err(|e| {
+					ICS02Error::implementation_specific(format!(
+						"[host_consensus_state]: Failed to decode header: {e:?}"
+					))
+				})?;
 		if header.hash() != header_hash {
 			Err(ICS02Error::implementation_specific(format!(
 				"[host_consensus_state]: Incorrect host consensus state for height {height}"

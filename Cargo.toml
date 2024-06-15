@@ -47,7 +47,7 @@ members = [
     "utils/subxt/generated",
     "utils/parachain-node",
     "utils/parachain-node/runtime",
-#     "utils/simnode"
+    # "utils/simnode"
 ]
 
 [workspace.dependencies]
@@ -102,9 +102,10 @@ hyperspace-testsuite                       = { path = "hyperspace/testsuite" }
 hyperspace-metrics                         = { path = "hyperspace/metrics" }
 
 # Subxt / utils
+subxt-generated                            = { path = "utils/subxt/generated" }
 subxt                                      = { git = "https://github.com/paritytech/subxt",  tag = "v0.37.0", features = ["substrate-compat"] }
 subxt-core                                 = { git = "https://github.com/paritytech/subxt",  tag = "v0.37.0", features = ["substrate-compat"] }
-subxt-generated                            = { path = "utils/subxt/generated" }
+subxt-metadata                             = { git = "https://github.com/paritytech/subxt",  tag = "v0.37.0", features = ["substrate-compat"] }
 scale-decode                               = { version = "0.13.0", default-features = false }
 scale-encode                               = { version = "0.7.0", default-features = false }
 scale-info                                 = { version = "2.11.0", default-features = false, features = ["derive"] }
@@ -313,9 +314,9 @@ hash-db               = { version = "0.16.0", default-features = false }
 http                  = { version = "0.2.9" }
 itertools             = { version = "0.10.5", default-features = false }
 impl-trait-for-tuples = { version = "0.2.2", default-features = false }
-jsonrpsee             = { version = "0.16.3", default-features = false }
-jsonrpsee-core        = { version = "0.16.3", default-features = false }
-jsonrpsee-ws-client   = { version = "0.16.3", default-features = false }
+jsonrpsee             = { version = "0.20.3", default-features = false }
+jsonrpsee-core        = { version = "0.20.3", default-features = false }
+jsonrpsee-ws-client   = { version = "0.20.3", default-features = false }
 k256                  = { version = "0.11.6", features = ["ecdsa-core", "ecdsa", "sha256"] }
 log                   = { version = "0.4.21", default-features = false }
 modelator             = { version = "0.4.2" }

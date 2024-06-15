@@ -18,7 +18,6 @@ use crate::{error::Error, ParachainClient};
 use anyhow::anyhow;
 use beefy_light_client_primitives::{ClientState as BeefyPrimitivesClientState, NodesUtils};
 use finality_grandpa::BlockNumberOps;
-use finality_grandpa_rpc::GrandpaApiClient;
 use grandpa_light_client_primitives::{
 	justification::find_scheduled_change, FinalityProof, ParachainHeaderProofs,
 	ParachainHeadersWithFinalityProof,
@@ -42,6 +41,7 @@ use primitives::{
 	IbcProvider, KeyProvider, UpdateType,
 };
 use rand::Rng;
+use sc_consensus_grandpa_rpc::GrandpaApiClient;
 use serde::{Deserialize, Serialize};
 use sp_consensus_grandpa::GRANDPA_ENGINE_ID;
 use sp_core::H256;
@@ -113,7 +113,7 @@ impl FinalityProtocol {
 		sp_core::H256: From<T::Hash>,
 		BTreeMap<H256, ParachainHeaderProofs>:
 			From<BTreeMap<<T as subxt::Config>::Hash, ParachainHeaderProofs>>,
-		<T::ExtrinsicParams as ExtrinsicParams<T::Index, T::Hash>>::OtherParams:
+		<T::ExtrinsicParams as ExtrinsicParams<T::Index, T::Hash>>::Params:
 			From<BaseExtrinsicParamsBuilder<T, T::Tip>> + Send + Sync,
 		<T as subxt::Config>::AccountId: Send + Sync,
 		<T as subxt::Config>::Address: Send + Sync,
@@ -148,7 +148,7 @@ where
 	<<T as subxt::Config>::Header as Header>::Number:
 		From<u32> + Debug + Display + Ord + sp_runtime::traits::Zero + One,
 	<T as subxt::Config>::Header: Decode,
-	<T::ExtrinsicParams as ExtrinsicParams<T::Index, T::Hash>>::OtherParams:
+	<T::ExtrinsicParams as ExtrinsicParams<T::Index, T::Hash>>::Params:
 		From<BaseExtrinsicParamsBuilder<T, T::Tip>> + Send + Sync,
 	T::Hash: From<sp_core::H256>,
 	sp_core::H256: From<T::Hash>,
@@ -378,7 +378,7 @@ where
 	sp_core::H256: From<T::Hash>,
 	BTreeMap<H256, ParachainHeaderProofs>:
 		From<BTreeMap<<T as subxt::Config>::Hash, ParachainHeaderProofs>>,
-	<T::ExtrinsicParams as ExtrinsicParams<T::Index, T::Hash>>::OtherParams:
+	<T::ExtrinsicParams as ExtrinsicParams<T::Index, T::Hash>>::Params:
 		From<BaseExtrinsicParamsBuilder<T, T::Tip>> + Send + Sync,
 	<T as subxt::Config>::Header: Decode + Send + Sync + Clone,
 	<T as subxt::Config>::AccountId: Send + Sync,
@@ -449,7 +449,7 @@ where
 	sp_core::H256: From<T::Hash>,
 	BTreeMap<H256, ParachainHeaderProofs>:
 		From<BTreeMap<<T as subxt::Config>::Hash, ParachainHeaderProofs>>,
-	<T::ExtrinsicParams as ExtrinsicParams<T::Index, T::Hash>>::OtherParams:
+	<T::ExtrinsicParams as ExtrinsicParams<T::Index, T::Hash>>::Params:
 		From<BaseExtrinsicParamsBuilder<T, T::Tip>> + Send + Sync,
 	<T as subxt::Config>::Header: Decode + Send + Sync + Clone,
 	<T as subxt::Config>::AccountId: Send + Sync,

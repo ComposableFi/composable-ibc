@@ -34,10 +34,10 @@ use ibc_proto::{
 };
 use ibc_runtime_api::IbcRuntimeApi;
 use jsonrpsee::{
-	core::{Error as RpcError, RpcResult as Result},
+	core::{Error as RpcError, RpcResult},
 	proc_macros::rpc,
 	tracing::log,
-	types::{error::CallError, ErrorObject},
+	types::ErrorObject,
 };
 use pallet_ibc::{
 	events::IbcEvent,
@@ -62,7 +62,7 @@ use ibc_proto::ibc::core::channel::v1::IdentifiedChannel;
 use pallet_ibc::errors::IbcError;
 
 /// Connection handshake proof
-#[derive(Serialize, Deserialize)]
+#[derive(Clone, Serialize, Deserialize)]
 pub struct ConnHandshakeProof {
 	/// Protobuf encoded client state
 	pub client_state: IdentifiedClientState,
@@ -101,7 +101,7 @@ impl<Hash: std::fmt::Debug> Display for BlockNumberOrHash<Hash> {
 }
 
 /// Proof for a set of keys
-#[derive(Serialize, Deserialize)]
+#[derive(Clone, Serialize, Deserialize)]
 pub struct Proof {
 	/// Trie proof
 	pub proof: Vec<u8>,
@@ -174,7 +174,7 @@ where
 		channel_id: String,
 		port_id: String,
 		seqs: Vec<u64>,
-	) -> Result<Vec<PacketInfo>>;
+	) -> RpcResult<Vec<PacketInfo>>;
 	/// Query Recv Packet
 	#[method(name = "ibc_queryRecvPackets")]
 	fn query_recv_packets(
@@ -182,7 +182,7 @@ where
 		channel_id: String,
 		port_id: String,
 		seqs: Vec<u64>,
-	) -> Result<Vec<PacketInfo>>;
+	) -> RpcResult<Vec<PacketInfo>>;
 
 	/// Query local time and height that a client was updated
 	#[method(name = "ibc_clientUpdateTimeAndHeight")]
@@ -191,20 +191,20 @@ where
 		client_id: String,
 		revision_number: u64,
 		revision_height: u64,
-	) -> Result<HeightAndTimestamp>;
+	) -> RpcResult<HeightAndTimestamp>;
 
 	/// Generate proof for given key
 	#[method(name = "ibc_queryProof")]
-	fn query_proof(&self, height: u32, keys: Vec<Vec<u8>>) -> Result<Proof>;
+	fn query_proof(&self, height: u32, keys: Vec<Vec<u8>>) -> RpcResult<Proof>;
 
 	/// Query latest height
 	#[method(name = "ibc_queryLatestHeight")]
-	fn query_latest_height(&self) -> Result<BlockNumber>;
+	fn query_latest_height(&self) -> RpcResult<BlockNumber>;
 
 	/// Query balance of an address on chain, addr should be a valid hexadecimal or SS58 string,
 	/// representing the account id.
 	#[method(name = "ibc_queryBalanceWithAddress")]
-	fn query_balance_with_address(&self, addr: String, asset_id: AssetId) -> Result<Coin>;
+	fn query_balance_with_address(&self, addr: String, asset_id: AssetId) -> RpcResult<Coin>;
 
 	/// Query a client state
 	#[method(name = "ibc_queryClientState")]
@@ -212,7 +212,7 @@ where
 		&self,
 		height: u32,
 		src_client_id: String,
-	) -> Result<QueryClientStateResponse>;
+	) -> RpcResult<QueryClientStateResponse>;
 
 	/// Query client consensus state
 	/// If the light client is a beefy light client, the revision height and revision number must be
@@ -228,19 +228,19 @@ where
 		revision_height: u64,
 		revision_number: u64,
 		latest_consensus_state: bool,
-	) -> Result<QueryConsensusStateResponse>;
+	) -> RpcResult<QueryConsensusStateResponse>;
 
 	/// Query upgraded client state
 	#[method(name = "ibc_queryUpgradedClient")]
-	fn query_upgraded_client(&self, height: u32) -> Result<QueryClientStateResponse>;
+	fn query_upgraded_client(&self, height: u32) -> RpcResult<QueryClientStateResponse>;
 
 	/// Query upgraded consensus state for client
 	#[method(name = "ibc_queryUpgradedConnectionState")]
-	fn query_upgraded_cons_state(&self, height: u32) -> Result<QueryConsensusStateResponse>;
+	fn query_upgraded_cons_state(&self, height: u32) -> RpcResult<QueryConsensusStateResponse>;
 
 	/// Query all client states
 	#[method(name = "ibc_queryClients")]
-	fn query_clients(&self) -> Result<Vec<IdentifiedClientState>>;
+	fn query_clients(&self) -> RpcResult<Vec<IdentifiedClientState>>;
 
 	/// Query a connection state
 	#[method(name = "ibc_queryConnection")]
@@ -248,11 +248,11 @@ where
 		&self,
 		height: u32,
 		connection_id: String,
-	) -> Result<QueryConnectionResponse>;
+	) -> RpcResult<QueryConnectionResponse>;
 
 	/// Query all connection states
 	#[method(name = "ibc_queryConnections")]
-	fn query_connections(&self) -> Result<QueryConnectionsResponse>;
+	fn query_connections(&self) -> RpcResult<QueryConnectionsResponse>;
 
 	/// Query all connection states for associated client
 	#[method(name = "ibc_queryConnectionUsingClient")]
@@ -260,7 +260,7 @@ where
 		&self,
 		height: u32,
 		client_id: String,
-	) -> Result<Vec<IdentifiedConnection>>;
+	) -> RpcResult<Vec<IdentifiedConnection>>;
 
 	/// Generate proof for connection handshake
 	#[method(name = "ibc_generateConnectionHandshakeProof")]
@@ -269,7 +269,7 @@ where
 		height: u32,
 		client_id: String,
 		conn_id: String,
-	) -> Result<ConnHandshakeProof>;
+	) -> RpcResult<ConnHandshakeProof>;
 
 	/// Query a channel state
 	#[method(name = "ibc_queryChannel")]
@@ -278,7 +278,7 @@ where
 		height: u32,
 		channel_id: String,
 		port_id: String,
-	) -> Result<QueryChannelResponse>;
+	) -> RpcResult<QueryChannelResponse>;
 
 	/// Query client state for channel and port id
 	#[method(name = "ibc_queryChannelClient")]
@@ -287,7 +287,7 @@ where
 		height: u32,
 		channel_id: String,
 		port_id: String,
-	) -> Result<IdentifiedClientState>;
+	) -> RpcResult<IdentifiedClientState>;
 
 	/// Query all channel states for associated connection
 	#[method(name = "ibc_queryConnectionChannels")]
@@ -295,11 +295,11 @@ where
 		&self,
 		height: u32,
 		connection_id: String,
-	) -> Result<QueryChannelsResponse>;
+	) -> RpcResult<QueryChannelsResponse>;
 
 	/// Query all channel states
 	#[method(name = "ibc_queryChannels")]
-	fn query_channels(&self) -> Result<QueryChannelsResponse>;
+	fn query_channels(&self) -> RpcResult<QueryChannelsResponse>;
 
 	/// Query packet commitments
 	#[method(name = "ibc_queryPacketCommitments")]
@@ -308,7 +308,7 @@ where
 		height: u32,
 		channel_id: String,
 		port_id: String,
-	) -> Result<QueryPacketCommitmentsResponse>;
+	) -> RpcResult<QueryPacketCommitmentsResponse>;
 
 	/// Query packet acknowledgements
 	#[method(name = "ibc_queryPacketAcknowledgements")]
@@ -317,7 +317,7 @@ where
 		height: u32,
 		channel_id: String,
 		port_id: String,
-	) -> Result<QueryPacketAcknowledgementsResponse>;
+	) -> RpcResult<QueryPacketAcknowledgementsResponse>;
 
 	/// Given a list of counterparty packet commitments, the querier checks if the packet
 	/// has already been received by checking if a receipt exists on this
@@ -337,7 +337,7 @@ where
 		channel_id: String,
 		port_id: String,
 		seqs: Vec<u64>,
-	) -> Result<Vec<u64>>;
+	) -> RpcResult<Vec<u64>>;
 
 	/// Given a list of counterparty packet acknowledgements, the querier checks if the ack
 	/// has already been received by checking if a packet commitment exists on this
@@ -357,7 +357,7 @@ where
 		channel_id: String,
 		port_id: String,
 		seqs: Vec<u64>,
-	) -> Result<Vec<u64>>;
+	) -> RpcResult<Vec<u64>>;
 
 	/// Query next sequence to be received on channel
 	#[method(name = "ibc_queryNextSeqRecv")]
@@ -366,7 +366,7 @@ where
 		height: u32,
 		channel_id: String,
 		port_id: String,
-	) -> Result<QueryNextSequenceReceiveResponse>;
+	) -> RpcResult<QueryNextSequenceReceiveResponse>;
 
 	/// Query packet commitment
 	#[method(name = "ibc_queryPacketCommitment")]
@@ -376,7 +376,7 @@ where
 		channel_id: String,
 		port_id: String,
 		seq: u64,
-	) -> Result<QueryPacketCommitmentResponse>;
+	) -> RpcResult<QueryPacketCommitmentResponse>;
 
 	/// Query packet acknowledgement
 	#[method(name = "ibc_queryPacketAcknowledgement")]
@@ -386,7 +386,7 @@ where
 		channel_id: String,
 		port_id: String,
 		seq: u64,
-	) -> Result<QueryPacketAcknowledgementResponse>;
+	) -> RpcResult<QueryPacketAcknowledgementResponse>;
 
 	/// Query packet receipt
 	#[method(name = "ibc_queryPacketReceipt")]
@@ -396,13 +396,13 @@ where
 		channel_id: String,
 		port_id: String,
 		seq: u64,
-	) -> Result<QueryPacketReceiptResponse>;
+	) -> RpcResult<QueryPacketReceiptResponse>;
 
 	/// Query the denom trace for an ibc denom from the asset Id
 	// In ibc-go this method accepts a string which is the hash of the ibc denom
 	// that is because ibc denoms are stored as hashes in ibc-go, but in our implementation here
 	#[method(name = "ibc_queryDenomTrace")]
-	fn query_denom_trace(&self, asset_id: AssetId) -> Result<QueryDenomTraceResponse>;
+	fn query_denom_trace(&self, asset_id: AssetId) -> RpcResult<QueryDenomTraceResponse>;
 
 	/// Query the denom traces for ibc denoms
 	/// key is the asset id from which to start paginating results
@@ -416,7 +416,7 @@ where
 		offset: Option<u32>,
 		limit: Option<u64>,
 		count_total: bool,
-	) -> Result<QueryDenomTracesResponse>;
+	) -> RpcResult<QueryDenomTracesResponse>;
 
 	/// Query newly created client in block and extrinsic
 	#[method(name = "ibc_queryNewlyCreatedClient")]
@@ -424,7 +424,7 @@ where
 		&self,
 		block_hash: Hash,
 		ext_hash: Hash,
-	) -> Result<IdentifiedClientState>;
+	) -> RpcResult<IdentifiedClientState>;
 
 	/// Query newly created connection in block and extrinsic
 	#[method(name = "ibc_queryNewlyCreatedConnection")]
@@ -432,7 +432,7 @@ where
 		&self,
 		block_hash: Hash,
 		ext_hash: Hash,
-	) -> Result<IdentifiedConnection>;
+	) -> RpcResult<IdentifiedConnection>;
 
 	/// Query newly created channel in block and extrinsic
 	#[method(name = "ibc_queryNewlyCreatedChannel")]
@@ -440,7 +440,7 @@ where
 		&self,
 		block_hash: Hash,
 		ext_hash: Hash,
-	) -> Result<IdentifiedChannel>;
+	) -> RpcResult<IdentifiedChannel>;
 
 	/// Query Ibc Events that were deposited in a series of blocks
 	/// Using String keys because HashMap fails to deserialize when key is not a String
@@ -448,16 +448,16 @@ where
 	fn query_events(
 		&self,
 		block_numbers: Vec<BlockNumberOrHash<Hash>>,
-	) -> Result<HashMap<String, Vec<RawIbcEvent>>>;
+	) -> RpcResult<HashMap<String, Vec<RawIbcEvent>>>;
 }
 
 /// Converts a runtime trap into an RPC error.
-fn runtime_error_into_rpc_error(e: impl std::fmt::Display) -> RpcError {
-	RpcError::Call(CallError::Custom(ErrorObject::owned(
+fn runtime_error_into_rpc_error(e: impl std::fmt::Display) -> ErrorObject<'static> {
+	ErrorObject::owned(
 		9876, // no real reason for this value
 		"Something wrong",
 		Some(format!("{e}")),
-	)))
+	)
 }
 
 /// An implementation of IBC specific RPC methods.
@@ -495,7 +495,7 @@ where
 		channel_id: String,
 		port_id: String,
 		seqs: Vec<u64>,
-	) -> Result<Vec<PacketInfo>> {
+	) -> RpcResult<Vec<PacketInfo>> {
 		let api = self.client.runtime_api();
 		let packets: Vec<ibc_primitives::PacketInfo> = api
 			.query_send_packet_info(
@@ -552,7 +552,7 @@ where
 		channel_id: String,
 		port_id: String,
 		seqs: Vec<u64>,
-	) -> Result<Vec<PacketInfo>> {
+	) -> RpcResult<Vec<PacketInfo>> {
 		let api = self.client.runtime_api();
 		let at = self.client.info().best_hash;
 		let packets: Vec<ibc_primitives::PacketInfo> = api
@@ -610,7 +610,7 @@ where
 		client_id: String,
 		revision_number: u64,
 		revision_height: u64,
-	) -> Result<HeightAndTimestamp> {
+	) -> RpcResult<HeightAndTimestamp> {
 		let api = self.client.runtime_api();
 		let at = self.client.info().best_hash;
 		let para_id = api
@@ -634,14 +634,14 @@ where
 		})
 	}
 
-	fn query_proof(&self, height: u32, mut keys: Vec<Vec<u8>>) -> Result<Proof> {
+	fn query_proof(&self, height: u32, mut keys: Vec<Vec<u8>>) -> RpcResult<Proof> {
 		let api = self.client.runtime_api();
 		let at = BlockId::Number(height.into());
 		let hash_at = self
 			.client
 			.block_hash_from_id(&at)
-			.map_err(|_| RpcError::Custom("Unknown block".into()))?
-			.ok_or_else(|| RpcError::Custom("Unknown block".into()))?;
+			.map_err(|_| runtime_error_into_rpc_error("Unknown Block"))?
+			.ok_or_else(|| runtime_error_into_rpc_error("Unknown Block"))?;
 		let para_id = api
 			.para_id(hash_at)
 			.map_err(|_| runtime_error_into_rpc_error("Error getting para id"))?;
@@ -662,7 +662,7 @@ where
 		})
 	}
 
-	fn query_latest_height(&self) -> Result<<<Block as BlockT>::Header as HeaderT>::Number> {
+	fn query_latest_height(&self) -> RpcResult<<<Block as BlockT>::Header as HeaderT>::Number> {
 		if let Ok(Some(height)) = self.client.number(self.client.info().best_hash) {
 			Ok(height)
 		} else {
@@ -670,7 +670,7 @@ where
 		}
 	}
 
-	fn query_balance_with_address(&self, addr: String, asset_id: AssetId) -> Result<Coin> {
+	fn query_balance_with_address(&self, addr: String, asset_id: AssetId) -> RpcResult<Coin> {
 		let api = self.client.runtime_api();
 		let at = self.client.info().best_hash;
 		let denom = String::from_utf8(
@@ -697,15 +697,15 @@ where
 		&self,
 		height: u32,
 		client_id: String,
-	) -> Result<QueryClientStateResponse> {
+	) -> RpcResult<QueryClientStateResponse> {
 		let api = self.client.runtime_api();
 
 		let at = BlockId::Number(height.into());
 		let hash_at = self
 			.client
 			.block_hash_from_id(&at)
-			.map_err(|_| RpcError::Custom("Unknown block".into()))?
-			.ok_or_else(|| RpcError::Custom("Unknown block".into()))?;
+			.map_err(|_| runtime_error_into_rpc_error("Unknown Block"))?
+			.ok_or_else(|| runtime_error_into_rpc_error("Unknown Block"))?;
 		let para_id = api
 			.para_id(hash_at)
 			.map_err(|_| runtime_error_into_rpc_error("Error getting para id"))?;
@@ -746,7 +746,7 @@ where
 		revision_height: u64,
 		revision_number: u64,
 		latest_cs: bool,
-	) -> Result<QueryConsensusStateResponse> {
+	) -> RpcResult<QueryConsensusStateResponse> {
 		let api = self.client.runtime_api();
 		let at = if let Some(height) = height {
 			BlockId::Number(height.into())
@@ -756,8 +756,8 @@ where
 		let hash_at = self
 			.client
 			.block_hash_from_id(&at)
-			.map_err(|_| RpcError::Custom("Unknown block".into()))?
-			.ok_or_else(|| RpcError::Custom("Unknown block".into()))?;
+			.map_err(|_| runtime_error_into_rpc_error("Unknown Block"))?
+			.ok_or_else(|| runtime_error_into_rpc_error("Unknown Block"))?;
 		let para_id = api
 			.para_id(hash_at)
 			.map_err(|_| runtime_error_into_rpc_error("Error getting para id"))?;
@@ -796,15 +796,15 @@ where
 		})
 	}
 	// TODO: Unimplemented
-	fn query_upgraded_client(&self, _height: u32) -> Result<QueryClientStateResponse> {
+	fn query_upgraded_client(&self, _height: u32) -> RpcResult<QueryClientStateResponse> {
 		Err(runtime_error_into_rpc_error("Unimplemented"))
 	}
 
-	fn query_upgraded_cons_state(&self, _height: u32) -> Result<QueryConsensusStateResponse> {
+	fn query_upgraded_cons_state(&self, _height: u32) -> RpcResult<QueryConsensusStateResponse> {
 		Err(runtime_error_into_rpc_error("Unimplemented"))
 	}
 
-	fn query_clients(&self) -> Result<Vec<IdentifiedClientState>> {
+	fn query_clients(&self) -> RpcResult<Vec<IdentifiedClientState>> {
 		let api = self.client.runtime_api();
 
 		let client_states: Option<Vec<(Vec<u8>, Vec<u8>)>> =
@@ -832,15 +832,15 @@ where
 		&self,
 		height: u32,
 		connection_id: String,
-	) -> Result<QueryConnectionResponse> {
+	) -> RpcResult<QueryConnectionResponse> {
 		let api = self.client.runtime_api();
 
 		let at = BlockId::Number(height.into());
 		let hash_at = self
 			.client
 			.block_hash_from_id(&at)
-			.map_err(|_| RpcError::Custom("Unknown block".into()))?
-			.ok_or_else(|| RpcError::Custom("Unknown block".into()))?;
+			.map_err(|_| runtime_error_into_rpc_error("Unknown Block"))?
+			.ok_or_else(|| runtime_error_into_rpc_error("Unknown Block"))?;
 		let para_id = api
 			.para_id(hash_at)
 			.map_err(|_| runtime_error_into_rpc_error("Error getting para id"))?;
@@ -874,15 +874,15 @@ where
 		})
 	}
 
-	fn query_connections(&self) -> Result<QueryConnectionsResponse> {
+	fn query_connections(&self) -> RpcResult<QueryConnectionsResponse> {
 		let api = self.client.runtime_api();
 
 		let at = BlockId::Hash(self.client.info().best_hash);
 		let hash_at = self
 			.client
 			.block_hash_from_id(&at)
-			.map_err(|_| RpcError::Custom("Unknown block".into()))?
-			.ok_or_else(|| RpcError::Custom("Unknown block".into()))?;
+			.map_err(|_| runtime_error_into_rpc_error("Unknown Block"))?
+			.ok_or_else(|| runtime_error_into_rpc_error("Unknown Block"))?;
 		let result: ibc_primitives::QueryConnectionsResponse = api
 			.connections(hash_at)
 			.ok()
@@ -911,7 +911,7 @@ where
 				let identified_connection: IdentifiedConnection = identified_connection.into();
 				Ok(identified_connection)
 			})
-			.collect::<Result<Vec<_>>>()?;
+			.collect::<RpcResult<Vec<_>>>()?;
 		Ok(QueryConnectionsResponse {
 			connections,
 			pagination: None,
@@ -926,15 +926,15 @@ where
 		&self,
 		height: u32,
 		client_id: String,
-	) -> Result<Vec<IdentifiedConnection>> {
+	) -> RpcResult<Vec<IdentifiedConnection>> {
 		let api = self.client.runtime_api();
 
 		let at = BlockId::Number(height.into());
 		let hash_at = self
 			.client
 			.block_hash_from_id(&at)
-			.map_err(|_| RpcError::Custom("Unknown block".into()))?
-			.ok_or_else(|| RpcError::Custom("Unknown block".into()))?;
+			.map_err(|_| runtime_error_into_rpc_error("Unknown Block"))?
+			.ok_or_else(|| runtime_error_into_rpc_error("Unknown Block"))?;
 		let result: Vec<ibc_primitives::IdentifiedConnection> = api
 			.connection_using_client(hash_at, client_id.as_bytes().to_vec())
 			.ok()
@@ -957,7 +957,7 @@ where
 				let identified_connection: IdentifiedConnection = identified_connection.into();
 				Ok(identified_connection)
 			})
-			.collect::<Result<Vec<_>>>()
+			.collect::<RpcResult<Vec<_>>>()
 	}
 
 	fn generate_conn_handshake_proof(
@@ -965,15 +965,15 @@ where
 		height: u32,
 		client_id: String,
 		conn_id: String,
-	) -> Result<ConnHandshakeProof> {
+	) -> RpcResult<ConnHandshakeProof> {
 		let api = self.client.runtime_api();
 
 		let at = BlockId::Number(height.into());
 		let hash_at = self
 			.client
 			.block_hash_from_id(&at)
-			.map_err(|_| RpcError::Custom("Unknown block".into()))?
-			.ok_or_else(|| RpcError::Custom("Unknown block".into()))?;
+			.map_err(|_| runtime_error_into_rpc_error("Unknown Block"))?
+			.ok_or_else(|| runtime_error_into_rpc_error("Unknown Block"))?;
 		let para_id = api
 			.para_id(hash_at)
 			.map_err(|_| runtime_error_into_rpc_error("Error getting para id"))?;
@@ -1022,15 +1022,15 @@ where
 		height: u32,
 		channel_id: String,
 		port_id: String,
-	) -> Result<QueryChannelResponse> {
+	) -> RpcResult<QueryChannelResponse> {
 		let api = self.client.runtime_api();
 
 		let at = BlockId::Number(height.into());
 		let hash_at = self
 			.client
 			.block_hash_from_id(&at)
-			.map_err(|_| RpcError::Custom("Unknown block".into()))?
-			.ok_or_else(|| RpcError::Custom("Unknown block".into()))?;
+			.map_err(|_| runtime_error_into_rpc_error("Unknown Block"))?
+			.ok_or_else(|| runtime_error_into_rpc_error("Unknown Block"))?;
 		let para_id = api
 			.para_id(hash_at)
 			.map_err(|_| runtime_error_into_rpc_error("Error getting para id"))?;
@@ -1068,15 +1068,15 @@ where
 		height: u32,
 		channel_id: String,
 		port_id: String,
-	) -> Result<IdentifiedClientState> {
+	) -> RpcResult<IdentifiedClientState> {
 		let api = self.client.runtime_api();
 
 		let at = BlockId::Number(height.into());
 		let hash_at = self
 			.client
 			.block_hash_from_id(&at)
-			.map_err(|_| RpcError::Custom("Unknown block".into()))?
-			.ok_or_else(|| RpcError::Custom("Unknown block".into()))?;
+			.map_err(|_| runtime_error_into_rpc_error("Unknown Block"))?
+			.ok_or_else(|| runtime_error_into_rpc_error("Unknown Block"))?;
 		let result: ibc_primitives::IdentifiedClientState = api
 			.channel_client(hash_at, channel_id.as_bytes().to_vec(), port_id.as_bytes().to_vec())
 			.ok()
@@ -1096,15 +1096,15 @@ where
 		&self,
 		height: u32,
 		connection_id: String,
-	) -> Result<QueryChannelsResponse> {
+	) -> RpcResult<QueryChannelsResponse> {
 		let api = self.client.runtime_api();
 
 		let at = BlockId::Number(height.into());
 		let hash_at = self
 			.client
 			.block_hash_from_id(&at)
-			.map_err(|_| RpcError::Custom("Unknown block".into()))?
-			.ok_or_else(|| RpcError::Custom("Unknown block".into()))?;
+			.map_err(|_| runtime_error_into_rpc_error("Unknown Block"))?
+			.ok_or_else(|| runtime_error_into_rpc_error("Unknown Block"))?;
 		let para_id = api
 			.para_id(hash_at)
 			.map_err(|_| runtime_error_into_rpc_error("Error getting para id"))?;
@@ -1137,7 +1137,7 @@ where
 					identified_channel.into();
 				Ok(identified_channel)
 			})
-			.collect::<Result<Vec<_>>>()?;
+			.collect::<RpcResult<Vec<_>>>()?;
 
 		Ok(QueryChannelsResponse {
 			channels,
@@ -1149,14 +1149,14 @@ where
 		})
 	}
 
-	fn query_channels(&self) -> Result<QueryChannelsResponse> {
+	fn query_channels(&self) -> RpcResult<QueryChannelsResponse> {
 		let api = self.client.runtime_api();
 		let at = BlockId::Hash(self.client.info().best_hash);
 		let hash_at = self
 			.client
 			.block_hash_from_id(&at)
-			.map_err(|_| RpcError::Custom("Unknown block".into()))?
-			.ok_or_else(|| RpcError::Custom("Unknown block".into()))?;
+			.map_err(|_| runtime_error_into_rpc_error("Unknown Block"))?
+			.ok_or_else(|| runtime_error_into_rpc_error("Unknown Block"))?;
 		let para_id = api
 			.para_id(hash_at)
 			.map_err(|_| runtime_error_into_rpc_error("Error getting para id"))?;
@@ -1187,7 +1187,7 @@ where
 					identified_channel.into();
 				Ok(identified_channel)
 			})
-			.collect::<Result<Vec<_>>>()?;
+			.collect::<RpcResult<Vec<_>>>()?;
 
 		Ok(QueryChannelsResponse {
 			channels,
@@ -1204,15 +1204,15 @@ where
 		height: u32,
 		channel_id: String,
 		port_id: String,
-	) -> Result<QueryPacketCommitmentsResponse> {
+	) -> RpcResult<QueryPacketCommitmentsResponse> {
 		let api = self.client.runtime_api();
 
 		let at = BlockId::Number(height.into());
 		let hash_at = self
 			.client
 			.block_hash_from_id(&at)
-			.map_err(|_| RpcError::Custom("Unknown block".into()))?
-			.ok_or_else(|| RpcError::Custom("Unknown block".into()))?;
+			.map_err(|_| runtime_error_into_rpc_error("Unknown Block"))?
+			.ok_or_else(|| runtime_error_into_rpc_error("Unknown Block"))?;
 		let para_id = api
 			.para_id(hash_at)
 			.map_err(|_| runtime_error_into_rpc_error("Error getting para id"))?;
@@ -1240,7 +1240,7 @@ where
 					data: packet_state.data,
 				})
 			})
-			.collect::<Result<Vec<_>>>()?;
+			.collect::<RpcResult<Vec<_>>>()?;
 		Ok(QueryPacketCommitmentsResponse {
 			commitments,
 			pagination: None,
@@ -1256,15 +1256,15 @@ where
 		height: u32,
 		channel_id: String,
 		port_id: String,
-	) -> Result<QueryPacketAcknowledgementsResponse> {
+	) -> RpcResult<QueryPacketAcknowledgementsResponse> {
 		let api = self.client.runtime_api();
 
 		let at = BlockId::Number(height.into());
 		let hash_at = self
 			.client
 			.block_hash_from_id(&at)
-			.map_err(|_| RpcError::Custom("Unknown block".into()))?
-			.ok_or_else(|| RpcError::Custom("Unknown block".into()))?;
+			.map_err(|_| runtime_error_into_rpc_error("Unknown Block"))?
+			.ok_or_else(|| runtime_error_into_rpc_error("Unknown Block"))?;
 
 		let para_id = api
 			.para_id(hash_at)
@@ -1293,7 +1293,7 @@ where
 					data: packet_state.data,
 				})
 			})
-			.collect::<Result<Vec<_>>>()?;
+			.collect::<RpcResult<Vec<_>>>()?;
 		Ok(QueryPacketAcknowledgementsResponse {
 			acknowledgements,
 			pagination: None,
@@ -1310,14 +1310,14 @@ where
 		channel_id: String,
 		port_id: String,
 		seqs: Vec<u64>,
-	) -> Result<Vec<u64>> {
+	) -> RpcResult<Vec<u64>> {
 		let api = self.client.runtime_api();
 		let at = BlockId::Number(height.into());
 		let hash_at = self
 			.client
 			.block_hash_from_id(&at)
-			.map_err(|_| RpcError::Custom("Unknown block".into()))?
-			.ok_or_else(|| RpcError::Custom("Unknown block".into()))?;
+			.map_err(|_| runtime_error_into_rpc_error("Unknown Block"))?
+			.ok_or_else(|| runtime_error_into_rpc_error("Unknown Block"))?;
 
 		api.unreceived_packets(
 			hash_at,
@@ -1336,14 +1336,14 @@ where
 		channel_id: String,
 		port_id: String,
 		seqs: Vec<u64>,
-	) -> Result<Vec<u64>> {
+	) -> RpcResult<Vec<u64>> {
 		let api = self.client.runtime_api();
 		let at = BlockId::Number(height.into());
 		let hash_at = self
 			.client
 			.block_hash_from_id(&at)
-			.map_err(|_| RpcError::Custom("Unknown block".into()))?
-			.ok_or_else(|| RpcError::Custom("Unknown block".into()))?;
+			.map_err(|_| runtime_error_into_rpc_error("Unknown Block"))?
+			.ok_or_else(|| runtime_error_into_rpc_error("Unknown Block"))?;
 
 		api.unreceived_acknowledgements(
 			hash_at,
@@ -1361,15 +1361,15 @@ where
 		height: u32,
 		channel_id: String,
 		port_id: String,
-	) -> Result<QueryNextSequenceReceiveResponse> {
+	) -> RpcResult<QueryNextSequenceReceiveResponse> {
 		let api = self.client.runtime_api();
 
 		let at = BlockId::Number(height.into());
 		let hash_at = self
 			.client
 			.block_hash_from_id(&at)
-			.map_err(|_| RpcError::Custom("Unknown block".into()))?
-			.ok_or_else(|| RpcError::Custom("Unknown block".into()))?;
+			.map_err(|_| runtime_error_into_rpc_error("Unknown Block"))?
+			.ok_or_else(|| runtime_error_into_rpc_error("Unknown Block"))?;
 		let para_id = api
 			.para_id(hash_at)
 			.map_err(|_| runtime_error_into_rpc_error("Error getting para id"))?;
@@ -1406,15 +1406,15 @@ where
 		channel_id: String,
 		port_id: String,
 		seq: u64,
-	) -> Result<QueryPacketCommitmentResponse> {
+	) -> RpcResult<QueryPacketCommitmentResponse> {
 		let api = self.client.runtime_api();
 
 		let at = BlockId::Number(height.into());
 		let hash_at = self
 			.client
 			.block_hash_from_id(&at)
-			.map_err(|_| RpcError::Custom("Unknown block".into()))?
-			.ok_or_else(|| RpcError::Custom("Unknown block".into()))?;
+			.map_err(|_| runtime_error_into_rpc_error("Unknown Block"))?
+			.ok_or_else(|| runtime_error_into_rpc_error("Unknown Block"))?;
 		let para_id = api
 			.para_id(hash_at)
 			.map_err(|_| runtime_error_into_rpc_error("Error getting para id"))?;
@@ -1456,15 +1456,15 @@ where
 		channel_id: String,
 		port_id: String,
 		seq: u64,
-	) -> Result<QueryPacketAcknowledgementResponse> {
+	) -> RpcResult<QueryPacketAcknowledgementResponse> {
 		let api = self.client.runtime_api();
 
 		let at = BlockId::Number(height.into());
 		let hash_at = self
 			.client
 			.block_hash_from_id(&at)
-			.map_err(|_| RpcError::Custom("Unknown block".into()))?
-			.ok_or_else(|| RpcError::Custom("Unknown block".into()))?;
+			.map_err(|_| runtime_error_into_rpc_error("Unknown Block"))?
+			.ok_or_else(|| runtime_error_into_rpc_error("Unknown Block"))?;
 		let para_id = api
 			.para_id(hash_at)
 			.map_err(|_| runtime_error_into_rpc_error("Error getting para id"))?;
@@ -1506,15 +1506,15 @@ where
 		channel_id: String,
 		port_id: String,
 		seq: u64,
-	) -> Result<QueryPacketReceiptResponse> {
+	) -> RpcResult<QueryPacketReceiptResponse> {
 		let api = self.client.runtime_api();
 
 		let at = BlockId::Number(height.into());
 		let hash_at = self
 			.client
 			.block_hash_from_id(&at)
-			.map_err(|_| RpcError::Custom("Unknown block".into()))?
-			.ok_or_else(|| RpcError::Custom("Unknown block".into()))?;
+			.map_err(|_| runtime_error_into_rpc_error("Unknown Block"))?
+			.ok_or_else(|| runtime_error_into_rpc_error("Unknown Block"))?;
 		let para_id = api
 			.para_id(hash_at)
 			.map_err(|_| runtime_error_into_rpc_error("Error getting para id"))?;
@@ -1550,7 +1550,7 @@ where
 		})
 	}
 
-	fn query_denom_trace(&self, asset_id: AssetId) -> Result<QueryDenomTraceResponse> {
+	fn query_denom_trace(&self, asset_id: AssetId) -> RpcResult<QueryDenomTraceResponse> {
 		let api = self.client.runtime_api();
 		let block_hash = self.client.info().best_hash;
 
@@ -1588,7 +1588,7 @@ where
 		offset: Option<u32>,
 		limit: Option<u64>,
 		count_total: bool,
-	) -> Result<QueryDenomTracesResponse> {
+	) -> RpcResult<QueryDenomTracesResponse> {
 		let api = self.client.runtime_api();
 		let block_hash = self.client.info().best_hash;
 
@@ -1625,7 +1625,7 @@ where
 					})?;
 				Ok(denom_trace)
 			})
-			.collect::<Result<Vec<_>>>()?;
+			.collect::<RpcResult<Vec<_>>>()?;
 
 		Ok(QueryDenomTracesResponse {
 			denom_traces,
@@ -1640,7 +1640,7 @@ where
 		&self,
 		block_hash: Block::Hash,
 		ext_hash: Block::Hash,
-	) -> Result<IdentifiedClientState> {
+	) -> RpcResult<IdentifiedClientState> {
 		let (block, event) = self.ibc_event_by_tx_id(block_hash, ext_hash)?;
 		let api = self.client.runtime_api();
 
@@ -1670,7 +1670,7 @@ where
 		&self,
 		block_hash: Block::Hash,
 		ext_hash: Block::Hash,
-	) -> Result<IdentifiedConnection> {
+	) -> RpcResult<IdentifiedConnection> {
 		let (block, event) = self.ibc_event_by_tx_id(block_hash, ext_hash)?;
 
 		match event {
@@ -1704,7 +1704,7 @@ where
 		&self,
 		block_hash: Block::Hash,
 		ext_hash: Block::Hash,
-	) -> Result<IdentifiedChannel> {
+	) -> RpcResult<IdentifiedChannel> {
 		let (block, event) = self.ibc_event_by_tx_id(block_hash, ext_hash)?;
 
 		match event {
@@ -1739,7 +1739,7 @@ where
 	fn query_events(
 		&self,
 		block_numbers: Vec<BlockNumberOrHash<Block::Hash>>,
-	) -> Result<HashMap<String, Vec<RawIbcEvent>>> {
+	) -> RpcResult<HashMap<String, Vec<RawIbcEvent>>> {
 		let api = self.client.runtime_api();
 		let mut events = HashMap::new();
 		for block_number_or_hash in block_numbers {
@@ -1750,8 +1750,8 @@ where
 			let hash_at = self
 				.client
 				.block_hash_from_id(&at)
-				.map_err(|_| RpcError::Custom("Unknown block".into()))?
-				.ok_or_else(|| RpcError::Custom("Unknown block".into()))?;
+				.map_err(|_| runtime_error_into_rpc_error("Unknown Block"))?
+				.ok_or_else(|| runtime_error_into_rpc_error("Unknown Block"))?;
 
 			let temp = api.block_events(hash_at, None).map_err(|_| {
 				runtime_error_into_rpc_error("[ibc_rpc]: failed to read block events")
@@ -1785,7 +1785,7 @@ where
 		&self,
 		block_hash: <Block as BlockT>::Hash,
 		ext_hash: <Block as BlockT>::Hash,
-	) -> Result<(SignedBlock<Block>, core::result::Result<IbcEvent, IbcError>)> {
+	) -> RpcResult<(SignedBlock<Block>, core::result::Result<IbcEvent, IbcError>)> {
 		let api = self.client.runtime_api();
 		let block = self.client.block(block_hash).ok().flatten().ok_or_else(|| {
 			runtime_error_into_rpc_error("[ibc_rpc]: failed to find block with provided hash")

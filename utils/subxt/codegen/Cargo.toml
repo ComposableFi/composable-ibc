@@ -18,7 +18,7 @@ subxt-codegen = { git = "https://github.com/paritytech/subxt", tag = "v0.29.0" }
 subxt-metadata = { git = "https://github.com/paritytech/subxt", tag = "v0.29.0" }
 jsonrpsee = { workspace = true , features = [
     "async-client",
-    "client-ws-transport",
+    "client-ws-transport-no-tls",
     "http-client",
 ] }
 frame-metadata = { version = "15.0.0", features = ["v14", "std"] }

@@ -21,7 +21,10 @@ use sp_core::keccak_256;
 use sp_runtime::traits::BlakeTwo256;
 use sp_trie::{generate_trie_proof, TrieDBMutBuilder, TrieMut};
 use std::{collections::BTreeMap, sync::Arc};
-use subxt::{Config, OnlineClient};
+use subxt::{
+	backend::{legacy::LegacyRpcMethods, rpc::RpcClient},
+	Config, OnlineClient,
+};
 
 /// Holds the timestamp inherent alongside a merkle-patricia trie proof of its existence in a given
 /// block.
@@ -56,10 +59,11 @@ pub struct ParaHeadsProof {
 
 /// Fetch timestamp extrinsic and it's proof
 pub async fn fetch_timestamp_extrinsic_with_proof<T: Config>(
-	client: &OnlineClient<T>,
+	client: &RpcClient,
 	block_hash: Option<T::Hash>,
 ) -> Result<TimeStampExtWithProof, Error> {
-	let block = client.rpc().block(block_hash).await?.ok_or_else(|| {
+	let legacy_rpc_methods = LegacyRpcMethods::<T>::new(client.clone());
+	let block = legacy_rpc_methods.chain_get_block(block_hash).await?.ok_or_else(|| {
 		Error::Custom(format!(
 			"[get_parachain_headers] Block with hash :{:?} not found",
 			block_hash

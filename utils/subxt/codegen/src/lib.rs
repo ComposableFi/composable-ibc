@@ -15,7 +15,7 @@
 use anyhow::anyhow;
 use jsonrpsee::{
 	async_client::ClientBuilder,
-	client_transport::ws::{Uri, WsTransportClientBuilder},
+	client_transport::ws::{Url, WsTransportClientBuilder},
 	core::{client::ClientT, Error},
 	rpc_params,
 };
@@ -27,12 +27,12 @@ use subxt_metadata::Metadata;
 
 pub async fn fetch_metadata_ws(url: &str) -> anyhow::Result<Vec<u8>> {
 	let (sender, receiver) = WsTransportClientBuilder::default()
-		.build(url.parse::<Uri>().unwrap())
+		.build(url.parse::<Url>().unwrap())
 		.await
 		.map_err(|e| Error::Transport(e.into()))?;
 
 	let client = ClientBuilder::default()
-		.max_notifs_per_subscription(4096)
+		.max_buffer_capacity_per_subscription(4096)
 		.build_with_tokio(sender, receiver);
 
 	let metadata: String = client.request("state_getMetadata", rpc_params![]).await?;

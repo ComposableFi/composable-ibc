@@ -41,7 +41,14 @@ use std::{
 	},
 	time::Duration,
 };
-use subxt::{config::Header, rpc::types::StorageChangeSet, Config, OnlineClient};
+use subxt::{
+	backend::{
+		legacy::{rpc_methods::StorageChangeSet, LegacyRpcMethods},
+		rpc::RpcClient,
+	},
+	config::Header,
+	Config, OnlineClient,
+};
 use tokio::{task::JoinSet, time::sleep};
 
 /// The maximum number of authority set changes to request at once
@@ -58,10 +65,14 @@ pub struct GrandpaProver<T: Config> {
 	pub relay_client: OnlineClient<T>,
 	/// Relay chain jsonrpsee client for typed rpc requests, which subxt lacks support for.
 	pub relay_ws_client: Arc<Client>,
+	/// Relay chain rpc client
+	pub relay_rpc_client: RpcClient,
 	/// Subxt client for the parachain
 	pub para_client: OnlineClient<T>,
 	/// Parachain jsonrpsee client for typed rpc requests, which subxt lacks support for.
 	pub para_ws_client: Arc<Client>,
+	/// Parachain rpc client
+	pub para_rpc_client: RpcClient,
 	/// ParaId of the associated parachain
 	pub para_id: u32,
 	/// Delay between rpc calls to the RPC
@@ -93,8 +104,10 @@ impl<T: Config> Clone for GrandpaProver<T> {
 	fn clone(&self) -> Self {
 		Self {
 			relay_client: self.relay_client.clone(),
+			relay_rpc_client: self.relay_rpc_client.clone(),
 			relay_ws_client: self.relay_ws_client.clone(),
 			para_client: self.para_client.clone(),
+			para_rpc_client: self.para_rpc_client.clone(),
 			para_ws_client: self.para_ws_client.clone(),
 			para_id: self.para_id,
 			rpc_call_delay: self.rpc_call_delay,
@@ -117,14 +130,19 @@ where
 		rpc_call_delay: Duration,
 	) -> Result<Self, anyhow::Error> {
 		let relay_ws_client = Arc::new(WsClientBuilder::default().build(relay_ws_url).await?);
-		let relay_client = OnlineClient::<T>::from_rpc_client(relay_ws_client.clone()).await?;
+		let relay_rpc_client = RpcClient::from_url(relay_ws_url).await?;
+		let relay_client =
+			OnlineClient::<T>::from_rpc_client(relay_rpc_client.to_owned().clone()).await?;
 		let para_ws_client = Arc::new(WsClientBuilder::default().build(para_ws_url).await?);
-		let para_client = OnlineClient::<T>::from_rpc_client(para_ws_client.clone()).await?;
+		let para_rpc_client = RpcClient::from_url(para_ws_url).await?;
+		let para_client = OnlineClient::<T>::from_rpc_client(para_rpc_client.clone()).await?;
 
 		Ok(Self {
 			relay_ws_client,
+			relay_rpc_client,
 			relay_client,
 			para_ws_client,
+			para_rpc_client,
 			para_client,
 			para_id,
 			rpc_call_delay,
@@ -137,12 +155,13 @@ where
 		<T as subxt::Config>::Header: Decode,
 	{
 		use sp_consensus_grandpa::AuthorityList;
-		let latest_relay_hash = self.relay_client.rpc().finalized_head().await.unwrap();
+		let latest_relay_hash = LegacyRpcMethods::<T>::new(self.relay_rpc_client.clone())
+			.chain_get_finalized_head()
+			.await
+			.unwrap();
 		log::debug!(target: "hyperspace", "Latest relay hash: {:?}", latest_relay_hash);
-		let header = self
-			.relay_client
-			.rpc()
-			.header(Some(latest_relay_hash))
+		let header = LegacyRpcMethods::<T>::new(self.relay_rpc_client.clone())
+			.chain_get_header(Some(latest_relay_hash))
 			.await
 			.unwrap()
 			.ok_or_else(|| anyhow!("Header not found for hash: {latest_relay_hash:?}"))
@@ -161,8 +180,7 @@ where
 
 		let current_authorities = {
 			let bytes = self
-				.relay_client
-				.rpc()
+				.relay_rpc_client
 				.request::<String>(
 					"state_call",
 					subxt::rpc_params!(
@@ -210,10 +228,8 @@ where
 	where
 		<T as subxt::Config>::Header: Decode,
 	{
-		let latest_finalized_hash = self
-			.relay_client
-			.rpc()
-			.block_hash(Some(latest_finalized_height.into()))
+		let latest_finalized_hash = LegacyRpcMethods::<T>::new(self.relay_rpc_client.clone())
+			.chain_get_block_hash(Some(latest_finalized_height.into()))
 			.await?
 			.ok_or_else(|| anyhow!("Block hash not found for number: {latest_finalized_height}"))?;
 		let key = T::Storage::paras_heads(self.para_id);
@@ -282,17 +298,13 @@ where
 			finality_proof
 		};
 
-		let start = self
-			.relay_client
-			.rpc()
-			.block_hash(Some(previous_finalized_height.into()))
+		let start = LegacyRpcMethods::<T>::new(self.relay_rpc_client.clone())
+			.chain_get_block_hash(Some(previous_finalized_height.into()))
 			.await?
 			.ok_or_else(|| anyhow!("Failed to fetch previous finalized hash + 1"))?;
 
-		let latest_finalized_hash = self
-			.relay_client
-			.rpc()
-			.block_hash(Some(latest_finalized_height.into()))
+		let latest_finalized_hash = LegacyRpcMethods::<T>::new(self.relay_rpc_client.clone())
+			.chain_get_block_hash(Some(latest_finalized_height.into()))
 			.await?
 			.ok_or_else(|| anyhow!("Failed to fetch previous finalized hash + 1"))?;
 
@@ -308,17 +320,13 @@ where
 				let duration = Duration::from_millis(rand::thread_rng().gen_range(1..to) as u64);
 				unknown_headers_join_set.spawn(async move {
 					sleep(duration).await;
-					let hash = prover
-						.relay_client
-						.rpc()
-						.block_hash(Some(height.into()))
+					let hash = LegacyRpcMethods::<T>::new(prover.relay_rpc_client.clone())
+						.chain_get_block_hash(Some(height.into()))
 						.await?
 						.ok_or_else(|| anyhow!("Failed to fetch block has for height {height}"))?;
 
-					let header = prover
-						.relay_client
-						.rpc()
-						.header(Some(hash))
+					let header = LegacyRpcMethods::<T>::new(prover.relay_rpc_client.clone())
+						.chain_get_header(Some(hash))
 						.await?
 						.ok_or_else(|| anyhow!("Header with hash: {hash:?} not found!"))?;
 
@@ -336,10 +344,8 @@ where
 		let para_storage_key = parachain_header_storage_key(self.para_id);
 		let keys = vec![para_storage_key.as_ref()];
 
-		let change_set = self
-			.relay_client
-			.rpc()
-			.query_storage(keys.clone(), start, Some(latest_finalized_hash))
+		let change_set = LegacyRpcMethods::<T>::new(self.relay_rpc_client.clone())
+			.state_query_storage(keys.clone(), start, Some(latest_finalized_hash))
 			.await?;
 
 		let mut change_set_join_set: JoinSet<Result<Option<_>, anyhow::Error>> = JoinSet::new();
@@ -368,10 +374,8 @@ where
 				let latest_para_height = latest_para_height.clone();
 				change_set_join_set.spawn(async move {
 					sleep(duration1).await;
-					let header = client
-						.relay_client
-						.rpc()
-						.header(Some(change.block))
+					let header = LegacyRpcMethods::<T>::new(client.relay_rpc_client.clone())
+						.chain_get_header(Some(change.block))
 						.await?
 						.ok_or_else(|| anyhow!("block not found {:?}", change.block))?;
 
@@ -397,10 +401,8 @@ where
 						return Ok(None)
 					}
 
-					let state_proof = client
-						.relay_client
-						.rpc()
-						.read_proof(keys.iter().map(AsRef::as_ref), Some(header.hash()))
+					let state_proof = LegacyRpcMethods::<T>::new(client.relay_rpc_client.clone())
+						.state_get_read_proof(keys.iter().map(AsRef::as_ref), Some(header.hash()))
 						.await?
 						.proof
 						.into_iter()
@@ -408,8 +410,8 @@ where
 						.collect();
 
 					let TimeStampExtWithProof { ext: extrinsic, proof: extrinsic_proof } =
-						fetch_timestamp_extrinsic_with_proof(
-							&client.para_client,
+						fetch_timestamp_extrinsic_with_proof::<T>(
+							&client.para_rpc_client,
 							Some(para_header.hash()),
 						)
 						.await
@@ -444,10 +446,8 @@ where
 		block: u32,
 	) -> Result<(u32, u32), anyhow::Error> {
 		let epoch_addr = T::Storage::babe_epoch_start();
-		let block_hash = self
-			.relay_client
-			.rpc()
-			.block_hash(Some(block.into()))
+		let block_hash = LegacyRpcMethods::<T>::new(self.relay_rpc_client.clone())
+			.chain_get_block_hash(Some(block.into()))
 			.await?
 			.ok_or_else(|| anyhow!("Failed to fetch block hash for block number {}", block))?;
 		let (previous_epoch_start, current_epoch_start) = self
@@ -465,7 +465,9 @@ where
 
 	/// Returns the session length in blocks
 	pub async fn session_length(&self) -> Result<u32, anyhow::Error> {
-		let metadata = self.relay_client.rpc().metadata().await?;
+		let metadata = LegacyRpcMethods::<T>::new(self.relay_rpc_client.clone())
+			.state_get_metadata(None)
+			.await?;
 		let metadata = metadata
 			.pallet_by_name("Babe")
 			.expect("pallet exists")

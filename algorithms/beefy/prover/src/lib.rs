@@ -25,6 +25,8 @@ pub mod helpers;
 /// Methods for querying the relay chain
 pub mod relay_chain_queries;
 
+use std::marker::PhantomData;
+
 use beefy_light_client_primitives::{
 	ClientState, HostFunctions, MmrUpdateProof, ParachainHeader, PartialMmrLeaf,
 };
@@ -40,7 +42,11 @@ use sp_core::{hexdisplay::AsBytesRef, keccak_256, H256};
 use sp_io::crypto;
 use sp_mmr_primitives::Proof;
 use sp_runtime::traits::BlakeTwo256;
-use subxt::{backend::rpc::RpcClient, config::Header, rpc_params, Config, OnlineClient};
+use subxt::{
+	backend::{legacy::LegacyRpcMethods, rpc::RpcClient},
+	config::Header,
+	rpc_params, Config, OnlineClient,
+};
 
 use crate::relay_chain_queries::parachain_header_storage_key;
 use light_client_common::config::{AsInner, BeefyAuthoritySetT, RuntimeStorage};
@@ -72,11 +78,13 @@ impl HostFunctions for Crypto {
 /// This contains methods for fetching BEEFY proofs for parachain headers.
 pub struct Prover<T: Config> {
 	/// Subxt client for the relay chain
-	pub relay_client: OnlineClient<T>,
+	pub relay_client: RpcClient,
 	/// Subxt client for the parachain
-	pub para_client: OnlineClient<T>,
+	pub para_client: RpcClient,
 	/// Para Id for the associated parachain.
 	pub para_id: u32,
+	/// Phantom
+	pub phantom: PhantomData<T>,
 }
 
 impl<T: light_client_common::config::Config> Prover<T>
@@ -84,7 +92,7 @@ where
 	u32: From<<<T as Config>::Header as Header>::Number>,
 {
 	/// Returns the initial state for bootstrapping a BEEFY light client.
-	pub async fn get_initial_client_state(client: Option<&OnlineClient<T>>) -> ClientState {
+	pub async fn get_initial_client_state(client: Option<&RpcClient>) -> ClientState {
 		if client.is_none() {
 			return ClientState {
 				latest_beefy_height: 0,
@@ -109,18 +117,31 @@ where
 		// In development mode validators are the same for all sessions only validator set_id
 		// changes
 		let client = client.expect("Client should be defined");
-		let rpc_client: RpcClient = client.backend();
+		let online_client = OnlineClient::<T>::from_rpc_client(client.clone())
+			.await
+			.expect("OnlineClient should be defined");
+		let legacy_rpc_methods = LegacyRpcMethods::<T>::new(client.clone());
 		let latest_beefy_finalized: <T as Config>::Hash =
-			client.rpc().request("beefy_getFinalizedHead", rpc_params!()).await.unwrap();
-		let header = client.rpc().header(Some(latest_beefy_finalized)).await.unwrap().unwrap();
+			client.request("beefy_getFinalizedHead", rpc_params!()).await.unwrap();
+		let header = legacy_rpc_methods
+			.chain_get_header(Some(latest_beefy_finalized))
+			.await
+			.unwrap()
+			.unwrap();
 		let validator_set_id = {
 			let key = T::Storage::beefy_validator_set_id();
-			client.storage().at(latest_beefy_finalized).fetch(&key).await.unwrap().unwrap()
+			online_client
+				.storage()
+				.at(latest_beefy_finalized)
+				.fetch(&key)
+				.await
+				.unwrap()
+				.unwrap()
 		};
 
 		let next_val_set = {
 			let key = T::Storage::mmr_leaf_beefy_next_authorities();
-			let data = client
+			let data = online_client
 				.storage()
 				.at(latest_beefy_finalized)
 				.fetch(&key)
@@ -158,14 +179,15 @@ where
 		<<T as Config>::Header as Header>::Number: From<u32>,
 		<T as Config>::Header: Decode,
 	{
-		let subxt_block_number: subxt::rpc::types::BlockNumber = commitment_block_number.into();
-		let block_hash = self.relay_client.rpc().block_hash(Some(subxt_block_number)).await?;
-		let previous_finalized_block_number: subxt::rpc::types::BlockNumber =
+		let subxt_block_number: subxt::backend::legacy::rpc_methods::BlockNumber =
+			commitment_block_number.into();
+		let online_client = OnlineClient::<T>::from_rpc_client(self.relay_client.clone()).await?;
+		let legacy_rpc_methods = LegacyRpcMethods::<T>::new(self.relay_client.clone());
+		let block_hash = legacy_rpc_methods.chain_get_block_hash(Some(subxt_block_number)).await?;
+		let previous_finalized_block_number: subxt::backend::legacy::rpc_methods::BlockNumber =
 			(latest_beefy_height + 1).into();
-		let previous_finalized_hash = self
-			.relay_client
-			.rpc()
-			.block_hash(Some(previous_finalized_block_number))
+		let previous_finalized_hash = legacy_rpc_methods
+			.chain_get_block_hash(Some(previous_finalized_block_number))
 			.await?
 			.ok_or_else(|| {
 				Error::Custom(
@@ -174,10 +196,8 @@ where
 				)
 			})?;
 
-		let change_set = self
-			.relay_client
-			.rpc()
-			.query_storage(
+		let change_set = legacy_rpc_methods
+			.state_query_storage(
 				// we are interested only in the blocks where our parachain header changes.
 				vec![parachain_header_storage_key(self.para_id).as_bytes_ref()],
 				previous_finalized_hash,
@@ -186,8 +206,10 @@ where
 			.await?;
 		let mut headers = vec![];
 		for changes in change_set {
-			let header =
-				self.relay_client.rpc().header(Some(changes.block)).await?.ok_or_else(|| {
+			let header = legacy_rpc_methods
+				.chain_get_header(Some(changes.block))
+				.await?
+				.ok_or_else(|| {
 					Error::Custom(format!(
 						"[get_parachain_headers] block not found {:?}",
 						changes.block
@@ -196,7 +218,7 @@ where
 
 			let key = T::Storage::paras_heads(self.para_id);
 			let head = <<T::Storage as RuntimeStorage>::HeadData as AsInner>::from_inner(
-				self.relay_client
+				online_client
 					.storage()
 					.at(header.hash())
 					.fetch(&key)
@@ -225,6 +247,7 @@ where
 		u32: From<<<T as Config>::Header as Header>::Number>,
 		<T as subxt::Config>::Header: Decode,
 	{
+		let legacy_rpc_methods = LegacyRpcMethods::<T>::new(self.relay_client.clone());
 		let header_numbers = header_numbers.into_iter().map(From::from).collect();
 		let FinalizedParaHeads { block_numbers, raw_finalized_heads: finalized_blocks } =
 			fetch_finalized_parachain_heads::<T>(
@@ -236,10 +259,12 @@ where
 			)
 			.await?;
 
-		let subxt_block_number: subxt::rpc::types::BlockNumber = commitment_block_number.into();
-		let block_hash = self.relay_client.rpc().block_hash(Some(subxt_block_number)).await?;
+		let subxt_block_number: subxt::backend::legacy::rpc_methods::BlockNumber =
+			commitment_block_number.into();
+		let block_hash = legacy_rpc_methods.chain_get_block_hash(Some(subxt_block_number)).await?;
 
-		let batch_proof = fetch_mmr_proof(&self.relay_client, block_numbers, block_hash).await?;
+		let batch_proof =
+			fetch_mmr_proof::<T>(&self.relay_client, block_numbers, block_hash).await?;
 
 		let leaves: Vec<Vec<u8>> = Decode::decode(&mut &*batch_proof.leaves.to_vec())?;
 
@@ -263,7 +288,7 @@ where
 
 			let decoded_para_head = T::Header::decode(&mut &para_head[..])?;
 			let TimeStampExtWithProof { ext: timestamp_extrinsic, proof: extrinsic_proof } =
-				fetch_timestamp_extrinsic_with_proof(
+				fetch_timestamp_extrinsic_with_proof::<T>(
 					&self.para_client,
 					Some(decoded_para_head.hash()),
 				)
@@ -305,7 +330,7 @@ where
 		let subxt_block_number: subxt::rpc::types::BlockNumber =
 			signed_commitment.commitment.block_number.into();
 		let block_hash =
-			self.relay_client.rpc().block_hash(Some(subxt_block_number)).await?.ok_or_else(
+			legacy_rpc_methods.chain_get_block_hash(Some(subxt_block_number)).await?.ok_or_else(
 				|| {
 					Error::Custom(format!(
 						"Failed to fetch block hash for block number {}",

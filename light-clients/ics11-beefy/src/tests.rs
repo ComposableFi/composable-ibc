@@ -101,7 +101,7 @@ async fn test_continuous_update_of_beefy_client() {
 
 	let (client_state, consensus_state) = loop {
 		let beefy_state = client_wrapper.construct_beefy_client_state().await.unwrap();
-		let subxt_block_number: subxt::rpc::types::BlockNumber =
+		let subxt_block_number: subxt::backend::legacy::rpc_methods::BlockNumber =
 			beefy_state.latest_beefy_height.into();
 		let block_hash = client_wrapper
 			.relay_client
@@ -138,7 +138,8 @@ async fn test_continuous_update_of_beefy_client() {
 		if block_number == 0 {
 			continue
 		}
-		let subxt_block_number: subxt::rpc::types::BlockNumber = block_number.into();
+		let subxt_block_number: subxt::backend::legacy::rpc_methods::BlockNumber =
+			block_number.into();
 		let block_hash = client_wrapper
 			.para_client
 			.rpc()

@@ -22,7 +22,6 @@ use crate::{
 	},
 };
 use beefy_prover::helpers::{fetch_timestamp_extrinsic_with_proof, TimeStampExtWithProof};
-use finality_grandpa_rpc::GrandpaApiClient;
 use futures::stream::StreamExt;
 use grandpa_client_primitives::{
 	justification::GrandpaJustification, parachain_header_storage_key, FinalityProof,
@@ -50,6 +49,7 @@ use ibc::{
 };
 use light_client_common::config::RuntimeStorage;
 use parity_scale_codec::{Decode, Encode};
+use sc_consensus_grandpa_rpc::GrandpaApiClient;
 use sp_core::{hexdisplay::AsBytesRef, H256};
 use std::time::Duration;
 use subxt::config::substrate::{BlakeTwo256, SubstrateHeader};
@@ -148,7 +148,8 @@ async fn test_continuous_update_of_grandpa_client() {
 			current_authorities: client_state.current_authorities,
 			_phantom: Default::default(),
 		};
-		let subxt_block_number: subxt::rpc::types::BlockNumber = decoded_para_head.number.into();
+		let subxt_block_number: subxt::backend::legacy::rpc_methods::BlockNumber =
+			decoded_para_head.number.into();
 		let block_hash =
 			prover.para_client.rpc().block_hash(Some(subxt_block_number)).await.unwrap();
 
@@ -206,15 +207,19 @@ async fn test_continuous_update_of_grandpa_client() {
 
 		let next_relay_height = client_state.latest_relay_height + 1;
 
-		let encoded = finality_grandpa_rpc::GrandpaApiClient::<JustificationNotification, H256, u32>::prove_finality(
+		let encoded = sc_consensus_grandpa_rpc::GrandpaApiClient::<
+			JustificationNotification,
+			H256,
+			u32,
+		>::prove_finality(
 			// we cast between the same type but different crate versions.
 			&*prover.relay_ws_client.clone(),
 			next_relay_height,
 		)
-			.await
-			.unwrap()
-			.unwrap()
-			.0;
+		.await
+		.unwrap()
+		.unwrap()
+		.0;
 
 		let finality_proof = FinalityProof::<RelayChainHeader>::decode(&mut &encoded[..]).unwrap();
 

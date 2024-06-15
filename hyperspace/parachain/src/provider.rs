@@ -51,7 +51,6 @@ use pallet_ibc::{
 	HostConsensusProof,
 };
 use parity_scale_codec::{Decode, Encode};
-use primitives::{apply_prefix, Chain, IbcProvider, KeyProvider, UpdateType};
 use sp_core::H256;
 use sp_runtime::{
 	traits::{IdentifyAccount, One, Verify},
@@ -101,7 +100,7 @@ where
 	sp_core::H256: From<T::Hash>,
 	BTreeMap<sp_core::H256, ParachainHeaderProofs>:
 		From<BTreeMap<<T as subxt::Config>::Hash, ParachainHeaderProofs>>,
-	<T::ExtrinsicParams as ExtrinsicParams<T::Index, T::Hash>>::OtherParams:
+	<T::ExtrinsicParams as ExtrinsicParams<T::Index, T::Hash>>::Params:
 		From<BaseExtrinsicParamsBuilder<T, T::Tip>> + Send + Sync,
 	<T as subxt::Config>::AccountId: Send + Sync,
 	<T as subxt::Config>::Address: Send + Sync,
@@ -350,7 +349,8 @@ where
 		let latest_height: u64 = (finalized_header.number()).into();
 		let height = Height::new(self.para_id.into(), latest_height.into());
 
-		let subxt_block_number: subxt::rpc::types::BlockNumber = latest_height.into();
+		let subxt_block_number: subxt::backend::legacy::rpc_methods::BlockNumber =
+			latest_height.into();
 		let block_hash =
 			self.para_client.rpc().block_hash(Some(subxt_block_number)).await?.ok_or_else(
 				|| Error::Custom("Latest block hash query returned None".to_string()),
@@ -624,7 +624,8 @@ where
 	}
 
 	async fn query_timestamp_at(&self, block_number: u64) -> Result<u64, Self::Error> {
-		let subxt_block_number: subxt::rpc::types::BlockNumber = block_number.into();
+		let subxt_block_number: subxt::backend::legacy::rpc_methods::BlockNumber =
+			block_number.into();
 		let block_hash =
 			self.para_client.rpc().block_hash(Some(subxt_block_number)).await?.ok_or_else(
 				|| Error::Custom("Block hash not found for block number".to_string()),

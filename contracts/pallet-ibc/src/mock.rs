@@ -1,10 +1,7 @@
-use crate::{
-	self as pallet_ibc, ics20::SubstrateMultihopXcmHandlerNone, ics20_fee::FlatFeeConverter,
-	routing::ModuleRouter,
-};
-use cumulus_primitives_core::ParaId;
+use crate::{self as pallet_ibc, ics20::SubstrateMultihopXcmHandlerNone, routing::ModuleRouter};
 use derive_more::Display;
 use frame_support::{
+	derive_impl,
 	pallet_prelude::ConstU32,
 	parameter_types,
 	traits::{
@@ -24,7 +21,7 @@ use pallet_membership::Instance2;
 use sp_consensus_aura::sr25519::AuthorityId as AuraId;
 use sp_core::{
 	offchain::{testing::TestOffchainExt, OffchainDbExt, OffchainWorkerExt},
-	H256,
+	ConstBool, H256,
 };
 use sp_keystore::{testing::MemoryKeystore, KeystoreExt};
 use sp_runtime::{
@@ -47,6 +44,7 @@ use sp_runtime::traits::{IdentifyAccount, Verify};
 pub type AssetId = u128;
 pub type Amount = i128;
 pub type Balance = u128;
+pub type Nonce = u64;
 pub type AccountId = <<MultiSignature as Verify>::Signer as IdentifyAccount>::AccountId;
 use super::*;
 use crate::{
@@ -73,6 +71,8 @@ impl pallet_aura::Config for Test {
 	type AuthorityId = AuraId;
 	type MaxAuthorities = MaxAuthorities;
 	type DisabledValidators = ();
+
+	type AllowMultipleBlocksPerSlot = ConstBool<false>;
 }
 
 impl pallet_membership::Config<Instance2> for Test {
@@ -98,10 +98,10 @@ impl pallet_balances::Config for Test {
 	type MaxLocks = ();
 	type MaxReserves = ();
 	type ReserveIdentifier = [u8; 8];
-	type HoldIdentifier = ();
 	type FreezeIdentifier = ();
-	type MaxHolds = ();
 	type MaxFreezes = ();
+	type RuntimeHoldReason = ();
+	type RuntimeFreezeReason = ();
 }
 
 parameter_types! {
@@ -112,6 +112,7 @@ parameter_types! {
 	pub const MaxAuthorities: u32 = 100_000;
 }
 
+#[derive_impl(frame_system::config_preludes::SolochainDefaultConfig as frame_system::DefaultConfig)]
 impl system::Config for Test {
 	type BaseCallFilter = Everything;
 	type BlockWeights = ();
@@ -119,14 +120,12 @@ impl system::Config for Test {
 	type DbWeight = ();
 	type RuntimeOrigin = RuntimeOrigin;
 	type RuntimeCall = RuntimeCall;
-	type Index = u64;
-	type BlockNumber = u32;
 	type Hash = H256;
 	type Hashing = BlakeTwo256;
 	type AccountId = AccountId;
 	type Lookup = IdentityLookup<Self::AccountId>;
-	type Header = Header;
 	type RuntimeEvent = RuntimeEvent;
+	type RuntimeTask = ();
 	type BlockHashCount = BlockHashCount;
 	type Version = ();
 	type PalletInfo = PalletInfo;
@@ -137,6 +136,12 @@ impl system::Config for Test {
 	type SS58Prefix = SS58Prefix;
 	type OnSetCode = ();
 	type MaxConsumers = ConstU32<2>;
+
+	type Nonce = Nonce;
+
+	#[doc = " The Block type used by the runtime. This is used by `construct_runtime` to retrieve the"]
+	#[doc = " extrinsics or other block specific data as needed."]
+	type Block = Block;
 }
 
 impl parachain_info::Config for Test {}
@@ -264,7 +269,7 @@ impl ValidateMemo for RawMemo {
 impl Config for Test {
 	type TimeProvider = Timestamp;
 	type RuntimeEvent = RuntimeEvent;
-	type NativeCurrency = Balances;
+	type NativeCurrency = PalletBalances;
 	type Balance = Balance;
 	type AssetId = AssetId;
 	type NativeAssetId = NativeAssetId;
@@ -484,7 +489,7 @@ frame_support::construct_runtime!(
 		ParachainInfo: parachain_info,
 		Tokens: orml_tokens,
 		Assets: pallet_assets,
-		PalletBalances: balances,
+		PalletBalances: pallet_balances,
 		IbcPing: pallet_ibc_ping,
 		Ics20Fee: crate::ics20_fee,
 		Ibc: pallet_ibc,

@@ -13,7 +13,6 @@
 // limitations under the License.
 
 use super::ParachainClient;
-use primitives::KeyProvider;
 use sp_core::crypto::Ss58Codec;
 use sp_runtime::traits::IdentifyAccount;
 use std::str::FromStr;
