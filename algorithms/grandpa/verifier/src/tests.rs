@@ -76,7 +76,6 @@ async fn follow_grandpa_justifications() {
 
 	let mut subscription = prover
 		.relay_client
-		.rpc()
 		.subscribe::<JustificationNotification>(
 			"grandpa_subscribeJustifications",
 			rpc_params![],

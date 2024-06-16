@@ -50,7 +50,6 @@ async fn test_verify_mmr_with_proof() {
 	println!("Parachain has started producing blocks");
 	let mut client_state = Prover::get_initial_client_state(Some(&client)).await;
 	let subscription: Subscription<EncodedVersionedFinalityProof> = client
-		.rpc()
 		.subscribe(
 			"beefy_subscribeJustifications",
 			rpc_params![],
@@ -225,7 +224,6 @@ async fn verify_parachain_headers() {
 	println!("Parachain has started producing blocks");
 	let mut client_state = Prover::get_initial_client_state(Some(&client)).await;
 	let subscription: Subscription<EncodedVersionedFinalityProof> = client
-		.rpc()
 		.subscribe(
 			"beefy_subscribeJustifications",
 			rpc_params![],

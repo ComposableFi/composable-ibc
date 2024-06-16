@@ -50,10 +50,7 @@ use sp_runtime::{
 	MultiSignature, MultiSigner,
 };
 use std::{collections::BTreeMap, fmt::Display, pin::Pin, sync::Arc, time::Duration};
-use subxt::{
-	config::{ExtrinsicParams, Header as HeaderT, Header},
-	events::Phase,
-};
+use subxt::{backend::legacy::LegacyRpcMethods, config::ExtrinsicParams, events::Phase};
 use tokio::time::sleep;
 
 type GrandpaJustification = grandpa_light_client_primitives::justification::GrandpaJustification<
@@ -227,10 +224,8 @@ where
 
 		let now = std::time::Instant::now();
 		let block_hash = loop {
-			let maybe_hash = self
-				.para_client
-				.rpc()
-				.block_hash(Some(host_height.revision_height.into()))
+			let maybe_hash = LegacyRpcMethods::<T>::new(self.para_rpc_client.clone())
+				.chain_get_block_hash(Some(host_height.revision_height.into()))
 				.await?;
 			match maybe_hash {
 				Some(hash) => break hash,
@@ -248,7 +243,6 @@ where
 
 		let event_bytes = self
 			.para_client
-			.rpc()
 			.storage(&*storage_key, Some(block_hash))
 			.await?
 			.map(|e| e.0)
@@ -284,7 +278,6 @@ where
 
 		let block = self
 			.para_client
-			.rpc()
 			.block(Some(block_hash.into()))
 			.await?
 			.ok_or_else(|| Error::from(format!("Block not found for hash {:?}", block_hash)))?;
@@ -414,14 +407,13 @@ where
 					.min_by_key(|h| h.number)
 					.expect("unknown_headers always contain at least one header; qed");
 
-				let common_ancestor_header = self
-					.relay_client
-					.rpc()
-					.header(Some(base_header.parent_hash.into()))
-					.await?
-					.ok_or_else(|| {
-						anyhow!("No header found for hash: {:?}", base_header.parent_hash)
-					})?;
+				let common_ancestor_header =
+					LegacyRpcMethods::<T>::new(self.relay_rpc_client.clone())
+						.header(Some(base_header.parent_hash.into()))
+						.await?
+						.ok_or_else(|| {
+							anyhow!("No header found for hash: {:?}", base_header.parent_hash)
+						})?;
 
 				let common_ancestor_block_number = u32::from(common_ancestor_header.number());
 				let encoded =
@@ -445,12 +437,11 @@ where
 				let to_block = trusted_justification.commit.target_number;
 				let from_block = (common_ancestor_block_number + 1).min(to_block);
 
-				let trusted_base_header_hash = self
-					.relay_client
-					.rpc()
-					.block_hash(Some(from_block.into()))
-					.await?
-					.ok_or_else(|| anyhow!("No hash found for block: {:?}", from_block))?;
+				let trusted_base_header_hash =
+					LegacyRpcMethods::<T>::new(self.relay_rpc_client.clone())
+						.chain_get_block_hash(Some(from_block.into()))
+						.await?
+						.ok_or_else(|| anyhow!("No hash found for block: {:?}", from_block))?;
 
 				let base_header_hash = base_header.hash();
 				if base_header_hash != trusted_base_header_hash.into() {
@@ -470,22 +461,19 @@ where
 					// TODO: parallelize this
 					for i in from_block..=to_block {
 						let unknown_header_hash =
-							self.relay_client.rpc().block_hash(Some(i.into())).await?.ok_or_else(
-								|| {
+							LegacyRpcMethods::<T>::new(self.relay_rpc_client.clone())
+								.chain_get_block_hash(Some(i.into()))
+								.await?
+								.ok_or_else(|| {
 									anyhow!(
 										"No block hash found for block number: {:?}",
 										common_ancestor_block_number
 									)
-								},
+								})?;
+						let unknown_header =
+							self.relay_client.header(Some(unknown_header_hash)).await?.ok_or_else(
+								|| anyhow!("No header found for hash: {:?}", unknown_header_hash),
 							)?;
-						let unknown_header = self
-							.relay_client
-							.rpc()
-							.header(Some(unknown_header_hash))
-							.await?
-							.ok_or_else(|| {
-								anyhow!("No header found for hash: {:?}", unknown_header_hash)
-							})?;
 						trusted_finality_proof
 							.unknown_headers
 							.push(parity_scale_codec::Decode::decode(&mut &*unknown_header.encode()).expect(

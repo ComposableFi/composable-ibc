@@ -78,9 +78,9 @@ where
 					unreachable!()
 				};
 
-				let latest_hash = self.relay_client.rpc().finalized_head().await?;
+				let latest_hash = self.relay_client.finalized_head().await?;
 				let finalized_head =
-					self.relay_client.rpc().header(Some(latest_hash)).await?.ok_or_else(|| {
+					self.relay_client.header(Some(latest_hash)).await?.ok_or_else(|| {
 						Error::Custom(format!("Expected finalized header, found None"))
 					})?;
 				let previous_finalized_height = client_state.latest_relay_height;
@@ -118,9 +118,9 @@ where
 				else {
 					unreachable!()
 				};
-				let latest_hash = self.relay_client.rpc().finalized_head().await?;
+				let latest_hash = self.relay_client.finalized_head().await?;
 				let finalized_head =
-					self.relay_client.rpc().header(Some(latest_hash)).await?.ok_or_else(|| {
+					self.relay_client.header(Some(latest_hash)).await?.ok_or_else(|| {
 						Error::Custom(format!("Expected finalized header, found None"))
 					})?;
 				let latest_finalized_height = u32::from(finalized_head.number());

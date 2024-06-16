@@ -141,7 +141,6 @@ async fn setup_clients() -> (AnyChain, AnyChain) {
 	let session_length = chain_a.grandpa_prover().session_length().await.unwrap();
 	let _ = chain_a
 		.relay_client
-		.rpc()
 		.subscribe_finalized_block_headers()
 		.await
 		.unwrap()

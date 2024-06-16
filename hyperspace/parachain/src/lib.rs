@@ -72,7 +72,10 @@ use sp_runtime::{
 	KeyTypeId, MultiSignature, MultiSigner,
 };
 use ss58_registry::Ss58AddressFormat;
-use subxt::{backend::rpc::RpcClient, config::Header};
+use subxt::{
+	backend::{legacy::LegacyRpcMethods, rpc::RpcClient},
+	config::Header,
+};
 use tokio::sync::Mutex as AsyncMutex;
 
 /// Implements the [`crate::Chain`] trait for parachains.
@@ -517,10 +520,12 @@ where
 
 			let subxt_block_number: subxt::backend::legacy::rpc_methods::BlockNumber =
 				beefy_state.latest_beefy_height.into();
-			let block_hash =
-				self.relay_client.rpc().block_hash(Some(subxt_block_number)).await?.ok_or_else(
-					|| Error::Custom(format!("Couldn't find block hash for relay block",)),
-				)?;
+			let block_hash = LegacyRpcMethods::<T>::new(self.relay_rpc_client.clone())
+				.chain_get_block_hash(Some(subxt_block_number))
+				.await?
+				.ok_or_else(|| {
+					Error::Custom(format!("Couldn't find block hash for relay block",))
+				})?;
 			let heads_addr = T::Storage::paras_heads(self.para_id);
 			let head_data = <T::Storage as RuntimeStorage>::HeadData::from_inner(
 				api.at(block_hash).fetch(&heads_addr).await?.ok_or_else(|| {
@@ -553,10 +558,12 @@ where
 			}
 			let subxt_block_number: subxt::backend::legacy::rpc_methods::BlockNumber =
 				block_number.into();
-			let block_hash =
-				self.para_client.rpc().block_hash(Some(subxt_block_number)).await?.ok_or_else(
-					|| Error::Custom(format!("Couldn't find block hash for para block",)),
-				)?;
+			let block_hash = LegacyRpcMethods::<T>::new(self.para_rpc_client.clone())
+				.chain_get_block_hash(Some(subxt_block_number))
+				.await?
+				.ok_or_else(|| {
+					Error::Custom(format!("Couldn't find block hash for para block",))
+				})?;
 			let timestamp_addr = T::Storage::timestamp_now();
 			let unix_timestamp_millis = para_client_api
 				.at(block_hash)
@@ -645,15 +652,15 @@ where
 
 			let subxt_block_number: subxt::backend::legacy::rpc_methods::BlockNumber =
 				block_number.into();
-			let block_hash =
-				self.para_client.rpc().block_hash(Some(subxt_block_number)).await?.ok_or_else(
-					|| {
-						Error::Custom(format!(
-							"Couldn't find block hash for ParaId({}) at block number {}",
-							self.para_id, block_number
-						))
-					},
-				)?;
+			let block_hash = LegacyRpcMethods::<T>::new(self.para_rpc_client.clone())
+				.chain_get_block_hash(Some(subxt_block_number))
+				.await?
+				.ok_or_else(|| {
+					Error::Custom(format!(
+						"Couldn't find block hash for ParaId({}) at block number {}",
+						self.para_id, block_number
+					))
+				})?;
 			let timestamp_addr = T::Storage::timestamp_now();
 			let unix_timestamp_millis = para_client_api
 				.at(block_hash)

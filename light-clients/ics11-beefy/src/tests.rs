@@ -53,7 +53,10 @@ use light_client_common::config::RuntimeStorage;
 use parity_scale_codec::{Decode, Encode};
 use sp_consensus_beefy::VersionedFinalityProof;
 use std::time::Duration;
-use subxt::rpc::{rpc_params, Subscription};
+use subxt::{
+	backend::legacy::LegacyRpcMethods,
+	rpc::{rpc_params, Subscription},
+};
 
 #[tokio::test]
 #[ignore]
@@ -103,10 +106,8 @@ async fn test_continuous_update_of_beefy_client() {
 		let beefy_state = client_wrapper.construct_beefy_client_state().await.unwrap();
 		let subxt_block_number: subxt::backend::legacy::rpc_methods::BlockNumber =
 			beefy_state.latest_beefy_height.into();
-		let block_hash = client_wrapper
-			.relay_client
-			.rpc()
-			.block_hash(Some(subxt_block_number))
+		let block_hash = LegacyRpcMethods::<T>::new(client_wrapper.relay_rpc_client.clone())
+			.chain_get_block_hash(Some(subxt_block_number))
 			.await
 			.unwrap()
 			.unwrap();
@@ -140,10 +141,8 @@ async fn test_continuous_update_of_beefy_client() {
 		}
 		let subxt_block_number: subxt::backend::legacy::rpc_methods::BlockNumber =
 			block_number.into();
-		let block_hash = client_wrapper
-			.para_client
-			.rpc()
-			.block_hash(Some(subxt_block_number))
+		let block_hash = LegacyRpcMethods::<T>::new(client_wrapper.para_rpc_client.clone())
+			.chain_get_block_hash(Some(subxt_block_number))
 			.await
 			.unwrap();
 
@@ -177,7 +176,6 @@ async fn test_continuous_update_of_beefy_client() {
 	let res = dispatch(&ctx, ClientMsg::CreateClient(create_client)).unwrap();
 	ctx.store_client_result(res.result).unwrap();
 	let subscription: Subscription<EncodedVersionedFinalityProof> = relay_client
-		.rpc()
 		.subscribe(
 			"beefy_subscribeJustifications",
 			rpc_params![],

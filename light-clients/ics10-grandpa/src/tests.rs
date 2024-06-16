@@ -52,7 +52,10 @@ use parity_scale_codec::{Decode, Encode};
 use sc_consensus_grandpa_rpc::GrandpaApiClient;
 use sp_core::{hexdisplay::AsBytesRef, H256};
 use std::time::Duration;
-use subxt::config::substrate::{BlakeTwo256, SubstrateHeader};
+use subxt::{
+	backend::legacy::LegacyRpcMethods,
+	config::substrate::{BlakeTwo256, SubstrateHeader},
+};
 
 #[tokio::test]
 async fn test_continuous_update_of_grandpa_client() {
@@ -109,7 +112,6 @@ async fn test_continuous_update_of_grandpa_client() {
 
 		let latest_relay_header = prover
 			.relay_client
-			.rpc()
 			.header(Some(client_state.latest_relay_hash))
 			.await
 			.expect("Failed to fetch finalized header")
@@ -150,8 +152,10 @@ async fn test_continuous_update_of_grandpa_client() {
 		};
 		let subxt_block_number: subxt::backend::legacy::rpc_methods::BlockNumber =
 			decoded_para_head.number.into();
-		let block_hash =
-			prover.para_client.rpc().block_hash(Some(subxt_block_number)).await.unwrap();
+		let block_hash = LegacyRpcMethods::<T>::new(prover.para_rpc_client.clone())
+			.chain_get_block_hash(Some(subxt_block_number))
+			.await
+			.unwrap();
 
 		let TimeStampExtWithProof { ext: timestamp_extrinsic, proof: extrinsic_proof } =
 			fetch_timestamp_extrinsic_with_proof(&prover.para_client, block_hash)
@@ -159,7 +163,6 @@ async fn test_continuous_update_of_grandpa_client() {
 				.unwrap();
 		let state_proof = prover
 			.relay_client
-			.rpc()
 			.read_proof(
 				vec![parachain_header_storage_key(prover.para_id).0.as_bytes_ref()],
 				Some(client_state.latest_relay_hash),

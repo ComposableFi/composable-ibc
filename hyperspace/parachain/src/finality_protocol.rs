@@ -58,7 +58,7 @@ use std::{
 use grandpa_prover::{
 	GrandpaJustification, GrandpaProver, JustificationNotification, PROCESS_BLOCKS_BATCH_SIZE,
 };
-use subxt::config::{ExtrinsicParams, Header as HeaderT, Header};
+use subxt::{backend::legacy::LegacyRpcMethods, config::ExtrinsicParams};
 use tendermint_proto::Protobuf;
 use tokio::task::JoinSet;
 
@@ -395,10 +395,16 @@ where
 			let duration = Duration::from_millis(rand::thread_rng().gen_range(1..delay) as u64);
 			join_set.spawn(async move {
 				tokio::time::sleep(duration).await;
-				let Some(hash) = relay_client.rpc().block_hash(Some(height.into())).await? else {
+				let Some(hash) = LegacyRpcMethods::<T>::new(relay_client.clone())
+					.chain_get_block_hash(Some(height.into()))
+					.await?
+				else {
 					return Ok(None)
 				};
-				let Some(block) = relay_client.rpc().block(Some(hash)).await? else {
+				let Some(block) = LegacyRpcMethods::<T>::new(relay_client.clone())
+					.chain_get_block(Some(hash))
+					.await?
+				else {
 					return Ok(None)
 				};
 				let Some(justifications) = block.justifications else { return Ok(None) };

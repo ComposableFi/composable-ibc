@@ -64,7 +64,7 @@ use std::{
 	str::FromStr,
 	time::Duration,
 };
-use subxt::config::{ExtrinsicParams, Header as HeaderT, Header};
+use subxt::{backend::legacy::LegacyRpcMethods, config::ExtrinsicParams};
 use tokio_stream::wrappers::ReceiverStream;
 
 #[derive(Debug)]
@@ -341,7 +341,6 @@ where
 	async fn latest_height_and_timestamp(&self) -> Result<(Height, Timestamp), Error> {
 		let finalized_header = self
 			.para_client
-			.rpc()
 			.header(None)
 			.await?
 			.ok_or_else(|| Error::Custom("Latest height query returned None".to_string()))?;
@@ -350,10 +349,10 @@ where
 
 		let subxt_block_number: subxt::backend::legacy::rpc_methods::BlockNumber =
 			latest_height.into();
-		let block_hash =
-			self.para_client.rpc().block_hash(Some(subxt_block_number)).await?.ok_or_else(
-				|| Error::Custom("Latest block hash query returned None".to_string()),
-			)?;
+		let block_hash = LegacyRpcMethods::<T>::new(self.para_rpc_client.clone())
+			.chain_get_block_hash(Some(subxt_block_number))
+			.await?
+			.ok_or_else(|| Error::Custom("Latest block hash query returned None".to_string()))?;
 		let timestamp_addr = T::Storage::timestamp_now();
 		let unix_timestamp_millis = self
 			.para_client
@@ -545,14 +544,11 @@ where
 		&self,
 		client_state: &AnyClientState,
 	) -> Result<Option<Vec<u8>>, Error> {
-		let hash = self
-			.para_client
-			.rpc()
-			.block_hash(Some(client_state.latest_height().revision_height.into()))
+		let hash = LegacyRpcMethods::<T>::new(self.para_rpc_client.clone())
+			.chain_get_block_hash(Some(client_state.latest_height().revision_height.into()))
 			.await?;
 		let header = self
 			.para_client
-			.rpc()
 			.header(hash)
 			.await?
 			.ok_or_else(|| Error::Custom("Latest height query returned None".to_string()))?;
@@ -625,10 +621,10 @@ where
 	async fn query_timestamp_at(&self, block_number: u64) -> Result<u64, Error> {
 		let subxt_block_number: subxt::backend::legacy::rpc_methods::BlockNumber =
 			block_number.into();
-		let block_hash =
-			self.para_client.rpc().block_hash(Some(subxt_block_number)).await?.ok_or_else(
-				|| Error::Custom("Block hash not found for block number".to_string()),
-			)?;
+		let block_hash = LegacyRpcMethods::<T>::new(self.para_rpc_client.clone())
+			.chain_get_block_hash(Some(subxt_block_number))
+			.await?
+			.ok_or_else(|| Error::Custom("Block hash not found for block number".to_string()))?;
 		let timestamp_addr = T::Storage::timestamp_now();
 		let unix_timestamp_millis = self
 			.para_client

@@ -25,7 +25,9 @@ use hyperspace_testsuite::{
 	ibc_messaging_packet_timestamp_timeout_with_connection_delay,
 	ibc_messaging_with_connection_delay, misbehaviour::ibc_messaging_submit_misbehaviour,
 };
+use light_client_common::config::Config;
 use std::time::Duration;
+use subxt::backend::{legacy::LegacyRpcMethods, rpc::RpcSubscription};
 
 #[derive(Debug, Clone)]
 pub struct Args {
@@ -97,10 +99,8 @@ async fn setup_clients() -> (ParachainClient<DefaultConfig>, ParachainClient<Def
 	// Wait until for parachains to start producing blocks
 	log::info!(target: "hyperspace", "Waiting for  block production from parachains");
 	let session_length = chain_a.grandpa_prover().session_length().await.unwrap();
-	let _ = chain_a
-		.relay_client
-		.rpc()
-		.subscribe_finalized_block_headers()
+	let _ = LegacyRpcMethods::<DefaultConfig>::new(chain_a.relay_rpc_client.clone())
+		.chain_subscribe_finalized_heads()
 		.await
 		.unwrap()
 		.filter_map(|result| futures::future::ready(result.ok()))
