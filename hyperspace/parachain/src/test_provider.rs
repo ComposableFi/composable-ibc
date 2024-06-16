@@ -16,6 +16,7 @@ use crate::{signer::ExtrinsicSigner, Error, ParachainClient};
 use finality_grandpa::BlockNumberOps;
 use futures::{Stream, StreamExt};
 use grandpa_light_client_primitives::ParachainHeaderProofs;
+use hyperspace_primitives::{KeyProvider, TestProvider};
 use ibc::{
 	applications::transfer::{msgs::transfer::MsgTransfer, PrefixedCoin},
 	core::ics24_host::identifier::{ChannelId, ClientId},
@@ -27,7 +28,6 @@ use light_client_common::config::RuntimeTransactions;
 use pallet_ibc::{MultiAddress, Timeout, TransferParams};
 use pallet_ibc_ping::SendPingParams;
 use parity_scale_codec::Decode;
-use primitives::{KeyProvider, TestProvider};
 use sp_core::{
 	crypto::{AccountId32, Ss58Codec},
 	H256,
@@ -37,13 +37,11 @@ use sp_runtime::{
 	MultiSignature, MultiSigner,
 };
 use std::{collections::BTreeMap, fmt::Display, pin::Pin, str::FromStr};
-use subxt::config::{
-	extrinsic_params::BaseExtrinsicParamsBuilder, ExtrinsicParams, Header as HeaderT, Header,
-};
+use subxt::config::{ExtrinsicParams, Header};
 
 impl<T: light_client_common::config::Config + Send + Sync> ParachainClient<T>
 where
-	u32: From<<<T as subxt::Config>::Header as HeaderT>::Number>,
+	u32: From<<<T as subxt::Config>::Header as Header>::Number>,
 	Self: KeyProvider,
 	<<T as light_client_common::config::Config>::Signature as Verify>::Signer:
 		From<MultiSigner> + IdentifyAccount<AccountId = T::AccountId>,
@@ -53,8 +51,8 @@ where
 	H256: From<T::Hash>,
 
 	<<T as subxt::Config>::Header as Header>::Number: Ord + sp_runtime::traits::Zero + One,
-	T::Header: HeaderT,
-	<<T::Header as HeaderT>::Hasher as subxt::config::Hasher>::Output: From<T::Hash>,
+	T::Header: Header,
+	<<T::Header as Header>::Hasher as subxt::config::Hasher>::Output: From<T::Hash>,
 	<<T as subxt::Config>::Header as Header>::Number: From<u32>,
 	BTreeMap<H256, ParachainHeaderProofs>:
 		From<BTreeMap<<T as subxt::Config>::Hash, ParachainHeaderProofs>>,
@@ -130,7 +128,7 @@ where
 impl<T> TestProvider for ParachainClient<T>
 where
 	T: light_client_common::config::Config + Send + Sync + Clone,
-	u32: From<<<T as subxt::Config>::Header as HeaderT>::Number>,
+	u32: From<<<T as subxt::Config>::Header as Header>::Number>,
 	u32: From<<<T as subxt::Config>::Header as Header>::Number>,
 	Self: KeyProvider,
 	<<T as light_client_common::config::Config>::Signature as Verify>::Signer:
@@ -154,7 +152,7 @@ where
 	<<T as light_client_common::config::Config>::Tx as RuntimeTransactions>::SendPingParams:
 		From<SendPingParams>,
 {
-	async fn send_transfer(&self, transfer: MsgTransfer<PrefixedCoin>) -> Result<(), Self::Error> {
+	async fn send_transfer(&self, transfer: MsgTransfer<PrefixedCoin>) -> Result<(), Error> {
 		let account_id = AccountId32::from_ss58check(transfer.receiver.as_ref())
 			.map(MultiAddress::Id)
 			.unwrap_or_else(|_| MultiAddress::Raw(transfer.receiver.to_string().into_bytes()));
@@ -183,7 +181,7 @@ where
 		&self,
 		channel_id: ChannelId,
 		timeout: Timeout,
-	) -> Result<(), Self::Error> {
+	) -> Result<(), Error> {
 		let (timeout_height, timestamp) = match timeout {
 			Timeout::Offset { timestamp, height } => (height.unwrap(), timestamp.unwrap()),
 			_ => panic!("Only offset timeouts allowed"),
@@ -220,7 +218,7 @@ where
 		Box::pin(Box::new(stream))
 	}
 
-	async fn increase_counters(&mut self) -> Result<(), Self::Error> {
+	async fn increase_counters(&mut self) -> Result<(), Error> {
 		let call = T::Tx::ibc_increase_counters();
 		self.submit_sudo_call(call).await.map(|_| ())
 	}

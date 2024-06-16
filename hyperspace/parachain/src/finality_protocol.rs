@@ -22,6 +22,10 @@ use grandpa_light_client_primitives::{
 	justification::find_scheduled_change, FinalityProof, ParachainHeaderProofs,
 	ParachainHeadersWithFinalityProof,
 };
+use hyperspace_primitives::{
+	filter_events_by_ids, mock::LocalClientTypes, query_maximum_height_for_timeout_proofs, Chain,
+	IbcProvider, KeyProvider, UpdateType,
+};
 use ibc::{
 	core::ics02_client::{client_state::ClientState as _, msgs::update_client::MsgUpdateAnyClient},
 	events::IbcEvent,
@@ -36,10 +40,6 @@ use ics11_beefy::client_message::{
 };
 use pallet_ibc::light_clients::{AnyClientMessage, AnyClientState};
 use parity_scale_codec::{Decode, Encode};
-use primitives::{
-	filter_events_by_ids, mock::LocalClientTypes, query_maximum_height_for_timeout_proofs, Chain,
-	IbcProvider, KeyProvider, UpdateType,
-};
 use rand::Rng;
 use sc_consensus_grandpa_rpc::GrandpaApiClient;
 use serde::{Deserialize, Serialize};
@@ -58,9 +58,7 @@ use std::{
 use grandpa_prover::{
 	GrandpaJustification, GrandpaProver, JustificationNotification, PROCESS_BLOCKS_BATCH_SIZE,
 };
-use subxt::config::{
-	extrinsic_params::BaseExtrinsicParamsBuilder, ExtrinsicParams, Header as HeaderT, Header,
-};
+use subxt::config::{ExtrinsicParams, Header as HeaderT, Header};
 use tendermint_proto::Protobuf;
 use tokio::task::JoinSet;
 

@@ -46,6 +46,7 @@ use beefy_light_client_primitives::{ClientState, MmrUpdateProof};
 use beefy_prover::Prover;
 use grandpa_light_client_primitives::ParachainHeaderProofs;
 use grandpa_prover::GrandpaProver;
+use hyperspace_primitives::{CommonClientState, KeyProvider};
 use ibc::{
 	core::ics24_host::identifier::{ChannelId, ClientId, ConnectionId, PortId},
 	timestamp::Timestamp,
@@ -62,7 +63,6 @@ use jsonrpsee_ws_client::WsClientBuilder;
 use light_client_common::config::{AsInner, RuntimeStorage};
 use pallet_ibc::light_clients::{AnyClientState, AnyConsensusState, HostFunctionsManager};
 use parity_scale_codec::Decode;
-use primitives::{CommonClientState, KeyProvider};
 use sc_keystore::LocalKeystore;
 use sp_core::{ecdsa, ed25519, sr25519, Bytes, Pair, H256};
 use sp_keystore::KeystorePtr;
@@ -72,7 +72,7 @@ use sp_runtime::{
 	KeyTypeId, MultiSignature, MultiSigner,
 };
 use ss58_registry::Ss58AddressFormat;
-use subxt::{backend::rpc::RpcClient, config::Header, tx::TxPayload};
+use subxt::{backend::rpc::RpcClient, config::Header};
 use tokio::sync::Mutex as AsyncMutex;
 
 /// Implements the [`crate::Chain`] trait for parachains.
@@ -198,18 +198,18 @@ where
 	pub async fn new(config: ParachainClientConfig) -> Result<Self, Error> {
 		let relay_ws_client = Arc::new(
 			WsClientBuilder::default()
-				.build(&config.relay_chain_rpc_url)
+				.build(&config.relay_chain_rpc_url.clone())
 				.await
 				.map_err(|e| Error::from(format!("Rpc Error {:?}", e)))?,
 		);
 		let para_ws_client = Arc::new(
 			WsClientBuilder::default()
-				.build(&config.parachain_rpc_url)
+				.build(&config.parachain_rpc_url.clone())
 				.await
 				.map_err(|e| Error::from(format!("Rpc Error {:?}", e)))?,
 		);
 
-		let para_rpc_client = RpcClient::from_url(config.parachain_rpc_url).await?;
+		let para_rpc_client = RpcClient::from_url(config.parachain_rpc_url.clone()).await?;
 		let relay_rpc_client = RpcClient::from_url(config.relay_chain_rpc_url).await?;
 
 		let para_client = subxt::OnlineClient::from_rpc_client(para_rpc_client.clone()).await?;
@@ -281,7 +281,7 @@ where
 
 impl<T: light_client_common::config::Config + Send + Sync> ParachainClient<T>
 where
-	u32: From<<<T as subxt::Config>::Header as HeaderT>::Number>,
+	u32: From<<<T as subxt::Config>::Header as Header>::Number>,
 	Self: KeyProvider,
 	<<T as light_client_common::config::Config>::Signature as Verify>::Signer:
 		From<MultiSigner> + IdentifyAccount<AccountId = T::AccountId>,
@@ -323,8 +323,8 @@ where
 		<T as subxt::Config>::Header: Decode,
 	{
 		let client_wrapper = Prover {
-			relay_client: self.relay_client.clone(),
-			para_client: self.para_client.clone(),
+			relay_rpc_client: self.relay_rpc_client.clone(),
+			para_rpc_client: self.para_rpc_client.clone(),
 			para_id: self.para_id,
 			phantom: std::marker::PhantomData,
 		};
@@ -355,8 +355,8 @@ where
 		<T as subxt::Config>::Header: Decode,
 	{
 		let client_wrapper = Prover {
-			relay_client: self.relay_client.clone(),
-			para_client: self.para_client.clone(),
+			relay_rpc_client: self.relay_rpc_client.clone(),
+			para_rpc_client: self.para_rpc_client.clone(),
 			para_id: self.para_id,
 			phantom: std::marker::PhantomData,
 		};
@@ -401,8 +401,8 @@ where
 		>,
 	) -> Result<MmrUpdateProof, Error> {
 		let prover = Prover {
-			relay_client: self.relay_client.clone(),
-			para_client: self.para_client.clone(),
+			relay_rpc_client: self.relay_rpc_client.clone(),
+			para_rpc_client: self.para_rpc_client.clone(),
 			para_id: self.para_id,
 			phantom: std::marker::PhantomData,
 		};
@@ -472,7 +472,7 @@ where
 
 impl<T: light_client_common::config::Config + Send + Sync> ParachainClient<T>
 where
-	u32: From<<<T as subxt::Config>::Header as HeaderT>::Number>,
+	u32: From<<<T as subxt::Config>::Header as Header>::Number>,
 	Self: KeyProvider,
 	<<T as light_client_common::config::Config>::Signature as Verify>::Signer:
 		From<MultiSigner> + IdentifyAccount<AccountId = T::AccountId>,
@@ -481,7 +481,7 @@ where
 	<T as subxt::Config>::Signature: From<MultiSignature> + Send + Sync,
 	H256: From<T::Hash>,
 	<<T as subxt::Config>::Header as Header>::Number: Ord + sp_runtime::traits::Zero + One,
-	T::Header: HeaderT,
+	T::Header: Header,
 	<<T::Header as Header>::Hasher as subxt::config::Hasher>::Output: From<T::Hash>,
 	<<T as subxt::Config>::Header as Header>::Number: From<u32>,
 	BTreeMap<H256, ParachainHeaderProofs>:
@@ -505,8 +505,8 @@ where
 		let api = self.relay_client.storage();
 		let para_client_api = self.para_client.storage();
 		let client_wrapper = Prover {
-			relay_client: self.relay_client.clone(),
-			para_client: self.para_client.clone(),
+			relay_rpc_client: self.relay_rpc_client.clone(),
+			para_rpc_client: self.para_rpc_client.clone(),
 			para_id: self.para_id,
 			phantom: std::marker::PhantomData,
 		};
@@ -515,7 +515,7 @@ where
 				Error::from(format!("[construct_beefy_client_state] Failed due to {:?}", e))
 			})?;
 
-			let subxt_block_number: subxt::rpc::types::BlockNumber =
+			let subxt_block_number: subxt::backend::legacy::rpc_methods::BlockNumber =
 				beefy_state.latest_beefy_height.into();
 			let block_hash =
 				self.relay_client.rpc().block_hash(Some(subxt_block_number)).await?.ok_or_else(
@@ -551,7 +551,8 @@ where
 			if block_number == 0 {
 				continue
 			}
-			let subxt_block_number: subxt::rpc::types::BlockNumber = block_number.into();
+			let subxt_block_number: subxt::backend::legacy::rpc_methods::BlockNumber =
+				block_number.into();
 			let block_hash =
 				self.para_client.rpc().block_hash(Some(subxt_block_number)).await?.ok_or_else(
 					|| Error::Custom(format!("Couldn't find block hash for para block",)),
@@ -642,7 +643,8 @@ where
 			client_state.para_id = self.para_id;
 			client_state.latest_relay_height = light_client_state.latest_relay_height;
 
-			let subxt_block_number: subxt::rpc::types::BlockNumber = block_number.into();
+			let subxt_block_number: subxt::backend::legacy::rpc_methods::BlockNumber =
+				block_number.into();
 			let block_hash =
 				self.para_client.rpc().block_hash(Some(subxt_block_number)).await?.ok_or_else(
 					|| {

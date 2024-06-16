@@ -45,12 +45,12 @@ pub fn get_updated_client_state(
 pub async fn fetch_max_extrinsic_weight<T: light_client_common::config::Config>(
 	client: &subxt::OnlineClient<T>,
 ) -> Result<u64, Error> {
-	let metadata = client.rpc().metadata().await?;
+	let metadata = client.metadata();
 	let block_weights = metadata
 		.pallet_by_name("System")
 		.expect("System pallet should exist")
 		.constant_by_name("BlockWeights")
-		.expect("constatn BlockWeights should exist");
+		.expect("constant BlockWeights should exist");
 	let weights = BlockWeights::decode(&mut &block_weights.value()[..])?;
 	let extrinsic_weights = weights.per_class.get(DispatchClass::Normal);
 	let max_extrinsic_weight = extrinsic_weights

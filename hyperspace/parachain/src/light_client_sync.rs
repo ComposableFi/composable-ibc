@@ -12,10 +12,7 @@ use sp_runtime::{
 	traits::{IdentifyAccount, One, Verify},
 	MultiSignature, MultiSigner,
 };
-use subxt::config::{
-	extrinsic_params::{BaseExtrinsicParamsBuilder, ExtrinsicParams},
-	Header as HeaderT, Header,
-};
+use subxt::config::ExtrinsicParams;
 
 use grandpa_prover::GrandpaProver;
 use ibc::core::ics02_client::msgs::update_client::MsgUpdateAnyClient;
@@ -28,7 +25,7 @@ use ibc_rpc::{BlockNumberOrHash, IbcApiClient};
 use ics10_grandpa::client_message::{ClientMessage, Header as GrandpaHeader};
 use pallet_ibc::light_clients::{AnyClientMessage, AnyClientState};
 
-use primitives::{
+use hyperspace_primitives::{
 	filter_events_by_ids, mock::LocalClientTypes, Chain, KeyProvider, LightClientSync,
 };
 
@@ -182,7 +179,7 @@ where
 		<<T as subxt::Config>::ExtrinsicParams as ExtrinsicParams<
 			<T as subxt::Config>::Index,
 			<T as subxt::Config>::Hash,
-		>>::OtherParams: Sync
+		>>::Params: Sync
 			+ Send
 			+ From<BaseExtrinsicParamsBuilder<T, <T as light_client_common::config::Config>::Tip>>,
 		<T as subxt::Config>::Hash: From<H256>,

@@ -78,9 +78,9 @@ impl HostFunctions for Crypto {
 /// This contains methods for fetching BEEFY proofs for parachain headers.
 pub struct Prover<T: Config> {
 	/// Subxt client for the relay chain
-	pub relay_client: RpcClient,
+	pub relay_rpc_client: RpcClient,
 	/// Subxt client for the parachain
-	pub para_client: RpcClient,
+	pub para_rpc_client: RpcClient,
 	/// Para Id for the associated parachain.
 	pub para_id: u32,
 	/// Phantom
@@ -181,8 +181,9 @@ where
 	{
 		let subxt_block_number: subxt::backend::legacy::rpc_methods::BlockNumber =
 			commitment_block_number.into();
-		let online_client = OnlineClient::<T>::from_rpc_client(self.relay_client.clone()).await?;
-		let legacy_rpc_methods = LegacyRpcMethods::<T>::new(self.relay_client.clone());
+		let online_client =
+			OnlineClient::<T>::from_rpc_client(self.relay_rpc_client.clone()).await?;
+		let legacy_rpc_methods = LegacyRpcMethods::<T>::new(self.relay_rpc_client.clone());
 		let block_hash = legacy_rpc_methods.chain_get_block_hash(Some(subxt_block_number)).await?;
 		let previous_finalized_block_number: subxt::backend::legacy::rpc_methods::BlockNumber =
 			(latest_beefy_height + 1).into();
@@ -247,11 +248,11 @@ where
 		u32: From<<<T as Config>::Header as Header>::Number>,
 		<T as subxt::Config>::Header: Decode,
 	{
-		let legacy_rpc_methods = LegacyRpcMethods::<T>::new(self.relay_client.clone());
+		let legacy_rpc_methods = LegacyRpcMethods::<T>::new(self.relay_rpc_client.clone());
 		let header_numbers = header_numbers.into_iter().map(From::from).collect();
 		let FinalizedParaHeads { block_numbers, raw_finalized_heads: finalized_blocks } =
 			fetch_finalized_parachain_heads::<T>(
-				&self.relay_client,
+				&self.relay_rpc_client,
 				commitment_block_number,
 				latest_beefy_height,
 				self.para_id,
@@ -264,7 +265,7 @@ where
 		let block_hash = legacy_rpc_methods.chain_get_block_hash(Some(subxt_block_number)).await?;
 
 		let batch_proof =
-			fetch_mmr_proof::<T>(&self.relay_client, block_numbers, block_hash).await?;
+			fetch_mmr_proof::<T>(&self.relay_rpc_client, block_numbers, block_hash).await?;
 
 		let leaves: Vec<Vec<u8>> = Decode::decode(&mut &*batch_proof.leaves.to_vec())?;
 
@@ -289,7 +290,7 @@ where
 			let decoded_para_head = T::Header::decode(&mut &para_head[..])?;
 			let TimeStampExtWithProof { ext: timestamp_extrinsic, proof: extrinsic_proof } =
 				fetch_timestamp_extrinsic_with_proof::<T>(
-					&self.para_client,
+					&self.para_rpc_client,
 					Some(decoded_para_head.hash()),
 				)
 				.await?;
@@ -327,7 +328,7 @@ where
 	) -> Result<MmrUpdateProof, Error> {
 		todo!("fetch beefy authorities")
 		/*
-		let subxt_block_number: subxt::rpc::types::BlockNumber =
+		let subxt_block_number: subxt::backend::legacy::rpc_methods::BlockNumber =
 			signed_commitment.commitment.block_number.into();
 		let block_hash =
 			legacy_rpc_methods.chain_get_block_hash(Some(subxt_block_number)).await?.ok_or_else(
@@ -341,7 +342,7 @@ where
 
 		let current_authorities: Vec<Public> = {
 			let key = T::Storage::beefy_authorities();
-			self.relay_client
+			self.relay_rpc_client
 				.storage()
 				.at(block_hash)
 				.fetch(&key)
@@ -352,7 +353,7 @@ where
 		// Current LeafIndex
 		let block_number = signed_commitment.commitment.block_number;
 		let leaf_proof =
-			fetch_mmr_proof(&self.relay_client, vec![block_number.into()], Some(block_hash))
+			fetch_mmr_proof(&self.relay_rpc_client, vec![block_number.into()], Some(block_hash))
 				.await?;
 		let leaves: Vec<Vec<u8>> = parity_scale_codec::Decode::decode(&mut &*leaf_proof.leaves.0)?;
 		let latest_leaf: MmrLeaf<u32, H256, H256, H256> = parity_scale_codec::Decode::decode(&mut &*leaves[0])?;
@@ -383,12 +384,12 @@ where
 		todo!("fetch beefy authorities")
 		/*
 		let (signed_commitment, latest_beefy_finalized) =
-			fetch_beefy_justification(&self.relay_client).await?;
+			fetch_beefy_justification(&self.relay_rpc_client).await?;
 
 		// Encoding and decoding to fix dependency version conflicts
 		let next_authority_set = {
 			let key = T::Storage::mmr_leaf_beefy_next_authorities();
-			self.relay_client
+			self.relay_rpc_client
 				.storage()
 				.at(latest_beefy_finalized)
 				.fetch(&key)
@@ -401,7 +402,7 @@ where
 
 		let current_authorities: Vec<Public> = {
 			let key = T::Storage::beefy_authorities();
-			self.relay_client
+			self.relay_rpc_client
 				.storage()
 				.at(latest_beefy_finalized)
 				.fetch(&key)

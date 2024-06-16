@@ -18,6 +18,9 @@ use anyhow::anyhow;
 use finality_grandpa::BlockNumberOps;
 use futures::{Stream, StreamExt, TryFutureExt};
 use grandpa_light_client_primitives::{FinalityProof, ParachainHeaderProofs};
+use hyperspace_primitives::{
+	mock::LocalClientTypes, Chain, CommonClientState, IbcProvider, MisbehaviourHandler,
+};
 use ibc::{
 	core::{
 		ics02_client::{
@@ -36,10 +39,9 @@ use itertools::Itertools;
 use jsonrpsee_ws_client::WsClientBuilder;
 use light_client_common::config::{EventRecordT, RuntimeCall, RuntimeTransactions};
 use pallet_ibc::light_clients::AnyClientMessage;
+use pallet_transaction_payment_rpc::TransactionPaymentApiClient;
+use pallet_transaction_payment_rpc_runtime_api::RuntimeDispatchInfo;
 use parity_scale_codec::{Decode, Encode};
-use primitives::{
-	mock::LocalClientTypes, Chain, CommonClientState, IbcProvider, MisbehaviourHandler,
-};
 use sc_consensus_beefy_rpc::BeefyApiClient;
 use sc_consensus_grandpa_rpc::GrandpaApiClient;
 use sp_core::{twox_128, H256};
@@ -49,15 +51,10 @@ use sp_runtime::{
 };
 use std::{collections::BTreeMap, fmt::Display, pin::Pin, sync::Arc, time::Duration};
 use subxt::{
-	config::{
-		extrinsic_params::{BaseExtrinsicParamsBuilder, Era},
-		ExtrinsicParams, Header as HeaderT, Header,
-	},
+	config::{ExtrinsicParams, Header as HeaderT, Header},
 	events::Phase,
 };
 use tokio::time::sleep;
-use transaction_payment_rpc::TransactionPaymentApiClient;
-use transaction_payment_rpc_runtime_api::RuntimeDispatchInfo;
 
 type GrandpaJustification = grandpa_light_client_primitives::justification::GrandpaJustification<
 	polkadot_core_primitives::Header,
@@ -102,7 +99,7 @@ where
 		self.max_extrinsic_weight * 100 / 80
 	}
 
-	async fn estimate_weight(&self, messages: Vec<Any>) -> Result<u64, Self::Error> {
+	async fn estimate_weight(&self, messages: Vec<Any>) -> Result<u64, Error> {
 		let extrinsic = {
 			// todo: put this in utils
 			let signer = ExtrinsicSigner::<T, Self>::new(

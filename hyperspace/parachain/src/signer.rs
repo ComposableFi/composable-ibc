@@ -68,8 +68,8 @@ where
 	<T as subxt::Config>::AccountId: Send + Sync,
 	<T as subxt::Config>::Address: Send + Sync,
 {
-	fn account_id(&self) -> &T::AccountId {
-		&self.account_id
+	fn account_id(&self) -> T::AccountId {
+		self.account_id
 	}
 
 	fn address(&self) -> <T as subxt::Config>::Address {
