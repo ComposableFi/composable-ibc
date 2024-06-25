@@ -64,7 +64,10 @@ use std::{
 	str::FromStr,
 	time::Duration,
 };
-use subxt::{backend::legacy::LegacyRpcMethods, config::ExtrinsicParams};
+use subxt::{
+	backend::legacy::LegacyRpcMethods,
+	config::{DefaultExtrinsicParamsBuilder, ExtrinsicParams, Header},
+};
 use tokio_stream::wrappers::ReceiverStream;
 
 #[derive(Debug)]
@@ -77,15 +80,14 @@ pub struct TransactionId<Hash> {
 impl<T: light_client_common::config::Config + Send + Sync + Clone> IbcProvider
 	for ParachainClient<T>
 where
-	u32: From<<<T as subxt::Config>::Header as HeaderT>::Number>,
-	u32: From<<<T as subxt::Config>::Header as Header>::Number>,
+	// u32: From<<<T as subxt::Config>::Header as subxt::config::Header>::Number>,
 	Self: KeyProvider,
 	<<T as light_client_common::config::Config>::Signature as Verify>::Signer:
 		From<MultiSigner> + IdentifyAccount<AccountId = T::AccountId>,
 	MultiSigner: From<MultiSigner>,
 	<T as subxt::Config>::Address: From<<T as subxt::Config>::AccountId>,
 	<T as subxt::Config>::Signature: From<MultiSignature> + Send + Sync,
-	<<T as subxt::Config>::Header as Header>::Number: BlockNumberOps
+	<<T as subxt::Config>::Header as subxt::config::Header>::Number: BlockNumberOps
 		+ From<u32>
 		+ Display
 		+ Ord
@@ -99,8 +101,8 @@ where
 	sp_core::H256: From<T::Hash>,
 	BTreeMap<sp_core::H256, ParachainHeaderProofs>:
 		From<BTreeMap<<T as subxt::Config>::Hash, ParachainHeaderProofs>>,
-	<T::ExtrinsicParams as ExtrinsicParams<T::Index, T::Hash>>::Params:
-		From<BaseExtrinsicParamsBuilder<T, T::Tip>> + Send + Sync,
+	<T::ExtrinsicParams as ExtrinsicParams<T>>::Params:
+		From<DefaultExtrinsicParamsBuilder<T>> + Send + Sync,
 	<T as subxt::Config>::AccountId: Send + Sync,
 	<T as subxt::Config>::Address: Send + Sync,
 	<T as light_client_common::config::Config>::AssetId: Clone,
@@ -339,9 +341,8 @@ where
 	}
 
 	async fn latest_height_and_timestamp(&self) -> Result<(Height, Timestamp), Error> {
-		let finalized_header = self
-			.para_client
-			.header(None)
+		let finalized_header = LegacyRpcMethods::<T>::new(self.para_rpc_client.clone())
+			.chain_get_header(None)
 			.await?
 			.ok_or_else(|| Error::Custom("Latest height query returned None".to_string()))?;
 		let latest_height: u64 = (finalized_header.number()).into();
@@ -547,15 +548,16 @@ where
 		let hash = LegacyRpcMethods::<T>::new(self.para_rpc_client.clone())
 			.chain_get_block_hash(Some(client_state.latest_height().revision_height.into()))
 			.await?;
-		let header = self
-			.para_client
-			.header(hash)
+		let header = LegacyRpcMethods::<T>::new(self.para_rpc_client.clone())
+			.chain_get_header(hash)
 			.await?
 			.ok_or_else(|| Error::Custom("Latest height query returned None".to_string()))?;
-		let extrinsic_with_proof =
-			fetch_timestamp_extrinsic_with_proof(&self.para_client, Some(header.hash()))
-				.await
-				.map_err(Error::BeefyProver)?;
+		let extrinsic_with_proof = fetch_timestamp_extrinsic_with_proof::<T>(
+			&self.para_rpc_client.clone(),
+			Some(header.hash()),
+		)
+		.await
+		.map_err(Error::BeefyProver)?;
 		let code_id = if let AnyClientState::Wasm(client_state) = &client_state {
 			Some(client_state.code_id.clone())
 		} else {

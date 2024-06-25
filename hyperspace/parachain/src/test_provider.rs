@@ -37,11 +37,13 @@ use sp_runtime::{
 	MultiSignature, MultiSigner,
 };
 use std::{collections::BTreeMap, fmt::Display, pin::Pin, str::FromStr};
-use subxt::config::{ExtrinsicParams, Header};
+use subxt::config::{DefaultExtrinsicParamsBuilder, ExtrinsicParams, Header};
 
 impl<T: light_client_common::config::Config + Send + Sync> ParachainClient<T>
 where
-	u32: From<<<T as subxt::Config>::Header as Header>::Number>,
+	// u32: From<<<T as
+	// subxt::Config>::Header
+	// as Header>::Number>,
 	Self: KeyProvider,
 	<<T as light_client_common::config::Config>::Signature as Verify>::Signer:
 		From<MultiSigner> + IdentifyAccount<AccountId = T::AccountId>,
@@ -108,16 +110,16 @@ where
 		let ext = T::Tx::sudo_sudo(call);
 		// Submit extrinsic to parachain node
 
-		let other_params = T::custom_extrinsic_params(&self.para_client).await?;
+		let other_params = T::custom_extrinsic_params(&self.para_client)
+			.await
+			.map_err(|e| Error::SubxtCore(e))?;
 
 		let _progress = self
 			.para_client
 			.tx()
 			.sign_and_submit_then_watch(&ext, &signer, other_params)
 			.await?
-			.wait_for_in_block()
-			.await?
-			.wait_for_success()
+			.wait_for_finalized_success()
 			.await?;
 
 		Ok(())
@@ -128,8 +130,8 @@ where
 impl<T> TestProvider for ParachainClient<T>
 where
 	T: light_client_common::config::Config + Send + Sync + Clone,
-	u32: From<<<T as subxt::Config>::Header as Header>::Number>,
-	u32: From<<<T as subxt::Config>::Header as Header>::Number>,
+	// u32: From<<<T as subxt::Config>::Header as Header>::Number>,
+	// u32: From<<<T as subxt::Config>::Header as Header>::Number>,
 	Self: KeyProvider,
 	<<T as light_client_common::config::Config>::Signature as Verify>::Signer:
 		From<MultiSigner> + IdentifyAccount<AccountId = T::AccountId>,
@@ -142,8 +144,8 @@ where
 	H256: From<T::Hash>,
 	BTreeMap<H256, ParachainHeaderProofs>:
 		From<BTreeMap<<T as subxt::Config>::Hash, ParachainHeaderProofs>>,
-	<T::ExtrinsicParams as ExtrinsicParams<T::Index, T::Hash>>::Params:
-		From<BaseExtrinsicParamsBuilder<T, T::Tip>> + Send + Sync,
+	<T::ExtrinsicParams as ExtrinsicParams<T>>::Params:
+		From<DefaultExtrinsicParamsBuilder<T>> + Send + Sync,
 	<T as subxt::Config>::AccountId: Send + Sync,
 	<T as subxt::Config>::Address: Send + Sync,
 	<T as light_client_common::config::Config>::AssetId: Clone,

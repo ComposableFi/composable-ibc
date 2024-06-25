@@ -37,9 +37,12 @@ pub enum Error {
 	/// subxt error
 	#[error("Subxt error: {0:?}")]
 	Subxt(#[from] subxt::Error),
+	/// subxt core error
+	#[error("Subxt core error: {0:?}")]
+	SubxtCore(#[from] subxt::ext::subxt_core::Error),
 	/// subxt rpc error
 	#[error("Rpc threw an error")]
-	SubxtRRpc(#[from] subxt::error::RpcError),
+	SubxtRpc(#[from] subxt::error::RpcError),
 	/// hex error
 	#[error("Error decoding hex: {0:?}")]
 	Hex(#[from] hex::FromHexError),
@@ -79,7 +82,7 @@ pub enum Error {
 	#[error("Metadat error: {0}")]
 	MetadataError(#[from] MetadataError),
 	#[error("Jsonrpsee error: {0}")]
-	JosnrpseeError(#[from] jsonrpsee::core::Error),
+	JsonrpseeError(#[from] jsonrpsee::core::Error),
 }
 
 impl From<String> for Error {

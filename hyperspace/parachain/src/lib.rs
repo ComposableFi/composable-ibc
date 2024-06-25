@@ -74,7 +74,9 @@ use sp_runtime::{
 use ss58_registry::Ss58AddressFormat;
 use subxt::{
 	backend::{legacy::LegacyRpcMethods, rpc::RpcClient},
+	blocks::BlockRef,
 	config::Header,
+	tx::Payload,
 };
 use tokio::sync::Mutex as AsyncMutex;
 
@@ -213,7 +215,7 @@ where
 		);
 
 		let para_rpc_client = RpcClient::from_url(config.parachain_rpc_url.clone()).await?;
-		let relay_rpc_client = RpcClient::from_url(config.relay_chain_rpc_url).await?;
+		let relay_rpc_client = RpcClient::from_url(config.relay_chain_rpc_url.clone()).await?;
 
 		let para_client = subxt::OnlineClient::from_rpc_client(para_rpc_client.clone()).await?;
 
@@ -284,7 +286,10 @@ where
 
 impl<T: light_client_common::config::Config + Send + Sync> ParachainClient<T>
 where
-	u32: From<<<T as subxt::Config>::Header as Header>::Number>,
+	// u32: From<<<T as
+	// subxt::Config>::Header
+	// as subxt::config::Header>::Number>,
+	//
 	Self: KeyProvider,
 	<<T as light_client_common::config::Config>::Signature as Verify>::Signer:
 		From<MultiSigner> + IdentifyAccount<AccountId = T::AccountId>,
@@ -321,11 +326,11 @@ where
 		client_state: &ClientState,
 	) -> Result<Vec<T::Header>, Error>
 	where
-		u32: From<<<T as subxt::Config>::Header as Header>::Number>,
+		// // u32: From<<<T as subxt::Config>::Header as Header>::Number>,
 		<<T as subxt::Config>::Header as Header>::Number: From<u32>,
 		<T as subxt::Config>::Header: Decode,
 	{
-		let client_wrapper = Prover {
+		let client_wrapper = Prover::<T> {
 			relay_rpc_client: self.relay_rpc_client.clone(),
 			para_rpc_client: self.para_rpc_client.clone(),
 			para_id: self.para_id,
@@ -357,7 +362,7 @@ where
 		<<T as subxt::Config>::Header as Header>::Number: Ord + sp_runtime::traits::Zero,
 		<T as subxt::Config>::Header: Decode,
 	{
-		let client_wrapper = Prover {
+		let client_wrapper = Prover::<T> {
 			relay_rpc_client: self.relay_rpc_client.clone(),
 			para_rpc_client: self.para_rpc_client.clone(),
 			para_id: self.para_id,
@@ -403,7 +408,7 @@ where
 			sp_consensus_beefy::ecdsa_crypto::Signature,
 		>,
 	) -> Result<MmrUpdateProof, Error> {
-		let prover = Prover {
+		let prover = Prover::<T> {
 			relay_rpc_client: self.relay_rpc_client.clone(),
 			para_rpc_client: self.para_rpc_client.clone(),
 			para_id: self.para_id,
@@ -422,7 +427,7 @@ where
 	///
 	/// We retry sending the transaction up to 5 times in the case where the transaction pool might
 	/// reject the transaction because of conflicting nonces.
-	pub async fn submit_call<C: TxPayload>(&self, call: C) -> Result<(T::Hash, T::Hash), Error> {
+	pub async fn submit_call<C: Payload>(&self, call: C) -> Result<(T::Hash, T::Hash), Error> {
 		// Try extrinsic submission five times in case of failures
 		let mut count = 0;
 		let progress = loop {
@@ -454,10 +459,13 @@ where
 		};
 
 		let tx_in_block =
-			tokio::time::timeout(WAIT_FOR_IN_BLOCK_TIMEOUT, progress.wait_for_in_block())
+			tokio::time::timeout(WAIT_FOR_IN_BLOCK_TIMEOUT, progress.wait_for_finalized())
 				.await
 				.map_err(|e| {
-					Error::from(format!("[submit_call] Failed to wait for in block due to {:?}", e))
+					Error::from(format!(
+						"[submit_call] Failed to wait for finalized success in block due to {:?}",
+						e
+					))
 				})??;
 		tx_in_block.wait_for_success().await?;
 		Ok((tx_in_block.extrinsic_hash(), tx_in_block.block_hash()))
@@ -475,7 +483,9 @@ where
 
 impl<T: light_client_common::config::Config + Send + Sync> ParachainClient<T>
 where
-	u32: From<<<T as subxt::Config>::Header as Header>::Number>,
+	// u32: From<<<T as
+	// subxt::Config>::Header
+	// as Header>::Number>,
 	Self: KeyProvider,
 	<<T as light_client_common::config::Config>::Signature as Verify>::Signer:
 		From<MultiSigner> + IdentifyAccount<AccountId = T::AccountId>,
@@ -502,12 +512,12 @@ where
 			From<MultiSigner> + IdentifyAccount<AccountId = T::AccountId>,
 		MultiSigner: From<MultiSigner>,
 		<T as subxt::Config>::Address: From<<T as subxt::Config>::AccountId>,
-		u32: From<<<T as subxt::Config>::Header as subxt::config::Header>::Number>,
+		// u32: From<<<T as subxt::Config>::Header as subxt::config::Header>::Number>,
 	{
 		use ibc::core::ics24_host::identifier::ChainId;
 		let api = self.relay_client.storage();
 		let para_client_api = self.para_client.storage();
-		let client_wrapper = Prover {
+		let client_wrapper = Prover::<T> {
 			relay_rpc_client: self.relay_rpc_client.clone(),
 			para_rpc_client: self.para_rpc_client.clone(),
 			para_id: self.para_id,
@@ -593,7 +603,7 @@ where
 			From<MultiSigner> + IdentifyAccount<AccountId = T::AccountId>,
 		MultiSigner: From<MultiSigner>,
 		<T as subxt::Config>::Address: From<<T as subxt::Config>::AccountId>,
-		u32: From<<<T as subxt::Config>::Header as Header>::Number>,
+		// u32: From<<<T as subxt::Config>::Header as Header>::Number>,
 		<T as subxt::Config>::Hash: From<H256>,
 		<T as subxt::Config>::Header: Decode,
 	{
@@ -619,7 +629,7 @@ where
 
 			let heads_addr = T::Storage::paras_heads(self.para_id);
 			let head_data = <T::Storage as RuntimeStorage>::HeadData::from_inner(
-				api.at(light_client_state.latest_relay_hash.into())
+				api.at(BlockRef::from_hash(light_client_state.latest_relay_hash.into()))
 					.fetch(&heads_addr)
 					.await?
 					.ok_or_else(|| {

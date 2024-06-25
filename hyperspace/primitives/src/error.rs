@@ -23,7 +23,7 @@ pub enum Error {
 	Subxt(#[from] subxt::Error),
 	/// subxt rpc error
 	#[error("Subxt rpc error")]
-	SubxtRRpc(#[from] subxt::error::RpcError),
+	SubxtRpc(#[from] subxt::error::RpcError),
 	/// Custom error
 	#[error("{0}")]
 	Custom(String),

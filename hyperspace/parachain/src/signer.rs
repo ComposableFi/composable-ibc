@@ -69,7 +69,7 @@ where
 	<T as subxt::Config>::Address: Send + Sync,
 {
 	fn account_id(&self) -> T::AccountId {
-		self.account_id
+		self.account_id.clone()
 	}
 
 	fn address(&self) -> <T as subxt::Config>::Address {

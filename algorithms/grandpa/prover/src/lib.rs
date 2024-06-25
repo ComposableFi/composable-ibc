@@ -119,7 +119,7 @@ impl<T> GrandpaProver<T>
 where
 	T: light_client_common::config::Config + Send + Sync,
 	<<T as subxt::Config>::Header as Header>::Number: Ord + Zero,
-	u32: From<<<T as subxt::Config>::Header as Header>::Number>,
+	// u32: From<<<T as subxt::Config>::Header as Header>::Number>,
 	sp_core::H256: From<T::Hash>,
 {
 	/// Initializes the parachain and relay chain clients given the ws urls.
