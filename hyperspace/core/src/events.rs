@@ -69,11 +69,12 @@ pub async fn parse_events(
 	// 1. translate events to messages
 	let mut is_connection_delay = true;
 	for event in events {
-		if matches!(event, IbcEvent::SendPacket(_))
-			|| matches!(event, IbcEvent::WriteAcknowledgement(_))
-				&& is_connection_delay
-				&& source.name() != "solana-1"
+		if (matches!(event, IbcEvent::SendPacket(_))
+			|| matches!(event, IbcEvent::WriteAcknowledgement(_)))
+			&& is_connection_delay
+			&& source.name() != "solana-1"
 		{
+			log::info!("event {:?} {:?}", is_connection_delay, source.name());
 			log::info!("Skipping due to connection delay {:?}", event);
 			continue;
 		}
