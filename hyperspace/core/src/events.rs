@@ -504,7 +504,7 @@ pub async fn parse_events(
 					log::info!("Skipping packet relay status");
 					continue;
 				}
-				if connection_delay && source.name() != "solana" {
+				if is_connection_delay && source.name() != "solana" {
 					log::info!("Skipping send packet relay because of connection delay");
 					continue;
 				}
@@ -584,7 +584,7 @@ pub async fn parse_events(
 			IbcEvent::WriteAcknowledgement(write_ack) => {
 				let port_id = &write_ack.packet.destination_port.clone();
 				let channel_id = &write_ack.packet.destination_channel.clone();
-				if connection_delay && source.name() == "solana" {
+				if is_connection_delay && source.name() == "solana" {
 					log::info!("Skipping acknowledgment packet relay because of connection delay");
 					continue;
 				}
