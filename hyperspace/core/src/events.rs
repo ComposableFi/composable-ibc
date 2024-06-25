@@ -69,15 +69,14 @@ pub async fn parse_events(
 	// 1. translate events to messages
 	let mut is_connection_delay = true;
 	for event in events {
-		if (matches!(event, IbcEvent::SendPacket(_))
-			|| matches!(event, IbcEvent::WriteAcknowledgement(_)))
-			&& is_connection_delay
-			&& source.name() != "solana"
-		{
-			log::info!("event {:?} {:?}", is_connection_delay, source.name());
-			log::info!("Skipping due to connection delay {:?}", event);
-			continue;
-		}
+		// if (matches!(event, IbcEvent::SendPacket(_))
+		// 	|| matches!(event, IbcEvent::WriteAcknowledgement(_)))
+		// 	&& is_connection_delay
+		// {
+		// 	log::info!("event {:?} {:?}", is_connection_delay, source.name());
+		// 	log::info!("Skipping due to connection delay {:?}", event);
+		// 	continue;
+		// }
 		match event {
 			IbcEvent::OpenInitConnection(open_init) => {
 				if let Some(connection_id) = open_init.connection_id() {
@@ -505,6 +504,10 @@ pub async fn parse_events(
 					log::info!("Skipping packet relay status");
 					continue;
 				}
+				if connection_delay && source.name() != "solana" {
+					log::info!("Skipping send packet relay because of connection delay");
+					continue;
+				}
 				log::info!("Found send packet {:?}", send_packet);
 				// can we send this packet?
 				// 1. query the connection and get the connection delay.
@@ -581,6 +584,10 @@ pub async fn parse_events(
 			IbcEvent::WriteAcknowledgement(write_ack) => {
 				let port_id = &write_ack.packet.destination_port.clone();
 				let channel_id = &write_ack.packet.destination_channel.clone();
+				if connection_delay && source.name() == "solana" {
+					log::info!("Skipping acknowledgment packet relay because of connection delay");
+					continue;
+				}
 				// let channel_response = source
 				// 	.query_channel_end(write_ack.height, *channel_id, port_id.clone())
 				// 	.await?;
