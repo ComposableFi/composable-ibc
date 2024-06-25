@@ -72,7 +72,7 @@ pub async fn parse_events(
 		if matches!(event, IbcEvent::SendPacket(_))
 			|| matches!(event, IbcEvent::WriteAcknowledgement(_))
 				&& is_connection_delay
-				&& source.name() == "solana-1"
+				&& source.name() != "solana-1"
 		{
 			log::info!("Skipping due to connection delay {:?}", event);
 			continue;
