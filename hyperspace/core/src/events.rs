@@ -67,13 +67,15 @@ pub async fn parse_events(
 ) -> Result<Vec<Any>, anyhow::Error> {
 	let mut messages = vec![];
 	// 1. translate events to messages
-	let mut is_connection_delay = false;
+	let mut is_connection_delay = true;
 	for event in events {
-		if matches!(event, IbcEvent::SendPacket(_)) ||
-			matches!(event, IbcEvent::WriteAcknowledgement(_)) && is_connection_delay
+		if matches!(event, IbcEvent::SendPacket(_))
+			|| matches!(event, IbcEvent::WriteAcknowledgement(_))
+				&& is_connection_delay
+				&& source.name() == "solana-1"
 		{
 			log::info!("Skipping due to connection delay {:?}", event);
-			continue
+			continue;
 		}
 		match event {
 			IbcEvent::OpenInitConnection(open_init) => {
@@ -394,7 +396,7 @@ pub async fn parse_events(
 					messages.push(msg)
 				}
 			},
-			IbcEvent::OpenTryChannel(open_try) =>
+			IbcEvent::OpenTryChannel(open_try) => {
 				if let Some(channel_id) = open_try.channel_id {
 					let channel_response = source
 						.query_channel_end(open_try.height(), channel_id, open_try.port_id.clone())
@@ -429,8 +431,9 @@ pub async fn parse_events(
 					let value = msg.encode_vec()?;
 					let msg = Any { value, type_url: msg.type_url() };
 					messages.push(msg)
-				},
-			IbcEvent::OpenAckChannel(open_ack) =>
+				}
+			},
+			IbcEvent::OpenAckChannel(open_ack) => {
 				if let Some(channel_id) = open_ack.channel_id {
 					let channel_response = source
 						.query_channel_end(open_ack.height(), channel_id, open_ack.port_id.clone())
@@ -461,7 +464,8 @@ pub async fn parse_events(
 					let value = msg.encode_vec()?;
 					let msg = Any { value, type_url: msg.type_url() };
 					messages.push(msg)
-				},
+				}
+			},
 			IbcEvent::CloseInitChannel(close_init) => {
 				let channel_id = close_init.channel_id;
 				let channel_response = source
@@ -498,7 +502,7 @@ pub async fn parse_events(
 				#[cfg(feature = "testing")]
 				if !packet_relay_status() {
 					log::info!("Skipping packet relay status");
-					continue
+					continue;
 				}
 				log::info!("Found send packet {:?}", send_packet);
 				// can we send this packet?
@@ -507,37 +511,37 @@ pub async fn parse_events(
 				// 3. otherwise skip.
 				let port_id = send_packet.packet.source_port.clone();
 				let channel_id = send_packet.packet.source_channel;
-				let channel_response = source
-					.query_channel_end(send_packet.height, channel_id, port_id.clone())
-					.await?;
-				let channel_end =
-					ChannelEnd::try_from(channel_response.channel.ok_or_else(|| {
-						Error::Custom(
-							"Failed to convert to concrete channel end from raw channel end"
-								.to_string(),
-						)
-					})?)?;
-				let connection_id = channel_end
-					.connection_hops
-					.get(0)
-					.ok_or_else(|| Error::Custom("Channel end missing connection id".to_string()))?
-					.clone();
-				let connection_response =
-					source.query_connection_end(send_packet.height, connection_id.clone()).await?;
-				let connection_end =
-					ConnectionEnd::try_from(connection_response.connection.ok_or_else(|| {
-						Error::Custom(format!("ConnectionEnd not found for {connection_id:?}"))
-					})?)?;
-				if !connection_end.delay_period().is_zero() {
-					// We can't send this packet immediately because of connection delays
-					log::info!(
-						target: "hyperspace",
-						"Skipping packet relay because of connection delays {:?}",
-						connection_end.delay_period()
-					);
-					is_connection_delay = true;
-					continue
-				}
+				// let channel_response = source
+				// 	.query_channel_end(send_packet.height, channel_id, port_id.clone())
+				// 	.await?;
+				// let channel_end =
+				// 	ChannelEnd::try_from(channel_response.channel.ok_or_else(|| {
+				// 		Error::Custom(
+				// 			"Failed to convert to concrete channel end from raw channel end"
+				// 				.to_string(),
+				// 		)
+				// 	})?)?;
+				// let connection_id = channel_end
+				// 	.connection_hops
+				// 	.get(0)
+				// 	.ok_or_else(|| Error::Custom("Channel end missing connection id".to_string()))?
+				// 	.clone();
+				// let connection_response =
+				// 	source.query_connection_end(send_packet.height, connection_id.clone()).await?;
+				// let connection_end =
+				// 	ConnectionEnd::try_from(connection_response.connection.ok_or_else(|| {
+				// 		Error::Custom(format!("ConnectionEnd not found for {connection_id:?}"))
+				// 	})?)?;
+				// if !connection_end.delay_period().is_zero() {
+				// 	// We can't send this packet immediately because of connection delays
+				// 	log::info!(
+				// 		target: "hyperspace",
+				// 		"Skipping packet relay because of connection delays {:?}",
+				// 		connection_end.delay_period()
+				// 	);
+				// 	is_connection_delay = true;
+				// 	continue
+				// }
 				let seq = u64::from(send_packet.packet.sequence);
 				let packet = send_packet.packet;
 
@@ -547,7 +551,7 @@ pub async fn parse_events(
 						"Skipping packet relay because packet timeout is zero: {}",
 						packet.sequence
 					);
-					continue
+					continue;
 				}
 
 				let packet_commitment_response = source
@@ -576,34 +580,34 @@ pub async fn parse_events(
 			IbcEvent::WriteAcknowledgement(write_ack) => {
 				let port_id = &write_ack.packet.destination_port.clone();
 				let channel_id = &write_ack.packet.destination_channel.clone();
-				let channel_response = source
-					.query_channel_end(write_ack.height, *channel_id, port_id.clone())
-					.await?;
-				let channel_end =
-					ChannelEnd::try_from(channel_response.channel.ok_or_else(|| {
-						Error::Custom(
-							"Failed to convert to concrete channel end from raw channel end"
-								.to_string(),
-						)
-					})?)?;
-				let connection_id = channel_end
-					.connection_hops
-					.get(0)
-					.ok_or_else(|| Error::Custom("Channel end missing connection id".to_string()))?
-					.clone();
-				let connection_response =
-					source.query_connection_end(write_ack.height, connection_id.clone()).await?;
-				let connection_end =
-					ConnectionEnd::try_from(connection_response.connection.ok_or_else(|| {
-						Error::Custom(format!("ConnectionEnd not found for {connection_id:?}"))
-					})?)?;
-				if !connection_end.delay_period().is_zero() {
-					log::debug!(target: "hyperspace", "Skipping write acknowledgement because of
-				connection delay {:?}", 		connection_end.delay_period());
-					// We can't send this packet immediately because of connection delays
-					is_connection_delay = true;
-					continue
-				}
+				// let channel_response = source
+				// 	.query_channel_end(write_ack.height, *channel_id, port_id.clone())
+				// 	.await?;
+				// let channel_end =
+				// 	ChannelEnd::try_from(channel_response.channel.ok_or_else(|| {
+				// 		Error::Custom(
+				// 			"Failed to convert to concrete channel end from raw channel end"
+				// 				.to_string(),
+				// 		)
+				// 	})?)?;
+				// let connection_id = channel_end
+				// 	.connection_hops
+				// 	.get(0)
+				// 	.ok_or_else(|| Error::Custom("Channel end missing connection id".to_string()))?
+				// 	.clone();
+				// let connection_response =
+				// 	source.query_connection_end(write_ack.height, connection_id.clone()).await?;
+				// let connection_end =
+				// 	ConnectionEnd::try_from(connection_response.connection.ok_or_else(|| {
+				// 		Error::Custom(format!("ConnectionEnd not found for {connection_id:?}"))
+				// 	})?)?;
+				// if !connection_end.delay_period().is_zero() {
+				// 	log::debug!(target: "hyperspace", "Skipping write acknowledgement because of
+				// connection delay {:?}", 		connection_end.delay_period());
+				// 	// We can't send this packet immediately because of connection delays
+				// 	is_connection_delay = true;
+				// 	continue;
+				// }
 				let seq = u64::from(write_ack.packet.sequence);
 				let packet = write_ack.packet;
 				let packet_acknowledgement_response = source
@@ -637,7 +641,7 @@ pub async fn parse_events(
 
 	// In light mode do not try to query channel state
 	if let Some(Mode::Light) = mode {
-		return Ok(messages)
+		return Ok(messages);
 	}
 
 	Ok(messages)
