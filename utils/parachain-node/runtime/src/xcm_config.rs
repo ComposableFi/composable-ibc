@@ -29,7 +29,7 @@ use polkadot_runtime_common::impls::ToAuthor;
 use sp_core::ConstU32;
 use xcm::{
 	latest::{prelude::*, Weight as XCMWeight},
-	v3::{InteriorMultiLocation, Junctions::X1, MultiLocation},
+	// v3::{InteriorMultiLocation, Junctions::X1, MultiLocation},
 };
 use xcm_builder::{
 	AccountId32Aliases, AllowExplicitUnpaidExecutionFrom, AllowKnownQueryResponses,
@@ -210,7 +210,7 @@ pub type XcmRouter = (
 );
 
 parameter_types! {
-	pub const UniversalLocation: InteriorMultiLocation = Junctions::Here;
+	pub const UniversalLocation: cumulus_primitives_core::InteriorLocation = Junctions::Here;
 }
 
 impl pallet_xcm::Config for Runtime {
