@@ -1,3 +1,5 @@
+use crate::ExecutiveBody;
+
 // Copyright 2022 ComposableFi
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
@@ -18,19 +20,26 @@ use super::{
 use core::marker::PhantomData;
 use frame_support::{
 	match_types, parameter_types,
-	traits::{Everything, Nothing, ProcessMessageError},
+	traits::{Contains, EitherOfDiverse, Equals, Everything, Nothing, ProcessMessageError},
 };
-use pallet_xcm::XcmPassthrough;
-use polkadot_parachain::primitives::Sibling;
+use frame_system::EnsureRoot;
+use pallet_xcm::{EnsureXcm, IsMajorityOfBody, XcmPassthrough};
+use polkadot_parachain_primitives::primitives::Sibling;
 use polkadot_runtime_common::impls::ToAuthor;
-use xcm::latest::{prelude::*, Weight as XCMWeight};
+use sp_core::ConstU32;
+use xcm::{
+	latest::{prelude::*, Weight as XCMWeight},
+	v3::{InteriorMultiLocation, Junctions::X1, MultiLocation},
+};
 use xcm_builder::{
 	AccountId32Aliases, AllowExplicitUnpaidExecutionFrom, AllowKnownQueryResponses,
-	AllowTopLevelPaidExecutionFrom, AllowUnpaidExecutionFrom, CurrencyAdapter, EnsureXcmOrigin,
-	FixedWeightBounds, IsConcrete, NativeAsset, ParentIsPreset, RelayChainAsNative,
-	SiblingParachainAsNative, SiblingParachainConvertsVia, SignedAccountId32AsNative,
-	SignedToAccountId32, SovereignSignedViaLocation, TakeWeightCredit, TrailingSetTopicAsId,
-	UsingComponents, WithComputedOrigin,
+	AllowSubscriptionsFrom, AllowTopLevelPaidExecutionFrom, AllowUnpaidExecutionFrom,
+	CurrencyAdapter, DenyReserveTransferToRelayChain, DenyThenTry, EnsureXcmOrigin,
+	FixedWeightBounds, FrameTransactionalProcessor, IsConcrete, NativeAsset, ParentAsSuperuser,
+	ParentIsPreset, RelayChainAsNative, SiblingParachainAsNative, SiblingParachainConvertsVia,
+	SignedAccountId32AsNative, SignedToAccountId32, SovereignSignedViaLocation, TakeWeightCredit,
+	TrailingSetTopicAsId, UsingComponents, WithComputedOrigin, XcmFeeManagerFromComponents,
+	XcmFeeToAccount,
 };
 use xcm_executor::{traits::ShouldExecute, XcmExecutor};
 
@@ -41,7 +50,13 @@ parameter_types! {
 	pub Ancestry: MultiLocation = Parachain(ParachainInfo::parachain_id().into()).into();
 }
 
-/// Type for specifying how a `MultiLocation` can be converted into an `AccountId`. This is used
+/// We allow root and the Relay Chain council to execute privileged collator selection operations.
+pub type CollatorSelectionUpdateOrigin = EitherOfDiverse<
+	EnsureRoot<AccountId>,
+	EnsureXcm<IsMajorityOfBody<RelayLocation, ExecutiveBody>>,
+>;
+
+/// Type for specifying how a `Location` can be converted into an `AccountId`. This is used
 /// when determining ownership of accounts for asset transacting and when attempting to use XCM
 /// `Transact` in order to determine the dispatch Origin.
 pub type LocationToAccountId = (
@@ -53,17 +68,18 @@ pub type LocationToAccountId = (
 	AccountId32Aliases<RelayNetwork, AccountId>,
 );
 
-/// Means for transacting assets on this chain.
-pub type LocalAssetTransactor = CurrencyAdapter<
+/// Means for transacting the native currency on this chain.
+#[allow(deprecated)]
+pub type CurrencyTransactor = CurrencyAdapter<
 	// Use this currency:
 	Balances,
 	// Use this currency when it is a fungible asset matching the given location or name:
 	IsConcrete<RelayLocation>,
-	// Do a simple punn to convert an AccountId32 MultiLocation into a native chain account ID:
+	// Convert an XCM Location into a local account id:
 	LocationToAccountId,
 	// Our chain's account ID type (we can't get away without mentioning it explicitly):
 	AccountId,
-	// We don't track any teleports.
+	// We don't track any teleports of `Balances`.
 	(),
 >;
 
@@ -75,12 +91,15 @@ pub type XcmOriginToTransactDispatchOrigin = (
 	// using `LocationToAccountId` and then turn that into the usual `Signed` origin. Useful for
 	// foreign chains who want to have a local sovereign account on this chain which they control.
 	SovereignSignedViaLocation<LocationToAccountId, RuntimeOrigin>,
-	// Native converter for Relay-chain (Parent) location; will converts to a `Relay` origin when
-	// recognized.
+	// Native converter for Relay-chain (Parent) location; will convert to a `Relay` origin when
+	// recognised.
 	RelayChainAsNative<RelayChainOrigin, RuntimeOrigin>,
 	// Native converter for sibling Parachains; will convert to a `SiblingPara` origin when
-	// recognized.
+	// recognised.
 	SiblingParachainAsNative<cumulus_pallet_xcm::Origin, RuntimeOrigin>,
+	// Superuser converter for the Relay-chain (Parent) location. This will allow it to issue a
+	// transaction from the Root origin.
+	ParentAsSuperuser<RuntimeOrigin>,
 	// Native signed account converter; this just converts an `AccountId32` origin into a normal
 	// `RuntimeOrigin::Signed` origin of the same 32-byte value.
 	SignedAccountId32AsNative<RelayNetwork, RuntimeOrigin>,
@@ -89,9 +108,8 @@ pub type XcmOriginToTransactDispatchOrigin = (
 );
 
 parameter_types! {
-	// Taken from https://github.com/paritytech/polkadot/blob/2bbef460d24f44aeba9d4014062bb8c631327496/runtime/test-runtime/src/xcm_config.rs#L34
-	// TODO: @dzmitry-lahoda can you validate?
-	pub const UnitWeightCost: xcm::latest::Weight = frame_support::weights::Weight::from_parts(1_000, 1_000);
+	// One XCM operation is 1_000_000_000 weight - almost certainly a conservative estimate.
+	pub UnitWeightCost: Weight = Weight::from_parts(1_000_000_000, 64 * 1024);
 	pub const MaxInstructions: u32 = 100;
 }
 
@@ -101,69 +119,10 @@ match_types! {
 		MultiLocation { parents: 1, interior: X1(Plurality { id: BodyId::Executive, .. }) }
 	};
 }
-
-//TODO: move DenyThenTry to polkadot's xcm module.
-/// Deny executing the xcm message if it matches any of the Deny filter regardless of anything else.
-/// If it passes the Deny, and matches one of the Allow cases then it is let through.
-pub struct DenyThenTry<Deny, Allow>(PhantomData<Deny>, PhantomData<Allow>)
-where
-	Deny: ShouldExecute,
-	Allow: ShouldExecute;
-
-impl<Deny, Allow> ShouldExecute for DenyThenTry<Deny, Allow>
-where
-	Deny: ShouldExecute,
-	Allow: ShouldExecute,
-{
-	fn should_execute<RuntimeCall>(
-		origin: &MultiLocation,
-		message: &mut [Instruction<RuntimeCall>],
-		max_weight: XCMWeight,
-		weight_credit: &mut XCMWeight,
-	) -> Result<(), ProcessMessageError> {
-		Deny::should_execute(origin, message, max_weight, weight_credit)?;
-		Allow::should_execute(origin, message, max_weight, weight_credit)
-	}
-}
-
-// See issue #5233
-pub struct DenyReserveTransferToRelayChain;
-impl ShouldExecute for DenyReserveTransferToRelayChain {
-	fn should_execute<RuntimeCall>(
-		origin: &MultiLocation,
-
-		message: &mut [Instruction<RuntimeCall>],
-		_max_weight: XCMWeight,
-		_weight_credit: &mut XCMWeight,
-	) -> Result<(), ProcessMessageError> {
-		if message.iter().any(|inst| {
-			matches!(
-				inst,
-				InitiateReserveWithdraw {
-					reserve: MultiLocation { parents: 1, interior: Here },
-					..
-				} | DepositReserveAsset { dest: MultiLocation { parents: 1, interior: Here }, .. } |
-					TransferReserveAsset {
-						dest: MultiLocation { parents: 1, interior: Here },
-						..
-					}
-			)
-		}) {
-			return Err(ProcessMessageError::Unsupported) // Deny
-		}
-
-		// An unexpected reserve transfer has arrived from the Relay Chain. Generally, `IsReserve`
-		// should not allow this, but we just log it here.
-		if matches!(origin, MultiLocation { parents: 1, interior: Here }) &&
-			message.iter().any(|inst| matches!(inst, ReserveAssetDeposited { .. }))
-		{
-			log::warn!(
-				target: "xcm::barriers",
-				"Unexpected ReserveAssetDeposited from the Relay Chain",
-			);
-		}
-		// Permit everything else
-		Ok(())
+pub struct ParentOrParentsPlurality;
+impl Contains<Location> for ParentOrParentsPlurality {
+	fn contains(location: &Location) -> bool {
+		matches!(location.unpack(), (1, []) | (1, [Plurality { .. }]))
 	}
 }
 
@@ -180,15 +139,14 @@ pub type Barrier = TrailingSetTopicAsId<
 					// If the message is one that immediately attempts to pay for execution, then
 					// allow it.
 					AllowTopLevelPaidExecutionFrom<Everything>,
-					// Parent, its pluralities (i.e. governance bodies), relay treasury pallet and
-					// BridgeHub get free execution.
+					// Parent, its pluralities (i.e. governance bodies) and relay treasury pallet
+					// get free execution.
 					AllowExplicitUnpaidExecutionFrom<(
-						ParentOrParentsExecutivePlurality,
+						ParentOrParentsPlurality,
 						Equals<RelayTreasuryLocation>,
-						Equals<bridging::SiblingBridgeHub>,
 					)>,
 					// Subscriptions for version tracking are OK.
-					AllowSubscriptionsFrom<ParentOrSiblings>,
+					AllowSubscriptionsFrom<ParentRelayOrSiblingParachains>,
 				),
 				UniversalLocation,
 				ConstU32<8>,
@@ -197,92 +155,34 @@ pub type Barrier = TrailingSetTopicAsId<
 	>,
 >;
 
-/// Multiplier used for dedicated `TakeFirstAssetTrader` with `Assets` instance.
-pub type AssetFeeAsExistentialDepositMultiplierFeeCharger = AssetFeeAsExistentialDepositMultiplier<
-	Runtime,
-	WeightToFee,
-	pallet_assets::BalanceToAssetBalance<Balances, Runtime, ConvertInto, TrustBackedAssetsInstance>,
-	TrustBackedAssetsInstance,
->;
-
-/// Multiplier used for dedicated `TakeFirstAssetTrader` with `ForeignAssets` instance.
-pub type ForeignAssetFeeAsExistentialDepositMultiplierFeeCharger =
-	AssetFeeAsExistentialDepositMultiplier<
-		Runtime,
-		WeightToFee,
-		pallet_assets::BalanceToAssetBalance<Balances, Runtime, ConvertInto, ForeignAssetsInstance>,
-		ForeignAssetsInstance,
-	>;
-
 /// Locations that will not be charged fees in the executor,
 /// either execution or delivery.
 /// We only waive fees for system functions, which these locations represent.
-pub type WaivedLocations =
-	(RelayOrOtherSystemParachains<SystemParachains, Runtime>, Equals<RelayTreasuryLocation>);
-
-/// Cases where a remote origin is accepted as trusted Teleporter for a given asset:
-///
-/// - ROC with the parent Relay Chain and sibling system parachains; and
-/// - Sibling parachains' assets from where they originate (as `ForeignCreators`).
-pub type TrustedTeleporters = (
-	ConcreteAssetFromSystem<TokenLocation>,
-	IsForeignConcreteAsset<FromSiblingParachain<parachain_info::Pallet<Runtime>>>,
+pub type WaivedLocations = (
+	RelayOrOtherSystemParachains<AllSiblingSystemParachains, Runtime>,
+	Equals<RelayTreasuryLocation>,
 );
+
+pub type TrustedTeleporter = ConcreteAssetFromSystem<RelayLocation>;
 
 pub struct XcmConfig;
 impl xcm_executor::Config for XcmConfig {
 	type RuntimeCall = RuntimeCall;
 	type XcmSender = XcmRouter;
-	type AssetTransactor = AssetTransactors;
+	type AssetTransactor = CurrencyTransactor;
 	type OriginConverter = XcmOriginToTransactDispatchOrigin;
-	// Asset Hub trusts only particular, pre-configured bridged locations from a different consensus
-	// as reserve locations (we trust the Bridge Hub to relay the message that a reserve is being
-	// held). Asset Hub may _act_ as a reserve location for ROC and assets created
-	// under `pallet-assets`. Users must use teleport where allowed (e.g. ROC with the Relay Chain).
-	type IsReserve = (bridging::to_westend::IsTrustedBridgedReserveLocationForConcreteAsset,);
-	type IsTeleporter = TrustedTeleporters;
+	type IsReserve = NativeAsset;
+	type IsTeleporter = TrustedTeleporter;
 	type UniversalLocation = UniversalLocation;
 	type Barrier = Barrier;
-	type Weigher = WeightInfoBounds<
-		crate::weights::xcm::AssetHubRococoXcmWeight<RuntimeCall>,
-		RuntimeCall,
-		MaxInstructions,
-	>;
-	type Trader = (
-		UsingComponents<WeightToFee, TokenLocation, AccountId, Balances, ToStakingPot<Runtime>>,
-		// This trader allows to pay with `is_sufficient=true` "Trust Backed" assets from dedicated
-		// `pallet_assets` instance - `Assets`.
-		cumulus_primitives_utility::TakeFirstAssetTrader<
-			AccountId,
-			AssetFeeAsExistentialDepositMultiplierFeeCharger,
-			TrustBackedAssetsConvertedConcreteId,
-			Assets,
-			cumulus_primitives_utility::XcmFeesTo32ByteAccount<
-				FungiblesTransactor,
-				AccountId,
-				XcmAssetFeesReceiver,
-			>,
-		>,
-		// This trader allows to pay with `is_sufficient=true` "Foreign" assets from dedicated
-		// `pallet_assets` instance - `ForeignAssets`.
-		cumulus_primitives_utility::TakeFirstAssetTrader<
-			AccountId,
-			ForeignAssetFeeAsExistentialDepositMultiplierFeeCharger,
-			ForeignAssetsConvertedConcreteId,
-			ForeignAssets,
-			cumulus_primitives_utility::XcmFeesTo32ByteAccount<
-				ForeignFungiblesTransactor,
-				AccountId,
-				XcmAssetFeesReceiver,
-			>,
-		>,
-	);
+	type Weigher = FixedWeightBounds<UnitWeightCost, RuntimeCall, MaxInstructions>;
+	type Trader = UsingComponents<WeightToFee, RelayLocation, AccountId, Balances, ()>;
 	type ResponseHandler = PolkadotXcm;
 	type AssetTrap = PolkadotXcm;
 	type AssetClaims = PolkadotXcm;
 	type SubscriptionService = PolkadotXcm;
 	type PalletInstancesInfo = AllPalletsWithSystem;
-	type MaxAssetsIntoHolding = MaxAssetsIntoHolding;
+	type MaxAssetsIntoHolding = ConstU32<8>;
 	type AssetLocker = ();
 	type AssetExchanger = ();
 	type FeeManager = XcmFeeManagerFromComponents<
@@ -290,9 +190,9 @@ impl xcm_executor::Config for XcmConfig {
 		XcmFeeToAccount<Self::AssetTransactor, AccountId, TreasuryAccount>,
 	>;
 	type MessageExporter = ();
-	type UniversalAliases = (bridging::to_westend::UniversalAliases,);
-	type CallDispatcher = WithOriginFilter<SafeCallFilter>;
-	type SafeCallFilter = SafeCallFilter;
+	type UniversalAliases = Nothing;
+	type CallDispatcher = RuntimeCall;
+	type SafeCallFilter = Everything;
 	type Aliasers = Nothing;
 	type TransactionalProcessor = FrameTransactionalProcessor;
 }

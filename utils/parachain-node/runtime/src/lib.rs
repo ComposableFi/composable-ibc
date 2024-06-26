@@ -31,7 +31,9 @@ pub mod xcm_config;
 
 use alloc::string::ToString;
 use core::str::FromStr;
-use cumulus_pallet_parachain_system::RelayNumberStrictlyIncreases;
+use cumulus_pallet_parachain_system::{
+	RelayNumberMonotonicallyIncreases, RelayNumberStrictlyIncreases,
+};
 use ibc::core::{
 	ics24_host::identifier::PortId,
 	ics26_routing::context::{Module, ModuleId},
@@ -193,6 +195,15 @@ impl WeightToFeePolynomial for WeightToFee {
 	}
 }
 
+/// Maximum number of blocks simultaneously accepted by the Runtime, not yet included
+/// into the relay chain.
+const UNINCLUDED_SEGMENT_CAPACITY: u32 = 3;
+/// How many parachain blocks are processed by the relay chain per parent. Limits the
+/// number of blocks authored per slot.
+const BLOCK_PROCESSING_VELOCITY: u32 = 1;
+/// Relay chain slot duration, in milliseconds.
+const RELAY_CHAIN_SLOT_DURATION_MILLIS: u32 = 6000;
+
 /// Opaque types. These are used by the CLI to instantiate machinery that don't need to know
 /// the specifics of the runtime. They can then be made to be agnostic over specific formats
 /// of data like extrinsics, allowing for them to continue syncing the network through upgrades
@@ -304,7 +315,7 @@ parameter_types! {
 }
 
 // Configure FRAME pallets to include in runtime.
-#[derive_impl(frame_system::config_preludes::ParaChainDefaultConfig as frame_system::DefaultConfig)]
+#[derive_impl(frame_system::config_preludes::ParaChainDefaultConfig)]
 impl frame_system::Config for Runtime {
 	/// The identifier used to distinguish between accounts.
 	type AccountId = AccountId;
@@ -389,7 +400,7 @@ impl pallet_balances::Config for Runtime {
 	type DustRemoval = ();
 	type ExistentialDeposit = ExistentialDeposit;
 	type AccountStore = System;
-	type WeightInfo = weights::pallet_balances::WeightInfo<Runtime>;
+	type WeightInfo = pallet_balances::weights::SubstrateWeight<Runtime>;
 	type MaxReserves = ConstU32<50>;
 	type ReserveIdentifier = [u8; 8];
 	type RuntimeHoldReason = RuntimeHoldReason;
@@ -416,6 +427,7 @@ impl pallet_transaction_payment::Config for Runtime {
 parameter_types! {
 	pub const ReservedXcmpWeight: Weight = MAXIMUM_BLOCK_WEIGHT.div(4);
 	pub const ReservedDmpWeight: Weight = MAXIMUM_BLOCK_WEIGHT.div(4);
+	pub const RelayOrigin: AggregateMessageOrigin = AggregateMessageOrigin::Parent;
 }
 
 impl cumulus_pallet_parachain_system::Config for Runtime {
@@ -424,7 +436,7 @@ impl cumulus_pallet_parachain_system::Config for Runtime {
 	type OnSystemEvent = ();
 	type SelfParaId = parachain_info::Pallet<Runtime>;
 	type OutboundXcmpMessageSource = ();
-	type DmpQueue = frame_support::traits::EnqueueWithOrigin<MessageQueue, RelayOrigin>;
+	type DmpQueue = frame_support::traits::EnqueueWithOrigin<MessageQueue, ReservedXcmpWeight>;
 	type ReservedDmpWeight = ReservedDmpWeight;
 	type XcmpMessageHandler = ();
 	type ReservedXcmpWeight = ();
@@ -443,7 +455,7 @@ impl cumulus_pallet_aura_ext::Config for Runtime {}
 
 parameter_types! {
 	/// The asset ID for the asset that we use to pay for message delivery fees.
-	pub FeeAssetId: AssetId = AssetId(xcm_config::WestendLocation::get());
+	pub FeeAssetId: AssetId = AssetId(RelayLocation::get());
 	/// The base fee for the message delivery fees.
 	pub const BaseDeliveryFee: u128 = CENTS.saturating_mul(3);
 }
@@ -464,7 +476,7 @@ impl cumulus_pallet_xcmp_queue::Config for Runtime {
 	type MaxInboundSuspended = sp_core::ConstU32<1_000>;
 	type ControllerOrigin = EnsureRoot<AccountId>;
 	type ControllerOriginConverter = XcmOriginToTransactDispatchOrigin;
-	type WeightInfo = weights::cumulus_pallet_xcmp_queue::WeightInfo<Runtime>;
+	type WeightInfo = cumulus_pallet_xcmp_queue::weights::SubstrateWeight<Runtime>;
 	type PriceForSiblingDelivery = PriceForSiblingParachainDelivery;
 }
 
@@ -522,7 +534,7 @@ impl pallet_collator_selection::Config for Runtime {
 	type ValidatorId = <Self as frame_system::Config>::AccountId;
 	type ValidatorIdOf = pallet_collator_selection::IdentityCollator;
 	type ValidatorRegistration = Session;
-	type WeightInfo = weights::pallet_collator_selection::WeightInfo<Runtime>;
+	type WeightInfo = pallet_collator_selection::weights::SubstrateWeight<Runtime>;
 }
 
 impl pallet_ibc_ping::Config for Runtime {
@@ -609,7 +621,7 @@ pub struct IbcDenomToAssetIdConversion;
 
 // generate new asset id
 fn generate_asset_id() -> Result<AssetId, DispatchError> {
-	let (asset_id, ..) = <asset_registry::SequentialId<Runtime> as AssetProcessor<
+	let (asset_id, ..) = <orml_asset_registry::SequentialId<Runtime> as AssetProcessor<
 		AssetId,
 		DefaultAssetMetadata<Runtime>,
 	>>::pre_register(
@@ -626,7 +638,7 @@ fn generate_asset_id() -> Result<AssetId, DispatchError> {
 	)
 	.map_err(|_| DispatchError::Other("Failed to generate asset id"))?;
 	let asset_id = if asset_id == 1 {
-		let (asset_id, ..) = <asset_registry::SequentialId<Runtime> as AssetProcessor<
+		let (asset_id, ..) = <orml_asset_registry::SequentialId<Runtime> as AssetProcessor<
 			AssetId,
 			DefaultAssetMetadata<Runtime>,
 		>>::pre_register(
@@ -1156,41 +1168,6 @@ impl_runtime_apis! {
 					}
 				}).flatten().collect()
 			}
-		}
-	}
-
-	impl<RuntimeCall, AccountId> simnode_api::CreateTransactionApi<Block, AccountId, RuntimeCall> for Runtime
-		where
-			RuntimeCall: parity_scale_codec::Codec,
-			AccountId: parity_scale_codec::Codec + parity_scale_codec::EncodeLike<sp_runtime::AccountId32> + Into<sp_runtime::AccountId32> + Clone+ PartialEq + scale_info::TypeInfo + core::fmt::Debug,
-			Block: sp_runtime::traits::Block
-	{
-		fn create_transaction(call: RuntimeCall, signer: AccountId) -> Vec<u8> {
-			use sp_runtime::{
-				generic::Era, MultiSignature,
-				traits::StaticLookup,
-			};
-			use sp_core::sr25519;
-			let nonce = frame_system::Pallet::<Runtime>::account_nonce(signer.clone());
-			let extra = (
-				frame_system::CheckNonZeroSender::<Runtime>::new(),
-				frame_system::CheckSpecVersion::<Runtime>::new(),
-				frame_system::CheckTxVersion::<Runtime>::new(),
-				frame_system::CheckGenesis::<Runtime>::new(),
-				frame_system::CheckEra::<Runtime>::from(Era::Immortal),
-				frame_system::CheckNonce::<Runtime>::from(nonce),
-				frame_system::CheckWeight::<Runtime>::new(),
-				pallet_transaction_payment::ChargeTransactionPayment::<Runtime>::from(0),
-			);
-			let signature = MultiSignature::from(sr25519::Signature([0_u8;64]));
-			let address = AccountIdLookup::unlookup(signer.into());
-			let ext = generic::UncheckedExtrinsic::<Address, RuntimeCall, Signature, SignedExtra>::new_signed(
-				call,
-				address,
-				signature,
-				extra,
-			);
-			ext.encode()
 		}
 	}
 

@@ -5,7 +5,6 @@ use frame_support::traits::{
 	tokens::{Fortitude, Precision},
 	Currency, Get,
 };
-use frame_system::pallet_prelude::BlockNumberFor;
 use ibc::{
 	applications::transfer::{
 		context::{BankKeeper, Ics20Context, Ics20Keeper, Ics20Reader},
@@ -20,7 +19,6 @@ use sp_runtime::traits::IdentifyAccount;
 
 impl<T: Config + Send + Sync> Ics20Reader for Context<T>
 where
-	u32: From<BlockNumberFor<T>>,
 	AccountId32: From<<T as frame_system::Config>::AccountId>,
 {
 	type AccountId = T::AccountIdConversion;
@@ -52,7 +50,6 @@ where
 
 impl<T: Config + Send + Sync> Ics20Keeper for Context<T>
 where
-	u32: From<BlockNumberFor<T>>,
 	AccountId32: From<<T as frame_system::Config>::AccountId>,
 {
 	type AccountId = T::AccountIdConversion;
@@ -60,7 +57,6 @@ where
 
 impl<T: Config + Send + Sync> Ics20Context for Context<T>
 where
-	u32: From<BlockNumberFor<T>>,
 	AccountId32: From<<T as frame_system::Config>::AccountId>,
 {
 	type AccountId = T::AccountIdConversion;
@@ -69,7 +65,6 @@ where
 impl<T> BankKeeper for Context<T>
 where
 	T: Config + Send + Sync,
-	u32: From<BlockNumberFor<T>>,
 	AccountId32: From<<T as frame_system::Config>::AccountId>,
 {
 	type AccountId = T::AccountIdConversion;

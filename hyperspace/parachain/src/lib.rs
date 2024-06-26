@@ -286,10 +286,6 @@ where
 
 impl<T: light_client_common::config::Config + Send + Sync> ParachainClient<T>
 where
-	// u32: From<<<T as
-	// subxt::Config>::Header
-	// as subxt::config::Header>::Number>,
-	//
 	Self: KeyProvider,
 	<<T as light_client_common::config::Config>::Signature as Verify>::Signer:
 		From<MultiSigner> + IdentifyAccount<AccountId = T::AccountId>,
@@ -326,7 +322,6 @@ where
 		client_state: &ClientState,
 	) -> Result<Vec<T::Header>, Error>
 	where
-		// // u32: From<<<T as subxt::Config>::Header as Header>::Number>,
 		<<T as subxt::Config>::Header as Header>::Number: From<u32>,
 		<T as subxt::Config>::Header: Decode,
 	{
@@ -483,9 +478,6 @@ where
 
 impl<T: light_client_common::config::Config + Send + Sync> ParachainClient<T>
 where
-	// u32: From<<<T as
-	// subxt::Config>::Header
-	// as Header>::Number>,
 	Self: KeyProvider,
 	<<T as light_client_common::config::Config>::Signature as Verify>::Signer:
 		From<MultiSigner> + IdentifyAccount<AccountId = T::AccountId>,
@@ -512,7 +504,6 @@ where
 			From<MultiSigner> + IdentifyAccount<AccountId = T::AccountId>,
 		MultiSigner: From<MultiSigner>,
 		<T as subxt::Config>::Address: From<<T as subxt::Config>::AccountId>,
-		// u32: From<<<T as subxt::Config>::Header as subxt::config::Header>::Number>,
 	{
 		use ibc::core::ics24_host::identifier::ChainId;
 		let api = self.relay_client.storage();
@@ -603,7 +594,6 @@ where
 			From<MultiSigner> + IdentifyAccount<AccountId = T::AccountId>,
 		MultiSigner: From<MultiSigner>,
 		<T as subxt::Config>::Address: From<<T as subxt::Config>::AccountId>,
-		// u32: From<<<T as subxt::Config>::Header as Header>::Number>,
 		<T as subxt::Config>::Hash: From<H256>,
 		<T as subxt::Config>::Header: Decode,
 	{

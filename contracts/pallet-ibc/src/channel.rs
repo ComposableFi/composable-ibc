@@ -1,7 +1,6 @@
 use super::*;
 use core::time::Duration;
 use frame_support::traits::Get;
-use frame_system::pallet_prelude::BlockNumberFor;
 use ibc_primitives::PacketInfo;
 use sp_core::crypto::AccountId32;
 
@@ -32,10 +31,7 @@ use ibc::{
 };
 use tendermint_proto::Protobuf;
 
-impl<T: Config + Sync + Send> ChannelReader for Context<T>
-where
-	u32: From<BlockNumberFor<T>>,
-{
+impl<T: Config + Sync + Send> ChannelReader for Context<T> {
 	/// Returns the ChannelEnd for the given `port_id` and `chan_id`.
 	fn channel_end(&self, port_channel_id: &(PortId, ChannelId)) -> Result<ChannelEnd, ICS04Error> {
 		log::trace!(target: "pallet_ibc",
@@ -261,7 +257,6 @@ where
 
 impl<T: Config + Sync + Send> ChannelKeeper for Context<T>
 where
-	u32: From<BlockNumberFor<T>>,
 	AccountId32: From<<T as frame_system::Config>::AccountId>,
 	Self: ChannelReader,
 {

@@ -56,6 +56,7 @@ use ics11_beefy::{
 use scale_info::prelude::format;
 use sp_consensus_grandpa::{AuthoritySignature, KEY_TYPE};
 use sp_core::crypto::{AccountId32, ByteArray};
+use sp_runtime::SaturatedConversion;
 use sp_std::prelude::*;
 use tendermint::{
 	account,
@@ -332,7 +333,6 @@ pub(crate) fn create_mock_grandpa_client_state() -> (
 pub(crate) fn create_client_update<T>() -> MsgUpdateAnyClient<Context<T>>
 where
 	T: Config + Send + Sync,
-	u32: From<BlockNumberFor<T>>,
 	BlockNumberFor<T>: From<u32>,
 {
 	MsgUpdateAnyClient {
@@ -355,7 +355,6 @@ where
 pub(crate) fn create_conn_open_try<T>() -> (ConsensusState, MsgConnectionOpenTry<Context<T>>)
 where
 	T: Config + Send + Sync,
-	u32: From<BlockNumberFor<T>>,
 	BlockNumberFor<T>: From<u32>,
 {
 	let client_id = ClientId::new("07-tendermint", 0).unwrap();
@@ -472,7 +471,6 @@ where
 pub(crate) fn create_conn_open_ack<T>() -> (ConsensusState, MsgConnectionOpenAck<Context<T>>)
 where
 	T: Config + Send + Sync,
-	u32: From<BlockNumberFor<T>>,
 	BlockNumberFor<T>: From<u32>,
 {
 	let client_id = ClientId::new("07-tendermint", 0).unwrap();
@@ -600,7 +598,7 @@ pub(crate) fn create_conn_open_confirm<T: Config>() -> (ConsensusState, MsgConne
 		"{}",
 		ClientConsensusStatePath {
 			client_id: counterparty_client_id,
-			epoch: u32::from(parachain_info::Pallet::<T>::parachain_id()).into(),
+			epoch: parachain_info::Pallet::<T>::parachain_id().saturated_into::<u32>(),
 			height: 1
 		}
 	)
@@ -909,7 +907,6 @@ pub(crate) fn create_recv_packet<T: Config + Send + Sync>(
 	data: Vec<u8>,
 ) -> (ConsensusState, MsgRecvPacket)
 where
-	u32: From<BlockNumberFor<T>>,
 	AccountId32: From<<T as frame_system::Config>::AccountId>,
 {
 	let port_id = PortId::transfer();
@@ -978,7 +975,6 @@ pub(crate) fn create_ack_packet<T: Config + Send + Sync>(
 	ack: Vec<u8>,
 ) -> (ConsensusState, MsgAcknowledgement)
 where
-	u32: From<BlockNumberFor<T>>,
 	AccountId32: From<<T as frame_system::Config>::AccountId>,
 {
 	let port_id = PortId::transfer();
@@ -1048,7 +1044,6 @@ pub(crate) fn create_timeout_packet<T: Config + Send + Sync>(
 	data: Vec<u8>,
 ) -> (ConsensusState, MsgTimeout)
 where
-	u32: From<BlockNumberFor<T>>,
 	AccountId32: From<<T as frame_system::Config>::AccountId>,
 {
 	let port_id = PortId::transfer();

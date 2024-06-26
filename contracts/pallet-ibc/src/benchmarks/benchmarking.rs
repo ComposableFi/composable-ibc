@@ -87,8 +87,7 @@ fn relayer_origin<T: pallet_membership::Config<Instance2> + frame_system::Config
 
 benchmarks! {
 	where_clause {
-		where u32: From<BlockNumberFor<T>>,
-				BlockNumberFor<T>: From<u32>,
+		where BlockNumberFor<T>: From<u32>,
 				T: Send + Sync +
 					pallet_timestamp::Config<Moment = u64> +
 					parachain_info::Config +

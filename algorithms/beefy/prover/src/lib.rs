@@ -87,10 +87,7 @@ pub struct Prover<T: Config> {
 	pub phantom: PhantomData<T>,
 }
 
-impl<T: light_client_common::config::Config> Prover<T>
-where
-	u32: From<<<T as Config>::Header as Header>::Number>,
-{
+impl<T: light_client_common::config::Config> Prover<T> {
 	/// Returns the initial state for bootstrapping a BEEFY light client.
 	pub async fn get_initial_client_state(client: Option<&RpcClient>) -> ClientState {
 		if client.is_none() {
@@ -175,7 +172,6 @@ where
 		latest_beefy_height: u32,
 	) -> Result<Vec<T::Header>, Error>
 	where
-		u32: From<<<T as Config>::Header as Header>::Number>,
 		<<T as Config>::Header as Header>::Number: From<u32>,
 		<T as Config>::Header: Decode,
 	{
@@ -245,7 +241,6 @@ where
 	) -> Result<(Vec<ParachainHeader>, Proof<H256>), Error>
 	where
 		<<T as Config>::Header as Header>::Number: Ord + sp_runtime::traits::Zero,
-		u32: From<<<T as Config>::Header as Header>::Number>,
 		<T as subxt::Config>::Header: Decode,
 	{
 		let legacy_rpc_methods = LegacyRpcMethods::<T>::new(self.relay_rpc_client.clone());

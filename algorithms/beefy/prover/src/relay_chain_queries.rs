@@ -20,7 +20,7 @@ use mmr_rpc::LeavesProof;
 use parity_scale_codec::{Decode, Encode};
 use sp_consensus_beefy::{SignedCommitment, VersionedFinalityProof};
 use sp_core::{hexdisplay::AsBytesRef, storage::StorageKey, H256};
-use sp_runtime::traits::Zero;
+use sp_runtime::{traits::Zero, SaturatedConversion};
 use std::collections::{BTreeMap, BTreeSet};
 use subxt::{
 	backend::{legacy::LegacyRpcMethods, rpc::RpcClient},
@@ -46,7 +46,6 @@ pub async fn fetch_finalized_parachain_heads<T: light_client_common::config::Con
 	header_numbers: &BTreeSet<<<T as Config>::Header as Header>::Number>,
 ) -> Result<FinalizedParaHeads, Error>
 where
-	u32: From<<<T as Config>::Header as Header>::Number>,
 	<<T as Config>::Header as Header>::Number: Ord + Zero,
 	<T as subxt::Config>::Header: Decode,
 {
@@ -141,7 +140,7 @@ where
 			continue
 		}
 
-		let block_number = u32::from(header.number());
+		let block_number = header.number().into().saturated_into::<u32>();
 		finalized_blocks.insert(block_number as u64, heads);
 		block_numbers.push(block_number);
 	}

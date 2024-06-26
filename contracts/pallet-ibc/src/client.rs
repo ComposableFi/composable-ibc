@@ -35,7 +35,6 @@ pub struct HostConsensusProof {
 
 impl<T: Config + Send + Sync> ClientReader for Context<T>
 where
-	u32: From<BlockNumberFor<T>>,
 	BlockNumberFor<T>: From<u32>,
 {
 	fn client_type(&self, client_id: &ClientId) -> Result<ClientType, ICS02Error> {
@@ -312,10 +311,7 @@ impl<T: Config> ClientTypes for Context<T> {
 	type ClientDef = AnyClient;
 }
 
-impl<T: Config + Send + Sync> ClientKeeper for Context<T>
-where
-	u32: From<BlockNumberFor<T>>,
-{
+impl<T: Config + Send + Sync> ClientKeeper for Context<T> {
 	fn store_client_type(
 		&mut self,
 		client_id: ClientId,

@@ -66,6 +66,7 @@ sp-version = { workspace = true }
 # Polkadot
 pallet-xcm = { workspace = true }
 polkadot-runtime-common = { workspace = true }
+polkadot-parachain-primitives = { workspace = true }
 xcm = { workspace = true }
 xcm-builder = { workspace = true }
 xcm-executor = { workspace = true }
@@ -127,6 +128,7 @@ std = [
 	"pallet-xcm/std",
 	"parachain-info/std",
 	"polkadot-runtime-common/std",
+	"polkadot-parachain-primitives/std",
 	"sp-api/std",
 	"sp-block-builder/std",
 	"sp-consensus-aura/std",

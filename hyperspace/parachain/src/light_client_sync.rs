@@ -5,7 +5,7 @@ use parity_scale_codec::{Decode, Encode};
 use sp_core::H256;
 use sp_runtime::{
 	traits::{IdentifyAccount, One, Verify},
-	MultiSignature, MultiSigner,
+	MultiSignature, MultiSigner, SaturatedConversion,
 };
 use std::{
 	collections::{BTreeMap, BTreeSet, HashMap},
@@ -40,7 +40,6 @@ const MAX_HEADERS_PER_ITERATION: usize = 100;
 impl<T: light_client_common::config::Config + Send + Sync + Clone> LightClientSync
 	for ParachainClient<T>
 where
-	// u32: From<<<T as subxt::Config>::Header as Header>::Number>,
 	Self: KeyProvider,
 	<<T as light_client_common::config::Config>::Signature as Verify>::Signer:
 		From<MultiSigner> + IdentifyAccount<AccountId = T::AccountId>,
@@ -89,7 +88,8 @@ where
 				let session_length = prover.session_length().await?;
 				let (.., session_end_block) =
 					prover.session_start_and_end_for_block(previous_finalized_height).await?;
-				let latest_finalized_height = u32::from(finalized_head.number());
+				let latest_finalized_height =
+					finalized_head.number().into().saturated_into::<u32>();
 				let session_changes =
 					latest_finalized_height.saturating_sub(session_end_block) / session_length;
 				// If no session changes have occurred between the last update and the latest
@@ -126,7 +126,8 @@ where
 					.ok_or_else(|| {
 						Error::Custom(format!("Expected finalized header, found None"))
 					})?;
-				let latest_finalized_height = u32::from(finalized_head.number());
+				let latest_finalized_height =
+					finalized_head.number().into().saturated_into::<u32>();
 				let (messages, events) = self
 					.query_missed_grandpa_updates(
 						counterparty,
@@ -246,7 +247,6 @@ async fn get_message<T: light_client_common::config::Config + Send + Sync>(
 	para_id: u32,
 ) -> Result<(Any, Vec<IbcEvent>, u32, u32), anyhow::Error>
 where
-	// // u32: From<<<T as subxt::Config>::Header as subxt::config::Header>::Number>,
 	<<T as subxt::Config>::Header as Header>::Number:
 		BlockNumberOps + From<u32> + Display + Ord + sp_runtime::traits::Zero + One + Send + Sync,
 	<T as subxt::Config>::Header: Decode + Send + Sync + Clone,
@@ -257,7 +257,7 @@ where
 	// fetch the latest finalized parachain header
 	let finalized_para_header =
 		prover.query_latest_finalized_parachain_header(latest_finalized_height).await?;
-	let finalized_para_height = u32::from(finalized_para_header.number());
+	let finalized_para_height = finalized_para_header.number().into().saturated_into::<u32>();
 	let latest_finalized_para_height = finalized_para_height;
 	let finalized_blocks =
 		((previous_finalized_para_height + 1)..=latest_finalized_para_height).collect::<Vec<_>>();

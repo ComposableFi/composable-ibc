@@ -5454,17 +5454,6 @@ dependencies = [
 ]
 
 [[package]]
-name = "hyperspace"
-version = "0.1.0"
-dependencies = [
- "anyhow",
- "clap 4.5.7",
- "hyperspace-core",
- "tokio",
- "toml 0.7.8",
-]
-
-[[package]]
 name = "hyperspace-core"
 version = "0.1.0"
 dependencies = [
@@ -5665,45 +5654,6 @@ dependencies = [
  "subxt",
  "thiserror",
  "tokio",
-]
-
-[[package]]
-name = "hyperspace-testsuite"
-version = "0.1.0"
-dependencies = [
- "anyhow",
- "async-trait",
- "finality-grandpa",
- "futures",
- "grandpa-light-client-primitives",
- "grandpa-light-client-verifier",
- "hex",
- "hyperspace-core",
- "hyperspace-cosmos",
- "hyperspace-parachain",
- "hyperspace-primitives",
- "ibc",
- "ibc-proto",
- "ics10-grandpa",
- "light-client-common",
- "log",
- "pallet-ibc",
- "pallet-ibc-ping",
- "parity-scale-codec",
- "polkadot-core-primitives 7.0.0",
- "rand 0.8.5",
- "serde_json",
- "sp-consensus-grandpa",
- "sp-core 28.0.0",
- "sp-keyring",
- "sp-keystore 0.34.0",
- "sp-runtime 31.0.1",
- "sp-state-machine 0.35.0",
- "sp-trie 29.0.0",
- "subxt",
- "tendermint-proto",
- "tokio",
- "toml 0.7.8",
 ]
 
 [[package]]
@@ -10272,6 +10222,7 @@ dependencies = [
  "pallet-transaction-payment-rpc-runtime-api",
  "pallet-xcm 7.0.0",
  "parity-scale-codec",
+ "polkadot-parachain-primitives 6.0.0",
  "polkadot-runtime-common 7.0.0",
  "scale-info",
  "serde",

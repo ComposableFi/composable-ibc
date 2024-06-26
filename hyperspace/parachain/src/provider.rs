@@ -80,7 +80,6 @@ pub struct TransactionId<Hash> {
 impl<T: light_client_common::config::Config + Send + Sync + Clone> IbcProvider
 	for ParachainClient<T>
 where
-	// u32: From<<<T as subxt::Config>::Header as subxt::config::Header>::Number>,
 	Self: KeyProvider,
 	<<T as light_client_common::config::Config>::Signature as Verify>::Signer:
 		From<MultiSigner> + IdentifyAccount<AccountId = T::AccountId>,

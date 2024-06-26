@@ -47,7 +47,7 @@ use sp_consensus_grandpa::GRANDPA_ENGINE_ID;
 use sp_core::H256;
 use sp_runtime::{
 	traits::{BlakeTwo256, IdentifyAccount, One, Verify},
-	MultiSignature, MultiSigner,
+	MultiSignature, MultiSigner, SaturatedConversion,
 };
 use std::{
 	collections::{BTreeMap, BTreeSet, HashMap},
@@ -90,7 +90,6 @@ impl FinalityProtocol {
 	where
 		T: light_client_common::config::Config + Send + Sync,
 		C: Chain,
-		// u32: From<<<T as subxt::Config>::Header as Header>::Number>,
 		ParachainClient<T>: Chain,
 		ParachainClient<T>: KeyProvider,
 		<<T as light_client_common::config::Config>::Signature as Verify>::Signer:
@@ -136,7 +135,6 @@ pub async fn query_latest_ibc_events_with_beefy<T, C>(
 where
 	T: light_client_common::config::Config + Send + Sync,
 	C: Chain,
-	// u32: From<<<T as subxt::Config>::Header as subxt::config::Header>::Number>,
 	ParachainClient<T>: Chain + KeyProvider,
 	<<T as light_client_common::config::Config>::Signature as Verify>::Signer:
 		From<MultiSigner> + IdentifyAccount<AccountId = T::AccountId>,
@@ -212,8 +210,10 @@ where
 	// height recorded in the on-chain client state, because in some cases a parachain
 	// block that was already finalized in a former beefy block might still be part of
 	// the parachain headers in a later beefy block, discovered this from previous logs
-	let finalized_blocks =
-		headers.iter().map(|header| u32::from(header.number())).collect::<Vec<_>>();
+	let finalized_blocks = headers
+		.iter()
+		.map(|header| header.number().into().saturated_into::<u32>())
+		.collect::<Vec<_>>();
 
 	let finalized_block_numbers = finalized_blocks
 		.iter()
@@ -362,7 +362,6 @@ async fn find_next_justification<T>(
 ) -> anyhow::Result<Option<GrandpaJustification<T::Header>>>
 where
 	T: light_client_common::config::Config + Send + Sync,
-	// u32: From<<<T as subxt::Config>::Header as subxt::config::Header>::Number>,
 	ParachainClient<T>: Chain + KeyProvider,
 	<<T as light_client_common::config::Config>::Signature as Verify>::Signer:
 		From<MultiSigner> + IdentifyAccount<AccountId = T::AccountId>,
@@ -438,7 +437,6 @@ pub async fn query_latest_ibc_events_with_grandpa<T, C>(
 where
 	T: light_client_common::config::Config + Send + Sync,
 	C: Chain,
-	// u32: From<<<T as subxt::Config>::Header as subxt::config::Header>::Number>,
 	ParachainClient<T>: Chain + KeyProvider,
 	<<T as light_client_common::config::Config>::Signature as Verify>::Signer:
 		From<MultiSigner> + IdentifyAccount<AccountId = T::AccountId>,
@@ -544,7 +542,7 @@ where
 		.await?;
 
 	// notice the inclusive range
-	let finalized_para_height = u32::from(finalized_para_header.number());
+	let finalized_para_height = finalized_para_header.number().into().saturated_into::<u32>();
 	let finalized_blocks =
 		((client_state.latest_para_height + 1)..=finalized_para_height).collect::<Vec<_>>();
 

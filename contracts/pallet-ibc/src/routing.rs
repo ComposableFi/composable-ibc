@@ -1,6 +1,5 @@
 use super::*;
 use core::fmt::Debug;
-use frame_system::pallet_prelude::BlockNumberFor;
 use ibc::{
 	applications::transfer::MODULE_ID_STR as IBC_TRANSFER_MODULE_ID,
 	core::{
@@ -54,7 +53,6 @@ pub trait ModuleRouter: Default + Clone + Eq + PartialEq + Debug {
 
 impl<T: Config + Send + Sync> Router for IbcRouter<T>
 where
-	u32: From<BlockNumberFor<T>>,
 	AccountId32: From<<T as frame_system::Config>::AccountId>,
 {
 	fn get_route_mut(&mut self, module_id: &ModuleId) -> Option<&mut dyn Module> {
@@ -81,7 +79,6 @@ where
 
 impl<T: Config + Send + Sync> Ics26Context for Context<T>
 where
-	u32: From<BlockNumberFor<T>>,
 	AccountId32: From<<T as frame_system::Config>::AccountId>,
 {
 	type Router = IbcRouter<T>;
@@ -95,17 +92,13 @@ where
 	}
 }
 
-impl<T: Config + Send + Sync> ReaderContext for Context<T>
-where
-	u32: From<BlockNumberFor<T>>,
-	AccountId32: From<<T as frame_system::Config>::AccountId>,
+impl<T: Config + Send + Sync> ReaderContext for Context<T> where
+	AccountId32: From<<T as frame_system::Config>::AccountId>
 {
 }
 
-impl<T: Config + Send + Sync> ModuleCallbackContext for Context<T>
-where
-	u32: From<BlockNumberFor<T>>,
-	AccountId32: From<<T as frame_system::Config>::AccountId>,
+impl<T: Config + Send + Sync> ModuleCallbackContext for Context<T> where
+	AccountId32: From<<T as frame_system::Config>::AccountId>
 {
 }
 

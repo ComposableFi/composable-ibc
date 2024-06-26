@@ -723,7 +723,6 @@ pub mod pallet {
 	#[pallet::hooks]
 	impl<T: Config> Hooks<BlockNumberFor<T>> for Pallet<T>
 	where
-		u32: From<BlockNumberFor<T>>,
 		T: Send + Sync,
 		AccountId32: From<<T as frame_system::Config>::AccountId>,
 	{
@@ -752,7 +751,6 @@ pub mod pallet {
 	where
 		T: Send + Sync,
 		AccountId32: From<<T as frame_system::Config>::AccountId>,
-		u32: From<BlockNumberFor<T>>,
 	{
 		#[pallet::call_index(0)]
 		#[pallet::weight(crate::weight::deliver::< T > (messages))]

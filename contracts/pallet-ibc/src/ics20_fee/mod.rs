@@ -1,7 +1,6 @@
 use crate::{routing::Context, DenomToAssetId};
 use alloc::format;
 use core::{fmt::Debug, marker::PhantomData, str::FromStr};
-use frame_system::pallet_prelude::BlockNumberFor;
 use ibc::{
 	applications::transfer::{
 		acknowledgement::Acknowledgement as Ics20Ack, context::BankKeeper,
@@ -185,7 +184,6 @@ impl<T: Config + Send + Sync, S: IbcModule + Clone + Default + PartialEq + Eq + 
 impl<T: Config + Send + Sync, S: IbcModule + Clone + Default + PartialEq + Eq + Debug> IbcModule
 	for Ics20ServiceCharge<T, S>
 where
-	u32: From<BlockNumberFor<T>>,
 	AccountId32: From<<T as frame_system::Config>::AccountId>,
 	<T as crate::Config>::AccountIdConversion: From<IbcAccount<T::AccountId>>,
 {
@@ -333,7 +331,6 @@ impl<T: Config + Send + Sync, S: IbcModule + Clone + Default + PartialEq + Eq + 
 	Ics20ServiceCharge<T, S>
 where
 	<T as crate::Config>::AccountIdConversion: From<IbcAccount<T::AccountId>>,
-	u32: From<BlockNumberFor<T>>,
 	AccountId32: From<<T as frame_system::Config>::AccountId>,
 {
 	fn process_fee(

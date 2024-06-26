@@ -21,12 +21,6 @@ use grandpa_light_client_primitives::{FinalityProof, ParachainHeaderProofs};
 use hyperspace_primitives::{
 	mock::LocalClientTypes, Chain, CommonClientState, IbcProvider, MisbehaviourHandler,
 };
-use subxt::{
-	backend::rpc::RpcClient,
-	blocks::BlockRef,
-	config::{DefaultExtrinsicParamsBuilder, Header},
-};
-
 use ibc::{
 	core::{
 		ics02_client::{
@@ -54,10 +48,15 @@ use sp_core::{twox_128, H256};
 use sp_runtime::{
 	generic::Era,
 	traits::{IdentifyAccount, One, Verify},
-	MultiSignature, MultiSigner,
+	MultiSignature, MultiSigner, SaturatedConversion,
 };
 use std::{collections::BTreeMap, fmt::Display, pin::Pin, sync::Arc, time::Duration};
-use subxt::{backend::legacy::LegacyRpcMethods, config::ExtrinsicParams, events::Phase};
+use subxt::{
+	backend::{legacy::LegacyRpcMethods, rpc::RpcClient},
+	blocks::BlockRef,
+	config::{DefaultExtrinsicParamsBuilder, ExtrinsicParams, Header},
+	events::Phase,
+};
 use tokio::time::sleep;
 
 type GrandpaJustification = grandpa_light_client_primitives::justification::GrandpaJustification<
@@ -75,7 +74,6 @@ struct JustificationNotification(sp_core::Bytes);
 impl<T: light_client_common::config::Config + Send + Sync + Clone + 'static> Chain
 	for ParachainClient<T>
 where
-	// u32: From<<<T as subxt::Config>::Header as subxt::config::Header>::Number>,
 	<<T as light_client_common::config::Config>::Signature as Verify>::Signer:
 		From<MultiSigner> + IdentifyAccount<AccountId = T::AccountId>,
 	MultiSigner: From<MultiSigner>,
@@ -245,7 +243,7 @@ where
 		// let mut storage_key = twox_128(b"System").to_vec();
 		// storage_key.extend(twox_128(b"Events").to_vec());
 
-		let storage_key = subxt::storage::dynamic("System".into(), "Events".into(), ());
+		let storage_key = subxt::storage::dynamic("System", "Events", ());
 		let event_bytes = self
 			.para_client
 			.storage()
@@ -253,7 +251,7 @@ where
 			.fetch(&storage_key)
 			.await?
 			.ok_or_else(|| Error::from("No events found".to_owned()))?;
-		let events: Vec<T::EventRecord> = Decode::decode(&mut &*event_bytes)
+		let events: Vec<T::EventRecord> = Decode::decode(&mut event_bytes.encoded())
 			.map_err(|e| Error::from(format!("Failed to decode events: {:?}", e)))?;
 		let (transaction_index, event_index) = events
 			.into_iter()
@@ -282,7 +280,7 @@ where
 			})
 			.ok_or_else(|| Error::from("No update client event found".to_owned()))?;
 
-		let block = RpcLegacyMethods::<T>::new(self.para_rpc_client.clone())
+		let block = LegacyRpcMethods::<T>::new(self.para_rpc_client.clone())
 			.chain_get_block(Some(block_hash.into()))
 			.await?
 			.ok_or_else(|| Error::from(format!("Block not found for hash {:?}", block_hash)))?;
@@ -382,7 +380,6 @@ where
 impl<T: light_client_common::config::Config + Send + Sync> MisbehaviourHandler
 	for ParachainClient<T>
 where
-	// u32: From<<<T as subxt::Config>::Header as Header>::Number>,
 	<<T as light_client_common::config::Config>::Signature as Verify>::Signer:
 		From<MultiSigner> + IdentifyAccount<AccountId = T::AccountId>,
 	MultiSigner: From<MultiSigner>,
@@ -422,7 +419,8 @@ where
 							anyhow!("No header found for hash: {:?}", base_header.parent_hash)
 						})?;
 
-				let common_ancestor_block_number = u32::from(common_ancestor_header.number());
+				let common_ancestor_block_number =
+					common_ancestor_header.number().into().saturated_into::<u32>();
 				let encoded =
 					GrandpaApiClient::<JustificationNotification, H256, u32>::prove_finality(
 						&*self.relay_ws_client,

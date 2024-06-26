@@ -1,7 +1,6 @@
 use super::*;
 use crate::{light_clients::AnyClientMessage, routing::Context};
 use frame_support::weights::constants::WEIGHT_REF_TIME_PER_MILLIS;
-use frame_system::pallet_prelude::BlockNumberFor;
 use grandpa_client_primitives::justification::GrandpaJustification;
 use ibc::core::{
 	ics02_client::msgs::ClientMsg,
@@ -179,10 +178,7 @@ pub fn channel_client<T: Config>(channel_id: &[u8], port_id: &[u8]) -> Result<Cl
 	Err(Error::<T>::Other)
 }
 
-pub(crate) fn deliver<T: Config + Send + Sync>(msgs: &[Any]) -> Weight
-where
-	u32: From<BlockNumberFor<T>>,
-{
+pub(crate) fn deliver<T: Config + Send + Sync>(msgs: &[Any]) -> Weight {
 	msgs.iter()
 		.filter_map(|msg| {
 			let type_url = msg.type_url.clone();

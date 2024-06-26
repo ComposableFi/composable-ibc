@@ -32,7 +32,10 @@ use sc_consensus_grandpa_rpc::GrandpaApiClient;
 use serde::{Deserialize, Serialize};
 use sp_consensus_grandpa::{AuthorityId, AuthoritySignature};
 use sp_core::H256;
-use sp_runtime::traits::{One, Zero};
+use sp_runtime::{
+	traits::{One, Zero},
+	SaturatedConversion,
+};
 use std::{
 	collections::{BTreeMap, BTreeSet},
 	sync::{
@@ -119,7 +122,6 @@ impl<T> GrandpaProver<T>
 where
 	T: light_client_common::config::Config + Send + Sync,
 	<<T as subxt::Config>::Header as Header>::Number: Ord + Zero,
-	// u32: From<<<T as subxt::Config>::Header as Header>::Number>,
 	sp_core::H256: From<T::Hash>,
 {
 	/// Initializes the parachain and relay chain clients given the ws urls.
@@ -205,7 +207,7 @@ where
 			}
 		}
 
-		let latest_relay_height = u32::from(header.number());
+		let latest_relay_height = header.number().into().saturated_into::<u32>();
 		let finalized_para_header =
 			self.query_latest_finalized_parachain_header(latest_relay_height).await.unwrap();
 
@@ -216,7 +218,7 @@ where
 			latest_relay_hash: latest_relay_hash.into(),
 			para_id: self.para_id,
 			// we'll set this below
-			latest_para_height: u32::from(finalized_para_header.number()),
+			latest_para_height: finalized_para_header.number().into().saturated_into::<u32>(),
 		})
 	}
 
@@ -260,7 +262,6 @@ where
 	) -> Result<ParachainHeadersWithFinalityProof<H>, anyhow::Error>
 	where
 		H: Header + parity_scale_codec::Decode + Send + 'static,
-		u32: From<<H as Header>::Number>,
 		<H::Hasher as subxt::config::Hasher>::Output: From<T::Hash>,
 		T::Hash: From<<H::Hasher as subxt::config::Hasher>::Output>,
 		H::Number: finality_grandpa::BlockNumberOps,
@@ -294,7 +295,7 @@ where
 
 			finality_proof.block = justification.commit.target_hash;
 
-			latest_finalized_height = u32::from(justification.commit.target_number);
+			latest_finalized_height = justification.commit.target_number.saturated_into::<u32>();
 			finality_proof
 		};
 
@@ -417,7 +418,10 @@ where
 						.await
 						.map_err(|err| anyhow!("Error fetching timestamp with proof: {err:?}"))?;
 					let proofs = ParachainHeaderProofs { state_proof, extrinsic, extrinsic_proof };
-					latest_para_height.fetch_max(u32::from(para_block_number), Ordering::SeqCst);
+					latest_para_height.fetch_max(
+						para_block_number.into().saturated_into::<u32>(),
+						Ordering::SeqCst,
+					);
 					Ok(Some((H256::from(header.hash()), proofs)))
 				});
 			}

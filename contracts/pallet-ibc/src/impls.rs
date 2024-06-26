@@ -15,7 +15,6 @@ use crate::{
 	MODULE_ID,
 };
 use frame_support::traits::{fungibles::Inspect, Currency};
-use frame_system::pallet_prelude::BlockNumberFor;
 use ibc::{
 	applications::transfer::{
 		msgs::transfer::MsgTransfer, relay::send_transfer::send_transfer, PrefixedCoin,
@@ -62,7 +61,7 @@ use parity_scale_codec::{Decode, Encode};
 use sp_core::crypto::AccountId32;
 use sp_runtime::{
 	traits::{Get, IdentifyAccount},
-	Either,
+	Either, SaturatedConversion,
 };
 use sp_std::prelude::*;
 use tendermint_proto::Protobuf;
@@ -72,7 +71,6 @@ const PACKET_CLEANUP_PER_CYCLE: u64 = 1001;
 impl<T: Config> Pallet<T>
 where
 	T: Send + Sync,
-	u32: From<BlockNumberFor<T>>,
 	AccountId32: From<<T as frame_system::Config>::AccountId>,
 {
 	pub(crate) fn execute_ibc_messages(
@@ -104,7 +102,6 @@ where
 impl<T: Config> Pallet<T>
 where
 	T: Send + Sync,
-	u32: From<BlockNumberFor<T>>,
 	AccountId32: From<<T as frame_system::Config>::AccountId>,
 {
 	// IBC Runtime Api helper methods
@@ -754,7 +751,6 @@ impl<T: Config> Pallet<T> {
 
 impl<T: Config + Send + Sync> IbcHandler<<T as frame_system::Config>::AccountId> for Pallet<T>
 where
-	u32: From<BlockNumberFor<T>>,
 	AccountId32: From<<T as frame_system::Config>::AccountId>,
 {
 	fn latest_height_and_timestamp(
@@ -839,7 +835,6 @@ where
 
 impl<T: Config + Send + Sync> Pallet<T>
 where
-	u32: From<BlockNumberFor<T>>,
 	AccountId32: From<<T as frame_system::Config>::AccountId>,
 {
 	fn send_packet(
@@ -1109,10 +1104,8 @@ where
 	}
 }
 
-pub fn host_height<T: Config>() -> u64
-where
-	u32: From<BlockNumberFor<T>>,
-{
-	let block_number: u32 = <frame_system::Pallet<T>>::block_number().into().as_u32();
+pub fn host_height<T: Config>() -> u64 {
+	let block_number: u32 =
+		<frame_system::Pallet<T>>::block_number().into().saturated_into::<u32>();
 	block_number.into()
 }

@@ -41,9 +41,6 @@ use subxt::config::{DefaultExtrinsicParamsBuilder, ExtrinsicParams, Header};
 
 impl<T: light_client_common::config::Config + Send + Sync> ParachainClient<T>
 where
-	// u32: From<<<T as
-	// subxt::Config>::Header
-	// as Header>::Number>,
 	Self: KeyProvider,
 	<<T as light_client_common::config::Config>::Signature as Verify>::Signer:
 		From<MultiSigner> + IdentifyAccount<AccountId = T::AccountId>,
@@ -130,8 +127,6 @@ where
 impl<T> TestProvider for ParachainClient<T>
 where
 	T: light_client_common::config::Config + Send + Sync + Clone,
-	// u32: From<<<T as subxt::Config>::Header as Header>::Number>,
-	// u32: From<<<T as subxt::Config>::Header as Header>::Number>,
 	Self: KeyProvider,
 	<<T as light_client_common::config::Config>::Signature as Verify>::Signer:
 		From<MultiSigner> + IdentifyAccount<AccountId = T::AccountId>,
