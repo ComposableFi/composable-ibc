@@ -1367,7 +1367,7 @@ deserialize client state"
 
 	fn expected_block_time(&self) -> Duration {
 		// solana block time is roughly 400 milliseconds
-		Duration::from_secs(3600)
+		Duration::from_secs(60)
 	}
 
 	async fn query_client_update_time_and_height(
