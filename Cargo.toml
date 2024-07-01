@@ -115,9 +115,9 @@ scale-info                                 = { version = "2.11.0", default-featu
 # orml
 # orml-tokens                                = { git = "https://github.com/open-web3-stack/open-runtime-module-library" }
 # orml-traits                                = { git = "https://github.com/open-web3-stack/open-runtime-module-library" }
-orml-tokens                                = { version = "0.12.0" }
-orml-traits                                = { version = "0.12.0" }
-orml-asset-registry                        = { version = "0.12.0" }
+# orml-tokens                                = { version = "0.8.0" }
+# orml-traits                                = { version = "0.8.0" }
+# orml-asset-registry                        = { version = "0.8.0" }
 
 # polkadot-sdk (wasm)
 sp-mmr-primitives                          = { git = "https://github.com/paritytech/polkadot-sdk", branch = "release-polkadot-v1.7.0", default-features = false }

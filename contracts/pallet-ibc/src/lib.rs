@@ -238,10 +238,10 @@ pub mod pallet {
 		/// accepted. Ensure that this is non-zero in production as it's a critical vulnerability.
 		#[pallet::constant]
 		type MinimumConnectionDelay: Get<u64>;
-		/// ParaId of the runtime
-		type ParaId: Get<ParaId>;
-		/// Relay chain this runtime is attached to
-		type RelayChain: Get<light_client_common::RelayChain>;
+		/// ChainId (or ParaId) of the runtime
+		type ChainId: Get<ParaId>;
+		/// Chain (Standalone or Relay) this runtime is attached to
+		type ChainType: Get<light_client_common::ChainType>;
 		/// benchmarking weight info
 		type WeightInfo: WeightInfo;
 		/// Origin allowed to unfreeze light clients

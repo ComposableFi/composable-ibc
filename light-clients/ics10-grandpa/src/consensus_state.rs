@@ -59,7 +59,7 @@ impl ConsensusState {
 		relay_state_root: H256,
 	) -> Result<(Height, Self), Error>
 	where
-		H: grandpa_client_primitives::HostFunctions,
+		H: grandpa_client_primitives::RelayHostFunctions,
 	{
 		let key = parachain_header_storage_key(para_id);
 		let proof = StorageProof::new(parachain_header_proof.state_proof);

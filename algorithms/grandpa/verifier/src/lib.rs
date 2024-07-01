@@ -27,8 +27,10 @@ use finality_grandpa::Chain;
 use grandpa_light_client_primitives::{
 	error,
 	justification::{find_scheduled_change, AncestryChain, GrandpaJustification},
-	parachain_header_storage_key, FinalityProof, HostFunctions, ParachainHeaderProofs,
-	ParachainHeadersWithFinalityProof, RelayClientState, StandaloneClientState,
+	parachain_header_storage_key,
+	standalone::GrandpaStandaloneJustification,
+	FinalityProof, ParachainHeaderProofs, ParachainHeadersWithFinalityProof, RelayClientState,
+	RelayHostFunctions, StandaloneClientState, StandaloneHostFunctions,
 };
 use hash_db::Hasher;
 use light_client_common::state_machine;
@@ -51,7 +53,7 @@ pub fn verify_parachain_headers_with_grandpa_finality_proof<H, Host>(
 where
 	H: Header<Hash = H256, Number = u32>,
 	H::Number: finality_grandpa::BlockNumberOps + Into<u32>,
-	Host: HostFunctions,
+	Host: RelayHostFunctions,
 	Host::BlakeTwo256: Hasher<Out = H256>,
 {
 	let ParachainHeadersWithFinalityProof { finality_proof, parachain_headers, latest_para_height } =
@@ -163,7 +165,7 @@ pub fn verify_standalone_grandpa_finality_proof<H, Host>(
 where
 	H: Header<Hash = H256, Number = u32>,
 	H::Number: finality_grandpa::BlockNumberOps + Into<u32>,
-	Host: HostFunctions,
+	Host: StandaloneHostFunctions,
 	Host::BlakeTwo256: Hasher<Out = H256>,
 {
 	// 1. First validate unknown headers.
@@ -180,7 +182,7 @@ where
 		Err(anyhow!("Latest finalized block should be highest block in unknown_headers"))?;
 	}
 
-	let justification = GrandpaJustification::<H>::decode(&mut &proof.justification[..])?;
+	let justification = GrandpaStandaloneJustification::<H>::decode(&mut &proof.justification[..])?;
 
 	if justification.commit.target_hash != proof.block {
 		Err(anyhow!("Justification target hash and finality proof block hash mismatch"))?;

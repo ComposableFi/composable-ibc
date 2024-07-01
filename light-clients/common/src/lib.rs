@@ -117,6 +117,67 @@ where
 }
 
 #[derive(Clone, Copy, Debug, PartialEq, Eq, Deserialize, Serialize)]
+pub enum ChainType {
+	RelayChain(RelayChain),
+	StandaloneChain(StandaloneChain),
+}
+
+impl ChainType {
+	pub fn as_str(&self) -> &'static str {
+		match self {
+			Self::RelayChain(chain) => chain.as_str(),
+			Self::StandaloneChain(chain) => chain.as_str(),
+		}
+	}
+
+	pub fn unbonding_period(&self) -> Duration {
+		match self {
+			Self::RelayChain(chain) => chain.unbonding_period(),
+			Self::StandaloneChain(chain) => chain.unbonding_period(),
+		}
+	}
+
+	pub fn trusting_period(&self) -> Duration {
+		match self {
+			Self::RelayChain(chain) => chain.trusting_period(),
+			Self::StandaloneChain(chain) => chain.trusting_period(),
+		}
+	}
+
+	pub fn to_relay_chain(&self) -> Result<RelayChain, anyhow::Error> {
+		match self {
+			Self::RelayChain(chain) => Ok(*chain),
+			_ => Err(anyhow!("Invalid chain type")),
+		}
+	}
+
+	pub fn to_standalone_chain(&self) -> Result<StandaloneChain, anyhow::Error> {
+		match self {
+			Self::StandaloneChain(chain) => Ok(*chain),
+			_ => Err(anyhow!("Invalid chain type")),
+		}
+	}
+}
+
+impl FromStr for ChainType {
+	type Err = anyhow::Error;
+
+	fn from_str(s: &str) -> Result<Self, Self::Err> {
+		match s.to_lowercase().trim_start_matches("order_") {
+			"polkadot" | "kusama" | "rococo" => Ok(Self::RelayChain(RelayChain::from_str(s)?)),
+			"tangle" => Ok(Self::StandaloneChain(StandaloneChain::from_str(s)?)),
+			_ => Err(anyhow!("Unknown chain type {s}")),
+		}
+	}
+}
+
+impl Display for ChainType {
+	fn fmt(&self, f: &mut Formatter<'_>) -> fmt::Result {
+		write!(f, "{}", self.as_str())
+	}
+}
+
+#[derive(Clone, Copy, Debug, PartialEq, Eq, Deserialize, Serialize)]
 pub enum RelayChain {
 	Polkadot = 0,
 	Kusama = 1,

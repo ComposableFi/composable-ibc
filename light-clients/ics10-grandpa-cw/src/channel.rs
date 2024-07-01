@@ -14,7 +14,7 @@
 // limitations under the License.
 
 use crate::context::Context;
-use grandpa_light_client_primitives::HostFunctions;
+use grandpa_light_client_primitives::RelayHostFunctions;
 use ibc::{
 	core::{
 		ics04_channel::{
@@ -32,7 +32,7 @@ use ibc::{
 use sha2::{Digest, Sha256};
 use std::time::Duration;
 
-impl<'a, H: HostFunctions> ChannelReader for Context<'a, H> {
+impl<'a, H: RelayHostFunctions> ChannelReader for Context<'a, H> {
 	fn channel_end(&self, _port_channel_id: &(PortId, ChannelId)) -> Result<ChannelEnd, Error> {
 		Err(Error::implementation_specific(
 			"'channel_end' is unavailable from the client".to_string(),

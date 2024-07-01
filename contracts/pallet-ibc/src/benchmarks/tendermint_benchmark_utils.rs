@@ -4,6 +4,7 @@ use crate::{
 	Config, MODULE_ID,
 };
 use core::{str::FromStr, time::Duration};
+use frame_system::pallet_prelude::BlockNumberFor;
 use ibc::{
 	applications::transfer::VERSION,
 	core::{
@@ -598,7 +599,7 @@ pub(crate) fn create_conn_open_confirm<T: Config>() -> (ConsensusState, MsgConne
 		"{}",
 		ClientConsensusStatePath {
 			client_id: counterparty_client_id,
-			epoch: parachain_info::Pallet::<T>::parachain_id().saturated_into::<u32>(),
+			epoch: parachain_info::Pallet::<T>::parachain_id().saturated_into::<u32>() as u64,
 			height: 1
 		}
 	)

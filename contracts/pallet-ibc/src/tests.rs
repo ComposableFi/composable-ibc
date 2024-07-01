@@ -225,7 +225,7 @@ fn send_transfer() {
 		setup_client_and_consensus_state(PortId::transfer());
 		let asset_id =
 			<<Test as Config>::IbcDenomToAssetIdConversion as DenomToAssetId<Test>>::from_denom_to_asset_id(
-				"PICA",
+				"TNT",
 			)
 			.unwrap();
 		let _ = <<Test as Config>::NativeCurrency as Currency<
@@ -282,7 +282,7 @@ fn send_transfer_with_invalid_memo() {
 		setup_client_and_consensus_state(PortId::transfer());
 		let asset_id =
 			<<Test as Config>::IbcDenomToAssetIdConversion as DenomToAssetId<Test>>::from_denom_to_asset_id(
-				"PICA",
+				"TNT",
 			)
 			.unwrap();
 		let _ = <<Test as Config>::NativeCurrency as Currency<
@@ -342,7 +342,7 @@ fn send_transfer_no_fee_feeless_channels() {
 		setup_client_and_consensus_state(PortId::transfer());
 		let asset_id =
 			<<Test as Config>::IbcDenomToAssetIdConversion as DenomToAssetId<Test>>::from_denom_to_asset_id(
-				"PICA",
+				"TNT",
 			)
 			.unwrap();
 		let _ = <<Test as Config>::NativeCurrency as Currency<
@@ -411,7 +411,7 @@ fn on_deliver_ics20_recv_packet() {
 		frame_system::Pallet::<Test>::set_block_number(1u64);
 		let asset_id =
 			<<Test as Config>::IbcDenomToAssetIdConversion as DenomToAssetId<Test>>::from_denom_to_asset_id(
-				"PICA",
+				"TNT",
 			)
 			.unwrap();
 		setup_client_and_consensus_state(PortId::transfer());
@@ -421,7 +421,7 @@ fn on_deliver_ics20_recv_packet() {
 
 		// We are simulating a transfer back to the source chain
 
-		let denom = "transfer/channel-1/PICA";
+		let denom = "transfer/channel-1/TNT";
 		let channel_escrow_address =
 			get_channel_escrow_address(&PortId::transfer(), channel_id).unwrap();
 		let channel_escrow_address =
@@ -512,7 +512,7 @@ fn on_deliver_ics20_recv_packet_incorrect_memo() {
 		frame_system::Pallet::<Test>::set_block_number(1u64);
 		let asset_id =
 			<<Test as Config>::IbcDenomToAssetIdConversion as DenomToAssetId<Test>>::from_denom_to_asset_id(
-				&"PICA".to_string(),
+				&"TNT".to_string(),
 			)
 			.unwrap();
 		setup_client_and_consensus_state(PortId::transfer());
@@ -522,7 +522,7 @@ fn on_deliver_ics20_recv_packet_incorrect_memo() {
 
 		// We are simulating a transfer back to the source chain
 
-		let denom = "transfer/channel-1/PICA";
+		let denom = "transfer/channel-1/TNT";
 		let channel_escrow_address =
 			get_channel_escrow_address(&PortId::transfer(), channel_id).unwrap();
 		let channel_escrow_address =
@@ -648,7 +648,7 @@ fn on_deliver_ics20_recv_packet_with_flat_fee() {
 		frame_system::Pallet::<Test>::set_block_number(1u64);
 		let asset_id =
 			<<Test as Config>::IbcDenomToAssetIdConversion as DenomToAssetId<Test>>::from_denom_to_asset_id(
-				"PICAFLATFEE",
+				"TNTFLATFEE",
 			)
 			.unwrap();
 		setup_client_and_consensus_state(PortId::transfer());
@@ -658,7 +658,7 @@ fn on_deliver_ics20_recv_packet_with_flat_fee() {
 
 		// We are simulating a transfer back to the source chain
 
-		let denom = "transfer/channel-1/PICAFLATFEE";
+		let denom = "transfer/channel-1/TNTFLATFEE";
 		let channel_escrow_address =
 			get_channel_escrow_address(&PortId::transfer(), channel_id).unwrap();
 		let channel_escrow_address =
@@ -748,7 +748,7 @@ fn on_ack_transfer_with_custom_success_result() {
 		frame_system::Pallet::<Test>::set_block_number(1u64);
 		let asset_id =
 			<<Test as Config>::IbcDenomToAssetIdConversion as DenomToAssetId<Test>>::from_denom_to_asset_id(
-				"PICAFLATFEE",
+				"TNTFLATFEE",
 			)
 			.unwrap();
 		setup_client_and_consensus_state(PortId::transfer());
@@ -828,7 +828,7 @@ fn on_deliver_ics20_recv_packet_transfered_amount_less_then_flat_fee() {
 		frame_system::Pallet::<Test>::set_block_number(1u64);
 		let asset_id =
 			<<Test as Config>::IbcDenomToAssetIdConversion as DenomToAssetId<Test>>::from_denom_to_asset_id(
-				"PICAFLATFEE",
+				"TNTFLATFEE",
 			)
 			.unwrap();
 		setup_client_and_consensus_state(PortId::transfer());
@@ -838,7 +838,7 @@ fn on_deliver_ics20_recv_packet_transfered_amount_less_then_flat_fee() {
 
 		// We are simulating a transfer back to the source chain
 
-		let denom = "transfer/channel-1/PICAFLATFEE";
+		let denom = "transfer/channel-1/TNTFLATFEE";
 		let channel_escrow_address =
 			get_channel_escrow_address(&PortId::transfer(), channel_id).unwrap();
 		let channel_escrow_address =
@@ -945,7 +945,7 @@ fn on_deliver_ics20_recv_packet_should_not_double_spend() {
 
 		// We are simulating a transfer back to the source chain
 
-		let denom = "transfer/channel-1/PICA";
+		let denom = "transfer/channel-1/TNT";
 		let channel_escrow_address =
 			get_channel_escrow_address(&PortId::transfer(), channel_id).unwrap();
 		let channel_escrow_address =

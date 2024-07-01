@@ -84,8 +84,9 @@ cumulus-primitives-utility = { workspace = true }
 pallet-collator-selection = { workspace = true }
 parachain-info = { workspace = true }
 
-orml-asset-registry = { workspace = true }
-orml-traits = { workspace = true }
+orml-tokens = { git = "https://github.com/webb-tools/open-runtime-module-library.git", branch = "polkadot-v1.7.0" }
+orml-traits = { git = "https://github.com/webb-tools/open-runtime-module-library.git", branch = "polkadot-v1.7.0" }
+orml-asset-registry = { git = "https://github.com/webb-tools/open-runtime-module-library.git", branch = "polkadot-v1.7.0" }
 
 simnode-api = { package = "simnode-runtime-api", git = "https://github.com/polytope-labs/sc-simnode", default-features = false }
 

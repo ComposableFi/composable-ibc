@@ -64,7 +64,7 @@ impl ConsensusState {
 		header: StandaloneChainHeader,
 	) -> Result<(Height, Self), Error>
 	where
-		H: grandpa_client_primitives::HostFunctions,
+		H: grandpa_client_primitives::StandaloneHostFunctions,
 	{
 		let timestamp = decode_timestamp_extrinsic(&timestamp_proof.extrinsic)?;
 		let duration = core::time::Duration::from_millis(timestamp);

@@ -25,8 +25,8 @@ use crate::client_message::ClientMessage;
 use alloc::{format, string::ToString, vec, vec::Vec};
 use core::marker::PhantomData;
 use finality_grandpa::Chain;
-use grandpa_client_primitives::justification::{
-	find_forced_change, find_scheduled_change, AncestryChain, GrandpaJustification,
+use grandpa_client_primitives::standalone::{
+	find_forced_change, find_scheduled_change, AncestryChain, GrandpaStandaloneJustification,
 };
 use ibc::{
 	core::{
@@ -69,7 +69,7 @@ pub struct GrandpaClient<T>(PhantomData<T>);
 
 impl<H> ClientDef for GrandpaClient<H>
 where
-	H: grandpa_client_primitives::HostFunctions<Header = StandaloneChainHeader>,
+	H: grandpa_client_primitives::StandaloneHostFunctions<Header = StandaloneChainHeader>,
 {
 	type ClientMessage = ClientMessage;
 	type ClientState = ClientState<H>;
@@ -158,20 +158,26 @@ where
 				}
 
 				// TODO: should we handle genesis block here somehow?
-				if !H::contains_relay_header_hash(first_parent) {
+				if !H::contains_header_hash(first_parent) {
 					Err(Error::Custom(
 						"Could not find the known header for first finality proof".to_string(),
 					))?
 				}
 
-				let first_justification = GrandpaJustification::<StandaloneChainHeader>::decode(
-					&mut &first_proof.justification[..],
-				)
-				.map_err(|_| Error::Custom("Could not decode first justification".to_string()))?;
-				let second_justification = GrandpaJustification::<StandaloneChainHeader>::decode(
-					&mut &second_proof.justification[..],
-				)
-				.map_err(|_| Error::Custom("Could not decode second justification".to_string()))?;
+				let first_justification =
+					GrandpaStandaloneJustification::<StandaloneChainHeader>::decode(
+						&mut &first_proof.justification[..],
+					)
+					.map_err(|_| {
+						Error::Custom("Could not decode first justification".to_string())
+					})?;
+				let second_justification =
+					GrandpaStandaloneJustification::<StandaloneChainHeader>::decode(
+						&mut &second_proof.justification[..],
+					)
+					.map_err(|_| {
+						Error::Custom("Could not decode second justification".to_string())
+					})?;
 
 				if first_proof.block != first_justification.commit.target_hash ||
 					second_proof.block != second_justification.commit.target_hash
@@ -274,7 +280,7 @@ where
 			client_state.current_authorities = scheduled_change.next_authorities;
 		}
 
-		H::insert_relay_header_hashes(&finalized);
+		H::insert_header_hashes(&finalized);
 
 		Ok((client_state, ConsensusUpdateResult::Single(wrapped)))
 	}

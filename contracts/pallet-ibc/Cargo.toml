@@ -85,8 +85,8 @@ tendermint-light-client-verifier = { workspace = true }
 chrono = { workspace = true }
 hex = { workspace = true }
 hex-literal = { workspace = true }
-orml-tokens = { workspace = true}
-orml-traits = { workspace = true }
+orml-tokens                                = { git = "https://github.com/webb-tools/open-runtime-module-library.git", branch = "polkadot-v1.7.0" }
+orml-traits                                = { git = "https://github.com/webb-tools/open-runtime-module-library.git", branch = "polkadot-v1.7.0" }
 pallet-aura = { workspace = true }
 pallet-membership = { workspace = true }
 frame-support = { workspace = true }
@@ -104,7 +104,6 @@ ibc = { workspace = true, features = ["mocks"] }
 [features]
 default = ["std"]
 testing = []
-standalone = []
 std = [
 	"parity-scale-codec/std",
 	"log/std",

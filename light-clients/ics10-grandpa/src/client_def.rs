@@ -69,7 +69,7 @@ pub struct GrandpaClient<T>(PhantomData<T>);
 
 impl<H> ClientDef for GrandpaClient<H>
 where
-	H: grandpa_client_primitives::HostFunctions<Header = RelayChainHeader>,
+	H: grandpa_client_primitives::RelayHostFunctions<Header = RelayChainHeader>,
 {
 	type ClientMessage = ClientMessage;
 	type ClientState = ClientState<H>;

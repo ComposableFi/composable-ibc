@@ -13,7 +13,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-use grandpa_light_client_primitives::HostFunctions;
+use grandpa_light_client_primitives::{RelayHostFunctions, StandaloneHostFunctions};
 use sp_core::ed25519::{Public, Signature};
 use sp_runtime::{
 	app_crypto::RuntimePublic,
@@ -29,7 +29,7 @@ impl light_client_common::HostFunctions for HostFunctionsProvider {
 	type BlakeTwo256 = BlakeTwo256;
 }
 
-impl HostFunctions for HostFunctionsProvider {
+impl RelayHostFunctions for HostFunctionsProvider {
 	type Header = sp_runtime::generic::Header<u32, BlakeTwo256>;
 
 	fn ed25519_verify(sig: &Signature, msg: &[u8], pubkey: &Public) -> bool {
@@ -41,6 +41,22 @@ impl HostFunctions for HostFunctionsProvider {
 	}
 
 	fn contains_relay_header_hash(_hash: <Self::Header as Header>::Hash) -> bool {
+		unimplemented!()
+	}
+}
+
+impl StandaloneHostFunctions for HostFunctionsProvider {
+	type Header = sp_runtime::generic::Header<u32, BlakeTwo256>;
+
+	fn ed25519_verify(sig: &Signature, msg: &[u8], pubkey: &Public) -> bool {
+		pubkey.verify(&msg, sig)
+	}
+
+	fn insert_header_hashes(_headers: &[<Self::Header as Header>::Hash]) {
+		unimplemented!()
+	}
+
+	fn contains_header_hash(_hash: <Self::Header as Header>::Hash) -> bool {
 		unimplemented!()
 	}
 }

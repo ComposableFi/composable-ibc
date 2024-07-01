@@ -156,7 +156,7 @@ impl<H> ClientState<H> {
 
 impl<H> ibc::core::ics02_client::client_state::ClientState for ClientState<H>
 where
-	H: grandpa_client_primitives::HostFunctions<Header = StandaloneChainHeader>,
+	H: grandpa_client_primitives::StandaloneHostFunctions<Header = StandaloneChainHeader>,
 {
 	type UpgradeOptions = UpgradeOptions;
 	type ClientDef = GrandpaClient<H>;

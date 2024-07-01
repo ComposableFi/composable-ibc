@@ -20,10 +20,7 @@
 use anyhow::anyhow;
 pub use beefy_prover;
 use beefy_prover::helpers::{fetch_timestamp_extrinsic_with_proof, TimeStampExtWithProof};
-use grandpa_light_client_primitives::{
-	parachain_header_storage_key, FinalityProof, ParachainHeaderProofs,
-	ParachainHeadersWithFinalityProof, StandaloneClientState,
-};
+use grandpa_light_client_primitives::{FinalityProof, StandaloneClientState};
 use jsonrpsee::{async_client::Client, tracing::log, ws_client::WsClientBuilder};
 use light_client_common::config::{AsInner, RuntimeStorage};
 use parity_scale_codec::{Decode, Encode};
@@ -60,7 +57,7 @@ pub const PROCESS_CHANGES_SET_BATCH_SIZE: usize = 100;
 pub const PROCESS_BLOCKS_BATCH_SIZE: usize = 100;
 
 /// Contains methods useful for proving parachain header finality using GRANDPA
-pub struct GrandpaProver<T: Config> {
+pub struct GrandpaStandaloneProver<T: Config> {
 	/// Subxt client for the relay chain
 	pub client: OnlineClient<T>,
 	/// Standalone chain jsonrpsee client for typed rpc requests, which subxt lacks support for.
@@ -94,7 +91,7 @@ pub struct GrandpaJustification<H: Header + parity_scale_codec::Decode> {
 #[derive(Clone, Serialize, Deserialize)]
 pub struct JustificationNotification(pub sp_core::Bytes);
 
-impl<T: Config> Clone for GrandpaProver<T> {
+impl<T: Config> Clone for GrandpaStandaloneProver<T> {
 	fn clone(&self) -> Self {
 		Self {
 			client: self.client.clone(),
@@ -106,7 +103,7 @@ impl<T: Config> Clone for GrandpaProver<T> {
 	}
 }
 
-impl<T> GrandpaProver<T>
+impl<T> GrandpaStandaloneProver<T>
 where
 	T: light_client_common::config::Config + Send + Sync,
 	<<T as subxt::Config>::Header as Header>::Number: Ord + Zero,

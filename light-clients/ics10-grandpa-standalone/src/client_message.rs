@@ -22,7 +22,7 @@ use crate::{
 };
 use alloc::{collections::BTreeMap, vec::Vec};
 use anyhow::anyhow;
-use grandpa_client_primitives::{FinalityProof, ParachainHeaderProofs, StandaloneTimestampProof};
+use grandpa_client_primitives::{FinalityProof, StandaloneTimestampProof};
 use ibc::Height;
 use parity_scale_codec::{Decode, Encode};
 use sp_core::H256;

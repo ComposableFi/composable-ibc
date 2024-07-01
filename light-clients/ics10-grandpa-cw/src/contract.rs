@@ -84,7 +84,7 @@ impl light_client_common::HostFunctions for HostFunctions {
 	type BlakeTwo256 = BlakeTwo256;
 }
 
-impl grandpa_light_client_primitives::HostFunctions for HostFunctions {
+impl grandpa_light_client_primitives::RelayHostFunctions for HostFunctions {
 	type Header = RelayChainHeader;
 
 	fn ed25519_verify(
@@ -372,7 +372,7 @@ fn store_client_and_consensus_states<H>(
 	consensus_update: ConsensusUpdateResult<Context<H>>,
 ) -> Result<StdResult<Binary>, ContractError>
 where
-	H: grandpa_light_client_primitives::HostFunctions<Header = RelayChainHeader>,
+	H: grandpa_light_client_primitives::RelayHostFunctions<Header = RelayChainHeader>,
 {
 	let height = client_state.latest_height();
 	match consensus_update {

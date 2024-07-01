@@ -14,7 +14,7 @@
 // limitations under the License.
 
 use crate::context::Context;
-use grandpa_light_client_primitives::HostFunctions;
+use grandpa_light_client_primitives::RelayHostFunctions;
 use ibc::{
 	core::{
 		ics03_connection::{connection::ConnectionEnd, context::ConnectionReader, error::Error},
@@ -25,7 +25,7 @@ use ibc::{
 };
 use std::time::Duration;
 
-impl<'a, H: HostFunctions> ConnectionReader for Context<'a, H> {
+impl<'a, H: RelayHostFunctions> ConnectionReader for Context<'a, H> {
 	fn minimum_delay_period(&self) -> Duration {
 		unimplemented!("minimum_delay_period")
 	}

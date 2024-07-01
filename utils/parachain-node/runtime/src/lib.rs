@@ -41,8 +41,10 @@ use ibc::core::{
 use ibc_primitives::{runtime_interface::ss58_to_account_id_32, IbcAccount};
 use orml_traits::asset_registry::AssetProcessor;
 use pallet_ibc::{
-	ics20::SubstrateMultihopXcmHandlerNone, ics20_fee::NonFlatFeeConverter,
-	light_client_common::RelayChain, LightClientProtocol,
+	ics20::SubstrateMultihopXcmHandlerNone,
+	ics20_fee::NonFlatFeeConverter,
+	light_client_common::{ChainType, RelayChain},
+	LightClientProtocol,
 };
 use parity_scale_codec::{Decode, Encode};
 use smallvec::smallvec;
@@ -586,7 +588,7 @@ impl pallet_sudo::Config for Runtime {
 
 parameter_types! {
 	pub const ExpectedBlockTime: u64 = MILLISECS_PER_BLOCK;
-	pub const RelayChainId: RelayChain = RelayChain::Rococo;
+	pub const RelayChainId: ChainType = ChainType::RelayChain(RelayChain::Rococo);
 	pub const SpamProtectionDeposit: Balance = 1_000_000_000_000;
 	pub const NativeAssetId: AssetId = 1;
 	pub const MinimumConnectionDelay: u64 = 0; // well we don't need the security tbh.
@@ -833,8 +835,8 @@ impl pallet_ibc::Config for Runtime {
 	type ExpectedBlockTime = ExpectedBlockTime;
 	type Router = Router;
 	type MinimumConnectionDelay = MinimumConnectionDelay;
-	type ParaId = parachain_info::Pallet<Runtime>;
-	type RelayChain = RelayChainId;
+	type ChainId = parachain_info::Pallet<Runtime>;
+	type ChainType = RelayChainId;
 	type WeightInfo = ();
 	type AdminOrigin = EnsureRoot<AccountId>;
 	type FreezeOrigin = EnsureRoot<AccountId>;

@@ -22,6 +22,7 @@ use ibc::{
 	timestamp::Timestamp,
 	Height,
 };
+use light_client_common::ChainType;
 use sp_runtime::SaturatedConversion;
 use tendermint_proto::Protobuf;
 
@@ -415,48 +416,60 @@ impl<T: Config + Send + Sync> ClientKeeper for Context<T> {
 
 	fn validate_self_client(&self, client_state: &AnyClientState) -> Result<(), ICS02Error> {
 		let unpacked = client_state.unpack_recursive();
-		let (relay_chain, para_id, latest_para_height) = match unpacked {
+		let (chain, chain_id, latest_height) = match unpacked {
 			AnyClientState::Beefy(client_state) => {
 				if client_state.frozen_height.is_some() {
 					Err(ICS02Error::implementation_specific(format!("client state is frozen")))?
 				}
 
-				(client_state.relay_chain, client_state.para_id, client_state.latest_para_height)
+				(
+					ChainType::RelayChain(client_state.relay_chain),
+					client_state.para_id,
+					client_state.latest_para_height,
+				)
 			},
 			AnyClientState::Grandpa(client_state) => {
 				if client_state.frozen_height.is_some() {
 					Err(ICS02Error::implementation_specific(format!("client state is frozen")))?
 				}
 
-				(client_state.relay_chain, client_state.para_id, client_state.latest_para_height)
+				(
+					ChainType::RelayChain(client_state.relay_chain),
+					client_state.para_id,
+					client_state.latest_para_height,
+				)
 			},
 			AnyClientState::GrandpaStandalone(client_state) => {
 				if client_state.frozen_height.is_some() {
 					Err(ICS02Error::implementation_specific(format!("client state is frozen")))?
 				}
 
-				(client_state.relay_chain, client_state.para_id, client_state.latest_para_height)
+				(
+					ChainType::StandaloneChain(client_state.chain),
+					client_state.chain_id,
+					client_state.latest_height,
+				)
 			},
 			client => Err(ICS02Error::unknown_client_type(format!("{}", client.client_type())))?,
 		};
 
-		if relay_chain != T::RelayChain::get() {
-			log::warn!(target : "pallet_ibc", "configured relay {} differs from provided in data {}", T::RelayChain::get(), relay_chain);
+		if chain != T::ChainType::get() {
+			log::warn!(target : "pallet_ibc", "configured relay {} differs from provided in data {}", T::ChainType::get(), chain);
 			Err(ICS02Error::implementation_specific(format!("relay chain mis-match")))?
 		}
 
-		let self_para_id: u32 = T::ParaId::get().into();
-		if para_id != self_para_id {
-			log::warn!(target : "pallet_ibc", "configured para {} differs from provided in data {}", self_para_id, para_id);
+		let self_chain_id: u32 = T::ChainId::get().into();
+		if chain_id != self_chain_id {
+			log::warn!(target : "pallet_ibc", "configured para {} differs from provided in data {}", self_chain_id, chain_id);
 			Err(ICS02Error::implementation_specific(format!("para-id mis-match")))?
 		}
 
 		let block_number: u32 = <frame_system::Pallet<T>>::block_number().into().as_u32();
 
 		// this really shouldn't be possible
-		if latest_para_height >= block_number {
+		if latest_height >= block_number {
 			Err(ICS02Error::implementation_specific(format!(
-				"client has latest_para_height {latest_para_height} greater than or equal to chain height {block_number}"
+				"client has latest_height {latest_height} greater than or equal to chain height {block_number}"
 			)))?
 		}
 
