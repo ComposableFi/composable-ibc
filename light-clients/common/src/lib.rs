@@ -236,3 +236,63 @@ where
 
 	Ok(())
 }
+
+#[derive(Clone, Copy, Debug, PartialEq, Eq, Deserialize, Serialize)]
+pub enum StandaloneChain {
+	Tangle = 0,
+}
+
+impl Default for StandaloneChain {
+	fn default() -> Self {
+		StandaloneChain::Tangle
+	}
+}
+
+impl Display for StandaloneChain {
+	fn fmt(&self, f: &mut Formatter<'_>) -> fmt::Result {
+		write!(f, "{}", self.as_str())
+	}
+}
+
+// Unbonding period for standalone chains in days
+const TANGLE_UNBONDING_PERIOD: u64 = 14;
+
+impl StandaloneChain {
+	/// Yields the Order as a string
+	pub fn as_str(&self) -> &'static str {
+		match self {
+			Self::Tangle => "Tangle",
+		}
+	}
+
+	// Parses the Order out from a i32.
+	pub fn from_i32(nr: i32) -> Result<Self, anyhow::Error> {
+		match nr {
+			0 => Ok(Self::Tangle),
+			id => Err(anyhow!("Unknown relay chain {id}")),
+		}
+	}
+
+	pub fn unbonding_period(&self) -> Duration {
+		match self {
+			Self::Tangle => Duration::from_secs(TANGLE_UNBONDING_PERIOD * DAY),
+		}
+	}
+
+	pub fn trusting_period(&self) -> Duration {
+		let unbonding_period = self.unbonding_period();
+		// Trusting period is 1/3 of unbonding period
+		unbonding_period.checked_div(3).unwrap()
+	}
+}
+
+impl FromStr for StandaloneChain {
+	type Err = anyhow::Error;
+
+	fn from_str(s: &str) -> Result<Self, Self::Err> {
+		match s.to_lowercase().trim_start_matches("order_") {
+			"tangle" => Ok(Self::Tangle),
+			_ => Err(anyhow!("Unknown relay chain {s}")),
+		}
+	}
+}

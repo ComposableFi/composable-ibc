@@ -430,6 +430,13 @@ impl<T: Config + Send + Sync> ClientKeeper for Context<T> {
 
 				(client_state.relay_chain, client_state.para_id, client_state.latest_para_height)
 			},
+			AnyClientState::GrandpaStandalone(client_state) => {
+				if client_state.frozen_height.is_some() {
+					Err(ICS02Error::implementation_specific(format!("client state is frozen")))?
+				}
+
+				(client_state.relay_chain, client_state.para_id, client_state.latest_para_height)
+			},
 			client => Err(ICS02Error::unknown_client_type(format!("{}", client.client_type())))?,
 		};
 

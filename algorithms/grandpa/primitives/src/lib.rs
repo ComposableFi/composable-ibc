@@ -57,9 +57,9 @@ pub struct FinalityProof<H: parity_scale_codec::Codec> {
 	pub unknown_headers: Vec<H>,
 }
 
-/// Previous light client state.
+/// Previous light client state for Relay chain.
 #[derive(Clone)]
-pub struct ClientState {
+pub struct RelayClientState {
 	/// Current authority set
 	pub current_authorities: AuthorityList,
 	/// Id of the current authority set.
@@ -72,6 +72,42 @@ pub struct ClientState {
 	pub latest_relay_hash: Hash,
 	/// para_id of associated parachain
 	pub para_id: u32,
+}
+
+/// Previous light client state for Standalone chain
+#[derive(Clone)]
+pub struct StandaloneClientState {
+	/// Current authority set
+	pub current_authorities: AuthorityList,
+	/// Id of the current authority set.
+	pub current_set_id: u64,
+	/// latest finalized height on the standalone chain.
+	pub latest_height: u32,
+	/// latest finalized hash on the standalone chain.
+	pub latest_hash: Hash,
+	/// chain_id of associated parachain
+	pub chain_id: u32,
+}
+
+/// Standalone timestamp proof.
+#[derive(Clone, Debug, Encode, Decode)]
+pub struct StandaloneTimestampProof {
+	/// Timestamp extrinsic for ibc
+	pub extrinsic: Vec<u8>,
+	/// Timestamp extrinsic proof for previously proven standalone header.
+	pub extrinsic_proof: Vec<Vec<u8>>,
+}
+
+/// Standalone header with finality proof
+#[derive(Clone, Encode, Decode)]
+pub struct StandaloneHeaderWithFinalityProof<H: parity_scale_codec::Codec> {
+	/// The grandpa finality proof: contains standalone chain header from the
+	/// last known finalized grandpa block.
+	pub finality_proof: FinalityProof<H>,
+	/// Standalone timestamp proof
+	pub timestamp_proof: StandaloneTimestampProof,
+	/// The latest finalized height on the standalone chain.
+	pub latest_height: u64,
 }
 
 /// Holds relavant parachain proofs for both header and timestamp extrinsic.

@@ -38,7 +38,7 @@ use system::EnsureRoot;
 
 type UncheckedExtrinsic = frame_system::mocking::MockUncheckedExtrinsic<Test>;
 type Block = frame_system::mocking::MockBlock<Test>;
-type Header = generic::Header<u32, BlakeTwo256>;
+type Header = generic::Header<u64, BlakeTwo256>;
 use sp_runtime::traits::{IdentifyAccount, Verify};
 
 pub type AssetId = u128;
@@ -220,7 +220,7 @@ parameter_types! {
 	pub const FlatFeeAssetId: AssetId = 130;
 	pub const FlatFeeAmount: AssetId = 10_000_000;
 	pub FeeAccount: <Test as Config>::AccountIdConversion = create_alice_key();
-	pub const CleanUpPacketsPeriod: u32 = 10;
+	pub const CleanUpPacketsPeriod: u64 = 10;
 }
 
 fn create_alice_key() -> <Test as Config>::AccountIdConversion {

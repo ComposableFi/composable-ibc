@@ -39,6 +39,14 @@ use ics10_grandpa::{
 	client_state::GRANDPA_CLIENT_STATE_TYPE_URL,
 	consensus_state::GRANDPA_CONSENSUS_STATE_TYPE_URL,
 };
+use ics10_grandpa_standalone::{
+	client_message::{
+		StandaloneChainHeader, GRANDPA_STANDALONE_CLIENT_MESSAGE_TYPE_URL,
+		GRANDPA_STANDALONE_HEADER_TYPE_URL, GRANDPA_STANDALONE_MISBEHAVIOUR_TYPE_URL,
+	},
+	client_state::GRANDPA_STANDALONE_CLIENT_STATE_TYPE_URL,
+	consensus_state::GRANDPA_STANDALONE_CONSENSUS_STATE_TYPE_URL,
+};
 use ics11_beefy::{
 	client_message::BEEFY_CLIENT_MESSAGE_TYPE_URL, client_state::BEEFY_CLIENT_STATE_TYPE_URL,
 	consensus_state::BEEFY_CONSENSUS_STATE_TYPE_URL,
@@ -140,7 +148,7 @@ pub type GrandpaHeaderHashesStorage = StorageValue<
 pub struct GrandpaHeaderHashesSetStorageInstance;
 impl StorageInstance for GrandpaHeaderHashesSetStorageInstance {
 	fn pallet_prefix() -> &'static str {
-		"ibc.lightclients.grandpa"
+		"ibc.lightclients.grandpa_standalone"
 	}
 
 	const STORAGE_PREFIX: &'static str = "HeaderHashesSet";
@@ -154,8 +162,51 @@ pub type GrandpaHeaderHashesSetStorage = StorageValue<
 /// Maximum number of block number to block hash mappings to keep (oldest pruned first).
 const GRANDPA_BLOCK_HASHES_CACHE_SIZE: u32 = 500;
 
+#[cfg(not(feature = "standalone"))]
 impl grandpa_client_primitives::HostFunctions for HostFunctionsManager {
 	type Header = RelayChainHeader;
+
+	fn ed25519_verify(sig: &ed25519::Signature, msg: &[u8], pub_key: &ed25519::Public) -> bool {
+		pub_key.verify(&msg, sig)
+	}
+
+	fn insert_relay_header_hashes(new_hashes: &[<Self::Header as Header>::Hash]) {
+		if new_hashes.is_empty() {
+			return
+		}
+
+		GrandpaHeaderHashesSetStorage::mutate(|hashes_set| {
+			GrandpaHeaderHashesStorage::mutate(|hashes| {
+				for hash in new_hashes {
+					match hashes.try_push(*hash) {
+						Ok(_) => {},
+						Err(_) => {
+							let old_hash = hashes.remove(0);
+							hashes_set.remove(&old_hash);
+							hashes.try_push(*hash).expect(
+								"we just removed an element, so there is space for this one; qed",
+							);
+						},
+					}
+					match hashes_set.try_insert(*hash) {
+						Ok(_) => {},
+						Err(_) => {
+							log::warn!("duplicated value in GrandpaHeaderHashesStorage or the storage is corrupted");
+						},
+					}
+				}
+			});
+		});
+	}
+
+	fn contains_relay_header_hash(hash: <Self::Header as Header>::Hash) -> bool {
+		GrandpaHeaderHashesSetStorage::get().contains(&hash)
+	}
+}
+
+#[cfg(feature = "standalone")]
+impl grandpa_client_primitives::HostFunctions for HostFunctionsManager {
+	type Header = StandaloneChainHeader;
 
 	fn ed25519_verify(sig: &ed25519::Signature, msg: &[u8], pub_key: &ed25519::Public) -> bool {
 		pub_key.verify(&msg, sig)
@@ -213,6 +264,7 @@ impl beefy_client_primitives::HostFunctions for HostFunctionsManager {
 
 #[derive(Clone, Debug, PartialEq, Eq, ClientDef)]
 pub enum AnyClient {
+	GrandpaStandalone(ics10_grandpa_standalone::client_def::GrandpaClient<HostFunctionsManager>),
 	Grandpa(ics10_grandpa::client_def::GrandpaClient<HostFunctionsManager>),
 	Beefy(ics11_beefy::client_def::BeefyClient<HostFunctionsManager>),
 	Tendermint(ics07_tendermint::client_def::TendermintClient<HostFunctionsManager>),
@@ -223,6 +275,7 @@ pub enum AnyClient {
 
 #[derive(Clone, Debug, PartialEq, Eq)]
 pub enum AnyUpgradeOptions {
+	GrandpaStandalone(ics10_grandpa_standalone::client_state::UpgradeOptions),
 	Grandpa(ics10_grandpa::client_state::UpgradeOptions),
 	Beefy(ics11_beefy::client_state::UpgradeOptions),
 	Tendermint(ics07_tendermint::client_state::UpgradeOptions),
@@ -233,6 +286,8 @@ pub enum AnyUpgradeOptions {
 
 #[derive(Clone, Debug, PartialEq, Eq, ClientState, Protobuf)]
 pub enum AnyClientState {
+	#[ibc(proto_url = "GRANDPA_STANDALONE_CLIENT_STATE_TYPE_URL")]
+	GrandpaStandalone(ics10_grandpa_standalone::client_state::ClientState<HostFunctionsManager>),
 	#[ibc(proto_url = "GRANDPA_CLIENT_STATE_TYPE_URL")]
 	Grandpa(ics10_grandpa::client_state::ClientState<HostFunctionsManager>),
 	#[ibc(proto_url = "BEEFY_CLIENT_STATE_TYPE_URL")]
@@ -319,6 +374,8 @@ impl AnyConsensusState {
 #[derive(Clone, Debug, ClientMessage)]
 #[allow(clippy::large_enum_variant)]
 pub enum AnyClientMessage {
+	#[ibc(proto_url = "GRANDPA_STANDALONE_CLIENT_MESSAGE_TYPE_URL")]
+	GrandpaStandalone(ics10_grandpa_standalone::client_message::ClientMessage),
 	#[ibc(proto_url = "GRANDPA_CLIENT_MESSAGE_TYPE_URL")]
 	Grandpa(ics10_grandpa::client_message::ClientMessage),
 	#[ibc(proto_url = "BEEFY_CLIENT_MESSAGE_TYPE_URL")]

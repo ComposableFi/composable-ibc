@@ -21,8 +21,8 @@ use anyhow::anyhow;
 pub use beefy_prover;
 use beefy_prover::helpers::{fetch_timestamp_extrinsic_with_proof, TimeStampExtWithProof};
 use grandpa_light_client_primitives::{
-	parachain_header_storage_key, ClientState, FinalityProof, ParachainHeaderProofs,
-	ParachainHeadersWithFinalityProof,
+	parachain_header_storage_key, FinalityProof, ParachainHeaderProofs,
+	ParachainHeadersWithFinalityProof, RelayClientState,
 };
 use jsonrpsee::{async_client::Client, tracing::log, ws_client::WsClientBuilder};
 use light_client_common::config::{AsInner, RuntimeStorage};
@@ -61,6 +61,7 @@ pub const PROCESS_BLOCKS_BATCH_SIZE: usize = 100;
 
 /// Host function implementation for the verifier
 pub mod host_functions;
+pub mod standalone;
 
 /// Contains methods useful for proving parachain header finality using GRANDPA
 pub struct GrandpaProver<T: Config> {
@@ -152,7 +153,7 @@ where
 	}
 
 	/// Construct the inital client state.
-	pub async fn initialize_client_state(&self) -> Result<ClientState, anyhow::Error>
+	pub async fn initialize_client_state(&self) -> Result<RelayClientState, anyhow::Error>
 	where
 		<T as subxt::Config>::Header: Decode,
 	{
@@ -211,7 +212,7 @@ where
 		let finalized_para_header =
 			self.query_latest_finalized_parachain_header(latest_relay_height).await.unwrap();
 
-		Ok(ClientState {
+		Ok(RelayClientState {
 			current_authorities,
 			current_set_id,
 			latest_relay_height,

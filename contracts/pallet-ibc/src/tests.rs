@@ -408,7 +408,7 @@ fn on_deliver_ics20_recv_packet() {
 		let pair = sp_core::sr25519::Pair::from_seed(b"12345678901234567890123456789012");
 		let ss58_address =
 			ibc_primitives::runtime_interface::account_id_to_ss58(pair.public().0, 49);
-		frame_system::Pallet::<Test>::set_block_number(1u32);
+		frame_system::Pallet::<Test>::set_block_number(1u64);
 		let asset_id =
 			<<Test as Config>::IbcDenomToAssetIdConversion as DenomToAssetId<Test>>::from_denom_to_asset_id(
 				"PICA",
@@ -509,7 +509,7 @@ fn on_deliver_ics20_recv_packet_incorrect_memo() {
 		let reciever = AccountId32::new(pair.public().0);
 		let ss58_address =
 			ibc_primitives::runtime_interface::account_id_to_ss58(pair.public().0, 49);
-		frame_system::Pallet::<Test>::set_block_number(1u32);
+		frame_system::Pallet::<Test>::set_block_number(1u64);
 		let asset_id =
 			<<Test as Config>::IbcDenomToAssetIdConversion as DenomToAssetId<Test>>::from_denom_to_asset_id(
 				&"PICA".to_string(),
@@ -645,7 +645,7 @@ fn on_deliver_ics20_recv_packet_with_flat_fee() {
 		let pair = sp_core::sr25519::Pair::from_seed(b"12345678901234567890123456789012");
 		let ss58_address =
 			ibc_primitives::runtime_interface::account_id_to_ss58(pair.public().0, 49);
-		frame_system::Pallet::<Test>::set_block_number(1u32);
+		frame_system::Pallet::<Test>::set_block_number(1u64);
 		let asset_id =
 			<<Test as Config>::IbcDenomToAssetIdConversion as DenomToAssetId<Test>>::from_denom_to_asset_id(
 				"PICAFLATFEE",
@@ -745,7 +745,7 @@ fn on_ack_transfer_with_custom_success_result() {
 	ext.execute_with(|| {
 		// Create  a new account
 		let pair = sp_core::sr25519::Pair::from_seed(b"12345678901234567890123456789012");
-		frame_system::Pallet::<Test>::set_block_number(1u32);
+		frame_system::Pallet::<Test>::set_block_number(1u64);
 		let asset_id =
 			<<Test as Config>::IbcDenomToAssetIdConversion as DenomToAssetId<Test>>::from_denom_to_asset_id(
 				"PICAFLATFEE",
@@ -825,7 +825,7 @@ fn on_deliver_ics20_recv_packet_transfered_amount_less_then_flat_fee() {
 		let pair = sp_core::sr25519::Pair::from_seed(b"12345678901234567890123456789012");
 		let ss58_address =
 			ibc_primitives::runtime_interface::account_id_to_ss58(pair.public().0, 49);
-		frame_system::Pallet::<Test>::set_block_number(1u32);
+		frame_system::Pallet::<Test>::set_block_number(1u64);
 		let asset_id =
 			<<Test as Config>::IbcDenomToAssetIdConversion as DenomToAssetId<Test>>::from_denom_to_asset_id(
 				"PICAFLATFEE",
@@ -937,7 +937,7 @@ fn on_deliver_ics20_recv_packet_should_not_double_spend() {
 		let pair = sp_core::sr25519::Pair::from_seed(b"12345678901234567890123456789012");
 		let ss58_address =
 			ibc_primitives::runtime_interface::account_id_to_ss58(pair.public().0, 49);
-		frame_system::Pallet::<Test>::set_block_number(1u32);
+		frame_system::Pallet::<Test>::set_block_number(1u64);
 		setup_client_and_consensus_state(PortId::transfer());
 
 		let channel_id = ChannelId::new(0);
@@ -1055,7 +1055,7 @@ fn on_deliver_ics20_recv_packet_should_not_double_spend() {
 fn should_fetch_recv_packet_with_acknowledgement() {
 	let mut ext = new_test_ext();
 	ext.execute_with(|| {
-		frame_system::Pallet::<Test>::set_block_number(1u32);
+		frame_system::Pallet::<Test>::set_block_number(1u64);
 		let channel_id = ChannelId::new(0);
 		let port_id = PortId::transfer();
 

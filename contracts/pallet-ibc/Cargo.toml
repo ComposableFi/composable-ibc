@@ -53,6 +53,7 @@ beefy-client-primitives = { workspace = true }
 light-client-common = { workspace = true }
 ics08-wasm = { workspace = true }
 ics10-grandpa = { workspace = true }
+ics10-grandpa-standalone = { workspace = true }
 ics11-beefy = { workspace = true }
 ics07-tendermint = { workspace = true }
 hex = { workspace = true }
@@ -103,6 +104,7 @@ ibc = { workspace = true, features = ["mocks"] }
 [features]
 default = ["std"]
 testing = []
+standalone = []
 std = [
 	"parity-scale-codec/std",
 	"log/std",
@@ -129,6 +131,7 @@ std = [
 	"beefy-client-primitives/std",
 	"light-client-common/std",
 	"ics10-grandpa/std",
+	"ics10-grandpa-standalone/std",
 	"ics11-beefy/std",
 	"ics07-tendermint/std",
 	"sp-consensus-grandpa/std",

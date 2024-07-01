@@ -30,6 +30,7 @@ members = [
     "light-clients/ics08-wasm",
     "light-clients/ics10-grandpa",
     "light-clients/ics10-grandpa-cw",
+    "light-clients/ics10-grandpa-standalone",
     "light-clients/ics11-beefy",
     "light-clients/ics13-near",
 
@@ -74,6 +75,7 @@ ics07-tendermint                           = { path = "light-clients/ics07-tende
 ics08-wasm                                 = { path = "light-clients/ics08-wasm", features = ["std"] }
 light-client-common                        = { path = "light-clients/common" }
 ics10-grandpa                              = { path = "light-clients/ics10-grandpa" }
+ics10-grandpa-standalone                   = { path = "light-clients/ics10-grandpa-standalone" }
 
 # Tendermint
 ics23                                      = { git = "https://github.com/cosmos/ics23", rev = "74ce807b7be39a7e0afb4e2efb8e28a57965f57b", default-features = false }

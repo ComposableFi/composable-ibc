@@ -1079,6 +1079,14 @@ pub mod pallet {
 			let client_state =
 				ctx.client_state(&client_id).map_err(|_| Error::<T>::ClientStateNotFound)?;
 			let frozen_state = match client_state {
+				AnyClientState::GrandpaStandalone(grandpa) => {
+					let latest_height = grandpa.latest_height();
+					AnyClientState::wrap(
+						&grandpa
+							.with_frozen_height(Height::new(latest_height.revision_number, height))
+							.map_err(|_| Error::<T>::ClientFreezeFailed)?,
+					)
+				},
 				AnyClientState::Grandpa(grandpa) => {
 					let latest_height = grandpa.latest_height();
 					AnyClientState::wrap(
