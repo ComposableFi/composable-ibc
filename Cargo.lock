@@ -1122,7 +1122,6 @@ version = "0.1.0"
 dependencies = [
  "anyhow",
  "beefy-light-client-primitives",
- "codegen",
  "derive_more",
  "frame-support",
  "hex",

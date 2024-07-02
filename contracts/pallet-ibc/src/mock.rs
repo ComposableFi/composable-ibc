@@ -9,7 +9,7 @@ use frame_support::{
 			metadata::{Inspect, Mutate},
 			Create,
 		},
-		AsEnsureOriginWithArg, ConstU64, Contains, Everything,
+		AsEnsureOriginWithArg, ConstU64, Contains, Currency, Everything,
 	},
 };
 use frame_system as system;
@@ -108,7 +108,7 @@ parameter_types! {
 	pub const BlockHashCount: u32 = 250;
 	pub const SS58Prefix: u8 = 49;
 	pub const ExpectedBlockTime: u64 = 1000;
-	pub const ExistentialDeposit: u128 = 0;
+	pub const ExistentialDeposit: u128 = 10000;
 	pub const MaxAuthorities: u32 = 100_000;
 }
 
@@ -388,6 +388,11 @@ where
 			id = 3;
 		}
 		if <<Test as Config>::Fungibles as Inspect<AccountId>>::decimals(id) == 0 {
+			// Give the creator account balance
+			orml_tokens::CurrencyAdapter::<Test, NativeAssetId>::make_free_balance_be(
+				&AccountId::new([0; 32]),
+				1000u128,
+			);
 			<<Test as Config>::Fungibles as Create<AccountId>>::create(
 				id,
 				AccountId::new([0; 32]),
