@@ -17,7 +17,7 @@ use crate::{
 	client_def::GrandpaClient,
 	client_message::StandaloneChainHeader,
 	error::Error,
-	proto::{Authority as RawAuthority, ClientState as RawClientState, Standalone},
+	proto::{Authority as RawAuthority, ClientState as RawClientState},
 };
 use alloc::{format, string::ToString, vec::Vec};
 use anyhow::anyhow;

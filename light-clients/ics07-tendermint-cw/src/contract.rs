@@ -31,7 +31,7 @@ use crate::{
 };
 #[cfg(not(feature = "library"))]
 use cosmwasm_std::entry_point;
-use cosmwasm_std::{to_binary, Binary, Deps, DepsMut, Env, MessageInfo, Response, StdResult};
+use cosmwasm_std::{to_json_binary, Binary, Deps, DepsMut, Env, MessageInfo, Response, StdResult};
 use ed25519_consensus::VerificationKey;
 use ibc::core::{
 	ics02_client::{
@@ -185,7 +185,7 @@ fn process_message(
 				msg.value,
 			)
 			.map_err(|e| ContractError::Tendermint(e.to_string()))?;
-			Ok(()).map(|_| to_binary(&ContractResult::success()))
+			Ok(()).map(|_| to_json_binary(&ContractResult::success()))
 		},
 		ExecuteMsg::VerifyNonMembership(msg) => {
 			let client_state = ctx
@@ -206,7 +206,7 @@ fn process_message(
 				msg.path,
 			)
 			.map_err(|e| ContractError::Tendermint(e.to_string()))
-			.map(|_| to_binary(&ContractResult::success()))
+			.map(|_| to_json_binary(&ContractResult::success()))
 		},
 		ExecuteMsg::VerifyClientMessage(msg) => {
 			let client_state = ctx
@@ -216,7 +216,7 @@ fn process_message(
 			client
 				.verify_client_message(ctx, client_id, client_state, msg.client_message)
 				.map_err(|e| ContractError::Tendermint(format!("{e:?}")))
-				.map(|_| to_binary(&ContractResult::success()))
+				.map(|_| to_json_binary(&ContractResult::success()))
 		},
 		ExecuteMsg::CheckForMisbehaviour(msg) => {
 			let client_state = ctx
@@ -226,7 +226,7 @@ fn process_message(
 			client
 				.check_for_misbehaviour(ctx, client_id, client_state, msg.client_message)
 				.map_err(|e| ContractError::Tendermint(e.to_string()))
-				.map(|result| to_binary(&ContractResult::success().misbehaviour(result)))
+				.map(|result| to_json_binary(&ContractResult::success().misbehaviour(result)))
 		},
 		ExecuteMsg::UpdateStateOnMisbehaviour(msg_raw) => {
 			let client_state = ctx
@@ -239,7 +239,7 @@ fn process_message(
 				.and_then(|cs| {
 					ctx.store_client_state(client_id, cs)
 						.map_err(|e| ContractError::Tendermint(e.to_string()))?;
-					Ok(to_binary(&ContractResult::success()))
+					Ok(to_json_binary(&ContractResult::success()))
 				})
 		},
 		ExecuteMsg::UpdateState(msg_raw) => {
@@ -269,7 +269,7 @@ fn process_message(
 						ctx.store_client_state(client_id, cs)
 							.map_err(|e| ContractError::Tendermint(e.to_string()))?;
 					}
-					Ok(to_binary(&ContractResult::success()))
+					Ok(to_json_binary(&ContractResult::success()))
 				})
 		},
 		ExecuteMsg::CheckSubstituteAndUpdateState(_msg) =>
@@ -280,7 +280,7 @@ fn process_message(
 					ctx.store_consensus_state_prefixed(height, cu, SUBJECT_PREFIX);
 					ctx.store_client_state_prefixed(cs, SUBJECT_PREFIX)
 						.map_err(|e| ContractError::Tendermint(e.to_string()))?;
-					Ok(to_binary(&ContractResult::success()))
+					Ok(to_json_binary(&ContractResult::success()))
 				}),
 		ExecuteMsg::VerifyUpgradeAndUpdateState(msg) => {
 			let old_client_state = ctx
@@ -304,7 +304,7 @@ fn process_message(
 					.map_err(|e| ContractError::Tendermint(e.to_string()))?;
 				ctx.store_client_state(client_id, cs)
 					.map_err(|e| ContractError::Tendermint(e.to_string()))?;
-				Ok(to_binary(&ContractResult::success()))
+				Ok(to_json_binary(&ContractResult::success()))
 			})
 		},
 	};
@@ -320,16 +320,16 @@ pub fn query(deps: Deps, env: Env, msg: QueryMsg) -> StdResult<Binary> {
 		QueryMsg::GetLatestHeightsMsg(_) => unimplemented!("GetLatestHeightsMsg"),
 		QueryMsg::ExportMetadata(ExportMetadataMsg {}) => {
 			let ro_proceeded_state = ReadonlyProcessedStates::new(deps.storage);
-			to_binary(&QueryResponse::genesis_metadata(ro_proceeded_state.get_metadata()))
+			to_json_binary(&QueryResponse::genesis_metadata(ro_proceeded_state.get_metadata()))
 		},
 		QueryMsg::Status(StatusMsg {}) => {
 			let client_state = match get_client_state::<HostFunctions>(deps) {
 				Ok(client_state) => client_state,
-				Err(_) => return to_binary(&QueryResponse::status("Unknown".to_string())),
+				Err(_) => return to_json_binary(&QueryResponse::status("Unknown".to_string())),
 			};
 
 			if client_state.frozen_height().is_some() {
-				to_binary(&QueryResponse::status("Frozen".to_string()))
+				to_json_binary(&QueryResponse::status("Frozen".to_string()))
 			} else {
 				let height = client_state.latest_height();
 				match get_consensus_state(deps, &client_id, height) {
@@ -338,11 +338,11 @@ pub fn query(deps: Deps, env: Env, msg: QueryMsg) -> StdResult<Binary> {
 						let tp = client_state.trusting_period.as_secs();
 						let now = env.block.time.seconds();
 						if (last_update + tp) < now {
-							return to_binary(&QueryResponse::status("Expired".to_string()))
+							return to_json_binary(&QueryResponse::status("Expired".to_string()))
 						}
-						to_binary(&QueryResponse::status("Active".to_string()))
+						to_json_binary(&QueryResponse::status("Active".to_string()))
 					},
-					Err(_) => to_binary(&QueryResponse::status("Expired".to_string())),
+					Err(_) => to_json_binary(&QueryResponse::status("Expired".to_string())),
 				}
 			}
 		},

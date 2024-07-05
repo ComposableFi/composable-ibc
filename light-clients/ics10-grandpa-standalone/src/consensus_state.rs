@@ -13,11 +13,9 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-use alloc::{format, vec, vec::Vec};
+use alloc::{format, vec::Vec};
 use anyhow::anyhow;
 use core::{convert::Infallible, fmt::Debug};
-use finality_grandpa::Commit;
-use parity_scale_codec::Decode;
 use serde::{Deserialize, Serialize};
 use tendermint::time::Time;
 use tendermint_proto::{google::protobuf as tpb, Protobuf};
@@ -25,16 +23,11 @@ use tendermint_proto::{google::protobuf as tpb, Protobuf};
 use crate::{client_message::StandaloneChainHeader, proto::ConsensusState as RawConsensusState};
 
 use crate::{alloc::string::ToString, error::Error};
-use grandpa_client_primitives::{
-	parachain_header_storage_key, ParachainHeaderProofs, StandaloneHeaderWithFinalityProof,
-	StandaloneTimestampProof,
-};
+use grandpa_client_primitives::StandaloneTimestampProof;
 use ibc::{core::ics23_commitment::commitment::CommitmentRoot, timestamp::Timestamp, Height};
 use ibc_proto::google::protobuf::Any;
-use light_client_common::{decode_timestamp_extrinsic, state_machine};
-use sp_core::H256;
-use sp_runtime::{generic, traits::BlakeTwo256, SaturatedConversion};
-use sp_trie::StorageProof;
+use light_client_common::decode_timestamp_extrinsic;
+use sp_runtime::SaturatedConversion;
 
 /// Protobuf type url for GRANDPA Consensus State
 pub const GRANDPA_STANDALONE_CONSENSUS_STATE_TYPE_URL: &str =
@@ -127,7 +120,7 @@ pub mod test_util {
 	use crate::mock::AnyConsensusState;
 
 	pub fn get_dummy_beefy_consensus_state() -> AnyConsensusState {
-		AnyConsensusState::Grandpa(ConsensusState {
+		AnyConsensusState::GrandpaStandalone(ConsensusState {
 			timestamp: Time::now(),
 			root: vec![0; 32].into(),
 		})

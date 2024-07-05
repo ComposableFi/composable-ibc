@@ -33,7 +33,6 @@ use sp_core::H256;
 use sp_runtime::traits::Convert;
 
 use alloc::{format, string::ToString};
-use sp_consensus_beefy::ecdsa_crypto::AuthorityId;
 use sp_core::ByteArray;
 use sp_runtime::{generic::Header, traits::BlakeTwo256};
 use sp_std::{prelude::*, vec};

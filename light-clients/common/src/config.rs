@@ -13,7 +13,6 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-use alloc::borrow::Cow;
 use async_trait::async_trait;
 use ibc::events::IbcEvent;
 use ibc_proto::google::protobuf::Any;
@@ -23,23 +22,19 @@ use sp_core::H256;
 use subxt::{
 	client::OnlineClient,
 	config::ExtrinsicParams,
-	error::{MetadataError, StorageAddressError},
+	error::StorageAddressError,
 	events::{Phase, StaticEvent},
 	ext::{
 		scale_decode::DecodeAsType,
 		scale_encode::{EncodeAsFields, EncodeAsType},
 		scale_value::scale::PortableRegistry,
-		sp_runtime::scale_info::TypeDef,
 	},
-	metadata::{
-		types::{StorageEntryType, StorageHasher},
-		DecodeWithMetadata, EncodeWithMetadata, Metadata,
-	},
-	storage::{Address, DefaultAddress, StaticStorageKey, StorageKey},
-	tx::{DefaultPayload, Payload},
+	metadata::{types::StorageHasher, EncodeWithMetadata, Metadata},
+	storage::{DefaultAddress, StaticStorageKey, StorageKey},
+	tx::DefaultPayload,
 	utils::{Encoded, Static, Yes},
 };
-use subxt_core::storage::address::{StorageHashers, StorageHashersIter};
+use subxt_core::storage::address::StorageHashersIter;
 
 // Skip over the hash bytes (including any key at the end), returning bytes
 // representing the key if one exists, or None if the hasher has no key appended.

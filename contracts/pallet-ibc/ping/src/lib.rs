@@ -23,8 +23,6 @@ use ibc::{
 };
 use ibc_primitives::{port_id_from_bytes, CallbackWeight, HandlerMessage, IbcHandler, Timeout};
 use sp_std::{marker::PhantomData, prelude::*};
-// Re-export pallet items so that they can be accessed from the crate namespace.
-pub use pallet::*;
 
 pub const MODULE_ID: &str = "PalletIbcPing";
 pub const PORT_ID: &str = "ping";
@@ -48,6 +46,9 @@ pub struct SendPingParams {
 	// Channel counter, for example counter for channel-0 is 0
 	pub channel_id: u64,
 }
+
+// Re-export pallet items so that they can be accessed from the crate namespace.
+pub use pallet::*;
 
 // Definition of the pallet logic, to be aggregated at runtime definition through
 // `construct_runtime`.

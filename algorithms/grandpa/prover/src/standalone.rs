@@ -19,12 +19,10 @@
 
 use anyhow::anyhow;
 pub use beefy_prover;
-use beefy_prover::helpers::{fetch_timestamp_extrinsic_with_proof, TimeStampExtWithProof};
 use grandpa_light_client_primitives::{FinalityProof, StandaloneClientState};
 use jsonrpsee::{async_client::Client, tracing::log, ws_client::WsClientBuilder};
-use light_client_common::config::{AsInner, RuntimeStorage};
+use light_client_common::config::RuntimeStorage;
 use parity_scale_codec::{Decode, Encode};
-use rand::Rng;
 use sc_consensus_grandpa_rpc::GrandpaApiClient;
 use serde::{Deserialize, Serialize};
 use sp_consensus_grandpa::{AuthorityId, AuthoritySignature};
@@ -33,23 +31,12 @@ use sp_runtime::{
 	traits::{One, Zero},
 	SaturatedConversion,
 };
-use std::{
-	collections::{BTreeMap, BTreeSet},
-	sync::{
-		atomic::{AtomicU32, Ordering},
-		Arc,
-	},
-	time::Duration,
-};
+use std::{collections::BTreeSet, sync::Arc, time::Duration};
 use subxt::{
-	backend::{
-		legacy::{rpc_methods::StorageChangeSet, LegacyRpcMethods},
-		rpc::RpcClient,
-	},
+	backend::{legacy::LegacyRpcMethods, rpc::RpcClient},
 	config::Header,
 	Config, OnlineClient,
 };
-use tokio::{task::JoinSet, time::sleep};
 
 /// The maximum number of authority set changes to request at once
 pub const PROCESS_CHANGES_SET_BATCH_SIZE: usize = 100;

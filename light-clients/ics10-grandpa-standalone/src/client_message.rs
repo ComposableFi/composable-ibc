@@ -20,7 +20,7 @@ use crate::{
 		Misbehaviour as RawMisbehaviour,
 	},
 };
-use alloc::{collections::BTreeMap, vec::Vec};
+use alloc::vec::Vec;
 use anyhow::anyhow;
 use grandpa_client_primitives::{FinalityProof, StandaloneTimestampProof};
 use ibc::Height;

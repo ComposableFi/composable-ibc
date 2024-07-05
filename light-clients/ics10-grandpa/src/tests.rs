@@ -54,6 +54,7 @@ use std::time::Duration;
 use subxt::{
 	backend::legacy::LegacyRpcMethods,
 	config::substrate::{BlakeTwo256, SubstrateHeader},
+	PolkadotConfig,
 };
 
 #[tokio::test]

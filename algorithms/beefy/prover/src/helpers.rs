@@ -23,7 +23,7 @@ use sp_trie::{generate_trie_proof, TrieDBMutBuilder, TrieMut};
 use std::{collections::BTreeMap, sync::Arc};
 use subxt::{
 	backend::{legacy::LegacyRpcMethods, rpc::RpcClient},
-	Config, OnlineClient,
+	Config,
 };
 
 /// Holds the timestamp inherent alongside a merkle-patricia trie proof of its existence in a given

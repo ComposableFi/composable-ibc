@@ -93,7 +93,7 @@ impl grandpa_light_client_primitives::RelayHostFunctions for HostFunctions {
 		pub_key: &sp_core::ed25519::Public,
 	) -> bool {
 		use ed25519_zebra::{Signature, VerificationKey as PublicKey, VerificationKeyBytes};
-		let bytes: [u8; 64] = (sig.clone()).try_into().expect("signature is 64 bytes; qed");
+		let bytes: [u8; 64] = (sig.clone()).into();
 		let sig = Signature::from(bytes);
 		let slice: &[u8] = pub_key.as_ref();
 		let pub_key = PublicKey::try_from(

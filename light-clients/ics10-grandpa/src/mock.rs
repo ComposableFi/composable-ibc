@@ -59,7 +59,7 @@ thread_local! {
 	static HEADER_HASHES: RefCell<BTreeSet<sp_core::H256>> = RefCell::new(BTreeSet::new());
 }
 
-impl grandpa_client_primitives::HostFunctions for HostFunctionsManager {
+impl grandpa_client_primitives::RelayHostFunctions for HostFunctionsManager {
 	type Header = sp_runtime::generic::Header<u32, BlakeTwo256>;
 
 	fn ed25519_verify(sig: &ed25519::Signature, msg: &[u8], pub_key: &ed25519::Public) -> bool {
