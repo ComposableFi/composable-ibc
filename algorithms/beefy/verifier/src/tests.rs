@@ -19,7 +19,6 @@ use beefy_light_client_primitives::{
 };
 use beefy_prover::{Crypto, Prover};
 use futures::stream::StreamExt;
-use hyperspace_core::substrate::DefaultConfig as PolkadotConfig;
 use sp_consensus_beefy::{
 	known_payloads::MMR_ROOT_ID,
 	mmr::{BeefyNextAuthoritySet, MmrLeaf},

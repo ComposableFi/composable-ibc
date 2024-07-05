@@ -57,7 +57,6 @@ finality-grandpa = { workspace = true, default-features = false }
 [dev-dependencies]
 cw-multi-test = { workspace = true }
 hex = { workspace = true }
-hyperspace-primitives = { workspace = true, features = ["testing"] }
 pallet-ibc = { workspace = true }
 serde-json-wasm = { workspace = true, default-features = false }
 serde_json = { workspace = true, default-features = false }

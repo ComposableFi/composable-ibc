@@ -27,8 +27,10 @@ use pallet_xcm::{EnsureXcm, IsMajorityOfBody, XcmPassthrough};
 use polkadot_parachain_primitives::primitives::Sibling;
 use polkadot_runtime_common::impls::ToAuthor;
 use sp_core::ConstU32;
+use xcm::opaque::v3::MultiLocation;
 use xcm::{
 	latest::{prelude::*, Weight as XCMWeight},
+	v3::Junctions::X1,
 	// v3::{InteriorMultiLocation, Junctions::X1, MultiLocation},
 };
 use xcm_builder::{
@@ -155,96 +157,101 @@ pub type Barrier = TrailingSetTopicAsId<
 	>,
 >;
 
-/// Locations that will not be charged fees in the executor,
-/// either execution or delivery.
-/// We only waive fees for system functions, which these locations represent.
-pub type WaivedLocations = (
-	RelayOrOtherSystemParachains<AllSiblingSystemParachains, Runtime>,
-	Equals<RelayTreasuryLocation>,
-);
-
 pub type TrustedTeleporter = ConcreteAssetFromSystem<RelayLocation>;
 
 pub struct XcmConfig;
 impl xcm_executor::Config for XcmConfig {
-	type RuntimeCall = RuntimeCall;
-	type XcmSender = XcmRouter;
-	type AssetTransactor = CurrencyTransactor;
-	type OriginConverter = XcmOriginToTransactDispatchOrigin;
-	type IsReserve = NativeAsset;
-	type IsTeleporter = TrustedTeleporter;
-	type UniversalLocation = UniversalLocation;
-	type Barrier = Barrier;
-	type Weigher = FixedWeightBounds<UnitWeightCost, RuntimeCall, MaxInstructions>;
-	type Trader = UsingComponents<WeightToFee, RelayLocation, AccountId, Balances, ()>;
-	type ResponseHandler = PolkadotXcm;
-	type AssetTrap = PolkadotXcm;
 	type AssetClaims = PolkadotXcm;
+	type AssetTransactor = TangleAssetTransactor;
+	type AssetTrap = TangleDropAssets<ToTreasury>;
+	type Barrier = Barrier;
+	type RuntimeCall = RuntimeCall;
+	type IsReserve = MultiNativeAsset<RelativeReserveProvider>;
+	type IsTeleporter = ();
+	type UniversalLocation = UniversalLocation;
+	type OriginConverter = XcmOriginToTransactDispatchOrigin;
+	type ResponseHandler = PolkadotXcm;
 	type SubscriptionService = PolkadotXcm;
+	type Trader = Trader;
+	type Weigher = FixedWeightBounds<UnitWeightCost, RuntimeCall, MaxInstructions>;
+	type XcmSender = XcmRouter;
 	type PalletInstancesInfo = AllPalletsWithSystem;
 	type MaxAssetsIntoHolding = ConstU32<8>;
-	type AssetLocker = ();
-	type AssetExchanger = ();
-	type FeeManager = XcmFeeManagerFromComponents<
-		WaivedLocations,
-		XcmFeeToAccount<Self::AssetTransactor, AccountId, TreasuryAccount>,
-	>;
-	type MessageExporter = ();
 	type UniversalAliases = Nothing;
 	type CallDispatcher = RuntimeCall;
-	type SafeCallFilter = Everything;
+	type SafeCallFilter = SafeCallFilter;
+	type AssetLocker = ();
+	type AssetExchanger = ();
+	type FeeManager = ();
+	type MessageExporter = ();
 	type Aliasers = Nothing;
 	type TransactionalProcessor = FrameTransactionalProcessor;
 }
 
-/// No local origins on this chain are allowed to dispatch XCM sends/executions.
+/// Local origins on this chain are allowed to dispatch XCM sends/executions.
 pub type LocalOriginToLocation = SignedToAccountId32<RuntimeOrigin, AccountId, RelayNetwork>;
 
 /// The means for routing XCM messages which are not for local execution into the right message
 /// queues.
 pub type XcmRouter = (
 	// Two routers - use UMP to communicate with the relay chain:
-	cumulus_primitives_utility::ParentAsUmp<ParachainSystem, (), ()>,
+	cumulus_primitives_utility::ParentAsUmp<ParachainSystem, PolkadotXcm, ()>,
 	// ..and XCMP to communicate with the sibling chains.
 	XcmpQueue,
 );
 
+#[cfg(feature = "runtime-benchmarks")]
 parameter_types! {
-	pub const UniversalLocation: cumulus_primitives_core::InteriorLocation = Junctions::Here;
+	pub ReachableDest: Option<MultiLocation> = Some(Parent.into());
 }
 
 impl pallet_xcm::Config for Runtime {
 	type RuntimeEvent = RuntimeEvent;
-	type Currency = Balances;
-	type CurrencyMatcher = ();
-	type SendXcmOrigin = EnsureXcmOrigin<RuntimeOrigin, LocalOriginToLocation>;
-	type XcmRouter = XcmRouter;
 	type ExecuteXcmOrigin = EnsureXcmOrigin<RuntimeOrigin, LocalOriginToLocation>;
-	type XcmExecuteFilter = Nothing;
-	// ^ Disable dispatchable execute on the XCM pallet.
-	// Needs to be `Everything` for local testing.
-	type XcmExecutor = XcmExecutor<XcmConfig>;
-	type XcmTeleportFilter = Everything;
-	type XcmReserveTransferFilter = Nothing;
-	type Weigher = FixedWeightBounds<UnitWeightCost, RuntimeCall, MaxInstructions>;
 	type UniversalLocation = UniversalLocation;
+	type SendXcmOrigin = EnsureXcmOrigin<RuntimeOrigin, LocalOriginToLocation>;
+	type Weigher = FixedWeightBounds<UnitWeightCost, RuntimeCall, MaxInstructions>;
+	type XcmExecuteFilter = Nothing;
+	#[cfg(feature = "runtime-benchmarks")]
+	type XcmExecutor = tangle_primitives::DoNothingExecuteXcm;
+	#[cfg(not(feature = "runtime-benchmarks"))]
+	type XcmExecutor = XcmExecutor<XcmConfig>;
+	type XcmReserveTransferFilter = Everything;
+	#[cfg(feature = "runtime-benchmarks")]
+	type XcmRouter = tangle_primitives::DoNothingRouter;
+	#[cfg(not(feature = "runtime-benchmarks"))]
+	type XcmRouter = XcmRouter;
+	type XcmTeleportFilter = Nothing;
 	type RuntimeOrigin = RuntimeOrigin;
 	type RuntimeCall = RuntimeCall;
-
 	const VERSION_DISCOVERY_QUEUE_SIZE: u32 = 100;
-	// ^ Override for AdvertisedXcmVersion default
 	type AdvertisedXcmVersion = pallet_xcm::CurrentXcmVersion;
+	type Currency = Balances;
+	type CurrencyMatcher = ();
 	type TrustedLockers = ();
 	type SovereignAccountOf = ();
-	type MaxLockers = ();
-	type WeightInfo = pallet_xcm::TestWeightInfo;
-
-	type AdminOrigin = frame_system::EnsureRoot<AccountId>;
-	type MaxRemoteLockConsumers = ();
+	type MaxLockers = ConstU32<8>;
+	type WeightInfo = weights::pallet_xcm::WeightInfo<Runtime>;
+	#[cfg(feature = "runtime-benchmarks")]
+	type ReachableDest = ReachableDest;
+	type AdminOrigin = EnsureRoot<AccountId>;
+	type MaxRemoteLockConsumers = ConstU32<0>;
 	type RemoteLockConsumerIdentifier = ();
 }
 
 impl cumulus_pallet_xcm::Config for Runtime {
 	type RuntimeEvent = RuntimeEvent;
 	type XcmExecutor = XcmExecutor<XcmConfig>;
+}
+
+impl cumulus_pallet_xcmp_queue::Config for Runtime {
+	type ChannelInfo = ParachainSystem;
+	type RuntimeEvent = RuntimeEvent;
+	type VersionWrapper = PolkadotXcm;
+	type ControllerOrigin = EnsureRoot<AccountId>;
+	type ControllerOriginConverter = XcmOriginToTransactDispatchOrigin;
+	type PriceForSiblingDelivery = NoPriceForMessageDelivery<ParaId>;
+	type XcmpQueue = ();
+	type MaxInboundSuspended = ();
+	type WeightInfo = cumulus_pallet_xcmp_queue::weights::SubstrateWeight<Runtime>;
 }

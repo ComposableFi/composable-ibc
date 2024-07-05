@@ -28,7 +28,6 @@ use grandpa_client_primitives::{
 	ParachainHeaderProofs, ParachainHeadersWithFinalityProof,
 };
 use grandpa_prover::{GrandpaProver, JustificationNotification};
-use hyperspace_core::substrate::DefaultConfig as PolkadotConfig;
 use ibc::{
 	core::{
 		ics02_client::{

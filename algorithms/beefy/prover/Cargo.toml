@@ -40,4 +40,4 @@ hex = { workspace = true }
 beefy-light-client-primitives = { workspace = true }
 
 [dev-dependencies]
-light-client-common = { path = "../../../light-clients/common" }
+light-client-common = { workspace = true }

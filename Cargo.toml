@@ -96,15 +96,15 @@ grandpa-prover                             = { path = "algorithms/grandpa/prover
 grandpa-light-client-primitives            = { path = "algorithms/grandpa/primitives" }
 
 # Hyperspace
-hyperspace-core                            = { path = "hyperspace/core", features = ["testing", "build-metadata-from-ws"] }
-hyperspace-primitives                      = { path = "hyperspace/primitives" }
-hyperspace-parachain                       = { path = "hyperspace/parachain" }
-hyperspace-cosmos                          = { path = "hyperspace/cosmos" }
-hyperspace-testsuite                       = { path = "hyperspace/testsuite" }
-hyperspace-metrics                         = { path = "hyperspace/metrics" }
+# hyperspace-core                            = { path = "hyperspace/core", features = ["testing", "build-metadata-from-ws"] }
+# hyperspace-primitives                      = { path = "hyperspace/primitives" }
+# hyperspace-parachain                       = { path = "hyperspace/parachain" }
+# hyperspace-cosmos                          = { path = "hyperspace/cosmos" }
+# hyperspace-testsuite                       = { path = "hyperspace/testsuite" }
+# hyperspace-metrics                         = { path = "hyperspace/metrics" }
 
 # Subxt / utils
-subxt-generated                            = { path = "utils/subxt/generated" }
+# subxt-generated                            = { path = "utils/subxt/generated" }
 subxt                                      = { git = "https://github.com/paritytech/subxt",  tag = "v0.37.0", features = ["substrate-compat"] }
 subxt-core                                 = { git = "https://github.com/paritytech/subxt",  tag = "v0.37.0", features = ["substrate-compat"] }
 subxt-metadata                             = { git = "https://github.com/paritytech/subxt",  tag = "v0.37.0", features = ["substrate-compat"] }

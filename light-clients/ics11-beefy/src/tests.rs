@@ -30,7 +30,6 @@ use beefy_prover::{
 	Prover,
 };
 use futures::stream::StreamExt;
-use hyperspace_core::substrate::DefaultConfig as PolkadotConfig;
 use ibc::{
 	core::{
 		ics02_client::{

@@ -100,7 +100,7 @@ use pallet_ibc::{
 	ics20::{MemoData, ValidateMemo},
 	routing::ModuleRouter,
 };
-use xcm::latest::prelude::BodyId;
+use xcm::latest::prelude::*;
 use xcm_executor::XcmExecutor;
 
 /// Alias to 512-bit hash when used in the context of a transaction signature on the chain.

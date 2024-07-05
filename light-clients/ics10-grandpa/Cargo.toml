@@ -82,5 +82,5 @@ serde_json = { workspace = true }
 frame-support = { workspace = true }
 sc-consensus-grandpa-rpc = { workspace = true }
 jsonrpsee-ws-client = { workspace = true }
-hyperspace-core = { workspace = true, features = ["testing", "build-metadata-from-ws"] }
+# hyperspace-core = { workspace = true, features = ["testing", "build-metadata-from-ws"] }
 light-client-common = { workspace = true, features = ["std"] }

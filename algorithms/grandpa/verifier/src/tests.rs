@@ -18,7 +18,6 @@ use futures::StreamExt;
 use grandpa_prover::{
 	beefy_prover::helpers::unsafe_arc_cast, host_functions::HostFunctionsProvider, GrandpaProver,
 };
-use hyperspace_core::substrate::DefaultConfig as PolkadotConfig;
 use parity_scale_codec::{Decode, Encode};
 use polkadot_core_primitives::Header;
 use primitives::{
