@@ -109,6 +109,7 @@ pub struct TransferParams<AccountId> {
 pub enum LightClientProtocol {
 	Beefy,
 	Grandpa,
+	GrandpaStandalone,
 }
 #[cfg(any(test, feature = "runtime-benchmarks"))]
 pub(crate) mod benchmarks;
