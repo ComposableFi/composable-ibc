@@ -22,49 +22,49 @@ normal = [
 
 [dependencies]
 # crates.io
-log = { workspace = true }
-serde = { workspace = true }
-scale-info = { workspace = true }
-serde_json = { workspace = true }
+log = { workspace = true, default-features = false }
+serde = { workspace = true, default-features = false }
+scale-info = { workspace = true, default-features = false }
+serde_json = { workspace = true, default-features = false }
 sha2 = { workspace = true, default-features = false }
 derive_more = { workspace = true, default-features = false, features = [
 	"from",
 	"display",
 ] }
 # substrate
-frame-support = { workspace = true }
-frame-system = { workspace = true }
+frame-support = { workspace = true, default-features = false }
+frame-system = { workspace = true, default-features = false }
 parachain-info = { workspace = true, default-features = false }
 cumulus-primitives-core = { workspace = true, default-features = false }
-sp-core = { workspace = true }
+sp-core = { workspace = true, default-features = false }
 sp-io = { workspace = true, default-features = false }
-sp-runtime = { workspace = true }
-sp-std = { workspace = true }
-sp-trie = { workspace = true }
+sp-runtime = { workspace = true, default-features = false }
+sp-std = { workspace = true, default-features = false }
+sp-trie = { workspace = true, default-features = false }
 
 # ibc
-ibc-proto = { workspace = true }
-tendermint = { workspace = true }       # cannot be defined as optional in workspace
-tendermint-proto = { workspace = true }
-ics23 = { workspace = true }
+ibc-proto = { workspace = true, default-features = false }
+tendermint = { workspace = true, default-features = false }       # cannot be defined as optional in workspace
+tendermint-proto = { workspace = true, default-features = false }
+ics23 = { workspace = true, default-features = false }
 
-grandpa-client-primitives = { workspace = true }
-beefy-client-primitives = { workspace = true }
-light-client-common = { workspace = true }
-ics08-wasm = { workspace = true }
-ics10-grandpa = { workspace = true }
-ics10-grandpa-standalone = { workspace = true }
-ics11-beefy = { workspace = true }
-ics07-tendermint = { workspace = true }
-hex = { workspace = true }
+grandpa-client-primitives = { workspace = true, default-features = false }
+beefy-client-primitives = { workspace = true, default-features = false }
+light-client-common = { workspace = true, default-features = false }
+ics08-wasm = { workspace = true, default-features = false }
+ics10-grandpa = { workspace = true, default-features = false }
+ics10-grandpa-standalone = { workspace = true, default-features = false }
+ics11-beefy = { workspace = true, default-features = false }
+ics07-tendermint = { workspace = true, default-features = false }
+hex = { workspace = true, default-features = false }
 # local deps
 ibc-primitives = { workspace = true }
 
 # optional
 hex-literal = { workspace = true, optional = true }
-prost = { workspace = true }
+prost = { workspace = true, default-features = false }
 frame-benchmarking = { workspace = true, default-features = false, optional = true }
-pallet-ibc-ping = { workspace = true, optional = true }
+pallet-ibc-ping = { workspace = true, default-features = false, optional = true }
 pallet-timestamp = { workspace = true, default-features = false }
 pallet-aura = { workspace = true, default-features = false, optional = true }
 pallet-membership = { workspace = true, default-features = false, optional = true }
@@ -77,16 +77,16 @@ sp-consensus-grandpa = { workspace = true, default-features = false, optional = 
 finality-grandpa = { workspace = true, features = ["derive-codec"], default-features = false, optional = true }
 
 parity-scale-codec = { workspace = true, features = ["derive", "full"] }
-ibc = { workspace = true }
-ibc-derive = { workspace = true }
-tendermint-light-client-verifier = { workspace = true }
+ibc = { workspace = true, default-features = false }
+ibc-derive = { workspace = true, default-features = false }
+tendermint-light-client-verifier = { workspace = true, default-features = false }
 
 [dev-dependencies]
 chrono = { workspace = true }
 hex = { workspace = true }
 hex-literal = { workspace = true }
-orml-tokens                                = { git = "https://github.com/webb-tools/open-runtime-module-library.git", branch = "polkadot-v1.7.0" }
-orml-traits                                = { git = "https://github.com/webb-tools/open-runtime-module-library.git", branch = "polkadot-v1.7.0" }
+orml-tokens                                = { git = "https://github.com/webb-tools/open-runtime-module-library.git", branch = "polkadot-v1.7.0", default-features = false }
+orml-traits                                = { git = "https://github.com/webb-tools/open-runtime-module-library.git", branch = "polkadot-v1.7.0", default-features = false }
 pallet-aura = { workspace = true }
 pallet-membership = { workspace = true }
 frame-support = { workspace = true }
