@@ -379,7 +379,7 @@ where
 	);
 
 	let (client_state, cs_state) = create_mock_grandpa_client_state();
-	let id: u32 = parachain_info::Pallet::<T>::parachain_id().into();
+	let id: u32 = T::ChainId::get().into();
 	let consensus_path = format!(
 		"{}",
 		ClientConsensusStatePath {
@@ -440,7 +440,7 @@ where
 		root: root.into(),
 		next_validators_hash: header.signed_header.header.next_validators_hash,
 	};
-	let para_id: u32 = parachain_info::Pallet::<T>::parachain_id().into();
+	let para_id: u32 = T::ChainId::get().into();
 	(
 		cs_state,
 		MsgConnectionOpenTry {
@@ -490,7 +490,7 @@ where
 	);
 
 	let (client_state, cs_state) = create_mock_grandpa_client_state();
-	let para_id: u32 = parachain_info::Pallet::<T>::parachain_id().into();
+	let para_id: u32 = T::ChainId::get().into();
 	let consensus_path = format!(
 		"{}",
 		ClientConsensusStatePath {
@@ -551,7 +551,7 @@ where
 		root: root.into(),
 		next_validators_hash: header.signed_header.header.next_validators_hash,
 	};
-	let para_id: u32 = parachain_info::Pallet::<T>::parachain_id().into();
+	let para_id: u32 = T::ChainId::get().into();
 	(
 		cs_state,
 		MsgConnectionOpenAck {

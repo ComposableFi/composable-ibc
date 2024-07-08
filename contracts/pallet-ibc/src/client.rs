@@ -134,7 +134,7 @@ where
 	fn host_height(&self) -> Height {
 		log::trace!(target: "pallet_ibc", "in client: [host_height]");
 		let current_height = host_height::<T>();
-		let para_id: u32 = parachain_info::Pallet::<T>::parachain_id().into();
+		let para_id: u32 = T::ChainId::get().into();
 		Height::new(para_id.into(), current_height)
 	}
 

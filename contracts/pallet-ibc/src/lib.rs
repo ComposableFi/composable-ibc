@@ -186,7 +186,7 @@ pub mod pallet {
 
 	/// Configure the pallet by specifying the parameters and types on which it depends.
 	#[pallet::config]
-	pub trait Config: frame_system::Config + parachain_info::Config + core::fmt::Debug {
+	pub trait Config: frame_system::Config + core::fmt::Debug {
 		type TimeProvider: UnixTime;
 		/// The overarching event type.
 		type RuntimeEvent: From<Event<Self>> + IsType<<Self as frame_system::Config>::RuntimeEvent>;
