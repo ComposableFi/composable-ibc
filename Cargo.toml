@@ -6,7 +6,6 @@ members = [
     "ibc/modules",
     "ibc/proto",
     "ibc/proto-compiler",
-
     # ibc contracts for different blockchain runtimes
     "contracts/pallet-ibc/ping",
     "contracts/pallet-ibc/primitives",
@@ -14,7 +13,6 @@ members = [
     "contracts/pallet-ibc/runtime-api",
     "contracts/pallet-ibc",
     "contracts/pallet-ibc/simple-iavl",
-
     # algorithms
     "algorithms/beefy/verifier",
     "algorithms/beefy/prover",
@@ -22,11 +20,11 @@ members = [
     "algorithms/grandpa/verifier",
     "algorithms/grandpa/prover",
     "algorithms/grandpa/primitives",
-
     # ibc light clients
     "light-clients/common",
     "light-clients/cf-guest",
     "light-clients/cf-guest-cw",
+    "light-clients/icsxx-cf-solana",
     "light-clients/ics07-tendermint",
     "light-clients/ics07-tendermint-cw",
     "light-clients/cf-guest",
@@ -36,7 +34,6 @@ members = [
     "light-clients/ics10-grandpa-cw",
     "light-clients/ics11-beefy",
     "light-clients/ics13-near",
-
     # hyperspace
     "hyperspace",
     "hyperspace/core",
@@ -46,13 +43,12 @@ members = [
     "hyperspace/solana",
     "hyperspace/testsuite",
     "hyperspace/metrics",
-
     # utilities
     "utils/subxt/codegen",
     "utils/subxt/generated",
     "utils/parachain-node",
     "utils/parachain-node/runtime",
-#     "utils/simnode"
+    #     "utils/simnode"
 ]
 
 [patch."https://github.com/paritytech/jsonrpsee"]
@@ -65,17 +61,17 @@ curve25519-dalek = { git = "https://github.com/solana-labs/curve25519-dalek.git"
 anchor-client = { git = "https://github.com/dhruvja/anchor" }
 anchor-lang = { git = "https://github.com/dhruvja/anchor" }
 
-ibc                         = { git = "https://github.com/mina86/ibc-rs", rev = "2b50319f3460d03e8781e5a834c4b56bdcfdc5bc", default-features = false, features = ["borsh", "serde"] }
+ibc = { git = "https://github.com/mina86/ibc-rs", rev = "2b50319f3460d03e8781e5a834c4b56bdcfdc5bc", default-features = false, features = ["borsh", "serde"] }
 ibc-client-tendermint-types = { git = "https://github.com/mina86/ibc-rs", rev = "2b50319f3460d03e8781e5a834c4b56bdcfdc5bc", default-features = false }
-ibc-core-channel-types      = { git = "https://github.com/mina86/ibc-rs", rev = "2b50319f3460d03e8781e5a834c4b56bdcfdc5bc", default-features = false }
-ibc-core-client-context     = { git = "https://github.com/mina86/ibc-rs", rev = "2b50319f3460d03e8781e5a834c4b56bdcfdc5bc", default-features = false }
-ibc-core-client-types       = { git = "https://github.com/mina86/ibc-rs", rev = "2b50319f3460d03e8781e5a834c4b56bdcfdc5bc", default-features = false }
-ibc-core-commitment-types   = { git = "https://github.com/mina86/ibc-rs", rev = "2b50319f3460d03e8781e5a834c4b56bdcfdc5bc", default-features = false }
-ibc-core-connection-types   = { git = "https://github.com/mina86/ibc-rs", rev = "2b50319f3460d03e8781e5a834c4b56bdcfdc5bc", default-features = false }
-ibc-core-host               = { git = "https://github.com/mina86/ibc-rs", rev = "2b50319f3460d03e8781e5a834c4b56bdcfdc5bc", default-features = false }
-ibc-core-host-types         = { git = "https://github.com/mina86/ibc-rs", rev = "2b50319f3460d03e8781e5a834c4b56bdcfdc5bc", default-features = false }
-ibc-primitives              = { git = "https://github.com/mina86/ibc-rs", rev = "2b50319f3460d03e8781e5a834c4b56bdcfdc5bc", default-features = false }
-ibc-testkit                 = { git = "https://github.com/mina86/ibc-rs", rev = "2b50319f3460d03e8781e5a834c4b56bdcfdc5bc", default-features = false }
+ibc-core-channel-types = { git = "https://github.com/mina86/ibc-rs", rev = "2b50319f3460d03e8781e5a834c4b56bdcfdc5bc", default-features = false }
+ibc-core-client-context = { git = "https://github.com/mina86/ibc-rs", rev = "2b50319f3460d03e8781e5a834c4b56bdcfdc5bc", default-features = false }
+ibc-core-client-types = { git = "https://github.com/mina86/ibc-rs", rev = "2b50319f3460d03e8781e5a834c4b56bdcfdc5bc", default-features = false }
+ibc-core-commitment-types = { git = "https://github.com/mina86/ibc-rs", rev = "2b50319f3460d03e8781e5a834c4b56bdcfdc5bc", default-features = false }
+ibc-core-connection-types = { git = "https://github.com/mina86/ibc-rs", rev = "2b50319f3460d03e8781e5a834c4b56bdcfdc5bc", default-features = false }
+ibc-core-host = { git = "https://github.com/mina86/ibc-rs", rev = "2b50319f3460d03e8781e5a834c4b56bdcfdc5bc", default-features = false }
+ibc-core-host-types = { git = "https://github.com/mina86/ibc-rs", rev = "2b50319f3460d03e8781e5a834c4b56bdcfdc5bc", default-features = false }
+ibc-primitives = { git = "https://github.com/mina86/ibc-rs", rev = "2b50319f3460d03e8781e5a834c4b56bdcfdc5bc", default-features = false }
+ibc-testkit = { git = "https://github.com/mina86/ibc-rs", rev = "2b50319f3460d03e8781e5a834c4b56bdcfdc5bc", default-features = false }
 # ibc-testkit               = { git = "https://github.com/mina86/ibc-rs", rev = "6015aea441d4660f7f7ecd89b5e770a993448089" }
 #ibc = { path = "../ibc-rs-mina/ibc" }
 #ibc-app-nft-transfer = { path = "../ibc-rs-mina/ibc-apps/ics721-nft-transfer" }
@@ -109,11 +105,11 @@ ibc-testkit                 = { git = "https://github.com/mina86/ibc-rs", rev = 
 #ibc-query = { path = "../ibc-rs-mina" }
 #ibc-testkit = { path = "../ibc-rs-mina/ibc-testkit" }
 
-tendermint                       = { git = "https://github.com/mina86/tendermint-rs", rev = "45fbd500d731effb95a98257630feb46f6c41d06" }
-tendermint-light-client          = { git = "https://github.com/mina86/tendermint-rs", rev = "45fbd500d731effb95a98257630feb46f6c41d06" }
+tendermint = { git = "https://github.com/mina86/tendermint-rs", rev = "45fbd500d731effb95a98257630feb46f6c41d06" }
+tendermint-light-client = { git = "https://github.com/mina86/tendermint-rs", rev = "45fbd500d731effb95a98257630feb46f6c41d06" }
 tendermint-light-client-verifier = { git = "https://github.com/mina86/tendermint-rs", rev = "45fbd500d731effb95a98257630feb46f6c41d06" }
-tendermint-proto                 = { git = "https://github.com/mina86/tendermint-rs", rev = "45fbd500d731effb95a98257630feb46f6c41d06" }
-tendermint-testgen               = { git = "https://github.com/mina86/tendermint-rs", rev = "45fbd500d731effb95a98257630feb46f6c41d06" }
+tendermint-proto = { git = "https://github.com/mina86/tendermint-rs", rev = "45fbd500d731effb95a98257630feb46f6c41d06" }
+tendermint-testgen = { git = "https://github.com/mina86/tendermint-rs", rev = "45fbd500d731effb95a98257630feb46f6c41d06" }
 
 # cfg-expr = { git = "https://github.com/EmbarkStudios/cfg-expr", tag="0.15.0" }
 

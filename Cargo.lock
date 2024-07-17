@@ -6519,6 +6519,38 @@ dependencies = [
 ]
 
 [[package]]
+name = "icsxx-cf-solana"
+version = "0.0.1"
+dependencies = [
+ "borsh 0.10.3",
+ "bytemuck",
+ "cf-guest 0.0.0",
+ "derive_more",
+ "ed25519-consensus",
+ "guestchain",
+ "ibc 0.15.0",
+ "ibc-core-client-context",
+ "ibc-core-client-types",
+ "ibc-core-handler-types",
+ "ibc-core-host-types 0.50.0 (git+https://github.com/mina86/ibc-rs?rev=6015aea441d4660f7f7ecd89b5e770a993448089)",
+ "ibc-derive 0.1.0",
+ "ibc-primitives 0.50.0 (git+https://github.com/mina86/ibc-rs?rev=6015aea441d4660f7f7ecd89b5e770a993448089)",
+ "ibc-proto 0.18.0",
+ "insta",
+ "lib",
+ "memory",
+ "prost 0.11.9",
+ "prost 0.12.3",
+ "prost-build 0.11.9",
+ "rand 0.8.5",
+ "sealable-trie",
+ "serde",
+ "stdx",
+ "tendermint-proto 0.34.1",
+ "trie-ids",
+]
+
+[[package]]
 name = "ident_case"
 version = "1.0.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
