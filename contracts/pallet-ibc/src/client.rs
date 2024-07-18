@@ -170,11 +170,12 @@ where
 					timestamp,
 					root: vec![].into(),
 				}),
-			crate::LightClientProtocol::GrandpaStandalone =>
-				AnyConsensusState::GrandpaStandalone(ics10_grandpa_standalone::consensus_state::ConsensusState {
+			crate::LightClientProtocol::GrandpaStandalone => AnyConsensusState::GrandpaStandalone(
+				ics10_grandpa_standalone::consensus_state::ConsensusState {
 					timestamp,
 					root: vec![].into(),
-				}),
+				},
+			),
 		};
 		Ok(consensus_state)
 	}
