@@ -1,7 +1,9 @@
 use super::*;
 use crate::{light_clients::AnyClientMessage, routing::Context};
 use frame_support::weights::constants::WEIGHT_REF_TIME_PER_MILLIS;
-use grandpa_client_primitives::justification::GrandpaJustification;
+use grandpa_client_primitives::{
+	justification::GrandpaJustification, standalone::GrandpaStandaloneJustification,
+};
 use ibc::core::{
 	ics02_client::msgs::ClientMsg,
 	ics03_connection::{context::ConnectionReader, msgs::ConnectionMsg},
@@ -11,6 +13,9 @@ use ibc::core::{
 };
 use ibc_primitives::{client_id_from_bytes, CallbackWeight};
 use ics10_grandpa::client_message::{ClientMessage, RelayChainHeader};
+use ics10_grandpa_standalone::client_message::{
+	ClientMessage as StandaloneClientMessage, StandaloneChainHeader,
+};
 
 pub trait WeightInfo {
 	fn create_client() -> Weight;
@@ -213,6 +218,40 @@ pub(crate) fn deliver<T: Config + Send + Sync>(msgs: &[Any]) -> Weight {
 								_ => return Weight::MAX,
 							}
 							Some(ty) if ty.contains("grandpa") => match msg.client_message {
+								AnyClientMessage::GrandpaStandalone(client_message) => match client_message {
+									StandaloneClientMessage::Header(header) => {
+										let justification =
+											GrandpaStandaloneJustification::<StandaloneChainHeader>::decode(
+												&mut &*header.finality_proof.justification,
+											)
+											.expect("Justification should be valid");
+										<T as Config>::WeightInfo::update_grandpa_client(
+											justification.commit.precommits.len() as u32,
+											header.finality_proof.unknown_headers.len() as u32,
+										)
+									},
+									StandaloneClientMessage::Misbehaviour(misbehaviour) => {
+										let justification_a =
+											GrandpaStandaloneJustification::<StandaloneChainHeader>::decode(
+												&mut &*misbehaviour.first_finality_proof.justification,
+											)
+												.expect("Justification should be valid");
+
+										let justification_b =
+											GrandpaStandaloneJustification::<StandaloneChainHeader>::decode(
+												&mut &*misbehaviour.second_finality_proof.justification,
+											)
+												.expect("Justification should be valid");
+
+										<T as Config>::WeightInfo::update_grandpa_client(
+											justification_a.commit.precommits.len() as u32,
+											misbehaviour.first_finality_proof.unknown_headers.len() as u32,
+										).saturating_add(<T as Config>::WeightInfo::update_grandpa_client(
+											justification_b.commit.precommits.len() as u32,
+											misbehaviour.second_finality_proof.unknown_headers.len() as u32,
+										))
+									},
+								},
 								AnyClientMessage::Grandpa(client_message) => match client_message {
 									ClientMessage::Header(header) => {
 										let justification =

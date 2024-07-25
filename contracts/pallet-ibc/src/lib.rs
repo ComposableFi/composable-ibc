@@ -32,7 +32,7 @@ extern crate alloc;
 use crate::ics20::ValidateMemo;
 use core::fmt::Debug;
 use cumulus_primitives_core::ParaId;
-use frame_support::{traits::GenesisBuild, weights::Weight};
+use frame_support::weights::Weight;
 pub use pallet::*;
 use parity_scale_codec::{Decode, Encode};
 use scale_info::{
@@ -109,6 +109,7 @@ pub struct TransferParams<AccountId> {
 pub enum LightClientProtocol {
 	Beefy,
 	Grandpa,
+	GrandpaStandalone,
 }
 #[cfg(any(test, feature = "runtime-benchmarks"))]
 pub(crate) mod benchmarks;
@@ -185,7 +186,7 @@ pub mod pallet {
 
 	/// Configure the pallet by specifying the parameters and types on which it depends.
 	#[pallet::config]
-	pub trait Config: frame_system::Config + parachain_info::Config + core::fmt::Debug {
+	pub trait Config: frame_system::Config + core::fmt::Debug {
 		type TimeProvider: UnixTime;
 		/// The overarching event type.
 		type RuntimeEvent: From<Event<Self>> + IsType<<Self as frame_system::Config>::RuntimeEvent>;
@@ -238,10 +239,10 @@ pub mod pallet {
 		/// accepted. Ensure that this is non-zero in production as it's a critical vulnerability.
 		#[pallet::constant]
 		type MinimumConnectionDelay: Get<u64>;
-		/// ParaId of the runtime
-		type ParaId: Get<ParaId>;
-		/// Relay chain this runtime is attached to
-		type RelayChain: Get<light_client_common::RelayChain>;
+		/// ChainId (or ParaId) of the runtime
+		type ChainId: Get<ParaId>;
+		/// Chain (Standalone or Relay) this runtime is attached to
+		type ChainType: Get<light_client_common::ChainType>;
 		/// benchmarking weight info
 		type WeightInfo: WeightInfo;
 		/// Origin allowed to unfreeze light clients
@@ -464,7 +465,7 @@ pub mod pallet {
 	}
 
 	#[pallet::genesis_build]
-	impl<T: Config> GenesisBuild<T> for GenesisConfig<T> {
+	impl<T: Config> BuildGenesisConfig for GenesisConfig<T> {
 		fn build(&self) {
 			for AssetConfig { id, denom } in &self.assets {
 				IbcDenoms::<T>::insert(denom.clone(), id);
@@ -1079,6 +1080,14 @@ pub mod pallet {
 			let client_state =
 				ctx.client_state(&client_id).map_err(|_| Error::<T>::ClientStateNotFound)?;
 			let frozen_state = match client_state {
+				AnyClientState::GrandpaStandalone(grandpa) => {
+					let latest_height = grandpa.latest_height();
+					AnyClientState::wrap(
+						&grandpa
+							.with_frozen_height(Height::new(latest_height.revision_number, height))
+							.map_err(|_| Error::<T>::ClientFreezeFailed)?,
+					)
+				},
 				AnyClientState::Grandpa(grandpa) => {
 					let latest_height = grandpa.latest_height();
 					AnyClientState::wrap(

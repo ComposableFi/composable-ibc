@@ -59,7 +59,7 @@
 extern crate alloc;
 #[allow(unused_imports)]
 #[macro_use]
-extern crate derive;
+extern crate ibc_derive;
 #[cfg(any(test, feature = "mocks"))]
 #[macro_use]
 extern crate serde;

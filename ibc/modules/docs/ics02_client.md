@@ -197,6 +197,7 @@ The code below describes how to allow support for multiple light client types us
 ```rust
 #[derive(Clone, Debug, PartialEq, Eq, ibc_derive::ClientDef)]
 pub enum AnyClient {
+    GrandpaStandalone(ics10_grandpa_standalone::client_def::GrandpaClient),
 	Grandpa(ics10_grandpa::client_def::GrandpaClient),
 	Beefy(ics11_beefy::client_def::BeefyClient),
 	Tendermint(ics07_tendermint::client_def::TendermintClient),
@@ -204,6 +205,7 @@ pub enum AnyClient {
 
 #[derive(Clone, Debug, PartialEq, Eq)]
 pub enum AnyUpgradeOptions {
+    GrandpaStandalone(ics10_grandpa_standalone::client_state::UpgradeOptions),
 	Grandpa(ics10_grandpa::client_state::UpgradeOptions),
 	Beefy(ics11_beefy::client_state::UpgradeOptions),
 	Tendermint(ics07_tendermint::client_state::UpgradeOptions),
@@ -211,6 +213,8 @@ pub enum AnyUpgradeOptions {
 
 #[derive(Clone, Debug, PartialEq, Eq, ibc_derive::ClientState, ibc_derive::Protobuf)]
 pub enum AnyClientState {
+    #[ibc(proto_url = "GRANDPA_STANDALONE_CLIENT_STATE_TYPE_URL")]
+	Grandpa(ics10_grandpa::client_state::ClientState<HostFunctionsManager>),
 	#[ibc(proto_url = "GRANDPA_CLIENT_STATE_TYPE_URL")]
 	Grandpa(ics10_grandpa::client_state::ClientState<HostFunctionsManager>),
 	#[ibc(proto_url = "BEEFY_CLIENT_STATE_TYPE_URL")]
@@ -221,6 +225,8 @@ pub enum AnyClientState {
 
 #[derive(Clone, Debug, PartialEq, Eq, ibc_derive::ConsensusState, ibc_derive::Protobuf)]
 pub enum AnyConsensusState {
+    #[ibc(proto_url = "GRANDPA_STANDALONE_CONSENSUS_STATE_TYPE_URL")]
+	GrandpaStandalone(ics10_grandpa_standalone::consensus_state::ConsensusState),
 	#[ibc(proto_url = "GRANDPA_CONSENSUS_STATE_TYPE_URL")]
 	Grandpa(ics10_grandpa::consensus_state::ConsensusState),
 	#[ibc(proto_url = "BEEFY_CONSENSUS_STATE_TYPE_URL")]
@@ -232,6 +238,8 @@ pub enum AnyConsensusState {
 #[derive(Clone, Debug, ibc_derive::ClientMessage)]
 #[allow(clippy::large_enum_variant)]
 pub enum AnyClientMessage {
+    #[ibc(proto_url = "GRANDPA_STANDALONE_CLIENT_MESSAGE_TYPE_URL")]
+	GrandpaStandalone(ics10_grandpa_standalone::client_message::ClientMessage),
 	#[ibc(proto_url = "GRANDPA_CLIENT_MESSAGE_TYPE_URL")]
 	Grandpa(ics10_grandpa::client_message::ClientMessage),
 	#[ibc(proto_url = "BEEFY_CLIENT_MESSAGE_TYPE_URL")]

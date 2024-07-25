@@ -81,4 +81,4 @@ sp-trie = { workspace = true }
 sp-core = { workspace = true }
 serde_json = { workspace = true }
 frame-support = { workspace = true }
-hyperspace-core = { workspace = true, features = ["testing", "build-metadata-from-ws"] }
+# hyperspace-core = { workspace = true, features = ["testing", "build-metadata-from-ws"] }

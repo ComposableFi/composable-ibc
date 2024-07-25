@@ -50,7 +50,6 @@ tendermint-light-client-verifier = { git = "https://github.com/informalsystems/t
 [dev-dependencies]
 cw-multi-test = "0.15.1"
 hex = { workspace = true }
-hyperspace-primitives = { path = "../../hyperspace/primitives", features = ["testing"] }
 pallet-ibc = { workspace = true }
 serde-json-wasm = { version = "0.5.0", default-features = false }
 serde_json = { version = "1.0.93", default-features = false }

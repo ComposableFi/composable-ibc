@@ -27,8 +27,10 @@ use finality_grandpa::Chain;
 use grandpa_light_client_primitives::{
 	error,
 	justification::{find_scheduled_change, AncestryChain, GrandpaJustification},
-	parachain_header_storage_key, ClientState, HostFunctions, ParachainHeaderProofs,
-	ParachainHeadersWithFinalityProof,
+	parachain_header_storage_key,
+	standalone::GrandpaStandaloneJustification,
+	FinalityProof, ParachainHeaderProofs, ParachainHeadersWithFinalityProof, RelayClientState,
+	RelayHostFunctions, StandaloneClientState, StandaloneHostFunctions,
 };
 use hash_db::Hasher;
 use light_client_common::state_machine;
@@ -45,13 +47,13 @@ mod tests;
 /// Next, we prove the finality of parachain headers, by verifying patricia-merkle trie state proofs
 /// of these headers, stored at the recently finalized relay chain heights.
 pub fn verify_parachain_headers_with_grandpa_finality_proof<H, Host>(
-	mut client_state: ClientState,
+	mut client_state: RelayClientState,
 	proof: ParachainHeadersWithFinalityProof<H>,
-) -> Result<ClientState, error::Error>
+) -> Result<RelayClientState, error::Error>
 where
 	H: Header<Hash = H256, Number = u32>,
 	H::Number: finality_grandpa::BlockNumberOps + Into<u32>,
-	Host: HostFunctions,
+	Host: RelayHostFunctions,
 	Host::BlakeTwo256: Hasher<Out = H256>,
 {
 	let ParachainHeadersWithFinalityProof { finality_proof, parachain_headers, latest_para_height } =
@@ -147,6 +149,72 @@ where
 		}
 		client_state.latest_para_height = max_height;
 	}
+	if let Some(scheduled_change) = find_scheduled_change::<H>(&target) {
+		client_state.current_set_id += 1;
+		client_state.current_authorities = scheduled_change.next_authorities;
+	}
+
+	Ok(client_state)
+}
+
+/// This function verifies the GRANDPA finality proof for standalone GRANDPA chain headers.
+pub fn verify_standalone_grandpa_finality_proof<H, Host>(
+	mut client_state: StandaloneClientState,
+	proof: FinalityProof<H>,
+) -> Result<StandaloneClientState, error::Error>
+where
+	H: Header<Hash = H256, Number = u32>,
+	H::Number: finality_grandpa::BlockNumberOps + Into<u32>,
+	Host: StandaloneHostFunctions,
+	Host::BlakeTwo256: Hasher<Out = H256>,
+{
+	// 1. First validate unknown headers.
+	let headers = AncestryChain::<H>::new(&proof.unknown_headers);
+
+	let target = proof
+		.unknown_headers
+		.iter()
+		.max_by_key(|h| *h.number())
+		.ok_or_else(|| anyhow!("Unknown headers can't be empty!"))?;
+
+	// this is illegal
+	if target.hash() != proof.block {
+		Err(anyhow!("Latest finalized block should be highest block in unknown_headers"))?;
+	}
+
+	let justification = GrandpaStandaloneJustification::<H>::decode(&mut &proof.justification[..])?;
+
+	if justification.commit.target_hash != proof.block {
+		Err(anyhow!("Justification target hash and finality proof block hash mismatch"))?;
+	}
+
+	let from = client_state.latest_hash;
+
+	let base = proof
+		.unknown_headers
+		.iter()
+		.min_by_key(|h| *h.number())
+		.ok_or_else(|| anyhow!("Unknown headers can't be empty!"))?;
+
+	if base.number() < &client_state.latest_height {
+		headers.ancestry(base.hash(), client_state.latest_hash).map_err(|_| {
+			anyhow!(
+				"[verify_standalone_grandpa_finality_proof] Invalid ancestry (base -> latest standalone block)!"
+			)
+		})?;
+	}
+
+	let mut finalized = headers
+		.ancestry(from, target.hash())
+		.map_err(|_| anyhow!("[verify_standalone_grandpa_finality_proof] Invalid ancestry!"))?;
+	finalized.sort();
+
+	// 2. verify justification.
+	justification.verify::<Host>(client_state.current_set_id, &client_state.current_authorities)?;
+
+	// 3. set new client state, optionally rotating authorities
+	client_state.latest_hash = target.hash();
+	client_state.latest_height = (*target.number()).into();
 	if let Some(scheduled_change) = find_scheduled_change::<H>(&target) {
 		client_state.current_set_id += 1;
 		client_state.current_authorities = scheduled_change.next_authorities;

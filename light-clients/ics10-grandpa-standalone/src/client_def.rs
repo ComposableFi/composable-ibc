@@ -13,20 +13,20 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-use crate::{client_state::ClientState, consensus_state::ConsensusState, error::Error};
+use crate::{
+	client_message::StandaloneChainHeader, client_state::ClientState,
+	consensus_state::ConsensusState, error::Error,
+};
 use ibc::core::ics02_client::{
 	client_consensus::ConsensusState as _, client_state::ClientState as _,
 };
 
-use crate::client_message::{ClientMessage, RelayChainHeader};
+use crate::client_message::ClientMessage;
 use alloc::{format, string::ToString, vec, vec::Vec};
 use core::marker::PhantomData;
 use finality_grandpa::Chain;
-use grandpa_client_primitives::{
-	justification::{
-		find_forced_change, find_scheduled_change, AncestryChain, GrandpaJustification,
-	},
-	ParachainHeadersWithFinalityProof,
+use grandpa_client_primitives::standalone::{
+	find_forced_change, find_scheduled_change, AncestryChain, GrandpaStandaloneJustification,
 };
 use ibc::{
 	core::{
@@ -69,7 +69,7 @@ pub struct GrandpaClient<T>(PhantomData<T>);
 
 impl<H> ClientDef for GrandpaClient<H>
 where
-	H: grandpa_client_primitives::RelayHostFunctions<Header = RelayChainHeader>,
+	H: grandpa_client_primitives::StandaloneHostFunctions<Header = StandaloneChainHeader>,
 {
 	type ClientMessage = ClientMessage;
 	type ClientState = ClientState<H>;
@@ -84,23 +84,18 @@ where
 	) -> Result<(), Ics02Error> {
 		match client_message {
 			ClientMessage::Header(header) => {
-				if client_state.para_id as u64 != header.height.revision_number {
+				if client_state.chain_id as u64 != header.height.revision_number {
 					return Err(Error::Custom(format!(
 						"Para id mismatch: expected {}, got {}",
-						client_state.para_id, header.height.revision_number
+						client_state.chain_id, header.height.revision_number
 					))
 					.into())
 				}
-				let headers_with_finality_proof = ParachainHeadersWithFinalityProof {
-					finality_proof: header.finality_proof,
-					parachain_headers: header.parachain_headers,
-					latest_para_height: header.height.revision_height as u32,
-				};
 
-				grandpa_client::verify_parachain_headers_with_grandpa_finality_proof::<
-					RelayChainHeader,
+				grandpa_client::verify_standalone_grandpa_finality_proof::<
+					StandaloneChainHeader,
 					H,
-				>(client_state.into(), headers_with_finality_proof)
+				>(client_state.into(), header.finality_proof)
 				.map_err(Error::GrandpaPrimitives)?;
 			},
 			ClientMessage::Misbehaviour(misbehavior) => {
@@ -114,14 +109,14 @@ where
 				}
 
 				let first_headers =
-					AncestryChain::<RelayChainHeader>::new(&first_proof.unknown_headers);
+					AncestryChain::<StandaloneChainHeader>::new(&first_proof.unknown_headers);
 				let first_target =
 					first_proof.unknown_headers.iter().max_by_key(|h| *h.number()).ok_or_else(
 						|| Error::Custom("Unknown headers can't be empty!".to_string()),
 					)?;
 
 				let second_headers =
-					AncestryChain::<RelayChainHeader>::new(&second_proof.unknown_headers);
+					AncestryChain::<StandaloneChainHeader>::new(&second_proof.unknown_headers);
 				let second_target =
 					second_proof.unknown_headers.iter().max_by_key(|h| *h.number()).ok_or_else(
 						|| Error::Custom("Unknown headers can't be empty!".to_string()),
@@ -163,20 +158,26 @@ where
 				}
 
 				// TODO: should we handle genesis block here somehow?
-				if !H::contains_relay_header_hash(first_parent) {
+				if !H::contains_header_hash(first_parent) {
 					Err(Error::Custom(
 						"Could not find the known header for first finality proof".to_string(),
 					))?
 				}
 
-				let first_justification = GrandpaJustification::<RelayChainHeader>::decode(
-					&mut &first_proof.justification[..],
-				)
-				.map_err(|_| Error::Custom("Could not decode first justification".to_string()))?;
-				let second_justification = GrandpaJustification::<RelayChainHeader>::decode(
-					&mut &second_proof.justification[..],
-				)
-				.map_err(|_| Error::Custom("Could not decode second justification".to_string()))?;
+				let first_justification =
+					GrandpaStandaloneJustification::<StandaloneChainHeader>::decode(
+						&mut &first_proof.justification[..],
+					)
+					.map_err(|_| {
+						Error::Custom("Could not decode first justification".to_string())
+					})?;
+				let second_justification =
+					GrandpaStandaloneJustification::<StandaloneChainHeader>::decode(
+						&mut &second_proof.justification[..],
+					)
+					.map_err(|_| {
+						Error::Custom("Could not decode second justification".to_string())
+					})?;
 
 				if first_proof.block != first_justification.commit.target_hash ||
 					second_proof.block != second_justification.commit.target_hash
@@ -218,11 +219,11 @@ where
 				"02-client will check for misbehaviour before calling update_state; qed"
 			),
 		};
+		let timestamp_proof = header.timestamp_proof;
 		let ancestry =
-			AncestryChain::<RelayChainHeader>::new(&header.finality_proof.unknown_headers);
-		let mut consensus_states = vec![];
+			AncestryChain::<StandaloneChainHeader>::new(&header.finality_proof.unknown_headers);
 
-		let from = client_state.latest_relay_hash;
+		let from = client_state.latest_hash;
 
 		let finalized = ancestry
 			.ancestry(from, header.finality_proof.block)
@@ -230,76 +231,58 @@ where
 		let mut finalized_sorted = finalized.clone();
 		finalized_sorted.sort();
 
-		for (relay_hash, parachain_header_proof) in header.parachain_headers {
-			// we really shouldn't set consensus states for parachain headers not in the finalized
-			// chain.
-			if finalized_sorted.binary_search(&relay_hash).is_err() {
-				continue
-			}
-
-			let header = ancestry.header(&relay_hash).ok_or_else(|| {
-				Error::Custom(format!("No relay chain header found for hash: {relay_hash:?}"))
-			})?;
-
-			let (height, consensus_state) = ConsensusState::from_header::<H>(
-				parachain_header_proof,
-				client_state.para_id,
-				header.state_root.clone(),
-			)?;
-
-			// Skip duplicate consensus states
-			if ctx.consensus_state(&client_id, height).is_ok() {
-				continue
-			}
-
-			let wrapped = Ctx::AnyConsensusState::wrap(&consensus_state)
-				.expect("AnyConsenusState is type checked; qed");
-			consensus_states.push((height, wrapped));
+		// we really shouldn't set consensus states for parachain headers not in the finalized
+		// chain.
+		let block_hash = header.finality_proof.block;
+		if finalized_sorted.binary_search(&block_hash).is_err() {
+			return Err(Error::Custom(format!(
+				"Block hash {block_hash:?} is not in the finalized chain"
+			)))?;
 		}
+
+		let header = ancestry.header(&block_hash).ok_or_else(|| {
+			Error::Custom(format!("No standalone chain header found for hash: {block_hash:?}"))
+		})?;
+
+		let (height, consensus_state) = ConsensusState::from_header::<H>(
+			timestamp_proof,
+			client_state.chain_id,
+			header.clone(),
+		)?;
+
+		// Error if duplicate consensus states
+		if ctx.consensus_state(&client_id, height).is_ok() {
+			return Err(Error::Custom(format!(
+				"Consensus state for height {height} already exists"
+			)))?;
+		}
+
+		let wrapped = Ctx::AnyConsensusState::wrap(&consensus_state)
+			.expect("AnyConsenusState is type checked; qed");
 
 		// updates
 		let target = ancestry
-			.header(&header.finality_proof.block)
+			.header(&block_hash)
 			.expect("target header has already been checked in verify_client_message; qed");
 
 		// can't try to rewind relay chain
-		if target.number <= client_state.latest_relay_height {
+		if target.number <= client_state.latest_height {
 			Err(Ics02Error::implementation_specific(format!(
-				"Light client can only be updated to new relay chain height."
+				"Light client can only be updated to new standalone chain height."
 			)))?
 		}
 
-		let mut heights = consensus_states
-			.iter()
-			.map(|(h, ..)| {
-				// this cast is safe, see [`ConsensusState::from_header`]
-				h.revision_height as u32
-			})
-			.collect::<Vec<_>>();
-
-		heights.sort();
-
-		if let Some((min_height, max_height)) = heights.first().zip(heights.last()) {
-			// can't try to rewind parachain.
-			if *min_height <= client_state.latest_para_height {
-				Err(Ics02Error::implementation_specific(format!(
-					"Light client can only be updated to new parachain height."
-				)))?
-			}
-			client_state.latest_para_height = *max_height
-		}
-
-		client_state.latest_relay_hash = header.finality_proof.block;
-		client_state.latest_relay_height = target.number;
+		client_state.latest_hash = block_hash;
+		client_state.latest_height = target.number;
 
 		if let Some(scheduled_change) = find_scheduled_change(target) {
 			client_state.current_set_id += 1;
 			client_state.current_authorities = scheduled_change.next_authorities;
 		}
 
-		H::insert_relay_header_hashes(&finalized);
+		H::insert_header_hashes(&finalized);
 
-		Ok((client_state, ConsensusUpdateResult::Batch(consensus_states)))
+		Ok((client_state, ConsensusUpdateResult::Single(wrapped)))
 	}
 
 	fn update_state_on_misbehaviour(
@@ -308,7 +291,7 @@ where
 		_client_message: Self::ClientMessage,
 	) -> Result<Self::ClientState, Ics02Error> {
 		client_state.frozen_height =
-			Some(Height::new(client_state.para_id as u64, client_state.latest_para_height as u64));
+			Some(Height::new(client_state.chain_id as u64, client_state.latest_height as u64));
 		Ok(client_state)
 	}
 
@@ -329,40 +312,40 @@ where
 			ClientMessage::Header(header) => header,
 			_ => unreachable!("We've checked for misbehavior in line 180; qed"),
 		};
+		let timestamp_proof = header.timestamp_proof;
 		//forced authority set change is handled as a misbehaviour
 
 		let ancestry =
-			AncestryChain::<RelayChainHeader>::new(&header.finality_proof.unknown_headers);
+			AncestryChain::<StandaloneChainHeader>::new(&header.finality_proof.unknown_headers);
 
-		for (relay_hash, parachain_header_proof) in header.parachain_headers {
-			let header = ancestry.header(&relay_hash).ok_or_else(|| {
-				Error::Custom(format!("No relay chain header found for hash: {relay_hash:?}"))
-			})?;
+		let block_hash = header.finality_proof.block;
+		let header = ancestry.header(&block_hash).ok_or_else(|| {
+			Error::Custom(format!("No standalone chain header found for hash: {block_hash:?}"))
+		})?;
 
-			if find_forced_change(header).is_some() {
-				return Ok(true)
-			}
-
-			let (height, consensus_state) = ConsensusState::from_header::<H>(
-				parachain_header_proof,
-				client_state.para_id,
-				header.state_root.clone(),
-			)?;
-
-			match ctx.maybe_consensus_state(&client_id, height)? {
-				Some(cs) => {
-					let cs: ConsensusState = cs
-						.downcast()
-						.ok_or(Ics02Error::client_args_type_mismatch(client_state.client_type()))?;
-
-					if cs != consensus_state {
-						// Houston we have a problem
-						return Ok(true)
-					}
-				},
-				None => {},
-			};
+		if find_forced_change(header).is_some() {
+			return Ok(true)
 		}
+
+		let (height, consensus_state) = ConsensusState::from_header::<H>(
+			timestamp_proof,
+			client_state.chain_id,
+			header.clone(),
+		)?;
+
+		match ctx.maybe_consensus_state(&client_id, height)? {
+			Some(cs) => {
+				let cs: ConsensusState = cs
+					.downcast()
+					.ok_or(Ics02Error::client_args_type_mismatch(client_state.client_type()))?;
+
+				if cs != consensus_state {
+					// Houston we have a problem
+					return Ok(true)
+				}
+			},
+			None => {},
+		};
 
 		Ok(false)
 	}
@@ -377,10 +360,8 @@ where
 		proof_upgrade_client: Vec<u8>,
 		proof_upgrade_consensus_state: Vec<u8>,
 	) -> Result<(Self::ClientState, ConsensusUpdateResult<Ctx>), Ics02Error> {
-		let height = Height::new(
-			old_client_state.para_id as u64,
-			old_client_state.latest_para_height as u64,
-		);
+		let height =
+			Height::new(old_client_state.chain_id as u64, old_client_state.latest_height as u64);
 
 		let consenus_state = ctx.consensus_state(&client_id, height)?
 			.downcast::<Self::ConsensusState>()
@@ -458,8 +439,8 @@ where
 	/// The following must always be true:
 	///   - The substitute client is the same type as the subject client
 	///   - The subject and substitute client states match in all parameters (expect `relay_chain`,
-	/// `para_id`, `latest_para_height`, `latest_relay_height`, `latest_relay_hash`,
-	/// `frozen_height`, `latest_para_height`, `current_set_id` and `current_authorities`).
+	/// `chain_id`, `latest_height`, `latest_height`, `latest_hash`,
+	/// `frozen_height`, `latest_height`, `current_set_id` and `current_authorities`).
 	fn check_substitute_and_update_state<Ctx: ReaderContext>(
 		&self,
 		_ctx: &Ctx,

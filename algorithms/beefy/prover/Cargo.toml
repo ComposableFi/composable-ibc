@@ -10,7 +10,7 @@ targets = ["x86_64-unknown-linux-gnu"]
 [build-dependencies]
 anyhow = "1.0.66"
 once_cell = "1.16.0"
-subxt-codegen = { package = "codegen", path = "../../../utils/subxt/codegen" }
+# subxt-codegen = { package = "codegen", path = "../../../utils/subxt/codegen" }
 tokio = { workspace = true, features = ["macros", "rt-multi-thread"] }
 
 [dependencies]
@@ -40,4 +40,4 @@ hex = { workspace = true }
 beefy-light-client-primitives = { workspace = true }
 
 [dev-dependencies]
-light-client-common = { path = "../../../light-clients/common" }
+light-client-common = { workspace = true }

@@ -15,7 +15,7 @@
 
 use crate::{
 	client_def::GrandpaClient,
-	client_message::RelayChainHeader,
+	client_message::StandaloneChainHeader,
 	error::Error,
 	proto::{Authority as RawAuthority, ClientState as RawClientState},
 };
@@ -34,29 +34,28 @@ use ibc::{
 	Height,
 };
 use ibc_proto::google::protobuf::Any;
-use light_client_common::RelayChain;
+use light_client_common::StandaloneChain;
 use serde::{Deserialize, Serialize};
 use sp_consensus_grandpa::AuthorityList;
 use sp_core::{ed25519::Public, H256};
 use tendermint_proto::Protobuf;
 
 /// Protobuf type url for GRANDPA ClientState
-pub const GRANDPA_CLIENT_STATE_TYPE_URL: &str = "/ibc.lightclients.grandpa.v1.ClientState";
+pub const GRANDPA_STANDALONE_CLIENT_STATE_TYPE_URL: &str =
+	"/ibc.lightclients.grandpa_standalone.v1.ClientState";
 
 #[derive(PartialEq, Clone, Debug, Default, Eq)]
 pub struct ClientState<H> {
 	/// Relay chain
-	pub relay_chain: RelayChain,
+	pub chain: StandaloneChain,
 	// Latest relay chain height
-	pub latest_relay_height: u32,
+	pub latest_height: u32,
 	/// Latest relay chain block hash
-	pub latest_relay_hash: H256,
+	pub latest_hash: H256,
 	/// Block height when the client was frozen due to a misbehaviour
 	pub frozen_height: Option<Height>,
-	/// latest parachain height
-	pub latest_para_height: u32,
-	/// ParaId of associated parachain
-	pub para_id: u32,
+	/// ChainId of associated parachain
+	pub chain_id: u32,
 	/// Id of the current authority set.
 	pub current_set_id: u64,
 	/// authorities for the current round
@@ -65,15 +64,14 @@ pub struct ClientState<H> {
 	pub _phantom: PhantomData<H>,
 }
 
-impl<H> From<ClientState<H>> for grandpa_client_primitives::RelayClientState {
-	fn from(client_state: ClientState<H>) -> grandpa_client_primitives::RelayClientState {
-		grandpa_client_primitives::RelayClientState {
+impl<H> From<ClientState<H>> for grandpa_client_primitives::StandaloneClientState {
+	fn from(client_state: ClientState<H>) -> grandpa_client_primitives::StandaloneClientState {
+		grandpa_client_primitives::StandaloneClientState {
 			current_authorities: client_state.current_authorities,
 			current_set_id: client_state.current_set_id,
-			latest_relay_hash: client_state.latest_relay_hash,
-			latest_relay_height: client_state.latest_relay_height,
-			latest_para_height: client_state.latest_para_height,
-			para_id: client_state.para_id,
+			latest_hash: client_state.latest_hash,
+			latest_height: client_state.latest_height,
+			chain_id: client_state.chain_id,
 		}
 	}
 }
@@ -82,16 +80,16 @@ impl<H: Clone> Protobuf<RawClientState> for ClientState<H> {}
 
 #[derive(Clone, Debug, PartialEq, Eq, Serialize, Deserialize)]
 pub struct UpgradeOptions {
-	latest_relay_hash: H256,
+	latest_hash: H256,
 }
 
 impl<H: Clone> ClientState<H> {
 	/// Verify that the client is at a sufficient height and unfrozen at the given height
 	pub fn verify_height(&self, height: Height) -> Result<(), Error> {
-		let latest_para_height = Height::new(self.para_id.into(), self.latest_para_height.into());
-		if latest_para_height < height {
+		let latest_height = Height::new(self.chain_id.into(), self.latest_height.into());
+		if latest_height < height {
 			return Err(Error::Custom(format!(
-				"Insufficient height, known height: {latest_para_height}, given height: {height}"
+				"Insufficient height, known height: {latest_height}, given height: {height}"
 			)))
 		}
 
@@ -104,7 +102,7 @@ impl<H: Clone> ClientState<H> {
 
 	pub fn to_any(&self) -> Any {
 		Any {
-			type_url: GRANDPA_CLIENT_STATE_TYPE_URL.to_string(),
+			type_url: GRANDPA_STANDALONE_CLIENT_STATE_TYPE_URL.to_string(),
 			value: self.encode_vec().unwrap(),
 		}
 	}
@@ -112,11 +110,11 @@ impl<H: Clone> ClientState<H> {
 
 impl<H> ClientState<H> {
 	pub fn latest_height(&self) -> Height {
-		Height::new(self.para_id.into(), self.latest_para_height.into())
+		Height::new(self.chain_id.into(), self.latest_height.into())
 	}
 
 	pub fn chain_id(&self) -> ChainId {
-		ChainId::new(self.relay_chain.to_string(), self.para_id as u64)
+		ChainId::new(self.chain.to_string(), self.chain_id as u64)
 	}
 
 	pub fn client_type() -> ClientType {
@@ -135,7 +133,7 @@ impl<H> ClientState<H> {
 	) -> Self {
 		self.frozen_height = None;
 		// Upgrade the client state
-		self.latest_relay_hash = upgrade_options.latest_relay_hash;
+		self.latest_hash = upgrade_options.latest_hash;
 
 		self
 	}
@@ -143,7 +141,7 @@ impl<H> ClientState<H> {
 	/// Check if the state is expired when `elapsed` time has passed since the latest consensus
 	/// state timestamp
 	pub fn expired(&self, elapsed: Duration) -> bool {
-		elapsed > self.relay_chain.trusting_period()
+		elapsed > self.chain.trusting_period()
 	}
 
 	pub fn with_frozen_height(self, h: Height) -> Result<Self, Error> {
@@ -158,7 +156,7 @@ impl<H> ClientState<H> {
 
 impl<H> ibc::core::ics02_client::client_state::ClientState for ClientState<H>
 where
-	H: grandpa_client_primitives::RelayHostFunctions<Header = RelayChainHeader>,
+	H: grandpa_client_primitives::StandaloneHostFunctions<Header = StandaloneChainHeader>,
 {
 	type UpgradeOptions = UpgradeOptions;
 	type ClientDef = GrandpaClient<H>;
@@ -242,23 +240,22 @@ impl<H> TryFrom<RawClientState> for ClientState<H> {
 			})
 			.collect::<Result<_, Error>>()?;
 
-		let relay_chain = RelayChain::from_i32(raw.relay_chain)?;
-		if raw.latest_relay_hash.len() != 32 {
-			Err(anyhow!("Invalid ed25519 public key lenght: {}", raw.latest_relay_hash.len()))?
+		let chain = StandaloneChain::from_i32(raw.chain_id as i32)?;
+		if raw.latest_hash.len() != 32 {
+			Err(anyhow!("Invalid ed25519 public key lenght: {}", raw.latest_hash.len()))?
 		}
 		let mut fixed_bytes = [0u8; 32];
-		fixed_bytes.copy_from_slice(&*raw.latest_relay_hash);
-		let latest_relay_hash = H256::from(fixed_bytes);
+		fixed_bytes.copy_from_slice(&*raw.latest_hash);
+		let latest_hash = H256::from(fixed_bytes);
 
 		Ok(Self {
-			frozen_height: raw.frozen_height.map(|height| Height::new(raw.para_id.into(), height)),
-			relay_chain,
-			latest_para_height: raw.latest_para_height,
-			para_id: raw.para_id,
+			frozen_height: raw.frozen_height.map(|height| Height::new(raw.chain_id.into(), height)),
+			chain,
+			chain_id: raw.chain_id,
 			current_set_id: raw.current_set_id,
 			current_authorities,
-			latest_relay_hash,
-			latest_relay_height: raw.latest_relay_height,
+			latest_hash,
+			latest_height: raw.latest_height,
 			_phantom: Default::default(),
 		})
 	}
@@ -267,15 +264,14 @@ impl<H> TryFrom<RawClientState> for ClientState<H> {
 impl<H> From<ClientState<H>> for RawClientState {
 	fn from(client_state: ClientState<H>) -> Self {
 		RawClientState {
-			latest_relay_height: client_state.latest_relay_height,
-			latest_relay_hash: client_state.latest_relay_hash.as_bytes().to_vec(),
+			latest_height: client_state.latest_height,
+			latest_hash: client_state.latest_hash.as_bytes().to_vec(),
 			current_set_id: client_state.current_set_id,
 			frozen_height: client_state
 				.frozen_height
 				.map(|frozen_height| frozen_height.revision_height),
-			relay_chain: client_state.relay_chain as i32,
-			para_id: client_state.para_id,
-			latest_para_height: client_state.latest_para_height,
+			chain: client_state.chain as i32,
+			chain_id: client_state.chain_id,
 			current_authorities: client_state
 				.current_authorities
 				.into_iter()

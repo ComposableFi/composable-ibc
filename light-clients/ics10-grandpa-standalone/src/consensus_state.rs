@@ -13,27 +13,25 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-use alloc::{format, vec, vec::Vec};
+use alloc::{format, vec::Vec};
 use anyhow::anyhow;
 use core::{convert::Infallible, fmt::Debug};
-use parity_scale_codec::Decode;
 use serde::{Deserialize, Serialize};
 use tendermint::time::Time;
 use tendermint_proto::{google::protobuf as tpb, Protobuf};
 
-use crate::proto::ConsensusState as RawConsensusState;
+use crate::{client_message::StandaloneChainHeader, proto::ConsensusState as RawConsensusState};
 
 use crate::{alloc::string::ToString, error::Error};
-use grandpa_client_primitives::{parachain_header_storage_key, ParachainHeaderProofs};
+use grandpa_client_primitives::StandaloneTimestampProof;
 use ibc::{core::ics23_commitment::commitment::CommitmentRoot, timestamp::Timestamp, Height};
 use ibc_proto::google::protobuf::Any;
-use light_client_common::{decode_timestamp_extrinsic, state_machine};
-use sp_core::H256;
-use sp_runtime::{generic, traits::BlakeTwo256, SaturatedConversion};
-use sp_trie::StorageProof;
+use light_client_common::decode_timestamp_extrinsic;
+use sp_runtime::SaturatedConversion;
 
 /// Protobuf type url for GRANDPA Consensus State
-pub const GRANDPA_CONSENSUS_STATE_TYPE_URL: &str = "/ibc.lightclients.grandpa.v1.ConsensusState";
+pub const GRANDPA_STANDALONE_CONSENSUS_STATE_TYPE_URL: &str =
+	"/ibc.lightclients.grandpa_standalone.v1.ConsensusState";
 
 #[derive(Clone, Debug, PartialEq, Eq, Serialize, Deserialize)]
 pub struct ConsensusState {
@@ -48,45 +46,28 @@ impl ConsensusState {
 
 	pub fn to_any(&self) -> Any {
 		Any {
-			type_url: GRANDPA_CONSENSUS_STATE_TYPE_URL.to_string(),
+			type_url: GRANDPA_STANDALONE_CONSENSUS_STATE_TYPE_URL.to_string(),
 			value: self.encode_vec().expect("encode ConsensusState"),
 		}
 	}
 
 	pub fn from_header<H>(
-		parachain_header_proof: ParachainHeaderProofs,
-		para_id: u32,
-		relay_state_root: H256,
+		timestamp_proof: StandaloneTimestampProof,
+		chain_id: u32,
+		header: StandaloneChainHeader,
 	) -> Result<(Height, Self), Error>
 	where
-		H: grandpa_client_primitives::RelayHostFunctions,
+		H: grandpa_client_primitives::StandaloneHostFunctions,
 	{
-		let key = parachain_header_storage_key(para_id);
-		let proof = StorageProof::new(parachain_header_proof.state_proof);
-		let parachain_header_bytes = state_machine::read_proof_check::<H::BlakeTwo256, _>(
-			&relay_state_root,
-			proof,
-			vec![parachain_header_storage_key(para_id)],
-		)
-		.map_err(anyhow::Error::msg)?
-		.remove(key.as_ref())
-		.flatten()
-		.ok_or_else(|| anyhow!("Invalid state proof for parachain header"))?;
-
-		let parachain_header =
-			generic::Header::<u32, BlakeTwo256>::decode(&mut &parachain_header_bytes[..])?;
-		let root = parachain_header.state_root.0.to_vec();
-
-		let timestamp = decode_timestamp_extrinsic(&parachain_header_proof.extrinsic)?;
+		let timestamp = decode_timestamp_extrinsic(&timestamp_proof.extrinsic)?;
 		let duration = core::time::Duration::from_millis(timestamp);
 		let timestamp = Timestamp::from_nanoseconds(duration.as_nanos().saturated_into::<u64>())?
 			.into_tm_time()
 			.ok_or_else(|| anyhow!("Error decoding Timestamp, timestamp cannot be zero"))?;
 
-		Ok((
-			Height::new(para_id as u64, parachain_header.number as u64),
-			Self { root: root.into(), timestamp },
-		))
+		let root = CommitmentRoot::from_bytes(header.state_root.as_ref());
+
+		Ok((Height::new(chain_id as u64, header.number as u64), Self { root, timestamp }))
 	}
 }
 
@@ -139,7 +120,7 @@ pub mod test_util {
 	use crate::mock::AnyConsensusState;
 
 	pub fn get_dummy_beefy_consensus_state() -> AnyConsensusState {
-		AnyConsensusState::Grandpa(ConsensusState {
+		AnyConsensusState::GrandpaStandalone(ConsensusState {
 			timestamp: Time::now(),
 			root: vec![0; 32].into(),
 		})

@@ -43,7 +43,7 @@ beefy-prover = { workspace = true }
 hex = { workspace = true }
 futures = { workspace = true }
 sc-consensus-beefy = { workspace = true, default-features = false }
-hyperspace-core = { workspace = true, features = ["testing", "build-metadata-from-ws"] }
+# hyperspace-core = { workspace = true, features = ["testing", "build-metadata-from-ws"] }
 
 
 [features]

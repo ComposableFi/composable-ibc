@@ -22,7 +22,7 @@ use crate::{
 	ContractError,
 };
 use cosmwasm_std::{DepsMut, Env, Storage};
-use grandpa_light_client_primitives::HostFunctions;
+use grandpa_light_client_primitives::RelayHostFunctions;
 use ibc::{core::ics26_routing::context::ReaderContext, Height};
 use ics10_grandpa::{
 	client_message::RelayChainHeader, client_state::ClientState, consensus_state::ConsensusState,
@@ -164,4 +164,4 @@ where
 	}
 }
 
-impl<'a, H: HostFunctions<Header = RelayChainHeader>> ReaderContext for Context<'a, H> {}
+impl<'a, H: RelayHostFunctions<Header = RelayChainHeader>> ReaderContext for Context<'a, H> {}

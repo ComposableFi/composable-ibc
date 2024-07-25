@@ -22,7 +22,7 @@ use crate::{
 	},
 	log,
 };
-use grandpa_light_client_primitives::HostFunctions;
+use grandpa_light_client_primitives::RelayHostFunctions;
 use ibc::{
 	core::{
 		ics02_client::{
@@ -47,14 +47,14 @@ use ics10_grandpa::{
 use prost::Message;
 use std::str::FromStr;
 
-impl<'a, H: HostFunctions<Header = RelayChainHeader>> ClientTypes for Context<'a, H> {
+impl<'a, H: RelayHostFunctions<Header = RelayChainHeader>> ClientTypes for Context<'a, H> {
 	type AnyClientMessage = ClientMessage;
 	type AnyClientState = ClientState<H>;
 	type AnyConsensusState = ConsensusState;
 	type ClientDef = GrandpaClient<H>;
 }
 
-impl<'a, H: HostFunctions<Header = RelayChainHeader>> ClientReader for Context<'a, H> {
+impl<'a, H: RelayHostFunctions<Header = RelayChainHeader>> ClientReader for Context<'a, H> {
 	fn client_type(&self, client_id: &ClientId) -> Result<ClientType, Error> {
 		log!(self, "in client : [client_type] >> client_id = {:?}", client_id);
 
@@ -179,7 +179,7 @@ impl<'a, H: HostFunctions<Header = RelayChainHeader>> ClientReader for Context<'
 	}
 }
 
-impl<'a, H: HostFunctions<Header = RelayChainHeader>> ClientKeeper for Context<'a, H> {
+impl<'a, H: RelayHostFunctions<Header = RelayChainHeader>> ClientKeeper for Context<'a, H> {
 	fn store_client_type(
 		&mut self,
 		_client_id: ClientId,

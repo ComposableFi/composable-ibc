@@ -251,7 +251,7 @@ impl CompileCmd {
 			format!("{}/proto/cosmos/upgrade", sdk_dir.display()),
 		];
 
-		let proto_includes_paths = vec![
+		let proto_includes_paths = [
 			format!("{}", gogo.display()),
 			format!("{}", google.display()),
 			format!("{}/proto", cosmos_proto.display()),

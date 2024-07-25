@@ -117,6 +117,67 @@ where
 }
 
 #[derive(Clone, Copy, Debug, PartialEq, Eq, Deserialize, Serialize)]
+pub enum ChainType {
+	RelayChain(RelayChain),
+	StandaloneChain(StandaloneChain),
+}
+
+impl ChainType {
+	pub fn as_str(&self) -> &'static str {
+		match self {
+			Self::RelayChain(chain) => chain.as_str(),
+			Self::StandaloneChain(chain) => chain.as_str(),
+		}
+	}
+
+	pub fn unbonding_period(&self) -> Duration {
+		match self {
+			Self::RelayChain(chain) => chain.unbonding_period(),
+			Self::StandaloneChain(chain) => chain.unbonding_period(),
+		}
+	}
+
+	pub fn trusting_period(&self) -> Duration {
+		match self {
+			Self::RelayChain(chain) => chain.trusting_period(),
+			Self::StandaloneChain(chain) => chain.trusting_period(),
+		}
+	}
+
+	pub fn to_relay_chain(&self) -> Result<RelayChain, anyhow::Error> {
+		match self {
+			Self::RelayChain(chain) => Ok(*chain),
+			_ => Err(anyhow!("Invalid chain type")),
+		}
+	}
+
+	pub fn to_standalone_chain(&self) -> Result<StandaloneChain, anyhow::Error> {
+		match self {
+			Self::StandaloneChain(chain) => Ok(*chain),
+			_ => Err(anyhow!("Invalid chain type")),
+		}
+	}
+}
+
+impl FromStr for ChainType {
+	type Err = anyhow::Error;
+
+	fn from_str(s: &str) -> Result<Self, Self::Err> {
+		match s.to_lowercase().trim_start_matches("order_") {
+			"polkadot" | "kusama" | "rococo" => Ok(Self::RelayChain(RelayChain::from_str(s)?)),
+			"tangle" => Ok(Self::StandaloneChain(StandaloneChain::from_str(s)?)),
+			_ => Err(anyhow!("Unknown chain type {s}")),
+		}
+	}
+}
+
+impl Display for ChainType {
+	fn fmt(&self, f: &mut Formatter<'_>) -> fmt::Result {
+		write!(f, "{}", self.as_str())
+	}
+}
+
+#[derive(Clone, Copy, Debug, PartialEq, Eq, Deserialize, Serialize)]
 pub enum RelayChain {
 	Polkadot = 0,
 	Kusama = 1,
@@ -235,4 +296,64 @@ where
 	}
 
 	Ok(())
+}
+
+#[derive(Clone, Copy, Debug, PartialEq, Eq, Deserialize, Serialize)]
+pub enum StandaloneChain {
+	Tangle = 0,
+}
+
+impl Default for StandaloneChain {
+	fn default() -> Self {
+		StandaloneChain::Tangle
+	}
+}
+
+impl Display for StandaloneChain {
+	fn fmt(&self, f: &mut Formatter<'_>) -> fmt::Result {
+		write!(f, "{}", self.as_str())
+	}
+}
+
+// Unbonding period for standalone chains in days
+const TANGLE_UNBONDING_PERIOD: u64 = 14;
+
+impl StandaloneChain {
+	/// Yields the Order as a string
+	pub fn as_str(&self) -> &'static str {
+		match self {
+			Self::Tangle => "Tangle",
+		}
+	}
+
+	// Parses the Order out from a i32.
+	pub fn from_i32(nr: i32) -> Result<Self, anyhow::Error> {
+		match nr {
+			0 => Ok(Self::Tangle),
+			id => Err(anyhow!("Unknown relay chain {id}")),
+		}
+	}
+
+	pub fn unbonding_period(&self) -> Duration {
+		match self {
+			Self::Tangle => Duration::from_secs(TANGLE_UNBONDING_PERIOD * DAY),
+		}
+	}
+
+	pub fn trusting_period(&self) -> Duration {
+		let unbonding_period = self.unbonding_period();
+		// Trusting period is 1/3 of unbonding period
+		unbonding_period.checked_div(3).unwrap()
+	}
+}
+
+impl FromStr for StandaloneChain {
+	type Err = anyhow::Error;
+
+	fn from_str(s: &str) -> Result<Self, Self::Err> {
+		match s.to_lowercase().trim_start_matches("order_") {
+			"tangle" => Ok(Self::Tangle),
+			_ => Err(anyhow!("Unknown relay chain {s}")),
+		}
+	}
 }

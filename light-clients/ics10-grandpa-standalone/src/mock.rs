@@ -16,9 +16,9 @@
 
 use crate::{
 	client_def::GrandpaClient,
-	client_message::{ClientMessage, GRANDPA_CLIENT_MESSAGE_TYPE_URL},
-	client_state::{ClientState, UpgradeOptions, GRANDPA_CLIENT_STATE_TYPE_URL},
-	consensus_state::{ConsensusState, GRANDPA_CONSENSUS_STATE_TYPE_URL},
+	client_message::{ClientMessage, GRANDPA_STANDALONE_CLIENT_MESSAGE_TYPE_URL},
+	client_state::{ClientState, UpgradeOptions, GRANDPA_STANDALONE_CLIENT_STATE_TYPE_URL},
+	consensus_state::{ConsensusState, GRANDPA_STANDALONE_CONSENSUS_STATE_TYPE_URL},
 };
 use ibc::{
 	core::{
@@ -59,14 +59,14 @@ thread_local! {
 	static HEADER_HASHES: RefCell<BTreeSet<sp_core::H256>> = RefCell::new(BTreeSet::new());
 }
 
-impl grandpa_client_primitives::RelayHostFunctions for HostFunctionsManager {
+impl grandpa_client_primitives::StandaloneHostFunctions for HostFunctionsManager {
 	type Header = sp_runtime::generic::Header<u32, BlakeTwo256>;
 
 	fn ed25519_verify(sig: &ed25519::Signature, msg: &[u8], pub_key: &ed25519::Public) -> bool {
 		pub_key.verify(&msg, sig)
 	}
 
-	fn insert_relay_header_hashes(headers: &[<Self::Header as Header>::Hash]) {
+	fn insert_header_hashes(headers: &[<Self::Header as Header>::Hash]) {
 		HEADER_HASHES.with(|set| {
 			let mut set_mut = set.borrow_mut();
 			for hash in headers {
@@ -75,7 +75,7 @@ impl grandpa_client_primitives::RelayHostFunctions for HostFunctionsManager {
 		})
 	}
 
-	fn contains_relay_header_hash(hash: <Self::Header as Header>::Hash) -> bool {
+	fn contains_header_hash(hash: <Self::Header as Header>::Hash) -> bool {
 		HEADER_HASHES.with(|set| set.borrow().contains(&hash))
 	}
 }
@@ -87,14 +87,14 @@ impl light_client_common::HostFunctions for HostFunctionsManager {
 #[derive(Clone, Debug, PartialEq, Eq, ClientDef)]
 pub enum AnyClient {
 	Mock(MockClient),
-	Grandpa(GrandpaClient<HostFunctionsManager>),
+	GrandpaStandalone(GrandpaClient<HostFunctionsManager>),
 }
 
 #[derive(Clone, Debug, PartialEq, Eq, Serialize, Deserialize)]
 #[serde(tag = "type")]
 pub enum AnyUpgradeOptions {
 	Mock(()),
-	Grandpa(UpgradeOptions),
+	GrandpaStandalone(UpgradeOptions),
 }
 
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq, Eq, ClientState, Protobuf)]
@@ -103,8 +103,8 @@ pub enum AnyClientState {
 	#[ibc(proto_url = "MOCK_CLIENT_STATE_TYPE_URL")]
 	Mock(MockClientState),
 	#[serde(skip)]
-	#[ibc(proto_url = "GRANDPA_CLIENT_STATE_TYPE_URL")]
-	Grandpa(ClientState<HostFunctionsManager>),
+	#[ibc(proto_url = "GRANDPA_STANDALONE_CLIENT_STATE_TYPE_URL")]
+	GrandpaStandalone(ClientState<HostFunctionsManager>),
 }
 
 #[derive(Clone, Debug, Deserialize, Serialize, ClientMessage)]
@@ -113,8 +113,8 @@ pub enum AnyClientMessage {
 	#[ibc(proto_url = "MOCK_CLIENT_MESSAGE_TYPE_URL")]
 	Mock(MockClientMessage),
 	#[serde(skip)]
-	#[ibc(proto_url = "GRANDPA_CLIENT_MESSAGE_TYPE_URL")]
-	Grandpa(ClientMessage),
+	#[ibc(proto_url = "GRANDPA_STANDALONE_CLIENT_MESSAGE_TYPE_URL")]
+	GrandpaStandalone(ClientMessage),
 }
 
 impl Protobuf<Any> for AnyClientMessage {}
@@ -126,7 +126,7 @@ impl TryFrom<Any> for AnyClientMessage {
 		match value.type_url.as_str() {
 			MOCK_CLIENT_MESSAGE_TYPE_URL =>
 				Ok(Self::Mock(panic!("MockClientMessage doesn't implement Protobuf"))),
-			GRANDPA_CLIENT_MESSAGE_TYPE_URL => Ok(Self::Grandpa(
+			GRANDPA_STANDALONE_CLIENT_MESSAGE_TYPE_URL => Ok(Self::GrandpaStandalone(
 				ClientMessage::decode_vec(&value.value)
 					.map_err(ics02_client::error::Error::decode_raw_header)?,
 			)),
@@ -141,8 +141,8 @@ impl From<AnyClientMessage> for Any {
 			AnyClientMessage::Mock(_mock) => {
 				panic!("MockClientMessage doesn't implement Protobuf");
 			},
-			AnyClientMessage::Grandpa(msg) => Any {
-				type_url: GRANDPA_CLIENT_MESSAGE_TYPE_URL.to_string(),
+			AnyClientMessage::GrandpaStandalone(msg) => Any {
+				type_url: GRANDPA_STANDALONE_CLIENT_MESSAGE_TYPE_URL.to_string(),
 				value: msg.encode_vec().unwrap(),
 			},
 		}
@@ -152,8 +152,8 @@ impl From<AnyClientMessage> for Any {
 #[derive(Clone, Debug, PartialEq, Eq, Serialize, ConsensusState, Protobuf)]
 #[serde(tag = "type")]
 pub enum AnyConsensusState {
-	#[ibc(proto_url = "GRANDPA_CONSENSUS_STATE_TYPE_URL")]
-	Grandpa(ConsensusState),
+	#[ibc(proto_url = "GRANDPA_STANDALONE_CONSENSUS_STATE_TYPE_URL")]
+	GrandpaStandalone(ConsensusState),
 	#[ibc(proto_url = "MOCK_CONSENSUS_STATE_TYPE_URL")]
 	Mock(MockConsensusState),
 }

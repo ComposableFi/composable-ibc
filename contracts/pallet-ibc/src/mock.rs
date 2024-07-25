@@ -9,25 +9,25 @@ use frame_support::{
 			metadata::{Inspect, Mutate},
 			Create,
 		},
-		AsEnsureOriginWithArg, ConstU64, Everything,
+		AsEnsureOriginWithArg, ConstU64, Contains, Currency, Everything,
 	},
 };
 use frame_system as system;
 use frame_system::EnsureSigned;
 use ibc_primitives::{runtime_interface::ss58_to_account_id_32, IbcAccount};
-use light_client_common::RelayChain;
+use light_client_common::{ChainType, RelayChain};
 use orml_traits::parameter_type_with_key;
 use pallet_membership::Instance2;
 use sp_consensus_aura::sr25519::AuthorityId as AuraId;
 use sp_core::{
 	offchain::{testing::TestOffchainExt, OffchainDbExt, OffchainWorkerExt},
-	ConstBool, H256,
+	ConstBool, ConstU128, ConstU16, H256,
 };
 use sp_keystore::{testing::MemoryKeystore, KeystoreExt};
 use sp_runtime::{
 	generic,
 	traits::{BlakeTwo256, IdentityLookup},
-	MultiSignature, Perbill,
+	BuildStorage, MultiSignature, Perbill,
 };
 use std::{
 	convert::Infallible,
@@ -38,7 +38,7 @@ use system::EnsureRoot;
 
 type UncheckedExtrinsic = frame_system::mocking::MockUncheckedExtrinsic<Test>;
 type Block = frame_system::mocking::MockBlock<Test>;
-type Header = generic::Header<u32, BlakeTwo256>;
+type Header = generic::Header<u64, BlakeTwo256>;
 use sp_runtime::traits::{IdentifyAccount, Verify};
 
 pub type AssetId = u128;
@@ -113,35 +113,23 @@ parameter_types! {
 }
 
 #[derive_impl(frame_system::config_preludes::SolochainDefaultConfig as frame_system::DefaultConfig)]
-impl system::Config for Test {
+impl frame_system::Config for Test {
+	type RuntimeEvent = RuntimeEvent;
 	type BaseCallFilter = Everything;
 	type BlockWeights = ();
 	type BlockLength = ();
 	type DbWeight = ();
-	type RuntimeOrigin = RuntimeOrigin;
-	type RuntimeCall = RuntimeCall;
+	type Nonce = Nonce;
 	type Hash = H256;
-	type Hashing = BlakeTwo256;
 	type AccountId = AccountId;
 	type Lookup = IdentityLookup<Self::AccountId>;
-	type RuntimeEvent = RuntimeEvent;
-	type RuntimeTask = ();
+	type Block = Block;
 	type BlockHashCount = BlockHashCount;
 	type Version = ();
-	type PalletInfo = PalletInfo;
 	type AccountData = pallet_balances::AccountData<Balance>;
-	type OnNewAccount = ();
-	type OnKilledAccount = ();
-	type SystemWeightInfo = ();
-	type SS58Prefix = SS58Prefix;
-	type OnSetCode = ();
-	type MaxConsumers = ConstU32<2>;
-
-	type Nonce = Nonce;
-
-	#[doc = " The Block type used by the runtime. This is used by `construct_runtime` to retrieve the"]
-	#[doc = " extrinsics or other block specific data as needed."]
-	type Block = Block;
+	type SystemWeightInfo = frame_system::weights::SubstrateWeight<Test>;
+	type SS58Prefix = ConstU16<42>;
+	type MaxConsumers = ConstU32<16>;
 }
 
 impl parachain_info::Config for Test {}
@@ -158,28 +146,27 @@ parameter_types! {
 	pub const MinimumConnectionDelay: u64 = 1;
 }
 
-pub type Balances = orml_tokens::CurrencyAdapter<Test, NativeAssetId>;
+pub type CurrencyAdapter = orml_tokens::CurrencyAdapter<Test, NativeAssetId>;
 
 impl pallet_assets::Config for Test {
-	type AssetId = AssetId;
-	type Balance = Balance;
-	type WeightInfo = ();
 	type RuntimeEvent = RuntimeEvent;
-	type Currency = Balances;
-	type ForceOrigin = EnsureRoot<AccountId>;
-	type AssetDeposit = ();
-	type AssetAccountDeposit = ();
-	type MetadataDepositBase = ();
-	type MetadataDepositPerByte = ();
-	type ApprovalDeposit = ();
-	type StringLimit = StringLimit;
+	type Balance = Balance;
+	type AssetId = u128;
+	type AssetIdParameter = u128;
+	type Currency = CurrencyAdapter;
+	type CreateOrigin = AsEnsureOriginWithArg<frame_system::EnsureSigned<AccountId>>;
+	type ForceOrigin = frame_system::EnsureRoot<AccountId>;
+	type AssetDeposit = ConstU128<1>;
+	type AssetAccountDeposit = ConstU128<10>;
+	type MetadataDepositBase = ConstU128<1>;
+	type MetadataDepositPerByte = ConstU128<1>;
+	type ApprovalDeposit = ConstU128<1>;
+	type StringLimit = ConstU32<50>;
 	type Freezer = ();
-	type Extra = ();
-	type CreateOrigin = AsEnsureOriginWithArg<EnsureSigned<AccountId>>;
-	type RemoveItemsLimit = ConstU32<128>;
-	type AssetIdParameter = Self::AssetId;
-
+	type WeightInfo = ();
 	type CallbackHandle = ();
+	type Extra = ();
+	type RemoveItemsLimit = ConstU32<5>;
 	#[cfg(feature = "runtime-benchmarks")]
 	type BenchmarkHelper = ();
 }
@@ -187,7 +174,7 @@ impl pallet_assets::Config for Test {
 parameter_types! {
 	pub const MaxLocks: u32 = 256;
 	pub static ParachainId: ParaId = ParaId::from(2087);
-	pub static RelayChainId: RelayChain = RelayChain::Rococo;
+	pub static RelayChainId: ChainType = ChainType::RelayChain(RelayChain::Rococo);
 	pub const SpamProtectionDeposit: u128 = 0;
 }
 
@@ -208,8 +195,15 @@ impl orml_tokens::Config for Test {
 	type MaxLocks = MaxLocks;
 	type ReserveIdentifier = ReserveIdentifier;
 	type MaxReserves = frame_support::traits::ConstU32<2>;
-	type DustRemovalWhitelist = Everything;
+	type DustRemovalWhitelist = MockDustRemovalWhitelist;
 	type CurrencyHooks = ();
+}
+
+pub struct MockDustRemovalWhitelist;
+impl Contains<AccountId> for MockDustRemovalWhitelist {
+	fn contains(a: &AccountId) -> bool {
+		true
+	}
 }
 
 parameter_types! {
@@ -220,7 +214,7 @@ parameter_types! {
 	pub const FlatFeeAssetId: AssetId = 130;
 	pub const FlatFeeAmount: AssetId = 10_000_000;
 	pub FeeAccount: <Test as Config>::AccountIdConversion = create_alice_key();
-	pub const CleanUpPacketsPeriod: u32 = 10;
+	pub const CleanUpPacketsPeriod: u64 = 10;
 }
 
 fn create_alice_key() -> <Test as Config>::AccountIdConversion {
@@ -269,7 +263,7 @@ impl ValidateMemo for RawMemo {
 impl Config for Test {
 	type TimeProvider = Timestamp;
 	type RuntimeEvent = RuntimeEvent;
-	type NativeCurrency = PalletBalances;
+	type NativeCurrency = CurrencyAdapter;
 	type Balance = Balance;
 	type AssetId = AssetId;
 	type NativeAssetId = NativeAssetId;
@@ -281,8 +275,8 @@ impl Config for Test {
 	type ExpectedBlockTime = ExpectedBlockTime;
 	type Router = Router;
 	type MinimumConnectionDelay = MinimumConnectionDelay;
-	type ParaId = ParachainId;
-	type RelayChain = RelayChainId;
+	type ChainId = ParachainId;
+	type ChainType = RelayChainId;
 	type WeightInfo = ();
 	type AdminOrigin = EnsureRoot<AccountId>;
 	type FreezeOrigin = EnsureRoot<AccountId>;
@@ -367,7 +361,7 @@ fn register_offchain_ext(ext: &mut sp_io::TestExternalities) {
 // Build genesis storage according to the mock runtime.
 pub fn new_test_ext() -> sp_io::TestExternalities {
 	let mut ext: sp_io::TestExternalities =
-		system::GenesisConfig::default().build_storage::<Test>().unwrap().into();
+		system::GenesisConfig::<Test>::default().build_storage().unwrap().into();
 	register_offchain_ext(&mut ext);
 	ext.register_extension(KeystoreExt(Arc::new(MemoryKeystore::new())));
 
@@ -387,13 +381,18 @@ where
 	type Error = ();
 	fn from_denom_to_asset_id(denom: &str) -> Result<T::AssetId, Self::Error> {
 		let mut id = 2u128;
-		if denom == "PICA" || denom == "1" {
+		if denom == "TNT" || denom == "1" {
 			id = 1;
 		}
 		if denom.contains("FLATFEE") {
 			id = 3;
 		}
 		if <<Test as Config>::Fungibles as Inspect<AccountId>>::decimals(id) == 0 {
+			// Give the creator account balance
+			orml_tokens::CurrencyAdapter::<Test, NativeAssetId>::make_free_balance_be(
+				&AccountId::new([0; 32]),
+				1000u128,
+			);
 			<<Test as Config>::Fungibles as Create<AccountId>>::create(
 				id,
 				AccountId::new([0; 32]),
@@ -416,12 +415,12 @@ where
 
 	fn from_asset_id_to_denom(id: T::AssetId) -> Option<String> {
 		if id == 1u128.into() {
-			return Some("PICA".to_string())
+			return Some("TNT".to_string())
 		}
 		if id == 3u128.into() {
-			return Some("PICAFLATFEE".to_string())
+			return Some("TNTFLATFEE".to_string())
 		}
-		Some("PICA".to_string())
+		Some("TNT".to_string())
 	}
 
 	fn ibc_assets(
@@ -479,21 +478,17 @@ impl ModuleRouter for Router {
 
 // Configure a mock runtime to test the pallet.
 frame_support::construct_runtime!(
-	pub enum Test where
-		Block = Block,
-		NodeBlock = Block,
-		UncheckedExtrinsic = UncheckedExtrinsic,
-	{
-		System: frame_system::{Pallet, Call, Config, Storage, Event<T>},
-		Timestamp: pallet_timestamp,
-		ParachainInfo: parachain_info,
-		Tokens: orml_tokens,
-		Assets: pallet_assets,
-		PalletBalances: pallet_balances,
-		IbcPing: pallet_ibc_ping,
-		Ics20Fee: crate::ics20_fee,
-		Ibc: pallet_ibc,
-		Aura: pallet_aura,
-		Membership: pallet_membership::<Instance2>,
+	pub enum Test {
+		System: frame_system::{Pallet, Call, Config<T>, Storage, Event<T>},
+		Timestamp: pallet_timestamp::{Pallet, Call, Storage, Inherent},
+		ParachainInfo: parachain_info::{Pallet, Storage, Config<T>},
+		Tokens: orml_tokens::{Pallet, Storage, Event<T>, Config<T>},
+		Assets: pallet_assets::{Pallet, Call, Storage, Event<T>},
+		Balances: pallet_balances::{Pallet, Call, Storage, Event<T>},
+		IbcPing: pallet_ibc_ping::{Pallet, Call, Storage, Event<T>},
+		Ics20Fee: crate::ics20_fee::{Pallet, Call, Storage, Event<T>},
+		Ibc: pallet_ibc::{Pallet, Call, Storage, Event<T>},
+		Aura: pallet_aura::{Pallet, Storage, Config<T>},
+		Membership: pallet_membership::<Instance2>::{Pallet, Call, Storage, Event<T>, Config<T>},
 	}
 );

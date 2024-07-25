@@ -13,7 +13,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-use crate::{error, Commit, RelayHostFunctions};
+use crate::{error, Commit, StandaloneHostFunctions};
 use alloc::collections::{BTreeMap, BTreeSet};
 use anyhow::anyhow;
 use finality_grandpa::voter_set::VoterSet;
@@ -35,7 +35,7 @@ use sp_std::prelude::*;
 /// nodes, and are used by syncing nodes to prove authority set handoffs.
 #[cfg_attr(any(feature = "std", test), derive(Debug))]
 #[derive(Clone, Encode, Decode, PartialEq, Eq)]
-pub struct GrandpaJustification<H: HeaderT> {
+pub struct GrandpaStandaloneJustification<H: HeaderT> {
 	/// Current voting round number, monotonically increasing
 	pub round: u64,
 	/// Contains block hash & number that's being finalized and the signatures.
@@ -44,7 +44,7 @@ pub struct GrandpaJustification<H: HeaderT> {
 	pub votes_ancestries: Vec<H>,
 }
 
-impl<H> GrandpaJustification<H>
+impl<H> GrandpaStandaloneJustification<H>
 where
 	H: HeaderT,
 	H::Number: finality_grandpa::BlockNumberOps,
@@ -52,10 +52,10 @@ where
 	/// Validate the commit and the votes' ancestry proofs.
 	pub fn verify<Host>(&self, set_id: u64, authorities: &AuthorityList) -> Result<(), error::Error>
 	where
-		Host: RelayHostFunctions,
+		Host: StandaloneHostFunctions,
 	{
 		// It's safe to assume that the authority list will not contain duplicates,
-		// since this list is extracted from a verified relaychain header.
+		// since this list is extracted from a verified standalone chain header.
 		let voters =
 			VoterSet::new(authorities.iter().cloned()).ok_or(anyhow!("Invalid AuthoritiesSet"))?;
 
@@ -69,7 +69,7 @@ where
 		voters: &VoterSet<AuthorityId>,
 	) -> Result<(), error::Error>
 	where
-		Host: RelayHostFunctions,
+		Host: StandaloneHostFunctions,
 	{
 		use finality_grandpa::Chain;
 
@@ -162,7 +162,7 @@ pub struct AncestryChain<H: HeaderT> {
 }
 
 impl<H: HeaderT> AncestryChain<H> {
-	/// Initialize the ancestry chain given a set of relay chain headers.
+	/// Initialize the ancestry chain given a set of standalone chain headers.
 	pub fn new(ancestry: &[H]) -> AncestryChain<H> {
 		let ancestry: BTreeMap<_, _> = ancestry.iter().cloned().map(|h: H| (h.hash(), h)).collect();
 
@@ -242,7 +242,7 @@ pub fn check_message_signature<Host, H, N>(
 	set_id: SetId,
 ) -> Result<(), anyhow::Error>
 where
-	Host: RelayHostFunctions,
+	Host: StandaloneHostFunctions,
 	H: Encode,
 	N: Encode,
 {
@@ -263,7 +263,7 @@ pub fn check_equivocation_proof<Host, H, N>(
 	equivocation: Equivocation<H, N>,
 ) -> Result<(), anyhow::Error>
 where
-	Host: RelayHostFunctions,
+	Host: StandaloneHostFunctions,
 	H: Clone + Encode + PartialEq,
 	N: Clone + Encode + PartialEq,
 {

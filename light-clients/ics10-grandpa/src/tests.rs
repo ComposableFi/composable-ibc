@@ -28,7 +28,6 @@ use grandpa_client_primitives::{
 	ParachainHeaderProofs, ParachainHeadersWithFinalityProof,
 };
 use grandpa_prover::{GrandpaProver, JustificationNotification};
-use hyperspace_core::substrate::DefaultConfig as PolkadotConfig;
 use ibc::{
 	core::{
 		ics02_client::{
@@ -55,6 +54,7 @@ use std::time::Duration;
 use subxt::{
 	backend::legacy::LegacyRpcMethods,
 	config::substrate::{BlakeTwo256, SubstrateHeader},
+	PolkadotConfig,
 };
 
 #[tokio::test]

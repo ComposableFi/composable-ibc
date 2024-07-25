@@ -34,6 +34,9 @@ use sp_storage::StorageKey;
 pub mod error;
 /// GRANDPA justification utilities
 pub mod justification;
+/// Standalone justification utilities
+pub mod standalone;
+
 /// Represents a Hash in this library
 pub type Hash = H256;
 /// A commit message for this chain's block type.
@@ -57,9 +60,9 @@ pub struct FinalityProof<H: parity_scale_codec::Codec> {
 	pub unknown_headers: Vec<H>,
 }
 
-/// Previous light client state.
+/// Previous light client state for Relay chain.
 #[derive(Clone)]
-pub struct ClientState {
+pub struct RelayClientState {
 	/// Current authority set
 	pub current_authorities: AuthorityList,
 	/// Id of the current authority set.
@@ -72,6 +75,42 @@ pub struct ClientState {
 	pub latest_relay_hash: Hash,
 	/// para_id of associated parachain
 	pub para_id: u32,
+}
+
+/// Previous light client state for Standalone chain
+#[derive(Clone)]
+pub struct StandaloneClientState {
+	/// Current authority set
+	pub current_authorities: AuthorityList,
+	/// Id of the current authority set.
+	pub current_set_id: u64,
+	/// latest finalized height on the standalone chain.
+	pub latest_height: u32,
+	/// latest finalized hash on the standalone chain.
+	pub latest_hash: Hash,
+	/// chain_id of associated parachain
+	pub chain_id: u32,
+}
+
+/// Standalone timestamp proof.
+#[derive(Clone, Debug, Encode, Decode)]
+pub struct StandaloneTimestampProof {
+	/// Timestamp extrinsic for ibc
+	pub extrinsic: Vec<u8>,
+	/// Timestamp extrinsic proof for previously proven standalone header.
+	pub extrinsic_proof: Vec<Vec<u8>>,
+}
+
+/// Standalone header with finality proof
+#[derive(Clone, Encode, Decode)]
+pub struct StandaloneHeaderWithFinalityProof<H: parity_scale_codec::Codec> {
+	/// The grandpa finality proof: contains standalone chain header from the
+	/// last known finalized grandpa block.
+	pub finality_proof: FinalityProof<H>,
+	/// Standalone timestamp proof
+	pub timestamp_proof: StandaloneTimestampProof,
+	/// The latest finalized height on the standalone chain.
+	pub latest_height: u64,
 }
 
 /// Holds relavant parachain proofs for both header and timestamp extrinsic.
@@ -100,7 +139,7 @@ pub struct ParachainHeadersWithFinalityProof<H: parity_scale_codec::Codec> {
 }
 
 /// Host functions that allow the light client perform cryptographic operations in native.
-pub trait HostFunctions: light_client_common::HostFunctions + 'static {
+pub trait RelayHostFunctions: light_client_common::HostFunctions + 'static {
 	/// RelayChain header type.
 	type Header: Header;
 
@@ -110,6 +149,19 @@ pub trait HostFunctions: light_client_common::HostFunctions + 'static {
 	fn insert_relay_header_hashes(headers: &[<Self::Header as Header>::Hash]);
 	/// Checks if a RelayChain header hash exists in the light client's storage.
 	fn contains_relay_header_hash(hash: <Self::Header as Header>::Hash) -> bool;
+}
+
+/// Host functions that allow the light client perform cryptographic operations in native.
+pub trait StandaloneHostFunctions: light_client_common::HostFunctions + 'static {
+	/// Standalone chain header type.
+	type Header: Header;
+
+	/// Verify an ed25519 signature
+	fn ed25519_verify(sig: &ed25519::Signature, msg: &[u8], pub_key: &ed25519::Public) -> bool;
+	/// Stores the given list of Standalone chain header hashes in the light client's storage.
+	fn insert_header_hashes(headers: &[<Self::Header as Header>::Hash]);
+	/// Checks if a Standalone chain header hash exists in the light client's storage.
+	fn contains_header_hash(hash: <Self::Header as Header>::Hash) -> bool;
 }
 
 /// This returns the storage key for a parachain header on the relay chain.
