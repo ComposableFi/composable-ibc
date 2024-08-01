@@ -298,7 +298,7 @@ impl<'a> Context<'a> {
 	pub fn encode_consensus_state(consensus_state: ConsensusState) -> Vec<u8> {
 		let wasm_consensus_state = ics08_wasm::consensus_state::ConsensusState {
 			data: ibc_proto::google::protobuf::Any::from(&consensus_state).encode_to_vec(),
-			timestamp: consensus_state.timestamp().nanoseconds(),
+			// timestamp: consensus_state.timestamp().nanoseconds(),
 			inner: Box::new(FakeInner),
 		};
 		wasm_consensus_state.to_any().encode_to_vec()

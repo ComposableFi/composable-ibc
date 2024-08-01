@@ -43,9 +43,9 @@ ed25519-zebra = { version = "3.1.0", default-features = false }
 byteorder = { version = "1.3.2", default-features = false }
 digest = { version = "0.10.3", default-features = false }
 hex = "0.4.3"
-tendermint = { git = "https://github.com/informalsystems/tendermint-rs", rev = "e81f7bf23d63ffbcd242381d1ce5e35da3515ff1", default-features = false } # cannot be defined as optional in workspace
-tendermint-proto = { git = "https://github.com/informalsystems/tendermint-rs", rev = "e81f7bf23d63ffbcd242381d1ce5e35da3515ff1", default-features = false }
-tendermint-light-client-verifier = { git = "https://github.com/informalsystems/tendermint-rs", rev = "e81f7bf23d63ffbcd242381d1ce5e35da3515ff1", default-features = false }
+tendermint = { git = "https://github.com/informalsystems/tendermint-rs", rev = "4d81b67c28510db7d2d99ed62ebfa9fdf0e02141", default-features = false } # cannot be defined as optional in workspace
+tendermint-proto = { git = "https://github.com/informalsystems/tendermint-rs", rev = "4d81b67c28510db7d2d99ed62ebfa9fdf0e02141", default-features = false }
+tendermint-light-client-verifier = { git = "https://github.com/informalsystems/tendermint-rs", rev = "4d81b67c28510db7d2d99ed62ebfa9fdf0e02141", default-features = false }
 
 [dev-dependencies]
 cw-multi-test = "0.15.1"
@@ -54,7 +54,7 @@ hyperspace-primitives = { path = "../../hyperspace/primitives", features = ["tes
 pallet-ibc = { path = "../../contracts/pallet-ibc" }
 serde-json-wasm = { version = "0.5.0", default-features = false }
 serde_json = { version = "1.0.93", default-features = false }
-tendermint = { git = "https://github.com/informalsystems/tendermint-rs", rev = "e81f7bf23d63ffbcd242381d1ce5e35da3515ff1", default-features = false }
+tendermint = { git = "https://github.com/informalsystems/tendermint-rs", rev = "4d81b67c28510db7d2d99ed62ebfa9fdf0e02141", default-features = false }
 
 [features]
 # for more explicit tests, cargo test --features=backtraces

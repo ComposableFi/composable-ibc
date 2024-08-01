@@ -165,7 +165,7 @@ where
 		client_state.verify_height(client_id, height)?;
 
 		let path = ibc_core_host_types::path::ConnectionPath(convert(connection_id));
-		let value = expected_connection_end.encode_vec().map_err(Ics02ClientError::encode)?;
+		let value = expected_connection_end.clone().encode_vec();
 		verify(proof, root, path.into(), Some(value))
 	}
 
@@ -185,7 +185,7 @@ where
 		client_state.verify_height(client_id, height)?;
 
 		let path = ibc_core_host_types::path::ChannelEndPath(convert(port_id), convert(channel_id));
-		let value = expected_channel_end.encode_vec().map_err(Ics02ClientError::encode)?;
+		let value = expected_channel_end.clone().encode_vec();
 		verify(proof, root, path.into(), Some(value)).map_err(|e| e.into())
 	}
 
