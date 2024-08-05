@@ -43,6 +43,10 @@ use ics11_beefy::{
 	client_message::BEEFY_CLIENT_MESSAGE_TYPE_URL, client_state::BEEFY_CLIENT_STATE_TYPE_URL,
 	consensus_state::BEEFY_CONSENSUS_STATE_TYPE_URL,
 };
+use icsxx_cf_solana::{
+	CF_SOLANA_CLIENT_MESSAGE_TYPE_URL, CF_SOLANA_CLIENT_STATE_TYPE_URL,
+	CF_SOLANA_CONSENSUS_STATE_TYPE_URL, CF_SOLANA_HEADER_TYPE_URL, CF_SOLANA_MISBEHAVIOUR_TYPE_URL,
+};
 use prost::Message;
 use sp_core::{crypto::ByteArray, ed25519, H256};
 use sp_runtime::{
@@ -333,6 +337,7 @@ pub enum AnyClient {
 	Tendermint(ics07_tendermint::client_def::TendermintClient<HostFunctionsManager>),
 	Wasm(ics08_wasm::client_def::WasmClient<AnyClient, AnyClientState, AnyConsensusState>),
 	Guest(cf_guest::client_def::GuestClient<PubKey>),
+	CfSolana(icsxx_cf_solana::client_def::CfSolanaClient<PubKey>),
 	#[cfg(any(test, feature = "testing"))]
 	Mock(ibc::mock::client_def::MockClient),
 }
@@ -344,6 +349,7 @@ pub enum AnyUpgradeOptions {
 	Tendermint(ics07_tendermint::client_state::UpgradeOptions),
 	Wasm(Box<Self>),
 	Guest(cf_guest::client::UpgradeOptions),
+	CfSolana(icsxx_cf_solana::client::UpgradeOptions),
 	#[cfg(any(test, feature = "testing"))]
 	Mock(()),
 }
@@ -360,6 +366,8 @@ pub enum AnyClientState {
 	Wasm(ics08_wasm::client_state::ClientState<AnyClient, Self, AnyConsensusState>),
 	#[ibc(proto_url = "GUEST_CLIENT_STATE_TYPE_URL")]
 	Guest(cf_guest::ClientState<PubKey>),
+	#[ibc(proto_url = "CF_SOLANA_CLIENT_STATE_TYPE_URL")]
+	CfSolana(icsxx_cf_solana::ClientState<PubKey>),
 	#[cfg(any(test, feature = "testing"))]
 	#[ibc(proto_url = "MOCK_CLIENT_STATE_TYPE_URL")]
 	Mock(ibc::mock::client_state::MockClientState),
@@ -435,6 +443,8 @@ pub enum AnyConsensusState {
 	Wasm(ics08_wasm::consensus_state::ConsensusState<Self>),
 	#[ibc(proto_url = "GUEST_CONSENSUS_STATE_TYPE_URL")]
 	Guest(cf_guest::ConsensusState),
+	#[ibc(proto_url = "CF_SOLANA_CONSENSUS_STATE_TYPE_URL")]
+	CfSolana(icsxx_cf_solana::ConsensusState),
 	#[cfg(any(test, feature = "testing"))]
 	#[ibc(proto_url = "MOCK_CONSENSUS_STATE_TYPE_URL")]
 	Mock(ibc::mock::client_state::MockConsensusState),
@@ -462,6 +472,8 @@ pub enum AnyClientMessage {
 	Wasm(ics08_wasm::client_message::ClientMessage<Self>),
 	#[ibc(proto_url = "GUEST_CLIENT_MESSAGE_TYPE_URL")]
 	Guest(cf_guest::ClientMessage<PubKey>),
+	#[ibc(proto_url = "CF_SOLANA_CLIENT_MESSAGE_TYPE_URL")]
+	CfSolana(icsxx_cf_solana::ClientMessage<PubKey>),
 	#[cfg(any(test, feature = "testing"))]
 	#[ibc(proto_url = "MOCK_CLIENT_MESSAGE_TYPE_URL")]
 	Mock(ibc::mock::header::MockClientMessage),
@@ -572,6 +584,10 @@ impl From<AnyClientMessage> for Any {
 			AnyClientMessage::Guest(msg) => Any {
 				type_url: GUEST_CLIENT_MESSAGE_TYPE_URL.to_string(),
 				value: msg.encode_vec().expect("encode_vec failed"),
+			},
+			AnyClientMessage::CfSolana(msg) => Any {
+				type_url: CF_SOLANA_CLIENT_MESSAGE_TYPE_URL.to_string(),
+				value: msg.encode_to_vec().expect("encode_vec failed"),
 			},
 			#[cfg(any(test, feature = "testing"))]
 			AnyClientMessage::Mock(_msg) => panic!("MockHeader can't be serialized"),

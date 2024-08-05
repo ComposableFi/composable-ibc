@@ -1,17 +1,18 @@
 use core::{convert::Infallible, num::NonZeroU64};
 
 use lib::hash::CryptoHash;
-use prost::Message as _;
-
-use crate::proto;
+use solana_sdk::hash::Hash;
 
 super::wrap!(cf_guest_upstream::ConsensusState as ConsensusState);
 super::wrap!(impl Eq for ConsensusState);
-super::wrap!(impl proto for ConsensusState);
+// super::wrap!(impl proto for ConsensusState);
 
 impl ConsensusState {
-	pub fn new(block_hash: &CryptoHash, timestamp_ns: NonZeroU64) -> Self {
-		Self(cf_guest_upstream::ConsensusState::new(block_hash, timestamp_ns))
+	pub fn new(block_hash: &Hash, timestamp_ns: NonZeroU64) -> Self {
+		Self(cf_guest_upstream::ConsensusState::new(
+			&CryptoHash(block_hash.to_bytes()),
+			timestamp_ns,
+		))
 	}
 }
 
@@ -28,31 +29,7 @@ impl ibc::core::ics02_client::client_consensus::ConsensusState for ConsensusStat
 	}
 
 	fn encode_to_vec(&self) -> Result<ibc::prelude::Vec<u8>, ibc::protobuf::Error> {
-		Ok(proto::ConsensusState::from(self).encode_to_vec())
-	}
-}
-
-impl<PK: guestchain::PubKey> From<crate::Header<PK>> for ConsensusState {
-	fn from(header: crate::Header<PK>) -> Self {
-		Self::from(&header.0)
-	}
-}
-
-impl<PK: guestchain::PubKey> From<&crate::Header<PK>> for ConsensusState {
-	fn from(header: &crate::Header<PK>) -> Self {
-		Self::from(&header.0)
-	}
-}
-
-impl<PK: guestchain::PubKey> From<cf_guest_upstream::Header<PK>> for ConsensusState {
-	fn from(header: cf_guest_upstream::Header<PK>) -> Self {
-		Self::from(&header)
-	}
-}
-
-impl<PK: guestchain::PubKey> From<&cf_guest_upstream::Header<PK>> for ConsensusState {
-	fn from(header: &cf_guest_upstream::Header<PK>) -> Self {
-		Self(header.into())
+		Ok(self.0.encode_to_vec().expect("encoding failed"))
 	}
 }
 

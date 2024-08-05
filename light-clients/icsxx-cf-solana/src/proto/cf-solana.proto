@@ -1,0 +1,205 @@
+syntax = "proto3";
+
+package lightclients.cf_solana.v1;
+
+// The consensus state of the guest blockchain.
+message ConsensusState {
+  // 32-byte block hash.
+  bytes block_hash = 1;
+  // Timestamp in nanoseconds.  Never zero.
+  uint64 timestamp_ns = 2;
+
+  // NEXT ID: 3
+}
+
+// The client state of the light client for the guest blockchain.
+message ClientState {
+  // Height of the latest finalised block.
+  uint64 latest_height = 1;
+
+  // Duration of the period since the last timestamp during which the
+  // submitted headers are valid for upgrade.
+  uint64 trusting_period_ns = 2;
+
+  // Whether client is frozen.
+  bool is_frozen = 3;
+
+  // Current leader of the blockchain.
+  bytes current_leader = 4;
+
+  // Genesis time of the blockchain.
+  uint64 genesis_time = 5;
+
+  // Duration of a slot in the blockchain.
+  uint64 slot_duration = 6;
+
+  // NEXT ID: 7
+}
+
+message ClientMessage {
+  oneof message {
+    Header header = 1;
+    Misbehaviour misbehaviour = 2;
+  }
+
+  // NEXT ID: 3
+}
+
+message Header {
+  repeated Shred shreds = 1;
+
+  // NEXT ID: 2
+}
+
+message Shred {
+  oneof message {
+    ShredCode shred_code = 1;
+    ShredData shred_data = 2;
+  }
+
+  // NEXT ID: 3
+}
+
+message ShredCode {
+  oneof message {
+    LegacyShredCode legacy_shred_code = 1;
+    MerkleShredCode merkle_shred_code = 2;
+  }
+
+  // NEXT ID: 3
+}
+
+message ShredData {
+  oneof message {
+    LegacyShredData legacy_shred_data = 1;
+    MerkleShredData merkle_shred_data = 2;
+  }
+
+  // NEXT ID: 3
+}
+
+// Protobuf definitions for ShredCommonHeader, CodingShredHeader, DataShredHeader, and other related messages.
+
+message ShredCommonHeader {
+  bytes signature = 1;
+  ShredVariant shred_variant = 2;
+  uint64 slot = 3;
+  uint32 index = 4;
+  uint32 version = 5;
+  uint32 fec_set_index = 6;
+
+  // NEXT ID: 7
+}
+
+message CodingShredHeader {
+  uint32 num_data_shreds = 1;
+  uint32 num_coding_shreds = 2;
+  uint32 position = 3; // [0..num_coding_shreds)
+
+  // NEXT ID: 4
+}
+
+message DataShredHeader {
+  uint32 parent_offset = 1;
+  ShredFlags flags = 2;
+  uint32 size = 3; // common shred header + data shred header + data
+
+  // NEXT ID: 4
+}
+
+message LegacyShredCode {
+  ShredCommonHeader common_header = 1;
+  CodingShredHeader coding_header = 2;
+  bytes payload = 3;
+
+  // NEXT ID: 4
+}
+
+message MerkleShredCode {
+  ShredCommonHeader common_header = 1;
+  CodingShredHeader coding_header = 2;
+  bytes payload = 3;
+
+  // NEXT ID: 4
+}
+
+message LegacyShredData {
+  ShredCommonHeader common_header = 1;
+  DataShredHeader data_header = 2;
+  bytes payload = 3;
+
+  // NEXT ID: 4
+}
+
+message MerkleShredData {
+  ShredCommonHeader common_header = 1;
+  DataShredHeader data_header = 2;
+  bytes payload = 3;
+
+  // NEXT ID: 4
+}
+
+// Define the ShredFlags as a bitfield.
+message ShredFlags {
+  uint32 bits = 1;
+
+  // NEXT ID: 2
+}
+
+// Define the ShredVariant enum.
+message ShredVariant {
+  oneof variant {
+    LegacyCode legacy_code = 1;
+    LegacyData legacy_data = 2;
+    MerkleCode merkle_code = 3;
+    MerkleData merkle_data = 4;
+  }
+
+  // NEXT ID: 5
+}
+
+message LegacyCode {
+  // No additional fields needed
+}
+
+message LegacyData {
+  // No additional fields needed
+}
+
+message MerkleCode {
+  uint32 proof_size = 1;
+  bool chained = 2;
+  bool resigned = 3;
+
+  // NEXT ID: 4
+}
+
+message MerkleData {
+  uint32 proof_size = 1;
+  bool chained = 2;
+  bool resigned = 3;
+
+  // NEXT ID: 4
+}
+
+// Define the ShredType enum.
+enum ShredType {
+  DATA = 0;
+  CODE = 1;
+}
+
+//message
+
+message Misbehaviour {
+  // First header.
+  Header header1 = 1;
+
+  // Second header.
+  //
+  // Note that the message may be partially filled.  If `header1` and
+  // `header2` have the same `genesis_hash` or `epoch` (which is extremely
+  // likely), those fields can be omitted in the second header.
+  Header header2 = 2;
+
+  // NEXT ID: 3
+}

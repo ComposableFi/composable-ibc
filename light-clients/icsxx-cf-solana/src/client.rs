@@ -1,42 +1,74 @@
+use crate::{client_def::CfSolanaClient, error::Error, proto, Header, CLIENT_TYPE};
 use alloc::string::{String, ToString};
-
 use ibc::{
 	core::{ics02_client::height::Height, ics24_host::identifier::ClientId},
 	timestamp::Timestamp,
 };
-use lib::hash::CryptoHash;
+use proto_utils::BadMessage;
 use serde::{Deserialize, Serialize};
+use solana_sdk::{clock::Slot, pubkey::Pubkey};
+use std::time::Duration;
 
-use crate::{client_def::GuestClient, error::Error, CLIENT_TYPE};
+#[derive(Clone, Debug, PartialEq, Eq)]
+pub struct ClientState<PK> {
+	/// Highest available guest block height.
+	pub latest_height: Slot,
 
-super::wrap!(cf_guest_upstream::ClientState<PK> as ClientState);
-super::wrap!(impl<PK> proto for ClientState);
+	pub trusting_period_ns: u64,
+
+	/// Whether client is frozen.
+	pub is_frozen: bool,
+
+	/// Current validator's Public Key
+	pub current_leader: Pubkey,
+
+	/// Genesis timestamp
+	pub genesis_time: Timestamp,
+
+	/// Chain's slot duration.
+	pub slot_duration: Duration,
+
+	_ph: core::marker::PhantomData<PK>,
+}
+
+// super::wrap!(cf_guest_upstream::ClientState<PK> as ClientState);
+// super::wrap!(impl<PK> proto for ClientState);
+
+impl<PK> ClientState<PK> {
+	pub(crate) fn timestamp_for_slot(&self, slot: Slot) -> Timestamp {
+		Timestamp::from_nanoseconds(
+			self.genesis_time.nanoseconds() + (slot as u64 * self.slot_duration.as_nanos() as u64),
+		)
+		.unwrap()
+	}
+}
 
 impl<PK: guestchain::PubKey> ClientState<PK> {
 	pub fn new(
-		genesis_hash: CryptoHash,
-		latest_height: guestchain::BlockHeight,
+		latest_height: Slot,
 		trusting_period_ns: u64,
-		epoch_commitment: CryptoHash,
-		prev_epoch_commitment: Option<CryptoHash>,
 		is_frozen: bool,
+		current_validator: Pubkey,
+		genesis_time: Timestamp,
+		slot_duration: Duration,
 	) -> Self {
-		Self(cf_guest_upstream::ClientState::new(
-			genesis_hash,
+		Self {
 			latest_height,
 			trusting_period_ns,
-			epoch_commitment,
-			prev_epoch_commitment,
 			is_frozen,
-		))
+			current_leader: current_validator,
+			genesis_time,
+			slot_duration,
+			_ph: core::marker::PhantomData,
+		}
 	}
 
-	pub fn with_header(&self, header: &cf_guest_upstream::Header<PK>) -> Self {
-		Self(self.0.with_header(&header))
+	pub fn update_unchecked(self, header: Header<PK>) -> Self {
+		Self { latest_height: header.slot(), ..self }
 	}
 
-	pub fn frozen(&self) -> Self {
-		Self(self.0.frozen())
+	pub fn into_frozen(self) -> Self {
+		Self { is_frozen: true, ..self }
 	}
 
 	/// Verify the time and height delays
@@ -64,17 +96,23 @@ impl<PK: guestchain::PubKey> ClientState<PK> {
 	}
 
 	pub fn verify_height(&self, client_id: &ClientId, height: ibc::Height) -> Result<(), Error> {
-		if self.0.latest_height < height.revision_height.into() {
+		if self.latest_height < height.revision_height {
 			return Err(Error::InsufficientHeight {
-				latest_height: Height::new(1, self.0.latest_height.into()),
+				latest_height: Height::new(1, self.latest_height.into()),
 				target_height: height,
 			})
 		}
 
-		if self.0.is_frozen {
+		if self.is_frozen {
 			return Err(Error::ClientFrozen { client_id: client_id.clone() })
 		}
 		Ok(())
+	}
+
+	pub(crate) fn leader_for_slot(&self, _slot: Slot) -> Pubkey {
+		// TODO: implement the actual mapping from slot to leader (see
+		// `crate::solana::leader_schedule`)
+		self.current_leader.clone()
 	}
 }
 
@@ -88,14 +126,14 @@ where
 {
 	type UpgradeOptions = UpgradeOptions;
 
-	type ClientDef = GuestClient<PK>;
+	type ClientDef = CfSolanaClient<PK>;
 
 	fn chain_id(&self) -> ibc::core::ics24_host::identifier::ChainId {
 		ibc::core::ics24_host::identifier::ChainId::new(String::from("Solana"), 0)
 	}
 
 	fn client_def(&self) -> Self::ClientDef {
-		GuestClient::default()
+		CfSolanaClient::default()
 	}
 
 	fn client_type(&self) -> ibc::core::ics02_client::client_state::ClientType {
@@ -103,11 +141,11 @@ where
 	}
 
 	fn latest_height(&self) -> ibc::Height {
-		Height::new(1, u64::from(self.0.latest_height))
+		Height::new(1, u64::from(self.latest_height))
 	}
 
 	fn frozen_height(&self) -> Option<ibc::Height> {
-		self.0.is_frozen.then(|| Height::new(1, u64::from(self.0.latest_height)))
+		self.is_frozen.then(|| Height::new(1, u64::from(self.latest_height)))
 	}
 
 	fn upgrade(
@@ -116,17 +154,70 @@ where
 		_upgrade_options: Self::UpgradeOptions,
 		_chain_id: ibc::core::ics24_host::identifier::ChainId,
 	) -> Self {
-		self.0.latest_height = upgrade_height.revision_height.into();
+		self.latest_height = upgrade_height.revision_height.into();
 		self
 	}
 
 	fn expired(&self, elapsed: core::time::Duration) -> bool {
-		elapsed.as_nanos() as u64 > self.0.trusting_period_ns
+		elapsed.as_nanos() as u64 > self.trusting_period_ns
 	}
 
 	fn encode_to_vec(&self) -> Result<ibc::prelude::Vec<u8>, ibc::protobuf::Error> {
-		Ok(self.0.encode())
+		Ok(self.encode())
 	}
+}
+
+impl<PK: guestchain::PubKey> From<ClientState<PK>> for proto::ClientState {
+	fn from(state: ClientState<PK>) -> Self {
+		Self::from(&state)
+	}
+}
+
+impl<PK: guestchain::PubKey> From<&ClientState<PK>> for proto::ClientState {
+	fn from(state: &ClientState<PK>) -> Self {
+		Self {
+			latest_height: state.latest_height.into(),
+			trusting_period_ns: state.trusting_period_ns,
+			is_frozen: state.is_frozen,
+			current_leader: state.current_leader.to_bytes().to_vec(),
+			genesis_time: state.genesis_time.nanoseconds(),
+			slot_duration: state.slot_duration.as_nanos() as u64,
+		}
+	}
+}
+
+impl<PK: guestchain::PubKey> TryFrom<proto::ClientState> for ClientState<PK> {
+	type Error = BadMessage;
+	fn try_from(msg: proto::ClientState) -> Result<Self, Self::Error> {
+		Self::try_from(&msg)
+	}
+}
+
+impl<PK: guestchain::PubKey> TryFrom<&proto::ClientState> for ClientState<PK> {
+	type Error = BadMessage;
+
+	fn try_from(msg: &proto::ClientState) -> Result<Self, Self::Error> {
+		let current_leader_bytes: &[u8] = msg.current_leader.as_ref();
+		let current_leader = Pubkey::try_from(current_leader_bytes).map_err(|_| BadMessage)?;
+		let genesis_time = Timestamp::from_nanoseconds(msg.genesis_time).map_err(|_| BadMessage)?;
+		let slot_duration = Duration::from_nanos(msg.slot_duration);
+
+		Ok(Self {
+			latest_height: msg.latest_height.into(),
+			trusting_period_ns: msg.trusting_period_ns,
+			is_frozen: msg.is_frozen,
+			current_leader,
+			genesis_time,
+			slot_duration,
+			_ph: core::marker::PhantomData,
+		})
+	}
+}
+
+proto_utils::define_wrapper! {
+	proto: crate::proto::ClientState,
+	wrapper: ClientState<PK> where
+		PK: guestchain::PubKey = guestchain::validators::MockPubKey,
 }
 
 #[cfg(test)]
@@ -158,14 +249,7 @@ mod tests {
 	]);
 
 	fn check(state: ClientState<MockPubKey>) {
-		let want = ClientState::<MockPubKey>::new(
-			GENESIS_HASH.clone(),
-			5.into(),
-			64000000000000,
-			EPOCH_COMMITMENT.clone(),
-			Some(EPOCH_COMMITMENT.clone()),
-			false,
-		);
+		let want = ClientState::<MockPubKey>::new(5.into(), 64000000000000, false);
 		assert_eq!(want, state);
 	}
 

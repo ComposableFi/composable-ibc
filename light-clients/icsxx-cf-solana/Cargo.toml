@@ -8,10 +8,16 @@ edition = "2021"
 borsh = "0.10"
 bytemuck = { version = "1.14", default-features = false, features = ["must_cast"] }
 derive_more = { version = "0.99", features = ["from"], default-features = false }
-prost = { version = "0.11", features = ["prost-derive"], default-features = false }
-prost-12 = { package = "prost", version = "0.12", default-features = false }
+prost = { version = "0.12", features = ["prost-derive"], default-features = false }
+prost-11 = { package = "prost", version = "0.11", default-features = false }
 ed25519-consensus = { version = "2", default-features = false }
 serde = { version = "1.0", default-features = false, features = ["derive"] }
+proto-utils = { git = "https://github.com/composableFi/emulated-light-client", default-features = false }
+num_enum = { version = "0.7.3", default-features = false }
+static_assertions = "1.1.0"
+assert_matches = "1.5.0"
+rand_chacha = { version = "0.3.1", default-features = false }
+rand = { version = "0.8.5", default-features = false }
 
 # New IBC
 ibc-core-client-context = { git = "https://github.com/mina86/ibc-rs", rev = "6015aea441d4660f7f7ecd89b5e770a993448089", default-features = false }
@@ -33,9 +39,13 @@ trie-ids = { git = "https://github.com/ComposableFi/emulated-light-client/", def
 sealable-trie = { git = "https://github.com/ComposableFi/emulated-light-client/", features = ["borsh"], default-features = false }
 stdx = { git = "https://github.com/ComposableFi/emulated-light-client/", default-features = false }
 cf-guest-upstream = { package = "cf-guest", git = "https://github.com/ComposableFi/emulated-light-client/", default-features = false }
+bitflags = "2.4.2"
+solana-sdk = { git = "https://github.com/ComposableFi/mantis-solana", rev = "d92c52575aaf430ca1f06bc2589f26b0fedde7bf" }
+itertools = "0.11.0"
+bincode = "1.3.3"
 
 [build-dependencies]
-prost-build = { version = "0.11", default-features = false }
+prost-build = { version = "0.12", default-features = false }
 
 [dev-dependencies]
 insta = { version = "1.34.0" }

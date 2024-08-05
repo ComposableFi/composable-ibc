@@ -72,6 +72,8 @@ ibc-core-host = { git = "https://github.com/mina86/ibc-rs", rev = "2b50319f3460d
 ibc-core-host-types = { git = "https://github.com/mina86/ibc-rs", rev = "2b50319f3460d03e8781e5a834c4b56bdcfdc5bc", default-features = false }
 ibc-primitives = { git = "https://github.com/mina86/ibc-rs", rev = "2b50319f3460d03e8781e5a834c4b56bdcfdc5bc", default-features = false }
 ibc-testkit = { git = "https://github.com/mina86/ibc-rs", rev = "2b50319f3460d03e8781e5a834c4b56bdcfdc5bc", default-features = false }
+solana-sdk = { git = "https://github.com/ComposableFi/mantis-solana", rev = "d92c52575aaf430ca1f06bc2589f26b0fedde7bf" }
+
 # ibc-testkit               = { git = "https://github.com/mina86/ibc-rs", rev = "6015aea441d4660f7f7ecd89b5e770a993448089" }
 #ibc = { path = "../ibc-rs-mina/ibc" }
 #ibc-app-nft-transfer = { path = "../ibc-rs-mina/ibc-apps/ics721-nft-transfer" }

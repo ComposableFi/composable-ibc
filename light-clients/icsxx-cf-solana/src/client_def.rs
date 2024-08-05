@@ -18,21 +18,22 @@ use ibc::{
 	protobuf::Protobuf,
 };
 use prost::Message;
+use std::num::NonZeroU64;
 
 use crate::{error::Error, ClientMessage, ClientState, ConsensusState as ClientConsensusState};
 
 type Result<T = (), E = ibc::core::ics02_client::error::Error> = ::core::result::Result<T, E>;
 
 #[derive(Clone, Debug, PartialEq, Eq)]
-pub struct GuestClient<PK>(core::marker::PhantomData<PK>);
+pub struct CfSolanaClient<PK>(core::marker::PhantomData<PK>);
 
-impl<PK: PubKey> Default for GuestClient<PK> {
+impl<PK: PubKey> Default for CfSolanaClient<PK> {
 	fn default() -> Self {
 		Self(core::marker::PhantomData)
 	}
 }
 
-impl<PK> ClientDef for GuestClient<PK>
+impl<PK> ClientDef for CfSolanaClient<PK>
 where
 	PK: PubKey + Send + Sync,
 	PK::Signature: Send + Sync,
@@ -48,7 +49,51 @@ where
 		client_state: Self::ClientState,
 		client_msg: Self::ClientMessage,
 	) -> Result<(), Ics02ClientError> {
-		client_state.0.do_verify_client_message(self, client_msg.0).map_err(convert)
+		match client_msg {
+			ClientMessage::Header(header) => {
+				// The client can't be updated if no shreds were received
+				let shreds = header.shreds;
+				if shreds.is_empty() {
+					return Err(Ics02ClientError::implementation_specific(
+						"no shreds received".to_string(),
+					));
+				}
+
+				let slot = shreds.first().unwrap().slot();
+
+				// All shreds' slots should be the same
+				shreds.iter().skip(1).all(|s| s.slot() == slot).then(|| ()).ok_or_else(|| {
+					Ics02ClientError::implementation_specific(
+						"shreds have different slots".to_string(),
+					)
+				})?;
+
+				if slot <= client_state.latest_height().revision_height {
+					return Err(Ics02ClientError::implementation_specific(
+						"slot is not greater than latest height".to_string(),
+					));
+				}
+
+				let leader = client_state.leader_for_slot(slot);
+
+				// Verify all shreds
+				shreds
+					.iter()
+					.map(|shred| shred.sanitize().and_then(|_| shred.verify_with_root(&leader)))
+					.collect::<Result<Vec<_>, _>>()
+					.map_err(|e| {
+						Ics02ClientError::implementation_specific(alloc::format!(
+							"shred verification failed: {}",
+							e
+						))
+					})?;
+				Ok(())
+			},
+			ClientMessage::Misbehaviour(_) =>
+				return Err(Ics02ClientError::implementation_specific(
+					"misbehaviour not supported".to_string(),
+				)),
+		}
 	}
 
 	fn update_state<Ctx: ReaderContext>(
@@ -57,19 +102,22 @@ where
 		_client_id: ibc::core::ics24_host::identifier::ClientId,
 		client_state: Self::ClientState,
 		client_msg: Self::ClientMessage,
-	) -> Result<
-		(Self::ClientState, ibc::core::ics02_client::client_def::ConsensusUpdateResult<Ctx>),
-		Ics02ClientError,
-	> {
-		let header = match client_msg.0 {
-			cf_guest_upstream::ClientMessage::Header(header) => header,
+	) -> Result<(Self::ClientState, ConsensusUpdateResult<Ctx>), Ics02ClientError> {
+		let header = match client_msg {
+			ClientMessage::Header(header) => header,
 			_ => unreachable!("02-client will check for Header before calling update_state; qed"),
 		};
-		let header_consensus_state = ClientConsensusState::from(&header);
+		let hash = header.hash();
+		let slot = header.slot();
+		let timestamp = client_state.timestamp_for_slot(slot);
+		let nanos = NonZeroU64::try_from(timestamp.nanoseconds()).map_err(|e| {
+			Ics02ClientError::implementation_specific(alloc::format!("invalid timestamp: {}", e))
+		})?;
+		let header_consensus_state = ClientConsensusState::new(&hash, nanos);
 		let cs = Ctx::AnyConsensusState::wrap(&header_consensus_state).ok_or_else(|| {
 			Error::UnknownConsensusStateType { description: "Ctx::AnyConsensusState".to_string() }
 		})?;
-		Ok((client_state.with_header(&header), ConsensusUpdateResult::Single(cs)))
+		Ok((client_state.update_unchecked(header), ConsensusUpdateResult::Single(cs)))
 	}
 
 	fn update_state_on_misbehaviour(
@@ -77,22 +125,17 @@ where
 		client_state: Self::ClientState,
 		_client_msg: Self::ClientMessage,
 	) -> Result<Self::ClientState, Ics02ClientError> {
-		Ok(client_state.frozen())
+		Ok(client_state.into_frozen())
 	}
 
 	fn check_for_misbehaviour<Ctx: ReaderContext>(
 		&self,
-		ctx: &Ctx,
-		client_id: ibc::core::ics24_host::identifier::ClientId,
-		client_state: Self::ClientState,
-		client_msg: Self::ClientMessage,
+		_ctx: &Ctx,
+		_client_id: ibc::core::ics24_host::identifier::ClientId,
+		_client_state: Self::ClientState,
+		_client_msg: Self::ClientMessage,
 	) -> Result<bool, Ics02ClientError> {
-		let client_id = convert(client_id);
-		let ctx = CommonContext::new(ctx);
-		client_state
-			.0
-			.do_check_for_misbehaviour(ctx, &client_id, client_msg.0)
-			.map_err(convert)
+		todo!("check_for_misbehaviour")
 	}
 
 	fn verify_upgrade_and_update_state<Ctx: ReaderContext>(
@@ -336,7 +379,7 @@ fn verify_delay_passed<Ctx: ReaderContext, PK: PubKey>(
 	.map_err(|e| e.into())
 }
 
-impl<PK: PubKey> Verifier<PK> for GuestClient<PK> {
+impl<PK: PubKey> Verifier<PK> for CfSolanaClient<PK> {
 	fn verify(&self, message: &[u8], pubkey: &PK, signature: &PK::Signature) -> bool {
 		(|| {
 			let pubkey = pubkey.as_bytes();
@@ -347,106 +390,6 @@ impl<PK: PubKey> Verifier<PK> for GuestClient<PK> {
 			Some(())
 		})()
 		.is_some()
-	}
-}
-
-#[derive(bytemuck::TransparentWrapper)]
-#[repr(transparent)]
-#[transparent(Ctx)]
-struct CommonContext<Ctx, PK> {
-	ctx: Ctx,
-	_ph: core::marker::PhantomData<PK>,
-}
-
-impl<Ctx, PK> CommonContext<Ctx, PK> {
-	fn new(ctx: &Ctx) -> &Self {
-		bytemuck::TransparentWrapper::wrap_ref(ctx)
-	}
-}
-
-type NewResult<T = ()> = Result<T, ibc_core_client_types::error::ClientError>;
-
-impl<Ctx: ReaderContext, PK: PubKey> cf_guest_upstream::CommonContext<PK>
-	for CommonContext<Ctx, PK>
-{
-	type ConversionError = core::convert::Infallible;
-	type AnyClientState = ClientState<PK>;
-	type AnyConsensusState = ClientConsensusState;
-
-	fn host_metadata(
-		&self,
-	) -> NewResult<(ibc_primitives::Timestamp, ibc_core_client_types::Height)> {
-		unimplemented!("host_metadata")
-	}
-
-	fn set_client_state(
-		&mut self,
-		_client_id: &ibc_core_host_types::identifiers::ClientId,
-		_state: ClientState<PK>,
-	) -> NewResult<()> {
-		unimplemented!("set_client_state")
-	}
-
-	fn consensus_state(
-		&self,
-		_client_id: &ibc_core_host_types::identifiers::ClientId,
-		_height: ibc_core_client_types::Height,
-	) -> NewResult<Self::AnyConsensusState> {
-		unimplemented!("consensus_state")
-	}
-
-	fn consensus_state_neighbourhood(
-		&self,
-		client_id: &ibc_core_host_types::identifiers::ClientId,
-		height: ibc_core_client_types::Height,
-	) -> NewResult<cf_guest_upstream::Neighbourhood<Self::AnyConsensusState>> {
-		use cf_guest_upstream::Neighbourhood;
-
-		let res: Result<_, Ics02ClientError> = (|| {
-			let client_id = convert(client_id);
-			let height = convert(height);
-			Ok(if let Some(state) = self.ctx.maybe_consensus_state(&client_id, height)? {
-				Neighbourhood::This(state)
-			} else {
-				let prev = self.ctx.prev_consensus_state(&client_id, height)?;
-				let next = self.ctx.next_consensus_state(&client_id, height)?;
-				Neighbourhood::Neighbours(prev, next)
-			})
-		})();
-		match res {
-			Ok(res) => Ok(res.map(|state: Ctx::AnyConsensusState| {
-				// TODO(mina86): propagate error rather than unwrapping
-				let state: Self::AnyConsensusState = state.downcast().unwrap();
-				state
-			})),
-			Err(err) => Err(convert(err)),
-		}
-	}
-
-	fn store_consensus_state_and_metadata(
-		&mut self,
-		_client_id: &ibc_core_host_types::identifiers::ClientId,
-		_height: ibc_core_client_types::Height,
-		_consensus: Self::AnyConsensusState,
-		_host_timestamp: ibc_primitives::Timestamp,
-		_host_height: ibc_core_client_types::Height,
-	) -> NewResult {
-		unimplemented!("store_consensus_state_and_metadata")
-	}
-
-	fn delete_consensus_state_and_metadata(
-		&mut self,
-		_client_id: &ibc_core_host_types::identifiers::ClientId,
-		_height: ibc_core_client_types::Height,
-	) -> NewResult {
-		unimplemented!("delete_consensus_state_and_metadata")
-	}
-	
-	fn earliest_consensus_state(
-		&self,
-		_client_id: &ibc_core_host_types::identifiers::ClientId,
-	) -> NewResult<Option<(ibc_core_client_types::Height, Self::AnyConsensusState)>> {
-		unimplemented!("earliest_consensus_state")
 	}
 }
 

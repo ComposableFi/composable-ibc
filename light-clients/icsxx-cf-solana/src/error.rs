@@ -28,6 +28,13 @@ pub enum Error {
 	InsufficientHeight { latest_height: Height, target_height: Height },
 	ClientFrozen { client_id: ClientId },
 	UnknownConsensusStateType { description: String },
+	Solana(crate::solana::Error),
+}
+
+impl From<crate::solana::Error> for Error {
+	fn from(err: crate::solana::Error) -> Self {
+		Self::Solana(err)
+	}
 }
 
 impl fmt::Display for Error {
