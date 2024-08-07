@@ -20,7 +20,6 @@ use hyperspace_core::{
 
 #[tokio::main]
 async fn main() -> Result<()> {
-
 	logging::setup_logging();
 	let cli = Cli::parse();
 

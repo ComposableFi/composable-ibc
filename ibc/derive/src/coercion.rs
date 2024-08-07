@@ -60,7 +60,7 @@ impl State {
 		let crate_ = &self.crate_ident;
 		quote! {
 			fn encode_to_vec(&self) -> ::core::result::Result<::alloc::vec::Vec<u8>, ::tendermint_proto::Error> {
-				#crate_::protobuf::Protobuf::encode_vec(self)
+				return Ok(#crate_::protobuf::Protobuf::encode_vec(self.clone()));
 			}
 		}
 	}

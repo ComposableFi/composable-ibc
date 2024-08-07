@@ -366,7 +366,8 @@ async fn process_updates<A: Chain, B: Chain>(
 			};
 			timeout_heights.push(height);
 		}
-		let latest_update_height = updates.last().map_or(0, |(_, height, _, _)| height.revision_height);
+		let latest_update_height =
+			updates.last().map_or(0, |(_, height, _, _)| height.revision_height);
 		let height_is_greater = timeout_heights
 			.iter()
 			.any(|height| height.revision_height > latest_update_height);
@@ -505,8 +506,9 @@ async fn process_updates<A: Chain, B: Chain>(
 			msg_update_client.type_url,
 			msg_update_client.value.len()
 		);
-		if 
-			(height.revision_height != update_max_height.revision_height && messages.is_empty() && update_type.is_optional())
+		if (height.revision_height != update_max_height.revision_height &&
+			messages.is_empty() &&
+			update_type.is_optional())
 		{
 			log::info!(
 				"Skipping update for {} at height {} because it is not the latest update",

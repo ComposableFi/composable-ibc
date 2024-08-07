@@ -100,13 +100,11 @@ impl TryFrom<Any> for AnyClientMessage {
 impl From<AnyClientMessage> for Any {
 	fn from(client_msg: AnyClientMessage) -> Self {
 		match client_msg {
-			AnyClientMessage::Mock(MockClientMessage::Header(header)) => Any {
-				type_url: MOCK_HEADER_TYPE_URL.to_string(),
-				value: header.encode_vec().unwrap(),
-			},
+			AnyClientMessage::Mock(MockClientMessage::Header(header)) =>
+				Any { type_url: MOCK_HEADER_TYPE_URL.to_string(), value: header.encode_vec() },
 			AnyClientMessage::Mock(MockClientMessage::Misbehaviour(misbehaviour)) => Any {
 				type_url: MOCK_MISBEHAVIOUR_TYPE_URL.to_string(),
-				value: misbehaviour.encode_vec().unwrap(),
+				value: misbehaviour.encode_vec(),
 			},
 		}
 	}
@@ -191,7 +189,7 @@ mod tests {
 	#[test]
 	fn encode_any() {
 		let header = MockHeader::new(Height::new(1, 10)).with_timestamp(Timestamp::none());
-		let bytes = AnyClientMessage::from(header).encode_vec().unwrap();
+		let bytes = AnyClientMessage::from(header).encode_vec();
 
 		assert_eq!(
 			&bytes,

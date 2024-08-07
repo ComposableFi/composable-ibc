@@ -28,7 +28,7 @@ impl<T: Config> Connections<T> {
 		child::put(
 			&ChildInfo::new_default(T::PalletPrefix::get()),
 			&connection_key,
-			&connection_end.encode_vec().expect("encode connection end"),
+			&connection_end.clone().encode_vec(),
 		);
 	}
 

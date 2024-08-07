@@ -26,7 +26,7 @@ use ibc_proto::{
 #[cfg(feature = "cosmwasm")]
 use serde::{Deserializer, Serializer};
 
-pub const WASM_PUSH_WASM_CODE_TYPE_URL: &str = "/ibc.lightclients.wasm.v1.MsgPushNewWasmCode";
+pub const WASM_PUSH_WASM_CODE_TYPE_URL: &str = "/ibc.lightclients.wasm.v1.MsgStoreCode";
 
 #[derive(Clone, PartialEq, Debug, Eq)]
 pub struct MsgPushNewWasmCode {
@@ -52,10 +52,7 @@ impl TryFrom<RawMsgPushNewWasmCode> for MsgPushNewWasmCode {
 
 impl From<MsgPushNewWasmCode> for Any {
 	fn from(value: MsgPushNewWasmCode) -> Self {
-		Any {
-			type_url: WASM_PUSH_WASM_CODE_TYPE_URL.to_string(),
-			value: value.encode_vec(),
-		}
+		Any { type_url: WASM_PUSH_WASM_CODE_TYPE_URL.to_string(), value: value.encode_vec() }
 	}
 }
 

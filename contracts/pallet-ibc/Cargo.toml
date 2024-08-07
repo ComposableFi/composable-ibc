@@ -129,7 +129,8 @@ features = ["mocks"]
 
 [features]
 default = ["std"]
-testing = ["ibc/mocks"]
+# testing = ["ibc/mocks"]
+testing = []
 std = [
 	"codec/std",
 	"log/std",

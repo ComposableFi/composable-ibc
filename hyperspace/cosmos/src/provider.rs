@@ -168,7 +168,10 @@ where
 			(latest_height.revision_height - trusted_latest_h.revision_height) *
 				self.expected_block_time().as_secs(),
 		);
-		log::info!("Time passed since last update on cosmos {:?}", time_passed_since_last_update.as_secs());
+		log::info!(
+			"Time passed since last update on cosmos {:?}",
+			time_passed_since_last_update.as_secs()
+		);
 		let mut force_update_at = None;
 		// Force update if the finality event height is reached and the client was not
 		// updated for the trusting period / 2 to avoid client expiration
@@ -246,9 +249,7 @@ where
 					)),
 					signer: counterparty.account_id(),
 				};
-				let value = msg.encode_vec().map_err(|e| {
-					Error::from(format!("Failed to encode MsgUpdateClient {msg:?}: {e:?}"))
-				})?;
+				let value = msg.clone().encode_vec();
 				Any { value, type_url: msg.type_url() }
 			};
 

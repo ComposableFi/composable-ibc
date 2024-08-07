@@ -509,7 +509,7 @@ where
 	) -> Result<(), Ics02Error> {
 		client_state.verify_height(height)?;
 		let path = ConnectionsPath(connection_id.clone());
-		let value = expected_connection_end.encode_vec().map_err(Ics02Error::encode)?;
+		let value = expected_connection_end.clone().encode_vec();
 		verify_membership::<H::BlakeTwo256, _>(prefix, proof, root, path, value)
 			.map_err(Error::Anyhow)?;
 		Ok(())
@@ -530,7 +530,7 @@ where
 	) -> Result<(), Ics02Error> {
 		client_state.verify_height(height)?;
 		let path = ChannelEndsPath(port_id.clone(), *channel_id);
-		let value = expected_channel_end.encode_vec().map_err(Ics02Error::encode)?;
+		let value = expected_channel_end.clone().encode_vec();
 		verify_membership::<H::BlakeTwo256, _>(prefix, proof, root, path, value)
 			.map_err(Error::Anyhow)?;
 		Ok(())

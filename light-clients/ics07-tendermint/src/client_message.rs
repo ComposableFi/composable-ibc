@@ -33,7 +33,13 @@ use ibc_proto::{
 };
 use prost::Message;
 use serde::{Deserialize, Serialize};
-use tendermint::{block::signed_header::SignedHeader, validator::Set as ValidatorSet};
+use tendermint::{
+	block::{signed_header::SignedHeader, Commit, CommitSig},
+	crypto::signature::Verifier,
+	validator::Set as ValidatorSet,
+	vote::{SignedVote, ValidatorIndex},
+	PublicKey, Vote,
+};
 use tendermint_proto::Protobuf;
 
 pub const TENDERMINT_HEADER_TYPE_URL: &str = "/ibc.lightclients.tendermint.v1.Header";
@@ -56,7 +62,7 @@ pub enum ClientMessage {
 
 impl ics02_client::client_message::ClientMessage for ClientMessage {
 	fn encode_to_vec(&self) -> Result<Vec<u8>, tendermint_proto::Error> {
-		self.encode_vec()
+		Ok(self.clone().encode_vec())
 	}
 }
 
@@ -84,14 +90,10 @@ impl TryFrom<Any> for ClientMessage {
 impl From<ClientMessage> for Any {
 	fn from(msg: ClientMessage) -> Self {
 		match msg {
-			ClientMessage::Header(header) => Any {
-				value: header.encode_vec().expect("failed to encode ClientMessage.header"),
-				type_url: TENDERMINT_HEADER_TYPE_URL.to_string(),
-			},
+			ClientMessage::Header(header) =>
+				Any { value: header.encode_vec(), type_url: TENDERMINT_HEADER_TYPE_URL.to_string() },
 			ClientMessage::Misbehaviour(misbheaviour) => Any {
-				value: misbheaviour
-					.encode_vec()
-					.expect("failed to encode ClientMessage.misbehaviour"),
+				value: misbheaviour.encode_vec(),
 				type_url: TENDERMINT_MISBEHAVIOUR_TYPE_URL.to_string(),
 			},
 		}

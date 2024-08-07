@@ -191,7 +191,7 @@ impl<'a> ClientKeeper for Context<'a> {
 	) -> Result<(), Error> {
 		let client_states = ReadonlyClientStates::new(self.storage());
 		let data = client_states.get().ok_or_else(|| Error::client_not_found(client_id.clone()))?;
-		let encoded = Self::encode_client_state(client_state, data)?;
+		let encoded = Self::encode_client_state(client_state, checksum)?;
 		let mut client_state_storage = ClientStates::new(self.storage_mut());
 		client_state_storage.insert(encoded);
 		Ok(())

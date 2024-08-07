@@ -79,7 +79,7 @@ pub async fn create_clients(
 		signer: chain_a.account_id(),
 	};
 
-	let msg = Any { type_url: msg.type_url(), value: msg.encode_vec()? };
+	let msg = Any { type_url: msg.type_url(), value: msg.encode_vec() };
 
 	println!("In clients");
 	let tx_id = chain_a.submit(vec![msg]).await?;
@@ -97,7 +97,7 @@ pub async fn create_clients(
 		signer: chain_b.account_id(),
 	};
 
-	let msg = Any { type_url: msg.type_url(), value: msg.encode_vec()? };
+	let msg = Any { type_url: msg.type_url(), value: msg.encode_vec() };
 
 	// let tx_id = chain_a.submit(vec![msg.clone()]).await?;
 	// let client_id_b_on_a = chain_a.query_client_id_from_tx_hash(tx_id).await?;
@@ -113,7 +113,7 @@ pub async fn create_clients(
 	//   client_message: Any { type_url: "/ibc.lightclients.tendermint.v1.Header".to_owned(), value:
 	// Vec::new() }, };
 
-	// let msg = Any { type_url: msg.type_url(), value: msg.encode_vec()? };
+	// let msg = Any { type_url: msg.type_url(), value: msg.encode_vec() };
 
 	// println!("In clients");
 	// let tx_id = chain_a.submit(vec![msg]).await?;
@@ -136,7 +136,7 @@ pub async fn create_connection(
 		signer: chain_a.account_id(),
 	};
 
-	let msg = Any { type_url: msg.type_url(), value: msg.encode_vec()? };
+	let msg = Any { type_url: msg.type_url(), value: msg.encode_vec() };
 
 	let tx_id = chain_a.submit(vec![msg]).await?;
 	let connection_id_a = chain_a.query_connection_id_from_tx_hash(tx_id).await?;
@@ -193,7 +193,7 @@ pub async fn create_channel(
 
 	let msg = MsgChannelOpenInit::new(port_id, channel, chain_a.account_id());
 
-	let msg = Any { type_url: msg.type_url(), value: msg.encode_vec()? };
+	let msg = Any { type_url: msg.type_url(), value: msg.encode_vec() };
 
 	let tx_id = chain_a.submit(vec![msg]).await?;
 	let channel_id_a = chain_a.query_channel_id_from_tx_hash(tx_id).await?;

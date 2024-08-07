@@ -309,7 +309,6 @@ pub async fn query_ready_and_timed_out_packets(
 					// If sink does not have a client height that is equal to or greater than the packet
 					// creation height, we can't send it yet, packet_info.height should represent the packet
 					// creation height on source chain
-					
 					if source.get_proof_height(Height::new(source_height.revision_number, packet_height)).await.revision_height > latest_source_height_on_sink.revision_height {
 						// Sink does not have client update required to prove recv packet message
 						log::info!(target: "hyperspace", "Skipping packet as sink does not have client update required to prove recv packet message: {:?}", packet);

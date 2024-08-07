@@ -25,7 +25,6 @@ use super::merkle::MerkleProof;
 
 #[derive(Clone, PartialEq, Eq, Serialize, Deserialize)]
 #[serde(transparent)]
-#[repr(transparent)]
 pub struct CommitmentRoot {
 	#[serde(serialize_with = "crate::serializers::ser_hex_upper")]
 	#[serde(deserialize_with = "crate::serializers::deser_hex_upper")]

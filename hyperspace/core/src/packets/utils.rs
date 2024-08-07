@@ -303,7 +303,7 @@ pub async fn construct_timeout_message(
 			)?,
 			signer: source.account_id(),
 		};
-		let value = msg.encode_vec()?;
+		let value = msg.clone().encode_vec();
 		Any { value, type_url: msg.type_url() }
 	} else {
 		log::debug!(target: "hyperspace", "actual_proof_height={actual_proof_height}");
@@ -313,7 +313,7 @@ pub async fn construct_timeout_message(
 			proofs: Proofs::new(proof_unreceived, None, None, None, actual_proof_height)?,
 			signer: source.account_id(),
 		};
-		let value = msg.encode_vec()?;
+		let value = msg.clone().encode_vec();
 		Any { value, type_url: msg.type_url() }
 	};
 	Ok(msg)
@@ -343,7 +343,7 @@ pub async fn construct_recv_message(
 		proofs: Proofs::new(commitment_proof, None, None, None, actual_proof_height)?,
 		signer: sink.account_id(),
 	};
-	let value = msg.encode_vec()?;
+	let value = msg.clone().encode_vec();
 	let msg = Any { value, type_url: msg.type_url() };
 	Ok(msg)
 }
@@ -377,7 +377,7 @@ pub async fn construct_ack_message(
 		acknowledgement: ack.into(),
 		signer: sink.account_id(),
 	};
-	let value = msg.encode_vec()?;
+	let value = msg.clone().encode_vec();
 	let msg = Any { value, type_url: msg.type_url() };
 	Ok(msg)
 }

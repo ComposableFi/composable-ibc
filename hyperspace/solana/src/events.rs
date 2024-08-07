@@ -9,8 +9,8 @@ use lib::hash::CryptoHash;
 use serde::{Deserialize, Serialize};
 use solana_ibc::events::Epoch;
 use solana_transaction_status::EncodedConfirmedTransactionWithStatusMeta;
-use tokio::runtime::Runtime;
 use std::str::FromStr;
+use tokio::runtime::Runtime;
 
 use base64::Engine;
 use ibc::{
@@ -237,9 +237,8 @@ pub fn convert_new_event_to_old(
 					destination_channel: ChannelId::from_str(e.chan_id_on_b().as_str()).unwrap(),
 					data: e.packet_data().to_vec(),
 					timeout_height: match e.timeout_height_on_b() {
-						ibc_core_channel_types::timeout::TimeoutHeight::Never => {
-							Height { revision_height: 0, revision_number: 0 }
-						},
+						ibc_core_channel_types::timeout::TimeoutHeight::Never =>
+							Height { revision_height: 0, revision_number: 0 },
 						ibc_core_channel_types::timeout::TimeoutHeight::At(h) => Height {
 							revision_height: h.revision_height(),
 							revision_number: h.revision_number(),
@@ -264,9 +263,8 @@ pub fn convert_new_event_to_old(
 					destination_channel: ChannelId::from_str(e.chan_id_on_b().as_str()).unwrap(),
 					data: e.packet_data().to_vec(),
 					timeout_height: match e.timeout_height_on_b() {
-						ibc_core_channel_types::timeout::TimeoutHeight::Never => {
-							Height { revision_height: 0, revision_number: 0 }
-						},
+						ibc_core_channel_types::timeout::TimeoutHeight::Never =>
+							Height { revision_height: 0, revision_number: 0 },
 						ibc_core_channel_types::timeout::TimeoutHeight::At(h) => Height {
 							revision_height: h.revision_height(),
 							revision_number: h.revision_number(),
@@ -291,9 +289,8 @@ pub fn convert_new_event_to_old(
 					destination_channel: ChannelId::from_str(e.chan_id_on_b().as_str()).unwrap(),
 					data: e.packet_data().to_vec(),
 					timeout_height: match e.timeout_height_on_b() {
-						ibc_core_channel_types::timeout::TimeoutHeight::Never => {
-							Height { revision_height: 0, revision_number: 0 }
-						},
+						ibc_core_channel_types::timeout::TimeoutHeight::Never =>
+							Height { revision_height: 0, revision_number: 0 },
 						ibc_core_channel_types::timeout::TimeoutHeight::At(h) => Height {
 							revision_height: h.revision_height(),
 							revision_number: h.revision_number(),
@@ -319,9 +316,8 @@ pub fn convert_new_event_to_old(
 					destination_channel: ChannelId::from_str(e.chan_id_on_b().as_str()).unwrap(),
 					data: Vec::new(),
 					timeout_height: match e.timeout_height_on_b() {
-						ibc_core_channel_types::timeout::TimeoutHeight::Never => {
-							Height { revision_height: 0, revision_number: 0 }
-						},
+						ibc_core_channel_types::timeout::TimeoutHeight::Never =>
+							Height { revision_height: 0, revision_number: 0 },
 						ibc_core_channel_types::timeout::TimeoutHeight::At(h) => Height {
 							revision_height: h.revision_height(),
 							revision_number: h.revision_number(),
@@ -346,9 +342,8 @@ pub fn convert_new_event_to_old(
 					destination_channel: ChannelId::from_str(e.chan_id_on_b().as_str()).unwrap(),
 					data: Vec::new(), // Not sure about this
 					timeout_height: match e.timeout_height_on_b() {
-						ibc_core_channel_types::timeout::TimeoutHeight::Never => {
-							Height { revision_height: 0, revision_number: 0 }
-						},
+						ibc_core_channel_types::timeout::TimeoutHeight::Never =>
+							Height { revision_height: 0, revision_number: 0 },
 						ibc_core_channel_types::timeout::TimeoutHeight::At(h) => Height {
 							revision_height: h.revision_height(),
 							revision_number: h.revision_number(),
@@ -614,7 +609,7 @@ pub async fn get_signatures_upto_height(
 				// 	solana_transaction_status::EncodedTransaction::Json(e) => {
 				// 		println!("Error in transaction {:?}", e.signatures);
 				// 	},
-				//   _ => panic!("WTF")	
+				//   _ => panic!("WTF")
 				// }
 				continue;
 			}
@@ -773,11 +768,16 @@ pub struct Response {
 #[test]
 pub fn testing_signatures() {
 	println!("I am testing signatures");
-	let rpc = RpcClient::new("https://mainnet.helius-rpc.com/?api-key=65520d87-04b2-43a5-b5d5-35d5db0601b3".to_string());
+	let rpc = RpcClient::new(
+		"https://mainnet.helius-rpc.com/?api-key=65520d87-04b2-43a5-b5d5-35d5db0601b3".to_string(),
+	);
 	let program_id = Pubkey::from_str("2HLLVco5HvwWriNbUhmVwA2pCetRkpgrqwnjcsZdyTKT").unwrap();
 	let upto_height = 116806;
 	println!("I am testing signatures");
-	let signatures = Runtime::new().unwrap().block_on(get_signatures_upto_height(rpc, program_id, upto_height));
+	let signatures =
+		Runtime::new()
+			.unwrap()
+			.block_on(get_signatures_upto_height(rpc, program_id, upto_height));
 	signatures.0.iter().for_each(|sig| {
 		println!("Height {}", sig.1.block_height);
 	})
@@ -823,17 +823,16 @@ pub fn testing_events() {
 		.iter()
 		.filter_map(|tx| match tx {
 			solana_ibc::events::Event::IbcEvent(e) => match e {
-				ibc_core_handler_types::events::IbcEvent::WriteAcknowledgement(packet) => {
-					if packet.chan_id_on_a().as_str() == &channel_id.to_string()
-						&& packet.port_id_on_a().as_str() == port_id.as_str()
-						&& seqs.iter().find(|&&seq| packet.seq_on_a().value() == seq).is_some()
+				ibc_core_handler_types::events::IbcEvent::WriteAcknowledgement(packet) =>
+					if packet.chan_id_on_a().as_str() == &channel_id.to_string() &&
+						packet.port_id_on_a().as_str() == port_id.as_str() &&
+						seqs.iter().find(|&&seq| packet.seq_on_a().value() == seq).is_some()
 					{
 						println!("We found packet");
 						Some(packet)
 					} else {
 						None
-					}
-				},
+					},
 				_ => None,
 			},
 			_ => None,

@@ -64,10 +64,7 @@ where
 	<AnyClientMessage as TryFrom<Any>>::Error: Display,
 {
 	pub fn to_any(&self) -> Any {
-		Any {
-			value: self.clone().encode_vec(),
-			type_url: WASM_CLIENT_MESSAGE_TYPE_URL.to_string(),
-		}
+		Any { value: self.clone().encode_vec(), type_url: WASM_CLIENT_MESSAGE_TYPE_URL.to_string() }
 	}
 }
 

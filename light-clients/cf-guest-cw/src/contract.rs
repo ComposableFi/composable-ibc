@@ -40,17 +40,21 @@ use cf_guest::{client_def::GuestClient, proof::verify};
 #[cfg(not(feature = "library"))]
 use cosmwasm_std::entry_point;
 use cosmwasm_std::{to_binary, Binary, Deps, DepsMut, Env, MessageInfo, Response, StdResult};
-use ibc::core::{
-	ics02_client::{
-		client_consensus::ConsensusState as _,
-		client_def::{ClientDef, ConsensusUpdateResult},
-		client_state::ClientState as _,
-		context::{ClientKeeper, ClientReader},
+use ibc::{
+	core::{
+		ics02_client::{
+			client_consensus::ConsensusState as _,
+			client_def::{ClientDef, ConsensusUpdateResult},
+			client_state::ClientState as _,
+			context::{ClientKeeper, ClientReader},
+		},
+		ics23_commitment::commitment::CommitmentPrefix,
+		ics24_host::identifier::ClientId,
 	},
-	ics23_commitment::commitment::CommitmentPrefix,
-	ics24_host::identifier::ClientId,
+	protobuf::Protobuf,
 };
 use ics08_wasm::{instantiate::InstantiateMessage, SUBJECT_PREFIX};
+use prost::Message;
 use std::str::FromStr;
 
 // #[entry_point]
@@ -59,32 +63,45 @@ use std::str::FromStr;
 //     Ok(Response::default())
 // }
 
+fn process_instantiate_msg(
+	msg: InstantiateMessage,
+	ctx: &mut Context,
+	client_id: ClientId,
+) -> Result<Binary, ContractError> {
+	let any = ibc_proto::google::protobuf::Any::decode(&mut msg.client_state.as_slice())?;
+	let client_state = cf_guest::ClientState::decode_vec(&any.value)?;
+	let any = ibc_proto::google::protobuf::Any::decode(&mut msg.consensus_state.as_slice())?;
+	let consensus_state = cf_guest::ConsensusState::decode_vec(&any.value)?;
+
+	ctx.checksum = Some(msg.checksum);
+	let height = client_state.latest_height();
+	ctx.store_client_state(client_id.clone(), client_state)
+		.map_err(ContractError::from)?;
+	ctx.store_consensus_state(client_id.clone(), height, consensus_state)
+		.map_err(ContractError::from)?;
+
+	ctx.store_update_height(client_id.clone(), height, ctx.host_height())
+		.map_err(ContractError::from)?;
+	ctx.store_update_time(client_id, height, ctx.host_timestamp())
+		.map_err(ContractError::from)?;
+
+	Ok(to_binary(&ContractResult::success())?)
+}
+
 #[cfg_attr(not(feature = "library"), entry_point)]
 pub fn instantiate(
 	deps: DepsMut,
 	env: Env,
 	_info: MessageInfo,
-	_msg: InstantiateMessage,
+	msg: InstantiateMessage,
 ) -> Result<Response, ContractError> {
-	// let client_state = Context::decode_client_state::<crate::crypto::PubKey>(&_msg.client_state)
-	// 	.map_err(|e| ContractError::Client(e.to_string()))?;
-
-	// let height = client_state.latest_height();
-
-	// let consensus_state =
-	// 	Context::decode_consensus_state::<crate::crypto::PubKey>(&_msg.consensus_state)
-	// 		.map_err(|e| ContractError::Client(e.to_string()))?;
-
 	let client_id = ClientId::from_str("08-wasm-0").expect("client id is valid");
 
-	let _client = GuestClient::<crate::crypto::PubKey>::default();
 	let mut ctx = Context::new(deps, env);
-	let client_state = ctx.client_state(&client_id)?;
-	let latest_height = client_state.latest_height();
-	ctx.store_update_height(client_id.clone(), latest_height, ctx.host_height())?;
-	ctx.store_update_time(client_id, latest_height, ctx.host_timestamp())?;
-
-	Ok(Response::default())
+	let data = process_instantiate_msg(msg, &mut ctx, client_id.clone())?;
+	let mut response = Response::default();
+	response.data = Some(data);
+	Ok(response)
 }
 
 #[cfg_attr(not(feature = "library"), entry_point)]
@@ -191,11 +208,10 @@ fn process_message(
 						ConsensusUpdateResult::Single(cs) => {
 							ctx.store_consensus_state(client_id.clone(), height, cs)?;
 						},
-						ConsensusUpdateResult::Batch(css) => {
+						ConsensusUpdateResult::Batch(css) =>
 							for (height, cs) in css {
 								ctx.store_consensus_state(client_id.clone(), height, cs)?;
-							}
-						},
+							},
 					}
 					if u64::from(cs.0.latest_height) > latest_revision_height {
 						ctx.store_client_state(client_id, cs)?;
@@ -250,9 +266,7 @@ pub fn query(deps: Deps, env: Env, msg: QueryMsg) -> StdResult<Binary> {
 		QueryMsg::Status(StatusMsg {}) => {
 			let client_state = match get_client_state::<crate::crypto::PubKey>(deps) {
 				Ok(state) => state,
-				Err(_) => {
-					return to_binary(&QueryResponse::success().status("Unknown".to_string()))
-				},
+				Err(_) => return to_binary(&QueryResponse::success().status("Unknown".to_string())),
 			};
 
 			if client_state.frozen_height().is_some() {
@@ -262,9 +276,7 @@ pub fn query(deps: Deps, env: Env, msg: QueryMsg) -> StdResult<Binary> {
 			let height = client_state.latest_height();
 			let consensus_state = match get_consensus_state(deps, &client_id, height) {
 				Ok(state) => state,
-				Err(_) => {
-					return to_binary(&QueryResponse::success().status("Expired".to_string()))
-				},
+				Err(_) => return to_binary(&QueryResponse::success().status("Expired".to_string())),
 			};
 
 			let last_update = consensus_state.0.timestamp_ns.get();

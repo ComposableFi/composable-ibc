@@ -961,9 +961,9 @@ pub mod pallet {
 						&coin.denom.to_string(),
 					)
 					.ok(),
-					ibc_denom: coin.denom.to_string().as_bytes().to_vec(),
-					source_channel: source_channel.to_string().as_bytes().to_vec(),
-					destination_channel: destination_channel.to_string().as_bytes().to_vec(),
+					ibc_denom: coin.denom.to_string().into_bytes(),
+					source_channel: source_channel.to_string().into_bytes(),
+					destination_channel: destination_channel.to_string().into_bytes(),
 				});
 			};
 
@@ -1016,6 +1016,8 @@ pub mod pallet {
 				use ibc_primitives::Error::*;
 				match e {
 					SendPacketError { .. } => Error::<T>::TransferSend,
+					// basically that can be anything, as simple as Balance too, but how one may get
+					// error of it?........
 					SendTransferError { .. } => Error::<T>::TransferSend,
 
 					ReceivePacketError { .. } => Error::<T>::TransferProtocol,
@@ -1047,10 +1049,10 @@ pub mod pallet {
 					&coin.denom.to_string(),
 				)
 				.ok(),
-				ibc_denom: coin.denom.to_string().as_bytes().to_vec(),
+				ibc_denom: coin.denom.to_string().into_bytes(),
 				is_sender_source,
-				source_channel: source_channel.to_string().as_bytes().to_vec(),
-				destination_channel: destination_channel.to_string().as_bytes().to_vec(),
+				source_channel: source_channel.to_string().into_bytes(),
+				destination_channel: destination_channel.to_string().into_bytes(),
 			});
 			Ok(())
 		}

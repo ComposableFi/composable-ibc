@@ -156,7 +156,7 @@ pub struct CommonClientState {
 	/// Last time when client was updated
 	pub last_client_update_time: SystemTime,
 	/// Flag which provides information if handshake is completed
-	/// 
+	///
 	/// Used to prevent finding proof for client state, connection state and channel state
 	/// once the handshake is completed.
 	pub handshake_completed: bool,
@@ -944,6 +944,7 @@ pub fn filter_events_by_ids(
 		IbcEvent::TimeoutOnClosePacket(e) => filter_packet(&e.packet),
 		IbcEvent::CreateClient(e) => filter_client_attributes(&e.0),
 		IbcEvent::UpdateClient(e) => filter_client_attributes(&e.common),
+		IbcEvent::UpdateClientProposal(e) => client_ids.contains(&e.client_id),
 		IbcEvent::UpgradeClient(e) => filter_client_attributes(&e.0),
 		IbcEvent::ClientMisbehaviour(e) => filter_client_attributes(&e.0),
 		IbcEvent::OpenInitConnection(e) => filter_connection_attributes(&e.0),

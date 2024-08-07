@@ -49,7 +49,7 @@ impl ConsensusState {
 	pub fn to_any(&self) -> Any {
 		Any {
 			type_url: GRANDPA_CONSENSUS_STATE_TYPE_URL.to_string(),
-			value: self.encode_vec().expect("encode ConsensusState"),
+			value: self.clone().encode_vec(),
 		}
 	}
 
@@ -102,7 +102,7 @@ impl ibc::core::ics02_client::client_consensus::ConsensusState for ConsensusStat
 	}
 
 	fn encode_to_vec(&self) -> Result<Vec<u8>, tendermint_proto::Error> {
-		self.encode_vec()
+		Ok(self.clone().encode_vec())
 	}
 }
 

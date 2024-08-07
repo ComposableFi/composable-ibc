@@ -309,11 +309,14 @@ impl VerifyClientMessage {
 		};
 		Ok(client_message)
 	}
-	fn decode_client_message_raw(raw: Bytes) -> Result<ClientMessage<crate::crypto::PubKey>, ContractError> {
+	fn decode_client_message_raw(
+		raw: Bytes,
+	) -> Result<ClientMessage<crate::crypto::PubKey>, ContractError> {
 		let any = Any::decode(&mut raw.as_slice())?;
 		let client_message = cf_guest::ClientMessage::decode_vec(&any.value)?;
 		// let client_message = match &*any.type_url {
-		// 	cf_guest::proto::Header::IBC_TYPE_URL => ClientMessage::Header(Header::decode_vec(&any.value)?),
+		// 	cf_guest::proto::Header::IBC_TYPE_URL =>
+		// ClientMessage::Header(Header::decode_vec(&any.value)?),
 		// 	cf_guest::proto::Misbehaviour::IBC_TYPE_URL => {
 		// 		ClientMessage::Misbehaviour(Misbehaviour::decode_vec(&any.value)?)
 		// 	},

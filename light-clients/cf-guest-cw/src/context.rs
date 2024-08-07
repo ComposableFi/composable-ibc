@@ -21,9 +21,12 @@ use crate::{
 	ContractError,
 };
 use cf_guest::{ClientState, ConsensusState};
-use cosmwasm_std::{DepsMut, Deps, Empty, Env, Storage};
+use cosmwasm_std::{Deps, DepsMut, Empty, Env, Storage};
 use ibc::{
-	core::{ics02_client::{error::Error, events::Checksum}, ics26_routing::context::ReaderContext},
+	core::{
+		ics02_client::{error::Error, events::Checksum},
+		ics26_routing::context::ReaderContext,
+	},
 	Height,
 };
 use std::{fmt, fmt::Debug};
