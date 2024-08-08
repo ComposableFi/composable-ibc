@@ -107,13 +107,8 @@ where
 			ClientMessage::Header(header) => header,
 			_ => unreachable!("02-client will check for Header before calling update_state; qed"),
 		};
-		let hash = header.hash();
-		let slot = header.slot();
-		let timestamp = client_state.timestamp_for_slot(slot);
-		let nanos = NonZeroU64::try_from(timestamp.nanoseconds()).map_err(|e| {
-			Ics02ClientError::implementation_specific(alloc::format!("invalid timestamp: {}", e))
-		})?;
-		let header_consensus_state = ClientConsensusState::new(&hash, nanos);
+		let header_consensus_state =
+			ClientConsensusState::from_header_and_client_state(&header, &client_state)?;
 		let cs = Ctx::AnyConsensusState::wrap(&header_consensus_state).ok_or_else(|| {
 			Error::UnknownConsensusStateType { description: "Ctx::AnyConsensusState".to_string() }
 		})?;
@@ -130,12 +125,47 @@ where
 
 	fn check_for_misbehaviour<Ctx: ReaderContext>(
 		&self,
-		_ctx: &Ctx,
-		_client_id: ibc::core::ics24_host::identifier::ClientId,
-		_client_state: Self::ClientState,
-		_client_msg: Self::ClientMessage,
+		ctx: &Ctx,
+		client_id: ibc::core::ics24_host::identifier::ClientId,
+		client_state: Self::ClientState,
+		client_msg: Self::ClientMessage,
 	) -> Result<bool, Ics02ClientError> {
-		todo!("check_for_misbehaviour")
+		match client_msg {
+			ClientMessage::Header(header) => {
+				// The client can't be updated if no shreds were received
+				let height = header.height();
+
+				// If we received an update from the past...
+				if height <= client_state.latest_height() {
+					// ...and we have the consensus state for that height, we need to check if
+					// they're the same, otherwise we have a misbehaviour.
+					if let Ok(existing_consensus_state) = ctx.consensus_state(&client_id, height) {
+						let header_consensus_state =
+							ClientConsensusState::from_header_and_client_state(
+								&header,
+								&client_state,
+							)?;
+						let new_consensus_state = Ctx::AnyConsensusState::wrap(
+							&header_consensus_state,
+						)
+						.ok_or_else(|| Error::UnknownConsensusStateType {
+							description: "Ctx::AnyConsensusState".to_string(),
+						})?;
+
+						// The consensus state is different, so we have a misbehaviour.
+						if existing_consensus_state != new_consensus_state {
+							return Ok(true);
+						}
+					}
+				}
+
+				Ok(false)
+			},
+			ClientMessage::Misbehaviour(_) =>
+				return Err(Ics02ClientError::implementation_specific(
+					"misbehaviour not supported".to_string(),
+				)),
+		}
 	}
 
 	fn verify_upgrade_and_update_state<Ctx: ReaderContext>(

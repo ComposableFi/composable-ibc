@@ -1,5 +1,6 @@
+use crate::{ClientState, Header};
 use core::{convert::Infallible, num::NonZeroU64};
-
+use ibc::core::ics02_client::error::Error as Ics02ClientError;
 use lib::hash::CryptoHash;
 use solana_sdk::hash::Hash;
 
@@ -13,6 +14,18 @@ impl ConsensusState {
 			&CryptoHash(block_hash.to_bytes()),
 			timestamp_ns,
 		))
+	}
+
+	pub fn from_header_and_client_state(
+		header: &Header<()>,
+		client_state: &ClientState<()>,
+	) -> Result<Self, Ics02ClientError> {
+		let hash = header.hash();
+		let timestamp = client_state.timestamp_for_slot(header.slot());
+		let nanos = NonZeroU64::try_from(timestamp.nanoseconds()).map_err(|e| {
+			Ics02ClientError::implementation_specific(alloc::format!("invalid timestamp: {}", e))
+		})?;
+		Ok(Self::new(&hash, nanos))
 	}
 }
 
