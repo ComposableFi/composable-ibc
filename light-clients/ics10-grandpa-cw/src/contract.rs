@@ -118,10 +118,23 @@ impl grandpa_light_client_primitives::HostFunctions for HostFunctions {
 	}
 }
 
-#[entry_point]
-pub fn migrate(_deps: DepsMut, _env: Env, _msg: MigrateMsg) -> Result<Response, ContractError> {
-    // No state migrations performed, just returned a Response
-    Ok(Response::default())
+fn process_instantiate_msg(
+	msg: InstantiateMessage,
+	ctx: &mut Context<HostFunctions>,
+	client_id: ClientId,
+) -> Result<Binary, ContractError> {
+	let any = Any::decode(&mut msg.client_state.as_slice())?;
+	let client_state = ClientState::decode_vec(&any.value)?;
+	let any = Any::decode(&mut msg.consensus_state.as_slice())?;
+	let consensus_state = ConsensusState::decode_vec(&any.value)?;
+
+	let height = client_state.latest_height();
+	ctx.checksum = Some(msg.checksum);
+	ctx.store_client_state(client_id.clone(), client_state)
+		.map_err(|e| ContractError::Grandpa(e.to_string()))?;
+	ctx.store_consensus_state(client_id, height, consensus_state)
+		.map_err(|e| ContractError::Grandpa(e.to_string()))?;
+	Ok(to_binary(&ContractResult::success())?)
 }
 
 #[cfg_attr(not(feature = "library"), entry_point)]

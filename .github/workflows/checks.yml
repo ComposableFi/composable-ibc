@@ -3,12 +3,12 @@ name: Cargo Check
 on:
   pull_request:
     branches:
-      - 'main'
+      - 'master'
       - 'develop'
       - 'release*'
   push:
     branches:
-      - 'main'
+      - 'master'
       - 'develop'
       - 'release*'
 
