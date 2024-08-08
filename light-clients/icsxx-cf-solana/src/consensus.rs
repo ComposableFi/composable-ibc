@@ -16,13 +16,13 @@ impl ConsensusState {
 	}
 
 	pub fn from_header_and_client_state(
-		header: &Header<()>,
-		client_state: &ClientState<()>,
+		header: &Header,
+		client_state: &ClientState,
 	) -> Result<Self, Error> {
 		let hash = header.calculate_hash()?;
 		let timestamp = client_state.timestamp_for_slot(header.slot());
 		let nanos =
-			NonZeroU64::try_from(timestamp.nanoseconds()).map_err(|e| Error::InvalidTimestamp)?;
+			NonZeroU64::try_from(timestamp.nanoseconds()).map_err(|_| Error::InvalidTimestamp)?;
 		Ok(Self::new(&hash, nanos))
 	}
 }

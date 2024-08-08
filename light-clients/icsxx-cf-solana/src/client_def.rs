@@ -1,10 +1,6 @@
-use core::str::FromStr;
-
-use guestchain::Signature;
-
 use crate::alloc::string::ToString;
 use alloc::vec::Vec;
-use guestchain::{PubKey, Verifier};
+use core::str::FromStr;
 use ibc::{
 	core::{
 		ics02_client::{
@@ -18,28 +14,23 @@ use ibc::{
 	protobuf::Protobuf,
 };
 use prost::Message;
-use std::num::NonZeroU64;
 
 use crate::{error::Error, ClientMessage, ClientState, ConsensusState as ClientConsensusState};
 
 type Result<T = (), E = ibc::core::ics02_client::error::Error> = ::core::result::Result<T, E>;
 
 #[derive(Clone, Debug, PartialEq, Eq)]
-pub struct CfSolanaClient<PK>(core::marker::PhantomData<PK>);
+pub struct CfSolanaClient;
 
-impl<PK: PubKey> Default for CfSolanaClient<PK> {
+impl Default for CfSolanaClient {
 	fn default() -> Self {
-		Self(core::marker::PhantomData)
+		Self
 	}
 }
 
-impl<PK> ClientDef for CfSolanaClient<PK>
-where
-	PK: PubKey + Send + Sync,
-	PK::Signature: Send + Sync,
-{
-	type ClientMessage = ClientMessage<PK>;
-	type ClientState = ClientState<PK>;
+impl ClientDef for CfSolanaClient {
+	type ClientMessage = ClientMessage;
+	type ClientState = ClientState;
 	type ConsensusState = ClientConsensusState;
 
 	fn verify_client_message<Ctx: ReaderContext>(
@@ -277,7 +268,7 @@ where
 		commitment: ibc::core::ics04_channel::commitment::PacketCommitment,
 	) -> Result<(), Ics02ClientError> {
 		client_state.verify_height(client_id, height)?;
-		verify_delay_passed::<Ctx, PK>(ctx, height, connection_end)?;
+		verify_delay_passed::<Ctx>(ctx, height, connection_end)?;
 
 		let path = ibc_core_host_types::path::CommitmentPath {
 			port_id: convert(port_id),
@@ -303,7 +294,7 @@ where
 	) -> Result<(), Ics02ClientError> {
 		// client state height = consensus state height
 		client_state.verify_height(client_id, height)?;
-		verify_delay_passed::<Ctx, PK>(ctx, height, connection_end)?;
+		verify_delay_passed::<Ctx>(ctx, height, connection_end)?;
 
 		let path = ibc_core_host_types::path::AckPath {
 			port_id: convert(port_id),
@@ -327,7 +318,7 @@ where
 		sequence: ibc::core::ics04_channel::packet::Sequence,
 	) -> Result<(), Ics02ClientError> {
 		client_state.verify_height(client_id, height)?;
-		verify_delay_passed::<Ctx, PK>(ctx, height, connection_end)?;
+		verify_delay_passed::<Ctx>(ctx, height, connection_end)?;
 
 		let path = ibc_core_host_types::path::SeqRecvPath(convert(port_id), convert(channel_id));
 		let mut seq_bytes = Vec::new();
@@ -349,7 +340,7 @@ where
 		sequence: ibc::core::ics04_channel::packet::Sequence,
 	) -> Result<(), Ics02ClientError> {
 		client_state.verify_height(client_id, height)?;
-		verify_delay_passed::<Ctx, PK>(ctx, height, connection_end)?;
+		verify_delay_passed::<Ctx>(ctx, height, connection_end)?;
 
 		let path = ibc_core_host_types::path::ReceiptPath {
 			port_id: convert(port_id),
@@ -360,7 +351,7 @@ where
 	}
 }
 
-fn verify_delay_passed<Ctx: ReaderContext, PK: PubKey>(
+fn verify_delay_passed<Ctx: ReaderContext>(
 	ctx: &Ctx,
 	height: ibc::Height,
 	connection_end: &ibc::core::ics03_connection::connection::ConnectionEnd,
@@ -380,7 +371,7 @@ fn verify_delay_passed<Ctx: ReaderContext, PK: PubKey>(
 	let delay_period_height = ctx.block_delay(delay_period_time);
 	let delay_period_time_u64 = u64::try_from(delay_period_time.as_nanos()).unwrap();
 
-	ClientState::<PK>::verify_delay_passed(
+	ClientState::verify_delay_passed(
 		current_timestamp,
 		current_height,
 		processed_time.nanoseconds(),
@@ -389,20 +380,6 @@ fn verify_delay_passed<Ctx: ReaderContext, PK: PubKey>(
 		delay_period_height,
 	)
 	.map_err(|e| e.into())
-}
-
-impl<PK: PubKey> Verifier<PK> for CfSolanaClient<PK> {
-	fn verify(&self, message: &[u8], pubkey: &PK, signature: &PK::Signature) -> bool {
-		(|| {
-			let pubkey = pubkey.as_bytes();
-			let pubkey = ed25519_consensus::VerificationKey::try_from(&pubkey[..]).ok()?;
-			let signature = signature.as_bytes();
-			let sig = ed25519_consensus::Signature::try_from(&signature[..]).ok()?;
-			pubkey.verify(&sig, message).ok()?;
-			Some(())
-		})()
-		.is_some()
-	}
 }
 
 // Helper wrappers

@@ -10,7 +10,7 @@ use solana_sdk::{clock::Slot, pubkey::Pubkey};
 use std::time::Duration;
 
 #[derive(Clone, Debug, PartialEq, Eq)]
-pub struct ClientState<PK> {
+pub struct ClientState {
 	/// Highest available guest block height.
 	pub latest_height: Slot,
 
@@ -27,14 +27,12 @@ pub struct ClientState<PK> {
 
 	/// Chain's slot duration.
 	pub slot_duration: Duration,
-
-	_ph: core::marker::PhantomData<PK>,
 }
 
-// super::wrap!(cf_guest_upstream::ClientState<PK> as ClientState);
-// super::wrap!(impl<PK> proto for ClientState);
+// super::wrap!(cf_guest_upstream::ClientState as ClientState);
+// super::wrap!(impl proto for ClientState);
 
-impl<PK> ClientState<PK> {
+impl ClientState {
 	pub(crate) fn timestamp_for_slot(&self, slot: Slot) -> Timestamp {
 		Timestamp::from_nanoseconds(
 			self.genesis_time.nanoseconds() + (slot as u64 * self.slot_duration.as_nanos() as u64),
@@ -43,7 +41,7 @@ impl<PK> ClientState<PK> {
 	}
 }
 
-impl<PK: guestchain::PubKey> ClientState<PK> {
+impl ClientState {
 	pub fn new(
 		latest_height: Slot,
 		trusting_period_ns: u64,
@@ -59,11 +57,10 @@ impl<PK: guestchain::PubKey> ClientState<PK> {
 			current_leader: current_validator,
 			genesis_time,
 			slot_duration,
-			_ph: core::marker::PhantomData,
 		}
 	}
 
-	pub fn update_unchecked(self, header: Header<PK>) -> Self {
+	pub fn update_unchecked(self, header: Header) -> Self {
 		Self { latest_height: header.slot(), ..self }
 	}
 
@@ -119,14 +116,10 @@ impl<PK: guestchain::PubKey> ClientState<PK> {
 #[derive(Clone, Debug, PartialEq, Eq, Serialize, Deserialize)]
 pub struct UpgradeOptions {}
 
-impl<PK> ibc::core::ics02_client::client_state::ClientState for ClientState<PK>
-where
-	PK: guestchain::PubKey + Send + Sync,
-	PK::Signature: Send + Sync,
-{
+impl ibc::core::ics02_client::client_state::ClientState for ClientState {
 	type UpgradeOptions = UpgradeOptions;
 
-	type ClientDef = CfSolanaClient<PK>;
+	type ClientDef = CfSolanaClient;
 
 	fn chain_id(&self) -> ibc::core::ics24_host::identifier::ChainId {
 		ibc::core::ics24_host::identifier::ChainId::new(String::from("Solana"), 0)
@@ -167,14 +160,14 @@ where
 	}
 }
 
-impl<PK: guestchain::PubKey> From<ClientState<PK>> for proto::ClientState {
-	fn from(state: ClientState<PK>) -> Self {
+impl From<ClientState> for proto::ClientState {
+	fn from(state: ClientState) -> Self {
 		Self::from(&state)
 	}
 }
 
-impl<PK: guestchain::PubKey> From<&ClientState<PK>> for proto::ClientState {
-	fn from(state: &ClientState<PK>) -> Self {
+impl From<&ClientState> for proto::ClientState {
+	fn from(state: &ClientState) -> Self {
 		Self {
 			latest_height: state.latest_height.into(),
 			trusting_period_ns: state.trusting_period_ns,
@@ -186,14 +179,14 @@ impl<PK: guestchain::PubKey> From<&ClientState<PK>> for proto::ClientState {
 	}
 }
 
-impl<PK: guestchain::PubKey> TryFrom<proto::ClientState> for ClientState<PK> {
+impl TryFrom<proto::ClientState> for ClientState {
 	type Error = BadMessage;
 	fn try_from(msg: proto::ClientState) -> Result<Self, Self::Error> {
 		Self::try_from(&msg)
 	}
 }
 
-impl<PK: guestchain::PubKey> TryFrom<&proto::ClientState> for ClientState<PK> {
+impl TryFrom<&proto::ClientState> for ClientState {
 	type Error = BadMessage;
 
 	fn try_from(msg: &proto::ClientState) -> Result<Self, Self::Error> {
@@ -209,15 +202,13 @@ impl<PK: guestchain::PubKey> TryFrom<&proto::ClientState> for ClientState<PK> {
 			current_leader,
 			genesis_time,
 			slot_duration,
-			_ph: core::marker::PhantomData,
 		})
 	}
 }
 
 proto_utils::define_wrapper! {
 	proto: crate::proto::ClientState,
-	wrapper: ClientState<PK> where
-		PK: guestchain::PubKey = guestchain::validators::MockPubKey,
+	wrapper: ClientState,
 }
 
 #[cfg(test)]
@@ -239,17 +230,8 @@ mod tests {
 		&ANY_MESSAGE[38..]
 	}
 
-	const GENESIS_HASH: CryptoHash = CryptoHash([
-		243, 148, 241, 41, 122, 49, 51, 253, 97, 145, 113, 22, 234, 164, 193, 183, 185, 48, 160,
-		186, 69, 72, 144, 156, 126, 229, 103, 131, 220, 174, 140, 165,
-	]);
-	const EPOCH_COMMITMENT: CryptoHash = CryptoHash([
-		86, 12, 131, 131, 127, 125, 82, 54, 32, 207, 121, 149, 204, 11, 121, 102, 180, 211, 111,
-		54, 0, 207, 247, 125, 195, 57, 10, 10, 80, 84, 86, 152,
-	]);
-
-	fn check(state: ClientState<MockPubKey>) {
-		let want = ClientState::<MockPubKey>::new(5.into(), 64000000000000, false);
+	fn check(state: ClientState) {
+		let want = ClientState::new(5.into(), 64000000000000, false);
 		assert_eq!(want, state);
 	}
 

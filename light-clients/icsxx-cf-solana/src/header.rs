@@ -7,19 +7,17 @@ use crate::{
 	},
 };
 use alloc::vec::Vec;
-use guestchain::PubKey;
 use ibc::Height;
 use proto_utils::BadMessage;
 use solana_sdk::{clock::Slot, hash::Hash, signature::Signature};
-use std::{collections::BTreeSet, convert::From, marker::PhantomData, ops::Deref};
+use std::{collections::BTreeSet, convert::From, ops::Deref};
 
 #[derive(Clone, PartialEq, Eq, Debug)]
-pub struct Header<PK> {
+pub struct Header {
 	pub shreds: PreCheckedShreds,
-	_phantom: PhantomData<PK>,
 }
 
-impl<PK> Header<PK> {
+impl Header {
 	pub(crate) fn slot(&self) -> Slot {
 		assert!(!self.shreds.is_empty(), "Header must contain at least one shred");
 		self.shreds[0].slot()
@@ -38,7 +36,7 @@ impl<PK> Header<PK> {
 	/// TODO: since only the last entry is needed to calculate hash, consider filtering out all the
 	/// other shreds
 	pub fn calculate_hash(&self) -> Result<Hash, Error> {
-		let mut shreds = self.shreds.iter().collect::<Vec<_>>();
+		let shreds = self.shreds.iter().collect::<Vec<_>>();
 
 		let data_shreds = shreds.iter().filter(|s| s.is_data()).cloned().collect::<Vec<_>>();
 		if data_shreds.is_empty() {
@@ -138,13 +136,13 @@ impl TryFrom<Vec<Shred>> for PreCheckedShreds {
 	}
 }
 
-impl<PK: PubKey> From<Header<PK>> for proto::Header {
-	fn from(value: Header<PK>) -> Self {
+impl From<Header> for proto::Header {
+	fn from(value: Header) -> Self {
 		Self::from(&value)
 	}
 }
 
-impl<PK: PubKey> TryFrom<proto::Header> for Header<PK> {
+impl TryFrom<proto::Header> for Header {
 	type Error = BadMessage;
 
 	fn try_from(msg: proto::Header) -> Result<Self, Self::Error> {
@@ -230,7 +228,7 @@ impl TryFrom<&proto::ShredFlags> for ShredFlags {
 	}
 }
 
-impl<PK: PubKey> TryFrom<&proto::Header> for Header<PK> {
+impl TryFrom<&proto::Header> for Header {
 	type Error = BadMessage;
 
 	fn try_from(msg: &proto::Header) -> Result<Self, Self::Error> {
@@ -343,7 +341,7 @@ impl<PK: PubKey> TryFrom<&proto::Header> for Header<PK> {
 		}
 
 		let shreds = PreCheckedShreds::try_from(shreds).map_err(|_| BadMessage)?;
-		Ok(Header { shreds, _phantom: PhantomData })
+		Ok(Header { shreds })
 	}
 }
 
@@ -413,8 +411,8 @@ impl From<&ShredFlags> for proto::ShredFlags {
 	}
 }
 
-impl<PK: PubKey> From<&Header<PK>> for proto::Header {
-	fn from(header: &Header<PK>) -> Self {
+impl From<&Header> for proto::Header {
+	fn from(header: &Header) -> Self {
 		let proto_shreds = header
 			.shreds
 			.iter()
@@ -472,9 +470,8 @@ impl<PK: PubKey> From<&Header<PK>> for proto::Header {
 
 proto_utils::define_wrapper! {
 	proto: crate::proto::Header,
-	wrapper: Header<PK> where
-		PK: guestchain::PubKey = guestchain::validators::MockPubKey,
+	wrapper: Header,
 }
 
-// super::impls!(<PK> Header);
-// super::impls!(impl<PK> proto for Header);
+// super::impls!( Header);
+// super::impls!(impl proto for Header);
