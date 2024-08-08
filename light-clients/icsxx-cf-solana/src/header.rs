@@ -232,113 +232,109 @@ impl TryFrom<&proto::Header> for Header {
 	type Error = BadMessage;
 
 	fn try_from(msg: &proto::Header) -> Result<Self, Self::Error> {
-		let mut shreds = Vec::new();
-
-		for proto_shred in &msg.shreds {
-			let shred = match &proto_shred.message {
-				Some(proto::shred::Message::ShredCode(proto_shred_code)) => {
-					match &proto_shred_code.message {
-						Some(proto::shred_code::Message::LegacyShredCode(
-							proto_legacy_shred_code,
-						)) => {
-							// Convert LegacyShredCode
-							let common_header: ShredCommonHeader = proto_legacy_shred_code
-								.common_header
-								.as_ref()
-								.ok_or(BadMessage)?
-								.try_into()?;
-							let coding_header: CodingShredHeader = proto_legacy_shred_code
-								.coding_header
-								.as_ref()
-								.ok_or(BadMessage)?
-								.try_into()?;
-							let payload = proto_legacy_shred_code.payload.clone();
-
-							Shred::ShredCode(ShredCode::Legacy(legacy::ShredCode {
-								common_header,
-								coding_header,
-								payload,
-							}))
-						},
-						Some(proto::shred_code::Message::MerkleShredCode(
-							proto_merkle_shred_code,
-						)) => {
-							// Convert MerkleShredCode
-							let common_header: ShredCommonHeader = proto_merkle_shred_code
-								.common_header
-								.as_ref()
-								.ok_or(BadMessage)?
-								.try_into()?;
-							let coding_header: CodingShredHeader = proto_merkle_shred_code
-								.coding_header
-								.as_ref()
-								.ok_or(BadMessage)?
-								.try_into()?;
-							let payload = proto_merkle_shred_code.payload.clone();
-
-							Shred::ShredCode(ShredCode::Merkle(merkle::ShredCode {
-								common_header,
-								coding_header,
-								payload,
-							}))
-						},
-						None => return Err(BadMessage),
-					}
-				},
-				Some(proto::shred::Message::ShredData(proto_shred_data)) => {
-					match &proto_shred_data.message {
-						Some(proto::shred_data::Message::LegacyShredData(
-							proto_legacy_shred_data,
-						)) => {
-							// Convert LegacyShredData
-							let common_header: ShredCommonHeader = proto_legacy_shred_data
-								.common_header
-								.as_ref()
-								.ok_or(BadMessage)?
-								.try_into()?;
-							let data_header: DataShredHeader = proto_legacy_shred_data
-								.data_header
-								.as_ref()
-								.ok_or(BadMessage)?
-								.try_into()?;
-							let payload = proto_legacy_shred_data.payload.clone();
-
-							Shred::ShredData(ShredData::Legacy(legacy::ShredData {
-								common_header,
-								data_header,
-								payload,
-							}))
-						},
-						Some(proto::shred_data::Message::MerkleShredData(
-							proto_merkle_shred_data,
-						)) => {
-							// Convert MerkleShredData
-							let common_header: ShredCommonHeader = proto_merkle_shred_data
-								.common_header
-								.as_ref()
-								.ok_or(BadMessage)?
-								.try_into()?;
-							let data_header: DataShredHeader = proto_merkle_shred_data
-								.data_header
-								.as_ref()
-								.ok_or(BadMessage)?
-								.try_into()?;
-							let payload = proto_merkle_shred_data.payload.clone();
-
-							Shred::ShredData(ShredData::Merkle(merkle::ShredData {
-								common_header,
-								data_header,
-								payload,
-							}))
-						},
-						None => return Err(BadMessage),
-					}
-				},
-				None => return Err(BadMessage),
-			};
-
-			shreds.push(shred);
-		}
+		let shreds = msg
+			.shreds
+			.iter()
+			.map(|shred| {
+				Ok(match &shred.message {
+					Some(proto::shred::Message::ShredCode(proto_shred_code)) => {
+						match &proto_shred_code.message {
+							Some(proto::shred_code::Message::LegacyShredCode(
+								proto_legacy_shred_code,
+							)) => {
+								// Convert LegacyShredCode
+								let common_header: ShredCommonHeader = proto_legacy_shred_code
+									.common_header
+									.as_ref()
+									.ok_or(BadMessage)?
+									.try_into()?;
+								let coding_header: CodingShredHeader = proto_legacy_shred_code
+									.coding_header
+									.as_ref()
+									.ok_or(BadMessage)?
+									.try_into()?;
+								let payload = proto_legacy_shred_code.payload.clone();
+								Shred::ShredCode(ShredCode::Legacy(legacy::ShredCode {
+									common_header,
+									coding_header,
+									payload,
+								}))
+							},
+							Some(proto::shred_code::Message::MerkleShredCode(
+								proto_merkle_shred_code,
+							)) => {
+								// Convert MerkleShredCode
+								let common_header: ShredCommonHeader = proto_merkle_shred_code
+									.common_header
+									.as_ref()
+									.ok_or(BadMessage)?
+									.try_into()?;
+								let coding_header: CodingShredHeader = proto_merkle_shred_code
+									.coding_header
+									.as_ref()
+									.ok_or(BadMessage)?
+									.try_into()?;
+								let payload = proto_merkle_shred_code.payload.clone();
+								Shred::ShredCode(ShredCode::Merkle(merkle::ShredCode {
+									common_header,
+									coding_header,
+									payload,
+								}))
+							},
+							None => return Err(BadMessage),
+						}
+					},
+					Some(proto::shred::Message::ShredData(proto_shred_data)) => {
+						match &proto_shred_data.message {
+							Some(proto::shred_data::Message::LegacyShredData(
+								proto_legacy_shred_data,
+							)) => {
+								// Convert LegacyShredData
+								let common_header: ShredCommonHeader = proto_legacy_shred_data
+									.common_header
+									.as_ref()
+									.ok_or(BadMessage)?
+									.try_into()?;
+								let data_header: DataShredHeader = proto_legacy_shred_data
+									.data_header
+									.as_ref()
+									.ok_or(BadMessage)?
+									.try_into()?;
+								let payload = proto_legacy_shred_data.payload.clone();
+								Shred::ShredData(ShredData::Legacy(legacy::ShredData {
+									common_header,
+									data_header,
+									payload,
+								}))
+							},
+							Some(proto::shred_data::Message::MerkleShredData(
+								proto_merkle_shred_data,
+							)) => {
+								// Convert MerkleShredData
+								let common_header: ShredCommonHeader = proto_merkle_shred_data
+									.common_header
+									.as_ref()
+									.ok_or(BadMessage)?
+									.try_into()?;
+								let data_header: DataShredHeader = proto_merkle_shred_data
+									.data_header
+									.as_ref()
+									.ok_or(BadMessage)?
+									.try_into()?;
+								let payload = proto_merkle_shred_data.payload.clone();
+								Shred::ShredData(ShredData::Merkle(merkle::ShredData {
+									common_header,
+									data_header,
+									payload,
+								}))
+							},
+							None => return Err(BadMessage),
+						}
+					},
+					None => return Err(BadMessage),
+				})
+			})
+			.collect::<Result<Vec<_>, _>>()?;
 
 		let shreds = PreCheckedShreds::try_from(shreds).map_err(|_| BadMessage)?;
 		Ok(Header { shreds })
