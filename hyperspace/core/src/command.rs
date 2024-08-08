@@ -64,34 +64,42 @@ pub enum Subcommand {
 	},
 }
 
+/* Notice that config_a, config_b and config_core are optional below,
+   even though we consider them mandatory. This is due to limitations
+   of clap, which does not allow mandatory arguments to be global.
+   Being local, they would have to occur immediately after query
+   subcommand, which is not very user-friendly. For this reason we
+   tell clap they're optional and raise an error later if they are not
+   provided.
+*/
 #[derive(Debug, Clone, Parser)]
 pub struct Cmd {
-	/// Relayer chain A config path.
-	#[clap(long)]
-	pub config_a: String,
-	/// Relayer chain B config path.
-	#[clap(long)]
-	config_b: String,
-	/// Relayer core config path.
-	#[clap(long)]
-	config_core: String,
+	/// Relayer chain A config path (madatory).
+	#[clap(long, global = true)]
+	pub config_a: Option<String>,
+	/// Relayer chain B config path (mandatory).
+	#[clap(long, global = true)]
+	config_b: Option<String>,
+    /// Relayer core config path (mandatory).
+	#[clap(long, global = true)]
+	config_core: Option<String>,
 	/// Port id for channel creation
-	#[clap(long)]
+	#[clap(long, global = true)]
 	port_id: Option<String>,
 	/// Connection delay period in seconds
-	#[clap(long)]
+	#[clap(long, global = true)]
 	delay_period: Option<std::num::NonZeroU32>,
 	/// Channel order
-	#[clap(long)]
+	#[clap(long, global = true)]
 	order: Option<String>,
 	/// Channel version
-	#[clap(long)]
+	#[clap(long, global = true)]
 	version: Option<String>,
 	/// New config path for A to avoid overriding existing configuration
-	#[clap(long)]
+	#[clap(long, global = true)]
 	pub out_config_a: Option<String>,
 	/// New config path for B to avoid overriding existing configuration
-	#[clap(long)]
+	#[clap(long, global = true)]
 	pub out_config_b: Option<String>,
 }
 
@@ -132,9 +140,15 @@ impl UploadWasmCmd {
 impl Cmd {
 	pub async fn parse_config(&self) -> Result<Config> {
 		use tokio::fs::read_to_string;
-		let path_a: PathBuf = self.config_a.parse()?;
-		let path_b: PathBuf = self.config_b.parse()?;
-		let path_core: PathBuf = self.config_core.parse()?;
+		let config_a_opt =
+			self.config_a.clone().ok_or(anyhow::anyhow!("--config-a is mandatory"))?;
+		let path_a: PathBuf = config_a_opt.parse()?;
+		let config_b_opt =
+			self.config_b.clone().ok_or(anyhow::anyhow!("--config-b is mandatory"))?;
+		let path_b: PathBuf = config_b_opt.parse()?;
+		let config_core_opt =
+			self.config_core.clone().ok_or(anyhow::anyhow!("--config-core is mandatory"))?;
+		let path_core: PathBuf = config_core_opt.parse()?;
 		let file_content = read_to_string(path_a).await?;
 		let config_a: AnyConfig = toml::from_str(&file_content)?;
 		let file_content = read_to_string(path_b).await?;
@@ -279,8 +293,10 @@ impl Cmd {
 	}
 
 	pub async fn save_config(&self, new_config: &Config) -> Result<()> {
-		let path_a = self.out_config_a.as_ref().cloned().unwrap_or_else(|| self.config_a.clone());
-		let path_b = self.out_config_b.as_ref().cloned().unwrap_or_else(|| self.config_b.clone());
+		let path_a = self.out_config_a.as_ref().cloned().or_else(|| self.config_a.clone())
+            .ok_or(anyhow::anyhow!("--config-a is mandatory"))?;
+		let path_b = self.out_config_b.as_ref().cloned().or_else(|| self.config_b.clone())
+            .ok_or(anyhow::anyhow!("--config-b is mandatory"))?;
 		write_config(path_a, &new_config.chain_a).await?;
 		write_config(path_b, &new_config.chain_b).await
 	}
