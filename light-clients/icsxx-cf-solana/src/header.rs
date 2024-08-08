@@ -29,21 +29,27 @@ impl<PK> Header<PK> {
 		Height::new(1, self.slot() as u64)
 	}
 
-	pub fn hash(&self) -> Hash {
+	/// Calculate the block hash of the block represented by its shreds.
+	///
+	/// The block hash is the hash of the last entry formed from data shreds.
+	/// If there are no data shreds, no last data shred in slot or it's not possible to form the
+	/// last entry an error is returned.
+	///
+	/// TODO: since only the last entry is needed to calculate hash, consider filtering out all the
+	/// other shreds
+	pub fn calculate_hash(&self) -> Result<Hash, Error> {
 		let mut shreds = self.shreds.iter().collect::<Vec<_>>();
-		shreds.sort_by_key(|s| s.index());
-		shreds.dedup_by_key(|s| s.index());
 
 		let data_shreds = shreds.iter().filter(|s| s.is_data()).cloned().collect::<Vec<_>>();
-
-		// TODO: replace with a return error
-		assert!(!data_shreds.is_empty());
+		if data_shreds.is_empty() {
+			return Err(Error::NoDataShreds)
+		}
 
 		let last_data_shred = data_shreds.last().unwrap();
+		if !last_data_shred.last_in_slot() {
+			return Err(Error::LastShredNotLastInSlot)
+		}
 
-		// TODO: replace with a return error
-		assert!(last_data_shred.last_in_slot());
-		let _parent_slot = last_data_shred.parent().unwrap();
 		let completed_data_indexes = data_shreds
 			.iter()
 			.filter_map(|s| if s.data_complete() { Some(s.index()) } else { None })
@@ -51,14 +57,10 @@ impl<PK> Header<PK> {
 		let consumed = last_data_shred.index() + 1;
 		let completed_ranges = get_completed_data_ranges(0, &completed_data_indexes, consumed);
 		let slot = self.slot();
-		let entries = get_slot_entries_in_block(slot, completed_ranges, &data_shreds).unwrap();
-		let slot_entries = entries;
+		let entries = get_slot_entries_in_block(slot, completed_ranges, &data_shreds)?;
+		let blockhash = entries.last().map(|entry| entry.hash).ok_or(Error::EntriesAreEmpty)?;
 
-		let blockhash = slot_entries
-			.last()
-			.map(|entry| entry.hash)
-			.unwrap_or_else(|| panic!("Rooted slot {slot:?} must have blockhash"));
-		blockhash
+		Ok(blockhash)
 	}
 }
 

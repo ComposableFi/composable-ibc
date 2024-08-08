@@ -53,26 +53,7 @@ where
 			ClientMessage::Header(header) => {
 				// The client can't be updated if no shreds were received
 				let shreds = header.shreds;
-				if shreds.is_empty() {
-					return Err(Ics02ClientError::implementation_specific(
-						"no shreds received".to_string(),
-					));
-				}
-
-				let slot = shreds.first().unwrap().slot();
-
-				// All shreds' slots should be the same
-				shreds.iter().skip(1).all(|s| s.slot() == slot).then(|| ()).ok_or_else(|| {
-					Ics02ClientError::implementation_specific(
-						"shreds have different slots".to_string(),
-					)
-				})?;
-
-				if slot <= client_state.latest_height().revision_height {
-					return Err(Ics02ClientError::implementation_specific(
-						"slot is not greater than latest height".to_string(),
-					));
-				}
+				let slot = shreds.slot();
 
 				let leader = client_state.leader_for_slot(slot);
 
@@ -87,6 +68,7 @@ where
 							e
 						))
 					})?;
+
 				Ok(())
 			},
 			ClientMessage::Misbehaviour(_) =>

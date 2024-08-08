@@ -33,6 +33,10 @@ pub enum Error {
 	ShredsContainDuplicates,
 	ShredsFromDifferentSlots,
 	Solana(crate::solana::Error),
+	NoDataShreds,
+	LastShredNotLastInSlot,
+	EntriesAreEmpty,
+	InvalidTimestamp,
 }
 
 impl From<crate::solana::Error> for Error {
