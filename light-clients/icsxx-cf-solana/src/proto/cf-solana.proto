@@ -194,11 +194,11 @@ message Misbehaviour {
   // First header.
   Header header1 = 1;
 
-  // Second header.
-  //
   // Note that the message may be partially filled.  If `header1` and
   // `header2` have the same `genesis_hash` or `epoch` (which is extremely
   // likely), those fields can be omitted in the second header.
+  //
+  // Second header.
   Header header2 = 2;
 
   // NEXT ID: 3
