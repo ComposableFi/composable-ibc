@@ -128,6 +128,9 @@ pub struct ClientStateCallResponse {
 }
 
 #[cw_serde]
+pub struct MigrateMsg {}
+
+#[cw_serde]
 pub struct InitializeState {
 	pub client_state: WasmClientState<FakeInner, FakeInner, FakeInner>,
 	pub consensus_state: WasmConsensusState<FakeInner>,
