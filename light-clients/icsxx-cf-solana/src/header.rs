@@ -36,9 +36,7 @@ impl Header {
 	/// TODO: since only the last entry is needed to calculate hash, consider filtering out all the
 	/// other shreds
 	pub fn calculate_hash(&self) -> Result<Hash, Error> {
-		let shreds = self.shreds.iter().collect::<Vec<_>>();
-
-		let data_shreds = shreds.iter().filter(|s| s.is_data()).cloned().collect::<Vec<_>>();
+		let data_shreds = self.shreds.iter().filter(|s| s.is_data()).collect::<Vec<_>>();
 		if data_shreds.is_empty() {
 			return Err(Error::NoDataShreds)
 		}
