@@ -53,15 +53,15 @@ impl ClientDef for CfSolanaClient {
 				// Verify all shreds
 				shreds
 					.iter()
-					.map(|shred| shred.sanitize().and_then(|_| shred.verify_with_root(&leader)))
-					.collect::<Result<Vec<_>, _>>()
-					.map_err(|e| {
+					.try_for_each(|shred| {
+						shred.sanitize()?;
+						shred.verify_with_root(&leader)
+					})
+					.map_err(|err| {
 						Ics02ClientError::implementation_specific(alloc::format!(
-							"shred verification failed: {}",
-							e
+							"shred verification failed: {err}",
 						))
 					})?;
-
 				Ok(())
 			},
 			ClientMessage::Misbehaviour(_) =>
