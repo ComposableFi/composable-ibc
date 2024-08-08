@@ -28,6 +28,10 @@ pub enum Error {
 	InsufficientHeight { latest_height: Height, target_height: Height },
 	ClientFrozen { client_id: ClientId },
 	UnknownConsensusStateType { description: String },
+	ShardsAreEmpty,
+	ShredsNotSorted,
+	ShredsContainDuplicates,
+	ShredsFromDifferentSlots,
 	Solana(crate::solana::Error),
 }
 

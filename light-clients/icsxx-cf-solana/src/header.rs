@@ -1,4 +1,5 @@
 use crate::{
+	error::Error,
 	proto,
 	solana::{
 		blockstore::{get_completed_data_ranges, get_slot_entries_in_block},
@@ -7,13 +8,14 @@ use crate::{
 };
 use alloc::vec::Vec;
 use guestchain::PubKey;
+use ibc::Height;
 use proto_utils::BadMessage;
 use solana_sdk::{clock::Slot, hash::Hash, signature::Signature};
-use std::{collections::BTreeSet, convert::From, marker::PhantomData};
+use std::{collections::BTreeSet, convert::From, marker::PhantomData, ops::Deref};
 
 #[derive(Clone, PartialEq, Eq, Debug)]
 pub struct Header<PK> {
-	pub shreds: Vec<Shred>,
+	pub shreds: PreCheckedShreds,
 	_phantom: PhantomData<PK>,
 }
 
@@ -21,6 +23,10 @@ impl<PK> Header<PK> {
 	pub(crate) fn slot(&self) -> Slot {
 		assert!(!self.shreds.is_empty(), "Header must contain at least one shred");
 		self.shreds[0].slot()
+	}
+
+	pub(crate) fn height(&self) -> Height {
+		Height::new(1, self.slot() as u64)
 	}
 
 	pub fn hash(&self) -> Hash {
@@ -53,6 +59,80 @@ impl<PK> Header<PK> {
 			.map(|entry| entry.hash)
 			.unwrap_or_else(|| panic!("Rooted slot {slot:?} must have blockhash"));
 		blockhash
+	}
+}
+
+/// An immutable array of shreds that have the following properties:
+/// 1. Is non-empty
+/// 2. Is sorted
+/// 3. Doesn't contain duplicates
+/// 4. All shreds have the same slot
+#[derive(Clone, PartialEq, Eq, Debug)]
+pub struct PreCheckedShreds(Vec<Shred>);
+
+impl PreCheckedShreds {
+	/// Returns the (common) shreds' slot. Since the shreds are pre-checked, the array contains at
+	/// least one shred and all the shreds have same slot.
+	pub(crate) fn slot(&self) -> Slot {
+		self.0[0].slot()
+	}
+}
+
+impl Deref for PreCheckedShreds {
+	type Target = [Shred];
+
+	fn deref(&self) -> &Self::Target {
+		&self.0
+	}
+}
+
+impl IntoIterator for PreCheckedShreds {
+	type Item = Shred;
+	type IntoIter = alloc::vec::IntoIter<Shred>;
+
+	fn into_iter(self) -> Self::IntoIter {
+		self.0.into_iter()
+	}
+}
+
+impl TryFrom<Vec<Shred>> for PreCheckedShreds {
+	type Error = Error;
+
+	/// Creates a new `PreCheckedShreds` from a `Vec<Shred>`. The input shreds must satisfy the
+	/// properties of the `PreCheckedShreds` type (see the `PreCheckedShreds`'s documentation).
+	fn try_from(shreds: Vec<Shred>) -> Result<Self, Self::Error> {
+		if shreds.is_empty() {
+			return Err(Error::ShardsAreEmpty)
+		}
+
+		let mut shreds_set = BTreeSet::new();
+		let mut prev_index = None;
+		let slot = shreds[0].slot();
+
+		for shred in &shreds {
+			let index = shred.index();
+
+			// Ensure the shreds are from the same slot.
+			if shred.slot() != slot {
+				return Err(Error::ShredsFromDifferentSlots);
+			}
+
+			// Ensure the shreds are sorted.
+			if let Some(prev_index) = prev_index {
+				if prev_index >= index {
+					return Err(Error::ShredsNotSorted);
+				}
+			}
+
+			// Ensure the shreds don't contain duplicates.
+			if !shreds_set.insert(index) {
+				return Err(Error::ShredsContainDuplicates);
+			}
+
+			prev_index = Some(index);
+		}
+
+		Ok(Self(shreds))
 	}
 }
 
@@ -260,6 +340,7 @@ impl<PK: PubKey> TryFrom<&proto::Header> for Header<PK> {
 			shreds.push(shred);
 		}
 
+		let shreds = PreCheckedShreds::try_from(shreds).map_err(|_| BadMessage)?;
 		Ok(Header { shreds, _phantom: PhantomData })
 	}
 }
