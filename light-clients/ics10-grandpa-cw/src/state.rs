@@ -30,7 +30,7 @@ pub fn get_client_state<H: Clone>(
 	client_id: ClientId,
 ) -> Result<ClientState<H>, Error> {
 	deps.storage
-		.get(&"clientState".to_string().into_bytes())
+		.get(b"clientState")
 		.ok_or_else(|| Error::unknown_client_state_type(client_id.to_string()))
 		.and_then(deserialize_client_state)
 }
@@ -63,5 +63,5 @@ pub fn get_consensus_state(
 }
 
 pub fn get_consensus_state_key(height: Height) -> Vec<u8> {
-	["consensusStates/".to_string().into_bytes(), format!("{height}").into_bytes()].concat()
+	format!("consensusStates/{height}").into_bytes()
 }

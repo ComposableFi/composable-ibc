@@ -13,20 +13,13 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-#![cfg_attr(not(feature = "std"), no_std)]
+use cf_guest_cw::msg;
+use cosmwasm_schema::write_api;
 
-#[macro_use]
-extern crate alloc;
-
-use alloc::vec::Vec;
-
-pub mod client_def;
-pub mod client_message;
-pub mod client_state;
-pub mod consensus_state;
-pub mod instantiate;
-pub mod msg;
-
-pub type Bytes = Vec<u8>;
-pub static SUBJECT_PREFIX: &str = "subject/";
-pub static SUBSTITUTE_PREFIX: &str = "substitute/";
+fn main() {
+	write_api! {
+		instantiate: msg::InstantiateMsg,
+		sudo: msg::SudoMsg,
+		query: msg::QueryMsg,
+	}
+}

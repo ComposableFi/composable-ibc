@@ -103,7 +103,7 @@ where
 {
 	pub fn processed_timestamp(&self, height: Height) -> Result<u64, Error> {
 		let processed_state = ReadonlyProcessedStates::new(self.storage());
-		match processed_state.get_processed_time(height, &mut Vec::new()) {
+		match processed_state.get_processed_time(height, "") {
 			Some(time) => Ok(time),
 			None => Err(Error::implementation_specific(
 				"problem getting processed timestamp".to_string(),
@@ -113,7 +113,7 @@ where
 
 	pub fn processed_height(&self, height: Height) -> Result<u64, Error> {
 		let processed_state = ReadonlyProcessedStates::new(self.storage());
-		match processed_state.get_processed_height(height, &mut Vec::new()) {
+		match processed_state.get_processed_height(height, "") {
 			Some(p_height) => Ok(p_height),
 			None =>
 				Err(Error::implementation_specific("problem getting processed height".to_string())),

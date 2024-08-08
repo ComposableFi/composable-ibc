@@ -154,7 +154,26 @@ these chunks are then submitted as individual transactions.
 
 ### How to build Hyperspace
 
+In order to deploy a relayer, there are some things to install first:
+
+1. Install [go](https://go.dev/doc/install)
+
+2. Install [rust](https://rustup.rs/)
+
+3. Install Protobuf --> 
+
 ```
+curl -LO https://github.com/protocolbuffers/protobuf/releases/download/v24.2/protoc-24.2-linux-x86_64.zip && \
+unzip  protoc-24.2-linux-x86_64.zip -d /usr/local/protoc && \
+export PATH=$PATH:/usr/local/protoc/bin
+```
+
+4. Install clang, solc, rocksdb (this can be installed through apt)
+
+Then, run:
+
+```
+cd hyperspace/
 make build-release-hyperspace
 ```
 
@@ -185,6 +204,118 @@ A template configuration file (which is needed to run the CLI) can be found
   between both chains.
   The config file must have a valid client and connection id.
     
+### Configuration
+
+1. Compile the WASM file using `cargo +nightly-2023-02-07 build -p ics10-grandpa-cw --release --target wasm32-unknown-unknown --lib --no-default-features` (install the toolchain if needed).
+
+2. How to create a [`gov`](https://www.youtube.com/watch?v=leFIbW9e2zY) proposal
+
+- Generate draft gov proposal
+```
+centaurid tx gov draft-proposal
+```
+
+- submit gov proposal
+```
+# centaurid tx gov submit-proposal /home/ubuntu/draft_proposal.json --from validator --fees=300ppica
+```
+
+- list governance proposals
+```
+# centaurid q gov proposals
+```
+
+- vote "yes" for gov proposal (`id=3`)
+
+```
+# centaurid tx gov vote 3 yes --from validator --fees=300ppica
+```
+
+- check votes for gov proposal (`id=3`)
+```
+# centaurid q gov votes 3
+```
+
+3. You will need two config files in order to start the relayer. In the following example you will have a config file for `centauri` and for `picasso`:
+
+The following is a template for banksy-testnet-5
+```
+type = "cosmos"
+name = "banksy"
+rpc_url = "https://rpc-testnet5.composable-cosmos.composablenodes.tech/"
+grpc_url = "https://api-testnet5.composable-cosmos.composablenodes.tech"
+websocket_url = "ws://rpc-testnet5.composable-cosmos.composablenodes.tech/websocket"
+chain_id = "banksy-testnet-5"
+client_id = "07-tendermint-0"
+connection_id = "connection-2"
+account_prefix = "centauri"
+fee_denom = "ppica"
+fee_amount = "4000"
+gas_limit = 9223372036854775806
+store_prefix = "ibc"
+max_tx_size = 200000
+wasm_code_id = "here_goes_the_wasm_code_id"
+channel_whitelist = [["channel-2", "transfer"]]
+mnemonic = "mnemonic phrase example ....."
+skip_optional_client_updates = true
+max_packets_to_process = 200
+```
+
+The following is a template of composable-mainnet
+
+```
+type = "cosmos"
+name = "composable"
+rpc_url = "wss://rpc.composable.finance"
+grpc_url = "wss://polkadot-rpc.dwellir.com"
+websocket_url = "ws://rpc.composable.finance/websocket"
+chain_id = "centauri-1"
+client_id = "07-tendermint-32"
+connection_id = "connection-5"
+account_prefix = "centauri"
+fee_denom = "ppica"
+fee_amount = "1500000"
+gas_limit = 10000000000
+store_prefix = "ibc"
+max_tx_size = 20000000
+wasm_code_id = "HERE IS THE WASM CODE"
+channel_whitelist = [["channel-2", "transfer"]]
+mnemonic = "mnemonic phrase example"
+skip_optional_client_updates = true
+skip_tokens_list = []
+```
+
+The following is a template of picasso mainnet
+
+```
+chain_id = "picasso_kusama"
+type = "picasso_kusama"
+name = "picasso"
+para_id = 2087
+parachain_rpc_url = "wss://rpc.composablenodes.tech"
+relay_chain_rpc_url = "wss://kusama-rpc.dwellir.com"
+client_id = "10-grandpa-28"
+connection_id = "connection-23"
+channel_whitelist = [["channel-15", "transfer"]]
+commitment_prefix = "0x6962632f"
+private_key = "here goes the private key"
+ss58_version = 49
+key_type = "sr25519"
+finality_protocol = "Grandpa"
+```
+
+4. Upload the contract 
+```
+hyperspace upload-wasm --config picasso-local.toml --wasm-path ics10-grandpa-cw
+```
+
+or
+
+```
+centaurid tx 08-wasm push-wasm ics10-grandpa-cw --keyring-backend test --gas auto --fees 1000016pica -y --from mykey
+```
+
+5. Build the [`connection`](./contract.toml)
 
 ### Metrics
 

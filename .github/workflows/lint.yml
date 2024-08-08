@@ -3,12 +3,12 @@ name: Lint
 on:
   pull_request:
     branches:
-      - 'main'
+      - 'master'
       - 'develop'
       - 'release*'
   push:
     branches:
-      - 'main'
+      - 'master'
       - 'develop'
       - 'release*'
 
@@ -19,7 +19,7 @@ jobs:
       group: check-${{ github.ref }}
       cancel-in-progress: true
     container:
-      image: paritytech/ci-unified:bullseye-1.74.0-2023-11-01-v20231214
+      image: paritytech/ci-unified:bullseye-1.74.0-v20240109
     runs-on: ubuntu-latest
     steps:
     - uses: actions/checkout@v2

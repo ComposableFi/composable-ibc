@@ -13,20 +13,18 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-#![cfg_attr(not(feature = "std"), no_std)]
+#![allow(dead_code)]
 
-#[macro_use]
 extern crate alloc;
+extern crate core;
 
-use alloc::vec::Vec;
-
-pub mod client_def;
-pub mod client_message;
-pub mod client_state;
-pub mod consensus_state;
-pub mod instantiate;
+mod context;
+mod contract;
+mod crypto;
+mod error;
+mod ibc;
 pub mod msg;
+mod serialisation;
+pub mod state;
 
-pub type Bytes = Vec<u8>;
-pub static SUBJECT_PREFIX: &str = "subject/";
-pub static SUBSTITUTE_PREFIX: &str = "substitute/";
+use crate::{crypto::PubKey, error::Error};
