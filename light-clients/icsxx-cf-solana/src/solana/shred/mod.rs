@@ -50,6 +50,9 @@
 //!
 //! So, given a) - c), we must restrict data shred's payload length such that the entire coding
 //! payload can fit into one coding shred / packet.
+//!
+//! TODO: check if `Legacy` variants of shreds are still being used in Solana. If not, get rif of
+//! them, not breaking the encoding
 
 #[cfg(test)]
 pub(crate) use self::shred_code::MAX_CODE_SHREDS_PER_SLOT;

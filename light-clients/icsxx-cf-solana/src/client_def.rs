@@ -46,6 +46,8 @@ impl ClientDef for CfSolanaClient {
 				let shreds = header.shreds;
 				let slot = shreds.slot();
 
+				// TODO: verify that the header is within trusting period
+
 				let leader = client_state.leader_for_slot(slot);
 
 				// Verify all shreds
