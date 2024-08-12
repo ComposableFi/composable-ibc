@@ -43,6 +43,8 @@ pub enum IbcEvent {
 		consensus_height: u64,
 		consensus_revision_number: u64,
 	},
+	/// Client update proposal passed
+	UpdateClientProposal { client_id: Vec<u8>, client_type: Vec<u8> },
 	/// Client upgraded
 	UpgradeClient {
 		client_id: Vec<u8>,
@@ -236,6 +238,10 @@ impl From<RawIbcEvent> for IbcEvent {
 				consensus_height: ev.0.consensus_height.revision_height,
 				consensus_revision_number: ev.0.consensus_height.revision_number,
 			},
+			RawIbcEvent::UpdateClientProposal(ev) => IbcEvent::UpdateClientProposal {
+				client_id: ev.client_id().as_bytes().to_vec(),
+				client_type: ev.client_type().as_bytes().to_vec(),
+			},
 			RawIbcEvent::UpdateClient(ev) => IbcEvent::UpdateClient {
 				client_id: ev.client_id().as_bytes().to_vec(),
 				client_type: ev.client_type().as_bytes().to_vec(),
@@ -311,124 +317,114 @@ impl From<RawIbcEvent> for IbcEvent {
 			RawIbcEvent::OpenInitChannel(ev) => IbcEvent::OpenInitChannel {
 				revision_height: ev.height().revision_height,
 				revision_number: ev.height().revision_number,
-				channel_id: ev
-					.channel_id()
-					.map(|channel_id| channel_id.to_string().as_bytes().to_vec()),
+				channel_id: ev.channel_id().map(|channel_id| channel_id.to_string().into_bytes()),
 				port_id: ev.port_id().as_bytes().to_vec(),
 				connection_id: ev.connection_id.as_bytes().to_vec(),
 				counterparty_port_id: ev.counterparty_port_id.as_bytes().to_vec(),
 				counterparty_channel_id: ev
 					.counterparty_channel_id
-					.map(|val| val.to_string().as_bytes().to_vec()),
+					.map(|val| val.to_string().into_bytes()),
 			},
 			RawIbcEvent::OpenTryChannel(ev) => IbcEvent::OpenTryChannel {
 				revision_height: ev.height().revision_height,
 				revision_number: ev.height().revision_number,
-				channel_id: ev
-					.channel_id()
-					.map(|channel_id| channel_id.to_string().as_bytes().to_vec()),
+				channel_id: ev.channel_id().map(|channel_id| channel_id.to_string().into_bytes()),
 				port_id: ev.port_id().as_bytes().to_vec(),
 				connection_id: ev.connection_id.as_bytes().to_vec(),
 				counterparty_port_id: ev.counterparty_port_id.as_bytes().to_vec(),
 				counterparty_channel_id: ev
 					.counterparty_channel_id
-					.map(|val| val.to_string().as_bytes().to_vec()),
+					.map(|val| val.to_string().into_bytes()),
 			},
 			RawIbcEvent::OpenAckChannel(ev) => IbcEvent::OpenAckChannel {
 				revision_height: ev.height().revision_height,
 				revision_number: ev.height().revision_number,
-				channel_id: ev
-					.channel_id()
-					.map(|channel_id| channel_id.to_string().as_bytes().to_vec()),
+				channel_id: ev.channel_id().map(|channel_id| channel_id.to_string().into_bytes()),
 				port_id: ev.port_id().as_bytes().to_vec(),
 				connection_id: ev.connection_id.as_bytes().to_vec(),
 				counterparty_port_id: ev.counterparty_port_id.as_bytes().to_vec(),
 				counterparty_channel_id: ev
 					.counterparty_channel_id
-					.map(|val| val.to_string().as_bytes().to_vec()),
+					.map(|val| val.to_string().into_bytes()),
 			},
 			RawIbcEvent::OpenConfirmChannel(ev) => IbcEvent::OpenConfirmChannel {
 				revision_height: ev.height().revision_height,
 				revision_number: ev.height().revision_number,
-				channel_id: ev
-					.channel_id()
-					.map(|channel_id| channel_id.to_string().as_bytes().to_vec()),
+				channel_id: ev.channel_id().map(|channel_id| channel_id.to_string().into_bytes()),
 				port_id: ev.port_id().as_bytes().to_vec(),
 				connection_id: ev.connection_id.as_bytes().to_vec(),
 				counterparty_port_id: ev.counterparty_port_id.as_bytes().to_vec(),
 				counterparty_channel_id: ev
 					.counterparty_channel_id
-					.map(|val| val.to_string().as_bytes().to_vec()),
+					.map(|val| val.to_string().into_bytes()),
 			},
 			RawIbcEvent::CloseInitChannel(ev) => IbcEvent::CloseInitChannel {
 				revision_height: ev.height().revision_height,
 				revision_number: ev.height().revision_number,
-				channel_id: ev.channel_id().to_string().as_bytes().to_vec(),
+				channel_id: ev.channel_id().to_string().into_bytes(),
 				port_id: ev.port_id().as_bytes().to_vec(),
 				connection_id: ev.connection_id.as_bytes().to_vec(),
 				counterparty_port_id: ev.counterparty_port_id.as_bytes().to_vec(),
 				counterparty_channel_id: ev
 					.counterparty_channel_id
-					.map(|val| val.to_string().as_bytes().to_vec()),
+					.map(|val| val.to_string().into_bytes()),
 			},
 			RawIbcEvent::CloseConfirmChannel(ev) => IbcEvent::CloseConfirmChannel {
 				revision_height: ev.height().revision_height,
 				revision_number: ev.height().revision_number,
 				port_id: ev.port_id.as_bytes().to_vec(),
-				channel_id: ev
-					.channel_id()
-					.map(|channel_id| channel_id.to_string().as_bytes().to_vec()),
+				channel_id: ev.channel_id().map(|channel_id| channel_id.to_string().into_bytes()),
 				connection_id: ev.connection_id.as_bytes().to_vec(),
 				counterparty_port_id: ev.counterparty_port_id.as_bytes().to_vec(),
 				counterparty_channel_id: ev
 					.counterparty_channel_id
-					.map(|val| val.to_string().as_bytes().to_vec()),
+					.map(|val| val.to_string().into_bytes()),
 			},
 			RawIbcEvent::SendPacket(ev) => IbcEvent::SendPacket {
 				revision_height: ev.height().revision_height,
 				revision_number: ev.height().revision_number,
-				channel_id: ev.src_channel_id().to_string().as_bytes().to_vec(),
+				channel_id: ev.src_channel_id().to_string().into_bytes(),
 				port_id: ev.src_port_id().as_bytes().to_vec(),
 				dest_port: ev.dst_port_id().as_bytes().to_vec(),
-				dest_channel: ev.dst_channel_id().to_string().as_bytes().to_vec(),
+				dest_channel: ev.dst_channel_id().to_string().into_bytes(),
 				sequence: ev.packet.sequence.into(),
 			},
 			RawIbcEvent::ReceivePacket(ev) => IbcEvent::ReceivePacket {
 				revision_height: ev.height().revision_height,
 				revision_number: ev.height().revision_number,
-				channel_id: ev.src_channel_id().to_string().as_bytes().to_vec(),
+				channel_id: ev.src_channel_id().to_string().into_bytes(),
 				port_id: ev.src_port_id().as_bytes().to_vec(),
 				dest_port: ev.dst_port_id().as_bytes().to_vec(),
-				dest_channel: ev.dst_channel_id().to_string().as_bytes().to_vec(),
+				dest_channel: ev.dst_channel_id().to_string().into_bytes(),
 				sequence: ev.packet.sequence.into(),
 			},
 			RawIbcEvent::WriteAcknowledgement(ev) => IbcEvent::WriteAcknowledgement {
 				revision_height: ev.height().revision_height,
 				revision_number: ev.height().revision_number,
-				channel_id: ev.src_channel_id().to_string().as_bytes().to_vec(),
+				channel_id: ev.src_channel_id().to_string().into_bytes(),
 				port_id: ev.src_port_id().as_bytes().to_vec(),
 				dest_port: ev.dst_port_id().as_bytes().to_vec(),
-				dest_channel: ev.dst_channel_id().to_string().as_bytes().to_vec(),
+				dest_channel: ev.dst_channel_id().to_string().into_bytes(),
 				sequence: ev.packet.sequence.into(),
 			},
 			RawIbcEvent::AcknowledgePacket(ev) => IbcEvent::AcknowledgePacket {
 				revision_height: ev.height().revision_height,
 				revision_number: ev.height().revision_number,
-				channel_id: ev.src_channel_id().to_string().as_bytes().to_vec(),
+				channel_id: ev.src_channel_id().to_string().into_bytes(),
 				port_id: ev.src_port_id().as_bytes().to_vec(),
 				sequence: ev.packet.sequence.into(),
 			},
 			RawIbcEvent::TimeoutPacket(ev) => IbcEvent::TimeoutPacket {
 				revision_height: ev.height().revision_height,
 				revision_number: ev.height().revision_number,
-				channel_id: ev.src_channel_id().to_string().as_bytes().to_vec(),
+				channel_id: ev.src_channel_id().to_string().into_bytes(),
 				port_id: ev.src_port_id().as_bytes().to_vec(),
 				sequence: ev.packet.sequence.into(),
 			},
 			RawIbcEvent::TimeoutOnClosePacket(ev) => IbcEvent::TimeoutOnClosePacket {
 				revision_height: ev.height().revision_height,
 				revision_number: ev.height().revision_number,
-				channel_id: ev.src_channel_id().to_string().as_bytes().to_vec(),
+				channel_id: ev.src_channel_id().to_string().into_bytes(),
 				port_id: ev.src_port_id().as_bytes().to_vec(),
 				sequence: ev.packet.sequence.into(),
 			},
@@ -436,7 +432,7 @@ impl From<RawIbcEvent> for IbcEvent {
 			RawIbcEvent::ChainError(_) => IbcEvent::ChainError,
 			RawIbcEvent::AppModule(ev) => IbcEvent::AppModule {
 				kind: ev.kind.as_bytes().to_vec(),
-				module_id: ev.module_name.to_string().as_bytes().to_vec(),
+				module_id: ev.module_name.to_string().into_bytes(),
 			},
 			RawIbcEvent::PushWasmCode(ev) => {
 				let wasm_checksum = ev.0;
@@ -509,6 +505,14 @@ impl TryFrom<IbcEvent> for RawIbcEvent {
 				},
 				header: None,
 			})),
+			IbcEvent::UpdateClientProposal { client_id, client_type } =>
+				Ok(RawIbcEvent::UpdateClientProposal(ClientEvents::UpdateClientProposal {
+					client_id: ClientId::from_str(
+						&String::from_utf8(client_id).map_err(|_| ERROR_STR)?,
+					)
+					.map_err(|_| ERROR_STR)?,
+					client_type: String::from_utf8(client_type).map_err(|_| ERROR_STR)?,
+				})),
 			IbcEvent::UpgradeClient {
 				client_id,
 				client_type,

@@ -375,8 +375,8 @@ impl State {
 }
 
 /// Provides a `to_string` method.
-impl core::fmt::Display for State {
-	fn fmt(&self, f: &mut core::fmt::Formatter<'_>) -> Result<(), core::fmt::Error> {
+impl fmt::Display for State {
+	fn fmt(&self, f: &mut fmt::Formatter<'_>) -> Result<(), fmt::Error> {
 		write!(f, "{}", self.as_string())
 	}
 }

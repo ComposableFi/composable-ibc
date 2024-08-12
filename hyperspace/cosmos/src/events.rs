@@ -19,6 +19,7 @@ use ibc::{
 			events::{self as channel_events, Attributes as ChannelAttributes},
 			packet::Packet,
 		},
+		ics24_host::identifier::ClientId,
 	},
 	events::{Error as IbcEventError, IbcEvent, IbcEventType},
 	protobuf::Protobuf,
@@ -103,8 +104,14 @@ pub fn ibc_event_try_from_abci_event(
 		Ok(IbcEventType::CreateClient) => Ok(IbcEvent::CreateClient(
 			create_client_try_from_abci_event(abci_event, height).map_err(IbcEventError::client)?,
 		)),
-		Ok(IbcEventType::UpdateClient) => Ok(IbcEvent::UpdateClient(
-			update_client_try_from_abci_event(abci_event, height).map_err(IbcEventError::client)?,
+		Ok(IbcEventType::UpdateClient) =>
+			return Ok(IbcEvent::UpdateClient(
+				update_client_try_from_abci_event(abci_event, height)
+					.map_err(IbcEventError::client)?,
+			)),
+		Ok(IbcEventType::UpdateClientProposal) => Ok(IbcEvent::UpdateClientProposal(
+			update_client_proposal_try_from_abci_event(abci_event, height)
+				.map_err(IbcEventError::client)?,
 		)),
 		Ok(IbcEventType::UpgradeClient) => Ok(IbcEvent::UpgradeClient(
 			upgrade_client_try_from_abci_event(abci_event, height)
@@ -187,11 +194,28 @@ pub fn update_client_try_from_abci_event(
 	client_extract_attributes_from_tx(abci_event, height).map(|attributes| {
 		client_events::UpdateClient {
 			common: attributes,
-			header: extract_header_from_tx(abci_event)
-				.ok()
-				.map(|h| h.encode_vec().expect("header should encode")),
+			header: extract_header_from_tx(abci_event).ok().map(|h| h.encode_vec()),
 		}
 	})
+}
+
+pub fn update_client_proposal_try_from_abci_event(
+	abci_event: &AbciEvent,
+	_height: Height,
+) -> Result<client_events::UpdateClientProposal, ClientError> {
+	let mut client_id = ClientId::default();
+	let mut client_type = String::default();
+	for tag in &abci_event.attributes {
+		let key = tag.key.as_str();
+		let value = tag.value.as_str();
+		match key {
+			client_events::SUBJECT_CLIENT_ID_ATTRIBUTE_KEY =>
+				client_id = value.parse().map_err(ClientError::invalid_client_identifier)?,
+			client_events::CLIENT_TYPE_ATTRIBUTE_KEY => client_type = value.to_owned(),
+			_ => {},
+		}
+	}
+	Ok(client_events::UpdateClientProposal { client_id, client_type })
 }
 
 pub fn upgrade_client_try_from_abci_event(
@@ -391,10 +415,18 @@ pub fn client_extract_attributes_from_tx(
 				attr.client_type = value
 					.parse()
 					.map_err(|_| ClientError::unknown_client_type(value.to_string()))?,
-			client_events::CONSENSUS_HEIGHT_ATTRIBUTE_KEY =>
-				attr.consensus_height = value
+			client_events::CONSENSUS_HEIGHT_ATTRIBUTE_KEY => {
+				let r = value
 					.parse()
-					.map_err(|e| ClientError::invalid_string_as_height(value.to_string(), e))?,
+					.map_err(|e| ClientError::invalid_string_as_height(value.to_string(), e));
+				match r {
+					Ok(r) => attr.consensus_height = r,
+					Err(e) => {
+						//skip error. This is a workaround for the fact that the height is not
+						// always present in the event and is just a empty string
+					},
+				}
+			},
 			client_events::HEIGHT_ATTRIBUTE_KEY =>
 				attr.height = value.parse().map_err(|e| {
 					ClientError::invalid_string_as_height(

@@ -16,7 +16,6 @@ use crate::{
 };
 use ibc::{
 	core::{
-		ics02_client::error::Error as ICS02Error,
 		ics04_channel::{
 			channel::ChannelEnd,
 			commitment::{AcknowledgementCommitment, PacketCommitment as PacketCommitmentType},
@@ -201,9 +200,7 @@ where
 		client_id: &ClientId,
 		height: Height,
 	) -> Result<Timestamp, ICS04Error> {
-		let encoded_height = height
-			.encode_vec()
-			.map_err(|e| ICS04Error::ics02_client(ICS02Error::encode(e)))?;
+		let encoded_height = height.encode_vec();
 		let client_id_bytes = client_id.as_bytes().to_vec();
 		let timestamp =
 			ClientUpdateTime::<T>::get(client_id_bytes, encoded_height).ok_or_else(|| {
@@ -225,9 +222,7 @@ where
 		client_id: &ClientId,
 		height: Height,
 	) -> Result<Height, ICS04Error> {
-		let encoded_height = height
-			.encode_vec()
-			.map_err(|e| ICS04Error::ics02_client(ICS02Error::encode(e)))?;
+		let encoded_height = height.encode_vec();
 		let client_id_bytes = client_id.as_bytes().to_vec();
 		let host_height = ClientUpdateHeight::<T>::get(client_id_bytes, encoded_height)
 			.ok_or_else(|| {
@@ -285,7 +280,7 @@ where
 		packet: ibc::core::ics04_channel::packet::Packet,
 	) -> Result<(), ICS04Error> {
 		// store packet offchain
-		let channel_id = key.1.to_string().as_bytes().to_vec();
+		let channel_id = key.1.to_string().into_bytes();
 		let port_id = key.0.as_bytes().to_vec();
 		let seq = u64::from(key.2);
 		let channel_end = ChannelReader::channel_end(self, &(key.0, key.1))?;
@@ -306,7 +301,7 @@ where
 		packet: ibc::core::ics04_channel::packet::Packet,
 	) -> Result<(), ICS04Error> {
 		// Store packet offchain
-		let channel_id = key.1.to_string().as_bytes().to_vec();
+		let channel_id = key.1.to_string().into_bytes();
 		let port_id = key.0.as_bytes().to_vec();
 		let seq = u64::from(key.2);
 		let channel_end = ChannelReader::channel_end(self, &(key.0, key.1))?;
@@ -396,10 +391,8 @@ where
 	) -> Result<(), ICS04Error> {
 		let conn_id = conn_id.as_bytes().to_vec();
 
-		let port_channel_id = (
-			port_channel_id.0.as_bytes().to_vec(),
-			port_channel_id.1.to_string().as_bytes().to_vec(),
-		);
+		let port_channel_id =
+			(port_channel_id.0.as_bytes().to_vec(), port_channel_id.1.to_string().into_bytes());
 
 		if <ChannelsConnection<T>>::contains_key(conn_id.clone()) {
 			log::trace!(target: "pallet_ibc", "in channel: [store_connection_channels] >> insert port_channel_id");

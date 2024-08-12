@@ -97,7 +97,6 @@ pub fn ed25519_signature_payload(entries: Vec<Entry>) -> Option<Instruction> {
 	new_instruction(&entries)
 }
 
-
 /// Displays the error if present, waits for few seconds and
 /// retries execution.
 ///
@@ -106,16 +105,16 @@ pub fn ed25519_signature_payload(entries: Vec<Entry>) -> Option<Instruction> {
 #[macro_export]
 macro_rules! skip_fail {
 	($res:expr) => {
-			match $res {
-					Ok(val) => val,
-					Err(e) => {
-							use crate::Duration;
-							use std::thread::sleep;
-							log::error!("{:?}", e);
-							sleep(Duration::from_secs(2));
-							continue;
-					}
-			}
+		match $res {
+			Ok(val) => val,
+			Err(e) => {
+				use crate::Duration;
+				use std::thread::sleep;
+				log::error!("{:?}", e);
+				sleep(Duration::from_secs(2));
+				continue;
+			},
+		}
 	};
 }
 

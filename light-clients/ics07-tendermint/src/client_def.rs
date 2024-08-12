@@ -167,11 +167,12 @@ where
 				let options = client_state.as_light_client_options()?;
 
 				let verifier = ProdVerifier::<H>::default();
-				let verdict = verifier.verify(
+				let time = ctx.host_timestamp().into_tm_time().unwrap();
+				let verdict = verifier.verify_misbehaviour_header(
 					untrusted_state,
 					trusted_state,
 					&options,
-					ctx.host_timestamp().into_tm_time().unwrap(),
+					time,
 				);
 
 				match verdict {
@@ -385,7 +386,7 @@ where
 		client_state.verify_height(height)?;
 
 		let path = ConnectionsPath(connection_id.clone());
-		let value = expected_connection_end.encode_vec().map_err(Ics02Error::encode)?;
+		let value = expected_connection_end.clone().encode_vec();
 		verify_membership::<H, _>(client_state, prefix, proof, root, path, value)
 	}
 
@@ -405,7 +406,7 @@ where
 		client_state.verify_height(height)?;
 
 		let path = ChannelEndsPath(port_id.clone(), *channel_id);
-		let value = expected_channel_end.encode_vec().map_err(Ics02Error::encode)?;
+		let value = expected_channel_end.clone().encode_vec();
 		verify_membership::<H, _>(client_state, prefix, proof, root, path, value)
 	}
 

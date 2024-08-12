@@ -26,7 +26,7 @@ sp-blockchain = { git = "https://github.com/paritytech/substrate", branch = "pol
 sp-core = { git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.43" }
 sp-runtime = { git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.43" }
 sp-trie = { git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.43" }
-tendermint-proto = { git = "https://github.com/informalsystems/tendermint-rs", rev = "e81f7bf23d63ffbcd242381d1ce5e35da3515ff1", default-features = false }
+tendermint-proto = { git = "https://github.com/informalsystems/tendermint-rs", rev = "4d81b67c28510db7d2d99ed62ebfa9fdf0e02141", default-features = false }
 
 [dependencies.ibc]
 path = "../../../ibc/modules"

@@ -127,9 +127,10 @@ const APP_MODULE_EVENT: &str = "app_module";
 /// Client event types
 const CREATE_CLIENT_EVENT: &str = "create_client";
 const UPDATE_CLIENT_EVENT: &str = "update_client";
+const UPDATE_CLIENT_PROPOSAL_EVENT: &str = "update_client_proposal";
 const CLIENT_MISBEHAVIOUR_EVENT: &str = "client_misbehaviour";
 const UPGRADE_CLIENT_EVENT: &str = "upgrade_client";
-const PUSH_WASM_CODE_EVENT: &str = "push_wasm_code";
+const PUSH_WASM_CODE_EVENT: &str = "store_wasm_code";
 /// Connection event types
 const CONNECTION_INIT_EVENT: &str = "connection_open_init";
 const CONNECTION_TRY_EVENT: &str = "connection_open_try";
@@ -156,6 +157,7 @@ pub enum IbcEventType {
 	NewBlock,
 	CreateClient,
 	UpdateClient,
+	UpdateClientProposal,
 	UpgradeClient,
 	ClientMisbehaviour,
 	PushWasmCode,
@@ -208,6 +210,7 @@ impl IbcEventType {
 			IbcEventType::AppModule => APP_MODULE_EVENT,
 			IbcEventType::Empty => EMPTY_EVENT,
 			IbcEventType::ChainError => CHAIN_ERROR_EVENT,
+			IbcEventType::UpdateClientProposal => UPDATE_CLIENT_PROPOSAL_EVENT,
 		}
 	}
 }
@@ -220,6 +223,7 @@ impl FromStr for IbcEventType {
 			NEW_BLOCK_EVENT => Ok(IbcEventType::NewBlock),
 			CREATE_CLIENT_EVENT => Ok(IbcEventType::CreateClient),
 			UPDATE_CLIENT_EVENT => Ok(IbcEventType::UpdateClient),
+			UPDATE_CLIENT_PROPOSAL_EVENT => Ok(IbcEventType::UpdateClientProposal),
 			UPGRADE_CLIENT_EVENT => Ok(IbcEventType::UpgradeClient),
 			CLIENT_MISBEHAVIOUR_EVENT => Ok(IbcEventType::ClientMisbehaviour),
 			PUSH_WASM_CODE_EVENT => Ok(IbcEventType::PushWasmCode),
@@ -255,6 +259,7 @@ pub enum IbcEvent {
 
 	CreateClient(ClientEvents::CreateClient),
 	UpdateClient(ClientEvents::UpdateClient),
+	UpdateClientProposal(ClientEvents::UpdateClientProposal),
 	UpgradeClient(ClientEvents::UpgradeClient),
 	ClientMisbehaviour(ClientEvents::ClientMisbehaviour),
 	PushWasmCode(ClientEvents::PushWasmCode),
@@ -309,6 +314,7 @@ impl fmt::Display for IbcEvent {
 
 			IbcEvent::CreateClient(ev) => write!(f, "CreateClientEv({})", ev),
 			IbcEvent::UpdateClient(ev) => write!(f, "UpdateClientEv({})", ev),
+			IbcEvent::UpdateClientProposal(ev) => write!(f, "UpdateClientProposalEv({})", ev),
 			IbcEvent::UpgradeClient(ev) => write!(f, "UpgradeClientEv({:?})", ev),
 			IbcEvent::ClientMisbehaviour(ev) => write!(f, "ClientMisbehaviourEv({:?})", ev),
 			IbcEvent::PushWasmCode(ev) => write!(f, "PushWasmCodeEv({:?})", ev),
@@ -407,6 +413,7 @@ impl IbcEvent {
 			IbcEvent::NewBlock(_) => IbcEventType::NewBlock,
 			IbcEvent::CreateClient(_) => IbcEventType::CreateClient,
 			IbcEvent::UpdateClient(_) => IbcEventType::UpdateClient,
+			IbcEvent::UpdateClientProposal(_) => IbcEventType::UpdateClientProposal,
 			IbcEvent::ClientMisbehaviour(_) => IbcEventType::ClientMisbehaviour,
 			IbcEvent::UpgradeClient(_) => IbcEventType::UpgradeClient,
 			IbcEvent::PushWasmCode(_) => IbcEventType::PushWasmCode,

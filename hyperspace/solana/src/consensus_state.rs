@@ -1,4 +1,4 @@
-use ibc::{core::ics23_commitment::commitment::CommitmentRoot};
+use ibc::core::ics23_commitment::commitment::CommitmentRoot;
 use ibc_proto_new::{
 	google::protobuf::Timestamp, ibc::lightclients::tendermint::v1::ConsensusState,
 };

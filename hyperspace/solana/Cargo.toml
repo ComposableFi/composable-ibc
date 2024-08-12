@@ -99,22 +99,22 @@ solana-signature-verifier = { git = "https://github.com/composableFi/emulated-li
 tracing = "0.1.36"
 
 # tendermint
-tendermint = { git = "https://github.com/informalsystems/tendermint-rs", rev = "e81f7bf23d63ffbcd242381d1ce5e35da3515ff1", default-features = false, features = [
+tendermint = { git = "https://github.com/informalsystems/tendermint-rs", rev = "4d81b67c28510db7d2d99ed62ebfa9fdf0e02141", default-features = false, features = [
     "secp256k1",
 ] }
 tendermint_new = { git = "https://github.com/mina86/tendermint-rs", rev = "45fbd500d731effb95a98257630feb46f6c41d06", default-features = false, package = "tendermint" }
-tendermint-proto = { git = "https://github.com/informalsystems/tendermint-rs", rev = "e81f7bf23d63ffbcd242381d1ce5e35da3515ff1", default-features = false }
-tendermint-rpc = { git = "https://github.com/informalsystems/tendermint-rs", rev = "e81f7bf23d63ffbcd242381d1ce5e35da3515ff1", default-features = false, features = [
+tendermint-proto = { git = "https://github.com/informalsystems/tendermint-rs", rev = "4d81b67c28510db7d2d99ed62ebfa9fdf0e02141", default-features = false }
+tendermint-rpc = { git = "https://github.com/informalsystems/tendermint-rs", rev = "4d81b67c28510db7d2d99ed62ebfa9fdf0e02141", default-features = false, features = [
     "http-client",
     "websocket-client",
 ] }
-tendermint-light-client = { git = "https://github.com/informalsystems/tendermint-rs", rev = "e81f7bf23d63ffbcd242381d1ce5e35da3515ff1", default-features = false, features = [
+tendermint-light-client = { git = "https://github.com/informalsystems/tendermint-rs", rev = "4d81b67c28510db7d2d99ed62ebfa9fdf0e02141", default-features = false, features = [
     "rpc-client",
     "secp256k1",
     "unstable",
 #    "testing"
 ] }
-tendermint-light-client-verifier = { git = "https://github.com/informalsystems/tendermint-rs", rev = "e81f7bf23d63ffbcd242381d1ce5e35da3515ff1", default-features = false }
+tendermint-light-client-verifier = { git = "https://github.com/informalsystems/tendermint-rs", rev = "4d81b67c28510db7d2d99ed62ebfa9fdf0e02141", default-features = false }
 tendermint-light-client-verifier_new = { git = "https://github.com/mina86/tendermint-rs", rev = "45fbd500d731effb95a98257630feb46f6c41d06", default-features = false, package = "tendermint-light-client-verifier" }
 
 [features]

@@ -235,6 +235,15 @@ where
 		client_state: Self::AnyClientState,
 	) -> Result<(), Error>;
 
+	fn store_client_state_with_checksum(
+		&mut self,
+		client_id: ClientId,
+		client_state: Self::AnyClientState,
+		checksum: Vec<u8>,
+	) -> Result<(), Error> {
+		unimplemented!()
+	}
+
 	/// Called upon successful client creation and update
 	fn store_consensus_state(
 		&mut self,

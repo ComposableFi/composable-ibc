@@ -117,7 +117,7 @@ impl From<AnyClientMessage> for Any {
 			},
 			AnyClientMessage::Tendermint(msg) => Any {
 				type_url: TENDERMINT_CLIENT_MESSAGE_TYPE_URL.to_string(),
-				value: msg.encode_vec().unwrap(),
+				value: msg.encode_vec(),
 			},
 		}
 	}

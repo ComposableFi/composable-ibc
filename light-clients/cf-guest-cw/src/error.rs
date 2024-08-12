@@ -34,3 +34,9 @@ pub enum ContractError {
 }
 
 impl Error for ContractError {}
+
+impl From<ContractError> for StdError {
+	fn from(e: ContractError) -> Self {
+		StdError::GenericErr { msg: e.to_string() }
+	}
+}

@@ -191,7 +191,7 @@ impl<'a> ClientKeeper for Context<'a> {
 	) -> Result<(), Error> {
 		let client_states = ReadonlyClientStates::new(self.storage());
 		let data = client_states.get().ok_or_else(|| Error::client_not_found(client_id.clone()))?;
-		let encoded = Self::encode_client_state(client_state, data)?;
+		let encoded = Self::encode_client_state(client_state, checksum)?;
 		let mut client_state_storage = ClientStates::new(self.storage_mut());
 		client_state_storage.insert(encoded);
 		Ok(())
@@ -298,7 +298,7 @@ impl<'a> Context<'a> {
 	pub fn encode_consensus_state(consensus_state: ConsensusState) -> Vec<u8> {
 		let wasm_consensus_state = ics08_wasm::consensus_state::ConsensusState {
 			data: ibc_proto::google::protobuf::Any::from(&consensus_state).encode_to_vec(),
-			timestamp: consensus_state.timestamp().nanoseconds(),
+			// timestamp: consensus_state.timestamp().nanoseconds(),
 			inner: Box::new(FakeInner),
 		};
 		wasm_consensus_state.to_any().encode_to_vec()

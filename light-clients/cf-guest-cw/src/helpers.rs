@@ -19,7 +19,7 @@ use serde::{Deserialize, Serialize};
 use crate::{
 	context::Context,
 	ics23::{ConsensusStates, FakeInner, ProcessedStates},
-	msg::ExecuteMsg,
+	msg::SudoMsg as ExecuteMsg,
 };
 use cosmwasm_std::{to_binary, Addr, CosmosMsg, StdResult, WasmMsg};
 use ibc::{

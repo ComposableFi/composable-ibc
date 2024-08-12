@@ -53,7 +53,7 @@ where
 	<AnyClientMessage as TryFrom<Any>>::Error: Display,
 {
 	fn encode_to_vec(&self) -> Result<Vec<u8>, tendermint_proto::Error> {
-		self.encode_vec()
+		Ok(self.clone().encode_vec())
 	}
 }
 
@@ -64,10 +64,7 @@ where
 	<AnyClientMessage as TryFrom<Any>>::Error: Display,
 {
 	pub fn to_any(&self) -> Any {
-		Any {
-			value: self.encode_vec().expect("encode client message"),
-			type_url: WASM_CLIENT_MESSAGE_TYPE_URL.to_string(),
-		}
+		Any { value: self.clone().encode_vec(), type_url: WASM_CLIENT_MESSAGE_TYPE_URL.to_string() }
 	}
 }
 

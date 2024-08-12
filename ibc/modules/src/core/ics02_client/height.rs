@@ -35,9 +35,10 @@ use tendermint_proto::Protobuf;
 )]
 #[cfg_attr(feature = "cosmwasm", derive(JsonSchema))]
 pub struct Height {
+	#[cfg_attr(feature = "cosmwasm", serde(default))]
+	#[cfg_attr(feature = "cosmwasm", schemars(default))]
 	/// Previously known as "epoch"
 	pub revision_number: u64,
-
 	/// The height of a block
 	pub revision_height: u64,
 }

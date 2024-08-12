@@ -149,7 +149,7 @@ pub struct SolanaClientConfig {
 	/// Maximun transaction size
 	pub max_tx_size: usize,
 	/// All the client states and headers will be wrapped in WASM ones using the WASM code ID.
-	pub wasm_code_id: Option<String>,
+	pub wasm_checksum: Option<String>,
 	pub common_state_config: CommonClientConfig,
 	/// Reference to commitment
 	pub commitment_prefix: Vec<u8>,

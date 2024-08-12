@@ -55,7 +55,12 @@ use crate::core::{
 	ics02_client::context::ClientTypes, ics04_channel::msgs::acknowledgement::Acknowledgement,
 	ics26_routing::context::ModuleCallbackContext,
 };
-use tendermint::{block, consensus, evidence, public_key::Algorithm};
+use tendermint::{
+	block,
+	consensus::{self, params::AbciParams},
+	evidence,
+	public_key::Algorithm,
+};
 
 // Needed in mocks.
 pub fn default_consensus_params() -> consensus::Params {
@@ -63,11 +68,12 @@ pub fn default_consensus_params() -> consensus::Params {
 		block: block::Size { max_bytes: 22020096, max_gas: -1, time_iota_ms: 1000 },
 		evidence: evidence::Params {
 			max_age_num_blocks: 100000,
-			max_age_duration: evidence::Duration(core::time::Duration::new(48 * 3600, 0)),
+			max_age_duration: evidence::Duration(Duration::new(48 * 3600, 0)),
 			max_bytes: 0,
 		},
 		validator: consensus::params::ValidatorParams { pub_key_types: vec![Algorithm::Ed25519] },
 		version: Some(consensus::params::VersionParams::default()),
+		abci: AbciParams::default(),
 	}
 }
 

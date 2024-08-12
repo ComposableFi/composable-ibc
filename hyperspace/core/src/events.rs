@@ -165,7 +165,7 @@ pub async fn parse_events(
 						proof_height,
 						client_state.latest_height()
 					);
-					let value = msg.encode_vec()?;
+					let value = msg.clone().encode_vec();
 					let msg = Any { value, type_url: msg.type_url() };
 					messages.push(msg)
 				}
@@ -194,7 +194,7 @@ pub async fn parse_events(
 					log::info!("This is the connection end in open ack {:?}", connection_end);
 					log::info!(
 						"Encoded connection end in open ack {:?}",
-						connection_end.encode_vec()?
+						connection_end.clone().encode_vec()
 					);
 					let counterparty = connection_end.counterparty();
 
@@ -223,7 +223,7 @@ pub async fn parse_events(
 					log::info!("THis is the client state of solana on cosmos {:?}", client_state);
 					log::info!(
 						"This is encoded client state in open ack {:?}",
-						client_state.encode_vec()
+						client_state.clone().encode_vec()
 					);
 					let consensus_proof = source
 						.query_client_consensus(
@@ -271,7 +271,7 @@ pub async fn parse_events(
 						signer: sink.account_id(),
 					};
 
-					let value = msg.encode_vec()?;
+					let value = msg.clone().encode_vec();
 					let msg = Any { value, type_url: msg.type_url() };
 					messages.push(msg)
 				}
@@ -322,7 +322,7 @@ pub async fn parse_events(
 						signer: sink.account_id(),
 					};
 
-					let value = msg.encode_vec()?;
+					let value = msg.clone().encode_vec();
 					let msg = Any { value, type_url: msg.type_url() };
 					messages.push(msg)
 				}
@@ -389,7 +389,7 @@ pub async fn parse_events(
 						signer: sink.account_id(),
 					};
 
-					let value = msg.encode_vec()?;
+					let value = msg.clone().encode_vec();
 					let msg = Any { value, type_url: msg.type_url() };
 					messages.push(msg)
 				}
@@ -426,7 +426,7 @@ pub async fn parse_events(
 						signer: sink.account_id(),
 					};
 
-					let value = msg.encode_vec()?;
+					let value = msg.clone().encode_vec();
 					let msg = Any { value, type_url: msg.type_url() };
 					messages.push(msg)
 				},
@@ -458,7 +458,7 @@ pub async fn parse_events(
 						signer: sink.account_id(),
 					};
 
-					let value = msg.encode_vec()?;
+					let value = msg.clone().encode_vec();
 					let msg = Any { value, type_url: msg.type_url() };
 					messages.push(msg)
 				},
@@ -490,7 +490,7 @@ pub async fn parse_events(
 					signer: sink.account_id(),
 				};
 
-				let value = msg.encode_vec()?;
+				let value = msg.clone().encode_vec();
 				let msg = Any { value, type_url: msg.type_url() };
 				messages.push(msg)
 			},
@@ -568,7 +568,7 @@ pub async fn parse_events(
 					signer: sink.account_id(),
 				};
 
-				let value = msg.encode_vec()?;
+				let value = msg.clone().encode_vec();
 				let msg = Any { value, type_url: msg.type_url() };
 				messages.push(msg);
 				log::info!(target: "hyperspace", "Sending packet {:?}", packet);
@@ -627,7 +627,7 @@ pub async fn parse_events(
 					signer: sink.account_id(),
 				};
 
-				let value = msg.encode_vec()?;
+				let value = msg.clone().encode_vec();
 				let msg = Any { value, type_url: msg.type_url() };
 				messages.push(msg)
 			},

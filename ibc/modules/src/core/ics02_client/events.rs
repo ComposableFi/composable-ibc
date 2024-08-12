@@ -28,6 +28,9 @@ pub const HEIGHT_ATTRIBUTE_KEY: &str = "height";
 /// The content of the `key` field for the attribute containing the client identifier.
 pub const CLIENT_ID_ATTRIBUTE_KEY: &str = "client_id";
 
+/// The content of the `key` field for the attribute containing the subject client identifier.
+pub const SUBJECT_CLIENT_ID_ATTRIBUTE_KEY: &str = "subject_client_id";
+
 /// The content of the `key` field for the attribute containing the client type.
 pub const CLIENT_TYPE_ATTRIBUTE_KEY: &str = "client_type";
 
@@ -204,6 +207,49 @@ impl core::fmt::Display for UpdateClient {
 impl core::fmt::Debug for UpdateClient {
 	fn fmt(&self, f: &mut core::fmt::Formatter<'_>) -> core::fmt::Result {
 		write!(f, "{}", self.common)
+	}
+}
+
+/// UpdateClientProposal event signals a proposal to update an on-chain client (IBC Client).
+#[derive(Deserialize, Serialize, Clone, PartialEq, Eq)]
+pub struct UpdateClientProposal {
+	pub client_id: ClientId,
+	pub client_type: String,
+}
+
+impl UpdateClientProposal {
+	pub fn client_id(&self) -> &ClientId {
+		&self.client_id
+	}
+
+	pub fn client_type(&self) -> &str {
+		&self.client_type
+	}
+}
+
+impl From<UpdateClientProposal> for IbcEvent {
+	fn from(v: UpdateClientProposal) -> Self {
+		IbcEvent::UpdateClientProposal(v)
+	}
+}
+
+impl core::fmt::Display for UpdateClientProposal {
+	fn fmt(&self, f: &mut core::fmt::Formatter<'_>) -> Result<(), core::fmt::Error> {
+		write!(
+			f,
+			"UpdateClientProposal: client_id: {}, client_type: {}",
+			self.client_id, self.client_type
+		)
+	}
+}
+
+impl core::fmt::Debug for UpdateClientProposal {
+	fn fmt(&self, f: &mut core::fmt::Formatter<'_>) -> core::fmt::Result {
+		write!(
+			f,
+			"UpdateClientProposal: client_id: {}, client_type: {}",
+			self.client_id, self.client_type
+		)
 	}
 }
 

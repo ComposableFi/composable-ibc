@@ -215,7 +215,7 @@ where
 	});
 
 	chain_a
-		.submit(vec![Any { value: msg.encode_vec().unwrap(), type_url: msg.type_url() }])
+		.submit(vec![Any { type_url: msg.type_url(), value: msg.encode_vec() }])
 		.await
 		.expect("failed to submit message");
 

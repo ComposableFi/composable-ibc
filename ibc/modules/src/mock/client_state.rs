@@ -153,7 +153,7 @@ impl ClientState for MockClientState {
 	}
 
 	fn encode_to_vec(&self) -> Result<Vec<u8>, tendermint_proto::Error> {
-		self.encode_vec()
+		Ok(self.clone().encode_vec())
 	}
 }
 
@@ -320,6 +320,6 @@ impl ConsensusState for MockConsensusState {
 	}
 
 	fn encode_to_vec(&self) -> Result<Vec<u8>, tendermint_proto::Error> {
-		self.encode_vec()
+		Ok(self.clone().encode_vec())
 	}
 }

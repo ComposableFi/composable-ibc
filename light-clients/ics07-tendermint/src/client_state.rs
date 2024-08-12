@@ -65,7 +65,7 @@ impl<H: Clone> ClientState<H> {
 	pub fn to_any(&self) -> Any {
 		Any {
 			type_url: TENDERMINT_CLIENT_STATE_TYPE_URL.to_string(),
-			value: self.encode_vec().unwrap(),
+			value: self.clone().encode_vec(),
 		}
 	}
 }
@@ -297,7 +297,7 @@ where
 	}
 
 	fn encode_to_vec(&self) -> Result<Vec<u8>, tendermint_proto::Error> {
-		self.encode_vec()
+		Ok(self.clone().encode_vec())
 	}
 }
 

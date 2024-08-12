@@ -400,7 +400,7 @@ async fn send_channel_close_init_and_assert_channel_close_confirm<A, B>(
 		signer: chain_a.account_id(),
 	};
 
-	let msg = Any { type_url: msg.type_url(), value: msg.encode_vec().unwrap() };
+	let msg = Any { type_url: msg.type_url(), value: msg.encode_vec() };
 
 	chain_a.submit(vec![msg.clone()]).await.unwrap();
 
@@ -454,7 +454,7 @@ async fn send_packet_and_assert_timeout_on_channel_close<A, B>(
 		signer: chain_a.account_id(),
 	};
 
-	let msg = Any { type_url: msg.type_url(), value: msg.encode_vec().unwrap() };
+	let msg = Any { type_url: msg.type_url(), value: msg.encode_vec() };
 
 	chain_a.submit(vec![msg.clone()]).await.unwrap();
 

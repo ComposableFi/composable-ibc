@@ -175,10 +175,7 @@ where
 	type Error = Error;
 
 	fn try_from(msg: MsgTransfer<C>) -> Result<Self, Self::Error> {
-		Ok(Self {
-			type_url: TYPE_URL.to_string(),
-			value: msg.encode_vec().map_err(Error::decode_raw_msg)?,
-		})
+		Ok(Self { type_url: TYPE_URL.to_string(), value: msg.encode_vec() })
 	}
 }
 

@@ -564,32 +564,24 @@ impl TryFrom<Any> for AnyClientMessage {
 impl From<AnyClientMessage> for Any {
 	fn from(client_msg: AnyClientMessage) -> Self {
 		match client_msg {
-			AnyClientMessage::Wasm(msg) => Any {
-				type_url: WASM_CLIENT_MESSAGE_TYPE_URL.to_string(),
-				value: msg.encode_vec().expect("encode_vec failed"),
-			},
+			AnyClientMessage::Wasm(msg) =>
+				Any { type_url: WASM_CLIENT_MESSAGE_TYPE_URL.to_string(), value: msg.encode_vec() },
 			AnyClientMessage::Grandpa(msg) => match msg {
-				ics10_grandpa::client_message::ClientMessage::Header(h) => Any {
-					type_url: GRANDPA_HEADER_TYPE_URL.to_string(),
-					value: h.encode_vec().expect("encode_vec failed"),
-				},
+				ics10_grandpa::client_message::ClientMessage::Header(h) =>
+					Any { type_url: GRANDPA_HEADER_TYPE_URL.to_string(), value: h.encode_vec() },
 				ics10_grandpa::client_message::ClientMessage::Misbehaviour(m) => Any {
 					type_url: GRANDPA_MISBEHAVIOUR_TYPE_URL.to_string(),
-					value: m.encode_vec().expect("encode_vec failed"),
+					value: m.encode_vec(),
 				},
 			},
-			AnyClientMessage::Beefy(msg) => Any {
-				type_url: BEEFY_CLIENT_MESSAGE_TYPE_URL.to_string(),
-				value: msg.encode_vec().expect("encode_vec failed"),
-			},
+			AnyClientMessage::Beefy(msg) =>
+				Any { type_url: BEEFY_CLIENT_MESSAGE_TYPE_URL.to_string(), value: msg.encode_vec() },
 			AnyClientMessage::Tendermint(msg) => Any {
 				type_url: TENDERMINT_CLIENT_MESSAGE_TYPE_URL.to_string(),
-				value: msg.encode_vec().expect("encode_vec failed"),
+				value: msg.encode_vec(),
 			},
-			AnyClientMessage::Guest(msg) => Any {
-				type_url: GUEST_CLIENT_MESSAGE_TYPE_URL.to_string(),
-				value: msg.encode_vec().expect("encode_vec failed"),
-			},
+			AnyClientMessage::Guest(msg) =>
+				Any { type_url: GUEST_CLIENT_MESSAGE_TYPE_URL.to_string(), value: msg.encode_vec() },
 			#[cfg(feature = "experimental-cf-solana")]
 			AnyClientMessage::CfSolana(msg) => Any {
 				type_url: CF_SOLANA_CLIENT_MESSAGE_TYPE_URL.to_string(),
