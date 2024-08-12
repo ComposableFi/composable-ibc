@@ -104,31 +104,22 @@ impl TryFrom<Vec<Shred>> for PreCheckedShreds {
 			return Err(Error::ShardsAreEmpty);
 		}
 
-		let mut shreds_set = BTreeSet::new();
-		let mut prev_index = None;
-		let slot = shreds[0].slot();
+		// TODO(mina86): use array_windows once it stabilises.
+		for pair in shreds.windows(2) {
+			let prev = &pair[0];
+			let this = &pair[1];
 
-		for shred in &shreds {
-			let index = shred.index();
-
-			// Ensure the shreds are from the same slot.
-			if shred.slot() != slot {
+			if prev.slot() != this.slot() {
 				return Err(Error::ShredsFromDifferentSlots);
 			}
 
-			// Ensure the shreds are sorted.
-			if let Some(prev_index) = prev_index {
-				if prev_index >= index {
-					return Err(Error::ShredsNotSorted);
-				}
+			if prev.index() > this.index() {
+				return Err(Error::ShredsNotSorted);
 			}
 
-			// Ensure the shreds don't contain duplicates.
-			if !shreds_set.insert(index) {
+			if prev.index() == this.index() {
 				return Err(Error::ShredsContainDuplicates);
 			}
-
-			prev_index = Some(index);
 		}
 
 		Ok(Self(shreds))
