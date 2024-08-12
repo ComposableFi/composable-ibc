@@ -34,6 +34,9 @@ pub struct ClientState {
 
 impl ClientState {
 	pub(crate) fn timestamp_for_slot(&self, slot: Slot) -> Timestamp {
+		// TODO: calculate timestamp using the Clock account:
+		// https://github.com/jito-foundation/jito-solana/blob/5396abaad1df66ebcab1e93473ce1b7c9f4c9f6c/sdk/program/src/clock.rs#L195
+
 		Timestamp::from_nanoseconds(
 			self.genesis_time.nanoseconds() + (slot as u64 * self.slot_duration.as_nanos() as u64),
 		)
@@ -81,12 +84,12 @@ impl ClientState {
 		// NOTE: delay time period is inclusive, so if current_time is earliest_time, then we
 		// return no error https://github.com/cosmos/ibc-go/blob/9ebc2f81049869bc40c443ffb72d9f3e47afb4fc/modules/light-clients/07-tendermint/client_state.go#L306
 		if current_time.nanoseconds() < earliest_time {
-			return Err(Error::NotEnoughTimeElapsed { current_time, earliest_time })
+			return Err(Error::NotEnoughTimeElapsed { current_time, earliest_time });
 		}
 
 		let earliest_height = processed_height + delay_period_blocks;
 		if current_height.revision_height < earliest_height {
-			return Err(Error::NotEnoughBlocksElapsed { current_height, earliest_height })
+			return Err(Error::NotEnoughBlocksElapsed { current_height, earliest_height });
 		}
 
 		Ok(())
@@ -97,11 +100,11 @@ impl ClientState {
 			return Err(Error::InsufficientHeight {
 				latest_height: Height::new(1, self.latest_height.into()),
 				target_height: height,
-			})
+			});
 		}
 
 		if self.is_frozen {
-			return Err(Error::ClientFrozen { client_id: client_id.clone() })
+			return Err(Error::ClientFrozen { client_id: client_id.clone() });
 		}
 		Ok(())
 	}
