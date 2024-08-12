@@ -23,24 +23,21 @@ pub struct ClientState {
 	pub current_leader: Pubkey,
 
 	/// Genesis timestamp
-	pub genesis_time: Timestamp,
+	pub genesis_time_ns: u64,
 
 	/// Chain's slot duration.
-	pub slot_duration: Duration,
+	pub slot_duration_ns: u64,
 }
 
 // super::wrap!(cf_guest_upstream::ClientState as ClientState);
 // super::wrap!(impl proto for ClientState);
 
 impl ClientState {
-	pub(crate) fn timestamp_for_slot(&self, slot: Slot) -> Timestamp {
+	pub(crate) fn timestamp_for_slot_ns(&self, slot: Slot) -> u64 {
 		// TODO: calculate timestamp using the Clock account:
 		// https://github.com/jito-foundation/jito-solana/blob/5396abaad1df66ebcab1e93473ce1b7c9f4c9f6c/sdk/program/src/clock.rs#L195
 
-		Timestamp::from_nanoseconds(
-			self.genesis_time.nanoseconds() + (slot as u64 * self.slot_duration.as_nanos() as u64),
-		)
-		.unwrap()
+		self.genesis_time_ns + (slot * self.slot_duration_ns)
 	}
 }
 
@@ -50,16 +47,16 @@ impl ClientState {
 		trusting_period_ns: u64,
 		is_frozen: bool,
 		current_validator: Pubkey,
-		genesis_time: Timestamp,
-		slot_duration: Duration,
+		genesis_time_ns: u64,
+		slot_duration_ns: u64,
 	) -> Self {
 		Self {
 			latest_height,
 			trusting_period_ns,
 			is_frozen,
 			current_leader: current_validator,
-			genesis_time,
-			slot_duration,
+			genesis_time_ns,
+			slot_duration_ns,
 		}
 	}
 
@@ -176,8 +173,8 @@ impl From<&ClientState> for proto::ClientState {
 			trusting_period_ns: state.trusting_period_ns,
 			is_frozen: state.is_frozen,
 			current_leader: state.current_leader.to_bytes().to_vec(),
-			genesis_time: state.genesis_time.nanoseconds(),
-			slot_duration: state.slot_duration.as_nanos() as u64,
+			genesis_time: state.genesis_time_ns,
+			slot_duration: state.slot_duration_ns,
 		}
 	}
 }
@@ -195,16 +192,14 @@ impl TryFrom<&proto::ClientState> for ClientState {
 	fn try_from(msg: &proto::ClientState) -> Result<Self, Self::Error> {
 		let current_leader_bytes: &[u8] = msg.current_leader.as_ref();
 		let current_leader = Pubkey::try_from(current_leader_bytes).map_err(|_| BadMessage)?;
-		let genesis_time = Timestamp::from_nanoseconds(msg.genesis_time).map_err(|_| BadMessage)?;
-		let slot_duration = Duration::from_nanos(msg.slot_duration);
 
 		Ok(Self {
 			latest_height: msg.latest_height.into(),
 			trusting_period_ns: msg.trusting_period_ns,
 			is_frozen: msg.is_frozen,
 			current_leader,
-			genesis_time,
-			slot_duration,
+			genesis_time_ns: msg.genesis_time,
+			slot_duration_ns: msg.slot_duration,
 		})
 	}
 }
