@@ -337,6 +337,7 @@ pub enum AnyClient {
 	Tendermint(ics07_tendermint::client_def::TendermintClient<HostFunctionsManager>),
 	Wasm(ics08_wasm::client_def::WasmClient<AnyClient, AnyClientState, AnyConsensusState>),
 	Guest(cf_guest::client_def::GuestClient<PubKey>),
+	#[cfg(feature = "experimental-cf-solana")]
 	CfSolana(icsxx_cf_solana::client_def::CfSolanaClient<PubKey>),
 	#[cfg(any(test, feature = "testing"))]
 	Mock(ibc::mock::client_def::MockClient),
@@ -349,6 +350,7 @@ pub enum AnyUpgradeOptions {
 	Tendermint(ics07_tendermint::client_state::UpgradeOptions),
 	Wasm(Box<Self>),
 	Guest(cf_guest::client::UpgradeOptions),
+	#[cfg(feature = "experimental-cf-solana")]
 	CfSolana(icsxx_cf_solana::client::UpgradeOptions),
 	#[cfg(any(test, feature = "testing"))]
 	Mock(()),
@@ -366,6 +368,7 @@ pub enum AnyClientState {
 	Wasm(ics08_wasm::client_state::ClientState<AnyClient, Self, AnyConsensusState>),
 	#[ibc(proto_url = "GUEST_CLIENT_STATE_TYPE_URL")]
 	Guest(cf_guest::ClientState<PubKey>),
+	#[cfg(feature = "experimental-cf-solana")]
 	#[ibc(proto_url = "CF_SOLANA_CLIENT_STATE_TYPE_URL")]
 	CfSolana(icsxx_cf_solana::ClientState<PubKey>),
 	#[cfg(any(test, feature = "testing"))]
@@ -443,6 +446,7 @@ pub enum AnyConsensusState {
 	Wasm(ics08_wasm::consensus_state::ConsensusState<Self>),
 	#[ibc(proto_url = "GUEST_CONSENSUS_STATE_TYPE_URL")]
 	Guest(cf_guest::ConsensusState),
+	#[cfg(feature = "experimental-cf-solana")]
 	#[ibc(proto_url = "CF_SOLANA_CONSENSUS_STATE_TYPE_URL")]
 	CfSolana(icsxx_cf_solana::ConsensusState),
 	#[cfg(any(test, feature = "testing"))]
@@ -472,6 +476,7 @@ pub enum AnyClientMessage {
 	Wasm(ics08_wasm::client_message::ClientMessage<Self>),
 	#[ibc(proto_url = "GUEST_CLIENT_MESSAGE_TYPE_URL")]
 	Guest(cf_guest::ClientMessage<PubKey>),
+	#[cfg(feature = "experimental-cf-solana")]
 	#[ibc(proto_url = "CF_SOLANA_CLIENT_MESSAGE_TYPE_URL")]
 	CfSolana(icsxx_cf_solana::ClientMessage<PubKey>),
 	#[cfg(any(test, feature = "testing"))]
@@ -585,6 +590,7 @@ impl From<AnyClientMessage> for Any {
 				type_url: GUEST_CLIENT_MESSAGE_TYPE_URL.to_string(),
 				value: msg.encode_vec().expect("encode_vec failed"),
 			},
+			#[cfg(feature = "experimental-cf-solana")]
 			AnyClientMessage::CfSolana(msg) => Any {
 				type_url: CF_SOLANA_CLIENT_MESSAGE_TYPE_URL.to_string(),
 				value: msg.encode_to_vec().expect("encode_vec failed"),
