@@ -44,6 +44,7 @@ use ibc::{
 };
 
 pub const TENDERMINT_CLIENT_STATE_TYPE_URL: &str = "/ibc.lightclients.tendermint.v1.ClientState";
+
 #[derive(PartialEq, Eq, Debug, Clone, Serialize, Deserialize)]
 pub struct ClientState<H> {
 	pub chain_id: ChainId,

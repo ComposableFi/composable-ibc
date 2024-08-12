@@ -177,12 +177,39 @@ checksum = "4436e0292ab1bb631b42973c61205e704475fe8126af845c8d923c0996328127"
 
 [[package]]
 name = "anchor-attribute-access-control"
+version = "0.24.2"
+source = "git+https://github.com/ComposableFi/mantis-solana?rev=d92c52575aaf430ca1f06bc2589f26b0fedde7bf#d92c52575aaf430ca1f06bc2589f26b0fedde7bf"
+dependencies = [
+ "anchor-syn 0.24.2",
+ "anyhow",
+ "proc-macro2",
+ "quote",
+ "regex",
+ "syn 1.0.109",
+]
+
+[[package]]
+name = "anchor-attribute-access-control"
 version = "0.29.0"
 source = "git+https://github.com/dhruvja/anchor#90a3008fcbbc5bcbc704cd6cccf61ef130c5f9eb"
 dependencies = [
- "anchor-syn",
+ "anchor-syn 0.29.0",
  "proc-macro2",
  "quote",
+ "syn 1.0.109",
+]
+
+[[package]]
+name = "anchor-attribute-account"
+version = "0.24.2"
+source = "git+https://github.com/ComposableFi/mantis-solana?rev=d92c52575aaf430ca1f06bc2589f26b0fedde7bf#d92c52575aaf430ca1f06bc2589f26b0fedde7bf"
+dependencies = [
+ "anchor-syn 0.24.2",
+ "anyhow",
+ "bs58 0.4.0",
+ "proc-macro2",
+ "quote",
+ "rustversion",
  "syn 1.0.109",
 ]
 
@@ -191,7 +218,7 @@ name = "anchor-attribute-account"
 version = "0.29.0"
 source = "git+https://github.com/dhruvja/anchor#90a3008fcbbc5bcbc704cd6cccf61ef130c5f9eb"
 dependencies = [
- "anchor-syn",
+ "anchor-syn 0.29.0",
  "bs58 0.5.1",
  "proc-macro2",
  "quote",
@@ -200,10 +227,31 @@ dependencies = [
 
 [[package]]
 name = "anchor-attribute-constant"
+version = "0.24.2"
+source = "git+https://github.com/ComposableFi/mantis-solana?rev=d92c52575aaf430ca1f06bc2589f26b0fedde7bf#d92c52575aaf430ca1f06bc2589f26b0fedde7bf"
+dependencies = [
+ "anchor-syn 0.24.2",
+ "proc-macro2",
+ "syn 1.0.109",
+]
+
+[[package]]
+name = "anchor-attribute-constant"
 version = "0.29.0"
 source = "git+https://github.com/dhruvja/anchor#90a3008fcbbc5bcbc704cd6cccf61ef130c5f9eb"
 dependencies = [
- "anchor-syn",
+ "anchor-syn 0.29.0",
+ "quote",
+ "syn 1.0.109",
+]
+
+[[package]]
+name = "anchor-attribute-error"
+version = "0.24.2"
+source = "git+https://github.com/ComposableFi/mantis-solana?rev=d92c52575aaf430ca1f06bc2589f26b0fedde7bf#d92c52575aaf430ca1f06bc2589f26b0fedde7bf"
+dependencies = [
+ "anchor-syn 0.24.2",
+ "proc-macro2",
  "quote",
  "syn 1.0.109",
 ]
@@ -213,7 +261,19 @@ name = "anchor-attribute-error"
 version = "0.29.0"
 source = "git+https://github.com/dhruvja/anchor#90a3008fcbbc5bcbc704cd6cccf61ef130c5f9eb"
 dependencies = [
- "anchor-syn",
+ "anchor-syn 0.29.0",
+ "quote",
+ "syn 1.0.109",
+]
+
+[[package]]
+name = "anchor-attribute-event"
+version = "0.24.2"
+source = "git+https://github.com/ComposableFi/mantis-solana?rev=d92c52575aaf430ca1f06bc2589f26b0fedde7bf#d92c52575aaf430ca1f06bc2589f26b0fedde7bf"
+dependencies = [
+ "anchor-syn 0.24.2",
+ "anyhow",
+ "proc-macro2",
  "quote",
  "syn 1.0.109",
 ]
@@ -223,7 +283,32 @@ name = "anchor-attribute-event"
 version = "0.29.0"
 source = "git+https://github.com/dhruvja/anchor#90a3008fcbbc5bcbc704cd6cccf61ef130c5f9eb"
 dependencies = [
- "anchor-syn",
+ "anchor-syn 0.29.0",
+ "proc-macro2",
+ "quote",
+ "syn 1.0.109",
+]
+
+[[package]]
+name = "anchor-attribute-interface"
+version = "0.24.2"
+source = "git+https://github.com/ComposableFi/mantis-solana?rev=d92c52575aaf430ca1f06bc2589f26b0fedde7bf#d92c52575aaf430ca1f06bc2589f26b0fedde7bf"
+dependencies = [
+ "anchor-syn 0.24.2",
+ "anyhow",
+ "heck 0.3.3",
+ "proc-macro2",
+ "quote",
+ "syn 1.0.109",
+]
+
+[[package]]
+name = "anchor-attribute-program"
+version = "0.24.2"
+source = "git+https://github.com/ComposableFi/mantis-solana?rev=d92c52575aaf430ca1f06bc2589f26b0fedde7bf#d92c52575aaf430ca1f06bc2589f26b0fedde7bf"
+dependencies = [
+ "anchor-syn 0.24.2",
+ "anyhow",
  "proc-macro2",
  "quote",
  "syn 1.0.109",
@@ -234,7 +319,19 @@ name = "anchor-attribute-program"
 version = "0.29.0"
 source = "git+https://github.com/dhruvja/anchor#90a3008fcbbc5bcbc704cd6cccf61ef130c5f9eb"
 dependencies = [
- "anchor-syn",
+ "anchor-syn 0.29.0",
+ "quote",
+ "syn 1.0.109",
+]
+
+[[package]]
+name = "anchor-attribute-state"
+version = "0.24.2"
+source = "git+https://github.com/ComposableFi/mantis-solana?rev=d92c52575aaf430ca1f06bc2589f26b0fedde7bf#d92c52575aaf430ca1f06bc2589f26b0fedde7bf"
+dependencies = [
+ "anchor-syn 0.24.2",
+ "anyhow",
+ "proc-macro2",
  "quote",
  "syn 1.0.109",
 ]
@@ -244,7 +341,7 @@ name = "anchor-client"
 version = "0.29.0"
 source = "git+https://github.com/dhruvja/anchor#90a3008fcbbc5bcbc704cd6cccf61ef130c5f9eb"
 dependencies = [
- "anchor-lang",
+ "anchor-lang 0.29.0",
  "anyhow",
  "bytemuck",
  "futures",
@@ -252,7 +349,7 @@ dependencies = [
  "serde",
  "solana-account-decoder",
  "solana-client",
- "solana-sdk",
+ "solana-sdk 1.17.30",
  "thiserror",
  "tokio",
  "url",
@@ -260,10 +357,22 @@ dependencies = [
 
 [[package]]
 name = "anchor-derive-accounts"
+version = "0.24.2"
+source = "git+https://github.com/ComposableFi/mantis-solana?rev=d92c52575aaf430ca1f06bc2589f26b0fedde7bf#d92c52575aaf430ca1f06bc2589f26b0fedde7bf"
+dependencies = [
+ "anchor-syn 0.24.2",
+ "anyhow",
+ "proc-macro2",
+ "quote",
+ "syn 1.0.109",
+]
+
+[[package]]
+name = "anchor-derive-accounts"
 version = "0.29.0"
 source = "git+https://github.com/dhruvja/anchor#90a3008fcbbc5bcbc704cd6cccf61ef130c5f9eb"
 dependencies = [
- "anchor-syn",
+ "anchor-syn 0.29.0",
  "quote",
  "syn 1.0.109",
 ]
@@ -273,7 +382,7 @@ name = "anchor-derive-serde"
 version = "0.29.0"
 source = "git+https://github.com/dhruvja/anchor#90a3008fcbbc5bcbc704cd6cccf61ef130c5f9eb"
 dependencies = [
- "anchor-syn",
+ "anchor-syn 0.29.0",
  "borsh-derive-internal 0.10.3",
  "proc-macro2",
  "quote",
@@ -292,16 +401,39 @@ dependencies = [
 
 [[package]]
 name = "anchor-lang"
+version = "0.24.2"
+source = "git+https://github.com/ComposableFi/mantis-solana?rev=d92c52575aaf430ca1f06bc2589f26b0fedde7bf#d92c52575aaf430ca1f06bc2589f26b0fedde7bf"
+dependencies = [
+ "anchor-attribute-access-control 0.24.2",
+ "anchor-attribute-account 0.24.2",
+ "anchor-attribute-constant 0.24.2",
+ "anchor-attribute-error 0.24.2",
+ "anchor-attribute-event 0.24.2",
+ "anchor-attribute-interface",
+ "anchor-attribute-program 0.24.2",
+ "anchor-attribute-state",
+ "anchor-derive-accounts 0.24.2",
+ "arrayref",
+ "base64 0.13.1",
+ "bincode",
+ "borsh 0.10.3",
+ "bytemuck",
+ "solana-program 2.0.0",
+ "thiserror",
+]
+
+[[package]]
+name = "anchor-lang"
 version = "0.29.0"
 source = "git+https://github.com/dhruvja/anchor#90a3008fcbbc5bcbc704cd6cccf61ef130c5f9eb"
 dependencies = [
- "anchor-attribute-access-control",
- "anchor-attribute-account",
- "anchor-attribute-constant",
- "anchor-attribute-error",
- "anchor-attribute-event",
- "anchor-attribute-program",
- "anchor-derive-accounts",
+ "anchor-attribute-access-control 0.29.0",
+ "anchor-attribute-account 0.29.0",
+ "anchor-attribute-constant 0.29.0",
+ "anchor-attribute-error 0.29.0",
+ "anchor-attribute-event 0.29.0",
+ "anchor-attribute-program 0.29.0",
+ "anchor-derive-accounts 0.29.0",
  "anchor-derive-serde",
  "anchor-derive-space",
  "arrayref",
@@ -310,7 +442,7 @@ dependencies = [
  "borsh 0.10.3",
  "bytemuck",
  "getrandom 0.2.15",
- "solana-program",
+ "solana-program 1.17.30",
  "thiserror",
 ]
 
@@ -320,12 +452,30 @@ version = "0.29.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "6c4fd6e43b2ca6220d2ef1641539e678bfc31b6cc393cf892b373b5997b6a39a"
 dependencies = [
- "anchor-lang",
+ "anchor-lang 0.29.0",
  "mpl-token-metadata",
- "solana-program",
+ "solana-program 1.17.30",
  "spl-associated-token-account",
  "spl-token",
  "spl-token-2022 0.9.0",
+]
+
+[[package]]
+name = "anchor-syn"
+version = "0.24.2"
+source = "git+https://github.com/ComposableFi/mantis-solana?rev=d92c52575aaf430ca1f06bc2589f26b0fedde7bf#d92c52575aaf430ca1f06bc2589f26b0fedde7bf"
+dependencies = [
+ "anyhow",
+ "bs58 0.3.1",
+ "heck 0.3.3",
+ "proc-macro2",
+ "proc-macro2-diagnostics",
+ "quote",
+ "serde",
+ "serde_json",
+ "sha2 0.9.9",
+ "syn 1.0.109",
+ "thiserror",
 ]
 
 [[package]]
@@ -943,6 +1093,12 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "9d297deb1925b89f2ccc13d7635fa0714f12c87adce1c75356b39ca9b7178567"
 
 [[package]]
+name = "base64"
+version = "0.22.1"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "72b3254f16251a8381aa12e40e3c4d2f0199f8c6508fbecb9d91f575e0fbb8c6"
+
+[[package]]
 name = "base64ct"
 version = "1.6.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -1280,6 +1436,16 @@ dependencies = [
 ]
 
 [[package]]
+name = "borsh"
+version = "1.5.1"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "a6362ed55def622cddc70a4746a68554d7b687713770de539e59a739b249f8ed"
+dependencies = [
+ "borsh-derive 1.5.1",
+ "cfg_aliases 0.2.1",
+]
+
+[[package]]
 name = "borsh-derive"
 version = "0.9.3"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -1303,6 +1469,20 @@ dependencies = [
  "proc-macro-crate 0.1.5",
  "proc-macro2",
  "syn 1.0.109",
+]
+
+[[package]]
+name = "borsh-derive"
+version = "1.5.1"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "c3ef8005764f53cd4dca619f5bf64cafd4664dada50ece25e4d81de54c80cc0b"
+dependencies = [
+ "once_cell",
+ "proc-macro-crate 3.1.0",
+ "proc-macro2",
+ "quote",
+ "syn 2.0.61",
+ "syn_derive",
 ]
 
 [[package]]
@@ -1390,6 +1570,12 @@ dependencies = [
  "alloc-no-stdlib",
  "alloc-stdlib",
 ]
+
+[[package]]
+name = "bs58"
+version = "0.3.1"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "476e9cd489f9e121e02ffa6014a8ef220ecb15c05ed23fc34cca13925dc283fb"
 
 [[package]]
 name = "bs58"
@@ -1567,7 +1753,7 @@ dependencies = [
 [[package]]
 name = "cf-guest"
 version = "0.0.0"
-source = "git+https://github.com/composableFi/emulated-light-client/#0c0f4b1f034639854a50217fd777d0a13a2dc55a"
+source = "git+https://github.com/ComposableFi/emulated-light-client/#0c0f4b1f034639854a50217fd777d0a13a2dc55a"
 dependencies = [
  "borsh 0.10.3",
  "bytemuck",
@@ -1679,6 +1865,12 @@ name = "cfg_aliases"
 version = "0.1.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "fd16c4719339c4530435d38e511904438d07cce7950afa3718a84ac36c10e89e"
+
+[[package]]
+name = "cfg_aliases"
+version = "0.2.1"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "613afe47fcd5fac7ccf1db93babcb082c5994d996f20b8b159f2ad1658eb5724"
 
 [[package]]
 name = "chacha20"
@@ -4842,7 +5034,7 @@ dependencies = [
 [[package]]
 name = "guestchain"
 version = "0.0.0"
-source = "git+https://github.com/composableFi/emulated-light-client/#0c0f4b1f034639854a50217fd777d0a13a2dc55a"
+source = "git+https://github.com/ComposableFi/emulated-light-client/#0c0f4b1f034639854a50217fd777d0a13a2dc55a"
 dependencies = [
  "borsh 0.10.3",
  "bytemuck",
@@ -5533,7 +5725,7 @@ name = "hyperspace-solana"
 version = "0.1.0"
 dependencies = [
  "anchor-client",
- "anchor-lang",
+ "anchor-lang 0.29.0",
  "anchor-spl",
  "anyhow",
  "async-trait",
@@ -5620,7 +5812,7 @@ dependencies = [
 name = "hyperspace-testsuite"
 version = "0.1.0"
 dependencies = [
- "anchor-lang",
+ "anchor-lang 0.29.0",
  "anyhow",
  "async-trait",
  "finality-grandpa",
@@ -6522,12 +6714,16 @@ dependencies = [
 name = "icsxx-cf-solana"
 version = "0.0.1"
 dependencies = [
+ "assert_matches",
+ "bincode",
+ "bitflags 2.5.0",
  "borsh 0.10.3",
  "bytemuck",
  "cf-guest 0.0.0",
  "derive_more",
  "ed25519-consensus",
  "guestchain",
+ "hex",
  "ibc 0.15.0",
  "ibc-core-client-context",
  "ibc-core-client-types",
@@ -6537,14 +6733,20 @@ dependencies = [
  "ibc-primitives 0.50.0 (git+https://github.com/mina86/ibc-rs?rev=6015aea441d4660f7f7ecd89b5e770a993448089)",
  "ibc-proto 0.18.0",
  "insta",
+ "itertools 0.11.0",
  "lib",
  "memory",
+ "num_enum 0.7.3",
  "prost 0.11.9",
  "prost 0.12.3",
- "prost-build 0.11.9",
+ "prost-build 0.12.3",
+ "proto-utils",
  "rand 0.8.5",
+ "rand_chacha 0.3.1",
  "sealable-trie",
  "serde",
+ "solana-sdk 2.0.0",
+ "static_assertions",
  "stdx",
  "tendermint-proto 0.34.1",
  "trie-ids",
@@ -6841,7 +7043,7 @@ dependencies = [
  "prost 0.12.3",
  "prost-types 0.12.3",
  "solana-perf",
- "solana-sdk",
+ "solana-sdk 1.17.30",
  "tonic 0.10.2",
  "tonic-build 0.10.2",
 ]
@@ -6857,7 +7059,7 @@ dependencies = [
  "prost-types 0.12.3",
  "solana-client",
  "solana-metrics",
- "solana-sdk",
+ "solana-sdk 1.17.30",
  "solana-transaction-status",
  "thiserror",
  "tokio",
@@ -7239,14 +7441,14 @@ checksum = "830d08ce1d1d941e6b30645f1a0eb5643013d835ce3779a5fc208261dbe10f55"
 [[package]]
 name = "lib"
 version = "0.0.0"
-source = "git+https://github.com/composableFi/emulated-light-client/#0c0f4b1f034639854a50217fd777d0a13a2dc55a"
+source = "git+https://github.com/ComposableFi/emulated-light-client/#0c0f4b1f034639854a50217fd777d0a13a2dc55a"
 dependencies = [
  "base64 0.21.7",
  "borsh 0.10.3",
  "bytemuck",
  "derive_more",
  "sha2 0.10.8",
- "solana-program",
+ "solana-program 1.17.30",
  "stdx",
 ]
 
@@ -8112,7 +8314,7 @@ dependencies = [
 [[package]]
 name = "memory"
 version = "0.0.0"
-source = "git+https://github.com/composableFi/emulated-light-client/#0c0f4b1f034639854a50217fd777d0a13a2dc55a"
+source = "git+https://github.com/ComposableFi/emulated-light-client/#0c0f4b1f034639854a50217fd777d0a13a2dc55a"
 dependencies = [
  "derive_more",
  "stdx",
@@ -8296,7 +8498,7 @@ dependencies = [
  "borsh 0.10.3",
  "num-derive 0.3.3",
  "num-traits",
- "solana-program",
+ "solana-program 1.17.30",
  "thiserror",
 ]
 
@@ -8758,11 +8960,11 @@ dependencies = [
 
 [[package]]
 name = "num_enum"
-version = "0.7.2"
+version = "0.7.3"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "02339744ee7253741199f897151b38e72257d13802d4ee837285cc2990a90845"
+checksum = "4e613fc340b2220f734a8595782c551f1250e969d87d3be1ae0579e8d4065179"
 dependencies = [
- "num_enum_derive 0.7.2",
+ "num_enum_derive 0.7.3",
 ]
 
 [[package]]
@@ -8779,9 +8981,9 @@ dependencies = [
 
 [[package]]
 name = "num_enum_derive"
-version = "0.7.2"
+version = "0.7.3"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "681030a937600a36906c185595136d26abfebb4aa9c65701cefcaf8578bb982b"
+checksum = "af1844ef2428cc3e1cb900be36181049ef3d3193c63e43026cfe202983b27a56"
 dependencies = [
  "proc-macro-crate 3.1.0",
  "proc-macro2",
@@ -9403,6 +9605,7 @@ dependencies = [
  "ics10-grandpa",
  "ics11-beefy",
  "ics23 0.10.0",
+ "icsxx-cf-solana",
  "light-client-common",
  "log",
  "orml-tokens",
@@ -12011,6 +12214,19 @@ dependencies = [
 ]
 
 [[package]]
+name = "proc-macro2-diagnostics"
+version = "0.9.1"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "4bf29726d67464d49fa6224a1d07936a8c08bb3fba727c7493f6cf1616fdaada"
+dependencies = [
+ "proc-macro2",
+ "quote",
+ "syn 1.0.109",
+ "version_check",
+ "yansi",
+]
+
+[[package]]
 name = "prometheus"
 version = "0.13.4"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -12201,7 +12417,7 @@ dependencies = [
 [[package]]
 name = "proto-utils"
 version = "0.0.0"
-source = "git+https://github.com/composableFi/emulated-light-client/#0c0f4b1f034639854a50217fd777d0a13a2dc55a"
+source = "git+https://github.com/ComposableFi/emulated-light-client/#0c0f4b1f034639854a50217fd777d0a13a2dc55a"
 dependencies = [
  "const_format",
  "derive_more",
@@ -14614,7 +14830,7 @@ dependencies = [
 [[package]]
 name = "sealable-trie"
 version = "0.0.0"
-source = "git+https://github.com/composableFi/emulated-light-client/#0c0f4b1f034639854a50217fd777d0a13a2dc55a"
+source = "git+https://github.com/ComposableFi/emulated-light-client/#0c0f4b1f034639854a50217fd777d0a13a2dc55a"
 dependencies = [
  "ascii 1.1.0",
  "base64 0.21.7",
@@ -15176,7 +15392,7 @@ dependencies = [
  "serde_derive",
  "serde_json",
  "solana-config-program",
- "solana-sdk",
+ "solana-sdk 1.17.30",
  "spl-token",
  "spl-token-2022 1.0.0",
  "spl-token-group-interface",
@@ -15188,10 +15404,10 @@ dependencies = [
 [[package]]
 name = "solana-allocator"
 version = "0.0.0"
-source = "git+https://github.com/composableFi/emulated-light-client/#0c0f4b1f034639854a50217fd777d0a13a2dc55a"
+source = "git+https://github.com/ComposableFi/emulated-light-client/#0c0f4b1f034639854a50217fd777d0a13a2dc55a"
 dependencies = [
  "bytemuck",
- "solana-program",
+ "solana-program 1.17.30",
 ]
 
 [[package]]
@@ -15204,7 +15420,7 @@ dependencies = [
  "clap 2.34.0",
  "rpassword",
  "solana-remote-wallet",
- "solana-sdk",
+ "solana-sdk 1.17.30",
  "thiserror",
  "tiny-bip39 0.8.2",
  "uriparse",
@@ -15235,7 +15451,7 @@ dependencies = [
  "solana-rpc-client",
  "solana-rpc-client-api",
  "solana-rpc-client-nonce-utils",
- "solana-sdk",
+ "solana-sdk 1.17.30",
  "solana-streamer",
  "solana-thin-client",
  "solana-tpu-client",
@@ -15255,7 +15471,7 @@ dependencies = [
  "serde",
  "serde_derive",
  "solana-program-runtime",
- "solana-sdk",
+ "solana-sdk 1.17.30",
 ]
 
 [[package]]
@@ -15275,7 +15491,7 @@ dependencies = [
  "rcgen",
  "solana-measure",
  "solana-metrics",
- "solana-sdk",
+ "solana-sdk 1.17.30",
  "thiserror",
  "tokio",
 ]
@@ -15305,7 +15521,30 @@ dependencies = [
  "serde_derive",
  "serde_json",
  "sha2 0.10.8",
- "solana-frozen-abi-macro",
+ "solana-frozen-abi-macro 1.17.30",
+ "subtle",
+ "thiserror",
+]
+
+[[package]]
+name = "solana-frozen-abi"
+version = "2.0.0"
+source = "git+https://github.com/ComposableFi/mantis-solana?rev=d92c52575aaf430ca1f06bc2589f26b0fedde7bf#d92c52575aaf430ca1f06bc2589f26b0fedde7bf"
+dependencies = [
+ "block-buffer 0.10.4",
+ "bs58 0.4.0",
+ "bv",
+ "either",
+ "generic-array 0.14.7",
+ "im",
+ "log",
+ "memmap2",
+ "rustc_version",
+ "serde",
+ "serde_bytes",
+ "serde_derive",
+ "sha2 0.10.8",
+ "solana-frozen-abi-macro 2.0.0",
  "subtle",
  "thiserror",
 ]
@@ -15323,11 +15562,22 @@ dependencies = [
 ]
 
 [[package]]
+name = "solana-frozen-abi-macro"
+version = "2.0.0"
+source = "git+https://github.com/ComposableFi/mantis-solana?rev=d92c52575aaf430ca1f06bc2589f26b0fedde7bf#d92c52575aaf430ca1f06bc2589f26b0fedde7bf"
+dependencies = [
+ "proc-macro2",
+ "quote",
+ "rustc_version",
+ "syn 2.0.61",
+]
+
+[[package]]
 name = "solana-ibc"
 version = "0.1.0"
-source = "git+https://github.com/composableFi/emulated-light-client/#0c0f4b1f034639854a50217fd777d0a13a2dc55a"
+source = "git+https://github.com/ComposableFi/emulated-light-client/#0c0f4b1f034639854a50217fd777d0a13a2dc55a"
 dependencies = [
- "anchor-lang",
+ "anchor-lang 0.29.0",
  "anchor-spl",
  "base64 0.21.7",
  "bytemuck",
@@ -15372,13 +15622,23 @@ dependencies = [
 ]
 
 [[package]]
+name = "solana-logger"
+version = "2.0.0"
+source = "git+https://github.com/ComposableFi/mantis-solana?rev=d92c52575aaf430ca1f06bc2589f26b0fedde7bf#d92c52575aaf430ca1f06bc2589f26b0fedde7bf"
+dependencies = [
+ "env_logger 0.9.3",
+ "lazy_static",
+ "log",
+]
+
+[[package]]
 name = "solana-measure"
 version = "1.17.30"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "857178177c6b378bcfc35df6867a6eef211059f5e4ab01ee87355d6b7493b556"
 dependencies = [
  "log",
- "solana-sdk",
+ "solana-sdk 1.17.30",
 ]
 
 [[package]]
@@ -15392,7 +15652,7 @@ dependencies = [
  "lazy_static",
  "log",
  "reqwest",
- "solana-sdk",
+ "solana-sdk 1.17.30",
  "thiserror",
 ]
 
@@ -15411,8 +15671,8 @@ dependencies = [
  "serde",
  "serde_derive",
  "socket2 0.5.7",
- "solana-logger",
- "solana-sdk",
+ "solana-logger 1.17.30",
+ "solana-sdk 1.17.30",
  "solana-version",
  "tokio",
  "url",
@@ -15439,11 +15699,11 @@ dependencies = [
  "rayon",
  "rustc_version",
  "serde",
- "solana-frozen-abi",
- "solana-frozen-abi-macro",
+ "solana-frozen-abi 1.17.30",
+ "solana-frozen-abi-macro 1.17.30",
  "solana-metrics",
  "solana-rayon-threadlimit",
- "solana-sdk",
+ "solana-sdk 1.17.30",
  "solana-vote-program",
 ]
 
@@ -15492,9 +15752,63 @@ dependencies = [
  "serde_json",
  "sha2 0.10.8",
  "sha3 0.10.8",
- "solana-frozen-abi",
- "solana-frozen-abi-macro",
- "solana-sdk-macro",
+ "solana-frozen-abi 1.17.30",
+ "solana-frozen-abi-macro 1.17.30",
+ "solana-sdk-macro 1.17.30",
+ "thiserror",
+ "tiny-bip39 0.8.2",
+ "wasm-bindgen",
+ "zeroize",
+]
+
+[[package]]
+name = "solana-program"
+version = "2.0.0"
+source = "git+https://github.com/ComposableFi/mantis-solana?rev=d92c52575aaf430ca1f06bc2589f26b0fedde7bf#d92c52575aaf430ca1f06bc2589f26b0fedde7bf"
+dependencies = [
+ "ark-bn254",
+ "ark-ec",
+ "ark-ff",
+ "ark-serialize",
+ "base64 0.22.1",
+ "bincode",
+ "bitflags 2.5.0",
+ "blake3",
+ "borsh 0.10.3",
+ "borsh 0.9.3",
+ "borsh 1.5.1",
+ "bs58 0.4.0",
+ "bv",
+ "bytemuck",
+ "cc",
+ "console_error_panic_hook",
+ "console_log",
+ "curve25519-dalek 3.2.1",
+ "getrandom 0.2.15",
+ "itertools 0.10.5",
+ "js-sys",
+ "lazy_static",
+ "libc",
+ "libsecp256k1 0.6.0",
+ "light-poseidon",
+ "log",
+ "memoffset 0.9.1",
+ "num-bigint 0.4.5",
+ "num-derive 0.4.2",
+ "num-traits",
+ "parking_lot 0.12.2",
+ "rand 0.8.5",
+ "rustc_version",
+ "rustversion",
+ "serde",
+ "serde_bytes",
+ "serde_derive",
+ "serde_json",
+ "sha2 0.10.8",
+ "sha3 0.10.8",
+ "solana-frozen-abi 2.0.0",
+ "solana-frozen-abi-macro 2.0.0",
+ "solana-sdk-macro 2.0.0",
  "thiserror",
  "tiny-bip39 0.8.2",
  "wasm-bindgen",
@@ -15520,11 +15834,11 @@ dependencies = [
  "rand 0.8.5",
  "rustc_version",
  "serde",
- "solana-frozen-abi",
- "solana-frozen-abi-macro",
+ "solana-frozen-abi 1.17.30",
+ "solana-frozen-abi-macro 1.17.30",
  "solana-measure",
  "solana-metrics",
- "solana-sdk",
+ "solana-sdk 1.17.30",
  "solana_rbpf",
  "thiserror",
 ]
@@ -15545,7 +15859,7 @@ dependencies = [
  "serde_json",
  "solana-account-decoder",
  "solana-rpc-client-api",
- "solana-sdk",
+ "solana-sdk 1.17.30",
  "thiserror",
  "tokio",
  "tokio-stream",
@@ -15575,7 +15889,7 @@ dependencies = [
  "solana-metrics",
  "solana-net-utils",
  "solana-rpc-client-api",
- "solana-sdk",
+ "solana-sdk 1.17.30",
  "solana-streamer",
  "thiserror",
  "tokio",
@@ -15605,7 +15919,7 @@ dependencies = [
  "parking_lot 0.12.2",
  "qstring",
  "semver 1.0.23",
- "solana-sdk",
+ "solana-sdk 1.17.30",
  "thiserror",
  "uriparse",
 ]
@@ -15629,7 +15943,7 @@ dependencies = [
  "serde_json",
  "solana-account-decoder",
  "solana-rpc-client-api",
- "solana-sdk",
+ "solana-sdk 1.17.30",
  "solana-transaction-status",
  "solana-version",
  "solana-vote-program",
@@ -15651,7 +15965,7 @@ dependencies = [
  "serde_derive",
  "serde_json",
  "solana-account-decoder",
- "solana-sdk",
+ "solana-sdk 1.17.30",
  "solana-transaction-status",
  "solana-version",
  "spl-token-2022 1.0.0",
@@ -15667,7 +15981,7 @@ dependencies = [
  "clap 2.34.0",
  "solana-clap-utils",
  "solana-rpc-client",
- "solana-sdk",
+ "solana-sdk 1.17.30",
  "thiserror",
 ]
 
@@ -15715,11 +16029,66 @@ dependencies = [
  "serde_with",
  "sha2 0.10.8",
  "sha3 0.10.8",
- "solana-frozen-abi",
- "solana-frozen-abi-macro",
- "solana-logger",
- "solana-program",
- "solana-sdk-macro",
+ "solana-frozen-abi 1.17.30",
+ "solana-frozen-abi-macro 1.17.30",
+ "solana-logger 1.17.30",
+ "solana-program 1.17.30",
+ "solana-sdk-macro 1.17.30",
+ "thiserror",
+ "uriparse",
+ "wasm-bindgen",
+]
+
+[[package]]
+name = "solana-sdk"
+version = "2.0.0"
+source = "git+https://github.com/ComposableFi/mantis-solana?rev=d92c52575aaf430ca1f06bc2589f26b0fedde7bf#d92c52575aaf430ca1f06bc2589f26b0fedde7bf"
+dependencies = [
+ "anchor-lang 0.24.2",
+ "assert_matches",
+ "base64 0.22.1",
+ "bincode",
+ "bitflags 2.5.0",
+ "borsh 1.5.1",
+ "bs58 0.4.0",
+ "bytemuck",
+ "byteorder",
+ "chrono",
+ "derivation-path",
+ "digest 0.10.7",
+ "ed25519-dalek 1.0.1",
+ "ed25519-dalek-bip32",
+ "generic-array 0.14.7",
+ "hmac 0.12.1",
+ "itertools 0.10.5",
+ "js-sys",
+ "lazy_static",
+ "libsecp256k1 0.6.0",
+ "log",
+ "memmap2",
+ "num-derive 0.4.2",
+ "num-traits",
+ "num_enum 0.7.3",
+ "pbkdf2 0.11.0",
+ "qstring",
+ "qualifier_attr",
+ "rand 0.7.3",
+ "rand 0.8.5",
+ "rustc_version",
+ "rustversion",
+ "serde",
+ "serde_bytes",
+ "serde_derive",
+ "serde_json",
+ "serde_with",
+ "sha2 0.10.8",
+ "sha3 0.10.8",
+ "siphasher",
+ "solana-frozen-abi 2.0.0",
+ "solana-frozen-abi-macro 2.0.0",
+ "solana-logger 2.0.0",
+ "solana-program 2.0.0",
+ "solana-sdk-macro 2.0.0",
  "thiserror",
  "uriparse",
  "wasm-bindgen",
@@ -15739,6 +16108,18 @@ dependencies = [
 ]
 
 [[package]]
+name = "solana-sdk-macro"
+version = "2.0.0"
+source = "git+https://github.com/ComposableFi/mantis-solana?rev=d92c52575aaf430ca1f06bc2589f26b0fedde7bf#d92c52575aaf430ca1f06bc2589f26b0fedde7bf"
+dependencies = [
+ "bs58 0.4.0",
+ "proc-macro2",
+ "quote",
+ "rustversion",
+ "syn 2.0.61",
+]
+
+[[package]]
 name = "solana-security-txt"
 version = "1.1.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -15747,7 +16128,7 @@ checksum = "468aa43b7edb1f9b7b7b686d5c3aeb6630dc1708e86e31343499dd5c4d775183"
 [[package]]
 name = "solana-signature-verifier"
 version = "0.0.0"
-source = "git+https://github.com/composableFi/emulated-light-client/#0c0f4b1f034639854a50217fd777d0a13a2dc55a"
+source = "git+https://github.com/ComposableFi/emulated-light-client/#0c0f4b1f034639854a50217fd777d0a13a2dc55a"
 dependencies = [
  "base64 0.21.7",
  "borsh 0.10.3",
@@ -15756,7 +16137,7 @@ dependencies = [
  "derive_more",
  "guestchain",
  "lib",
- "solana-program",
+ "solana-program 1.17.30",
  "stdx",
 ]
 
@@ -15786,7 +16167,7 @@ dependencies = [
  "rustls 0.21.12",
  "solana-metrics",
  "solana-perf",
- "solana-sdk",
+ "solana-sdk 1.17.30",
  "thiserror",
  "tokio",
  "x509-parser",
@@ -15804,7 +16185,7 @@ dependencies = [
  "solana-connection-cache",
  "solana-rpc-client",
  "solana-rpc-client-api",
- "solana-sdk",
+ "solana-sdk 1.17.30",
 ]
 
 [[package]]
@@ -15826,7 +16207,7 @@ dependencies = [
  "solana-pubsub-client",
  "solana-rpc-client",
  "solana-rpc-client-api",
- "solana-sdk",
+ "solana-sdk 1.17.30",
  "thiserror",
  "tokio",
 ]
@@ -15848,7 +16229,7 @@ dependencies = [
  "serde_derive",
  "serde_json",
  "solana-account-decoder",
- "solana-sdk",
+ "solana-sdk 1.17.30",
  "spl-associated-token-account",
  "spl-memo",
  "spl-token",
@@ -15859,13 +16240,13 @@ dependencies = [
 [[package]]
 name = "solana-trie"
 version = "0.0.0"
-source = "git+https://github.com/composableFi/emulated-light-client/#0c0f4b1f034639854a50217fd777d0a13a2dc55a"
+source = "git+https://github.com/ComposableFi/emulated-light-client/#0c0f4b1f034639854a50217fd777d0a13a2dc55a"
 dependencies = [
  "bytemuck",
  "lib",
  "memory",
  "sealable-trie",
- "solana-program",
+ "solana-program 1.17.30",
  "stdx",
 ]
 
@@ -15878,7 +16259,7 @@ dependencies = [
  "async-trait",
  "solana-connection-cache",
  "solana-net-utils",
- "solana-sdk",
+ "solana-sdk 1.17.30",
  "solana-streamer",
  "thiserror",
  "tokio",
@@ -15895,9 +16276,9 @@ dependencies = [
  "semver 1.0.23",
  "serde",
  "serde_derive",
- "solana-frozen-abi",
- "solana-frozen-abi-macro",
- "solana-sdk",
+ "solana-frozen-abi 1.17.30",
+ "solana-frozen-abi-macro 1.17.30",
+ "solana-sdk 1.17.30",
 ]
 
 [[package]]
@@ -15913,21 +16294,21 @@ dependencies = [
  "rustc_version",
  "serde",
  "serde_derive",
- "solana-frozen-abi",
- "solana-frozen-abi-macro",
+ "solana-frozen-abi 1.17.30",
+ "solana-frozen-abi-macro 1.17.30",
  "solana-metrics",
- "solana-program",
+ "solana-program 1.17.30",
  "solana-program-runtime",
- "solana-sdk",
+ "solana-sdk 1.17.30",
  "thiserror",
 ]
 
 [[package]]
 name = "solana-write-account"
 version = "0.0.0"
-source = "git+https://github.com/composableFi/emulated-light-client/#0c0f4b1f034639854a50217fd777d0a13a2dc55a"
+source = "git+https://github.com/ComposableFi/emulated-light-client/#0c0f4b1f034639854a50217fd777d0a13a2dc55a"
 dependencies = [
- "solana-program",
+ "solana-program 1.17.30",
  "stdx",
 ]
 
@@ -15953,8 +16334,8 @@ dependencies = [
  "serde",
  "serde_json",
  "sha3 0.9.1",
- "solana-program",
- "solana-sdk",
+ "solana-program 1.17.30",
+ "solana-sdk 1.17.30",
  "subtle",
  "thiserror",
  "zeroize",
@@ -17121,7 +17502,7 @@ dependencies = [
  "borsh 0.10.3",
  "num-derive 0.4.2",
  "num-traits",
- "solana-program",
+ "solana-program 1.17.30",
  "spl-token",
  "spl-token-2022 1.0.0",
  "thiserror",
@@ -17134,7 +17515,7 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "daa600f2fe56f32e923261719bae640d873edadbc5237681a39b8e37bfd4d263"
 dependencies = [
  "bytemuck",
- "solana-program",
+ "solana-program 1.17.30",
  "spl-discriminator-derive",
 ]
 
@@ -17168,7 +17549,7 @@ version = "4.0.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "f0f180b03318c3dbab3ef4e1e4d46d5211ae3c780940dd0a28695aba4b59a75a"
 dependencies = [
- "solana-program",
+ "solana-program 1.17.30",
 ]
 
 [[package]]
@@ -17179,7 +17560,7 @@ checksum = "85a5db7e4efb1107b0b8e52a13f035437cdcb36ef99c58f6d467f089d9b2915a"
 dependencies = [
  "borsh 0.10.3",
  "bytemuck",
- "solana-program",
+ "solana-program 1.17.30",
  "solana-zk-token-sdk",
  "spl-program-error",
 ]
@@ -17192,7 +17573,7 @@ checksum = "7e0657b6490196971d9e729520ba934911ff41fbb2cb9004463dbe23cf8b4b4f"
 dependencies = [
  "num-derive 0.4.2",
  "num-traits",
- "solana-program",
+ "solana-program 1.17.30",
  "spl-program-error-derive",
  "thiserror",
 ]
@@ -17216,7 +17597,7 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "062e148d3eab7b165582757453632ffeef490c02c86a48bfdb4988f63eefb3b9"
 dependencies = [
  "bytemuck",
- "solana-program",
+ "solana-program 1.17.30",
  "spl-discriminator",
  "spl-pod",
  "spl-program-error",
@@ -17230,7 +17611,7 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "56f335787add7fa711819f9e7c573f8145a5358a709446fe2d24bf2a88117c90"
 dependencies = [
  "bytemuck",
- "solana-program",
+ "solana-program 1.17.30",
  "spl-discriminator",
  "spl-pod",
  "spl-program-error",
@@ -17248,7 +17629,7 @@ dependencies = [
  "num-derive 0.3.3",
  "num-traits",
  "num_enum 0.6.1",
- "solana-program",
+ "solana-program 1.17.30",
  "thiserror",
 ]
 
@@ -17262,8 +17643,8 @@ dependencies = [
  "bytemuck",
  "num-derive 0.4.2",
  "num-traits",
- "num_enum 0.7.2",
- "solana-program",
+ "num_enum 0.7.3",
+ "solana-program 1.17.30",
  "solana-zk-token-sdk",
  "spl-memo",
  "spl-pod",
@@ -17284,8 +17665,8 @@ dependencies = [
  "bytemuck",
  "num-derive 0.4.2",
  "num-traits",
- "num_enum 0.7.2",
- "solana-program",
+ "num_enum 0.7.3",
+ "solana-program 1.17.30",
  "solana-security-txt",
  "solana-zk-token-sdk",
  "spl-memo",
@@ -17305,7 +17686,7 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "b889509d49fa74a4a033ca5dae6c2307e9e918122d97e58562f5c4ffa795c75d"
 dependencies = [
  "bytemuck",
- "solana-program",
+ "solana-program 1.17.30",
  "spl-discriminator",
  "spl-pod",
  "spl-program-error",
@@ -17318,7 +17699,7 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "4c16ce3ba6979645fb7627aa1e435576172dd63088dc7848cb09aa331fa1fe4f"
 dependencies = [
  "borsh 0.10.3",
- "solana-program",
+ "solana-program 1.17.30",
  "spl-discriminator",
  "spl-pod",
  "spl-program-error",
@@ -17333,7 +17714,7 @@ checksum = "051d31803f873cabe71aec3c1b849f35248beae5d19a347d93a5c9cccc5d5a9b"
 dependencies = [
  "arrayref",
  "bytemuck",
- "solana-program",
+ "solana-program 1.17.30",
  "spl-discriminator",
  "spl-pod",
  "spl-program-error",
@@ -17349,7 +17730,7 @@ checksum = "7aabdb7c471566f6ddcee724beb8618449ea24b399e58d464d6b5bc7db550259"
 dependencies = [
  "arrayref",
  "bytemuck",
- "solana-program",
+ "solana-program 1.17.30",
  "spl-discriminator",
  "spl-pod",
  "spl-program-error",
@@ -17364,7 +17745,7 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "8f9ebd75d29c5f48de5f6a9c114e08531030b75b8ac2c557600ac7da0b73b1e8"
 dependencies = [
  "bytemuck",
- "solana-program",
+ "solana-program 1.17.30",
  "spl-discriminator",
  "spl-pod",
  "spl-program-error",
@@ -17404,7 +17785,7 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "8a2a1c578e98c1c16fc3b8ec1328f7659a500737d7a0c6d625e73e830ff9c1f6"
 dependencies = [
  "bitflags 1.3.2",
- "cfg_aliases",
+ "cfg_aliases 0.1.1",
  "libc",
  "parking_lot 0.11.2",
  "parking_lot_core 0.8.6",
@@ -17418,7 +17799,7 @@ version = "1.0.2"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "70a2595fc3aa78f2d0e45dd425b22282dd863273761cc77780914b2cf3003acf"
 dependencies = [
- "cfg_aliases",
+ "cfg_aliases 0.1.1",
  "memchr",
  "proc-macro2",
  "quote",
@@ -17428,7 +17809,7 @@ dependencies = [
 [[package]]
 name = "stdx"
 version = "0.0.0"
-source = "git+https://github.com/composableFi/emulated-light-client/#0c0f4b1f034639854a50217fd777d0a13a2dc55a"
+source = "git+https://github.com/ComposableFi/emulated-light-client/#0c0f4b1f034639854a50217fd777d0a13a2dc55a"
 
 [[package]]
 name = "strsim"
@@ -17744,6 +18125,18 @@ dependencies = [
  "proc-macro2",
  "quote",
  "unicode-ident",
+]
+
+[[package]]
+name = "syn_derive"
+version = "0.1.8"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "1329189c02ff984e9736652b1631330da25eaa6bc639089ed4915d25446cbe7b"
+dependencies = [
+ "proc-macro-error",
+ "proc-macro2",
+ "quote",
+ "syn 2.0.61",
 ]
 
 [[package]]
@@ -18713,7 +19106,7 @@ dependencies = [
 [[package]]
 name = "trie-ids"
 version = "0.0.0"
-source = "git+https://github.com/composableFi/emulated-light-client/#0c0f4b1f034639854a50217fd777d0a13a2dc55a"
+source = "git+https://github.com/ComposableFi/emulated-light-client/#0c0f4b1f034639854a50217fd777d0a13a2dc55a"
 dependencies = [
  "ascii 1.1.0",
  "base64 0.21.7",
@@ -19146,7 +19539,7 @@ dependencies = [
 [[package]]
 name = "wasm"
 version = "0.0.0"
-source = "git+https://github.com/composableFi/emulated-light-client/#0c0f4b1f034639854a50217fd777d0a13a2dc55a"
+source = "git+https://github.com/ComposableFi/emulated-light-client/#0c0f4b1f034639854a50217fd777d0a13a2dc55a"
 dependencies = [
  "const_format",
  "derive_more",
@@ -20161,6 +20554,12 @@ dependencies = [
  "rand 0.8.5",
  "static_assertions",
 ]
+
+[[package]]
+name = "yansi"
+version = "0.5.1"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "09041cd90cf85f7f8b2df60c646f853b7f535ce68f85244eb6731cf89fa498ec"
 
 [[package]]
 name = "yap"

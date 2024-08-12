@@ -28,6 +28,22 @@ pub enum Error {
 	InsufficientHeight { latest_height: Height, target_height: Height },
 	ClientFrozen { client_id: ClientId },
 	UnknownConsensusStateType { description: String },
+	ShardsAreEmpty,
+	ShredsNotSorted,
+	ShredsContainDuplicates,
+	ShredsFromDifferentSlots,
+	ShredIsNotData,
+	Solana(crate::solana::Error),
+	NoDataShreds,
+	LastShredNotLastInSlot,
+	EntriesAreEmpty,
+	InvalidTimestamp,
+}
+
+impl From<crate::solana::Error> for Error {
+	fn from(err: crate::solana::Error) -> Self {
+		Self::Solana(err)
+	}
 }
 
 impl fmt::Display for Error {
