@@ -1,4 +1,13 @@
-use crate::alloc::string::ToString;
+use crate::{
+	alloc::string::ToString,
+	error::Error,
+	solana::{
+		entry::Entry,
+		shred::{merkle::SIZE_OF_MERKLE_PROOF_ENTRY, shred_code::ShredCode, Shred, ShredData},
+		shredder::Shredder,
+	},
+	ClientMessage, ClientState, ConsensusState as ClientConsensusState, Header,
+};
 use alloc::vec::Vec;
 use core::str::FromStr;
 use ibc::{
@@ -9,21 +18,12 @@ use ibc::{
 			client_state::ClientState as OtherClientState,
 			error::Error as Ics02ClientError,
 		},
+		ics24_host::identifier::ClientId,
 		ics26_routing::context::ReaderContext,
 	},
 	protobuf::Protobuf,
 };
 use prost::Message;
-
-use crate::{
-	error::Error,
-	solana::{
-		entry::Entry,
-		shred::{merkle::SIZE_OF_MERKLE_PROOF_ENTRY, shred_code::ShredCode, Shred, ShredData},
-		shredder::Shredder,
-	},
-	ClientMessage, ClientState, ConsensusState as ClientConsensusState,
-};
 
 type Result<T = (), E = ibc::core::ics02_client::error::Error> = ::core::result::Result<T, E>;
 
@@ -115,36 +115,9 @@ impl ClientDef for CfSolanaClient {
 		client_msg: Self::ClientMessage,
 	) -> Result<bool, Ics02ClientError> {
 		match client_msg {
-			ClientMessage::Header(header) => {
-				// The client can't be updated if no shreds were received
-				let height = header.height();
-
-				// If we received an update from the past...
-				if height <= client_state.latest_height() {
-					// ...and we have the consensus state for that height, we need to check if
-					// they're the same, otherwise we have a misbehaviour.
-					if let Ok(existing_consensus_state) = ctx.consensus_state(&client_id, height) {
-						let header_consensus_state =
-							ClientConsensusState::from_header_and_client_state(
-								&header,
-								&client_state,
-							)?;
-						let new_consensus_state = Ctx::AnyConsensusState::wrap(
-							&header_consensus_state,
-						)
-						.ok_or_else(|| Error::UnknownConsensusStateType {
-							description: "Ctx::AnyConsensusState".to_string(),
-						})?;
-
-						// The consensus state is different, so we have a misbehaviour.
-						if existing_consensus_state != new_consensus_state {
-							return Ok(true);
-						}
-					}
-				}
-
-				Ok(false)
-			},
+			ClientMessage::Header(header) =>
+				Self::check_header_for_misbehaviour(ctx, &client_id, &client_state, &header)
+					.map_err(Into::into),
 			ClientMessage::Misbehaviour(_) =>
 				return Err(Ics02ClientError::implementation_specific(
 					"misbehaviour not supported".to_string(),
@@ -359,6 +332,38 @@ impl ClientDef for CfSolanaClient {
 			sequence: sequence.0.into(),
 		};
 		verify(proof, root, path.into(), None)
+	}
+}
+
+impl CfSolanaClient {
+	fn check_header_for_misbehaviour<Ctx: ReaderContext>(
+		ctx: &Ctx,
+		client_id: &ClientId,
+		client_state: &ClientState,
+		header: &Header,
+	) -> Result<bool, Error> {
+		let height = header.height();
+
+		// If we received an update from the past...
+		if height <= client_state.latest_height() {
+			// ...and we have the consensus state for that height, we need to check if
+			// they're the same, otherwise we have a misbehaviour.
+			if let Ok(existing_consensus_state) = ctx.consensus_state(&client_id, height) {
+				let header_consensus_state =
+					ClientConsensusState::from_header_and_client_state(&header, &client_state)?;
+				let new_consensus_state = Ctx::AnyConsensusState::wrap(&header_consensus_state)
+					.ok_or_else(|| Error::UnknownConsensusStateType {
+						description: "Ctx::AnyConsensusState".to_string(),
+					})?;
+
+				// The consensus state is different, so we have a misbehaviour.
+				if existing_consensus_state != new_consensus_state {
+					return Ok(true);
+				}
+			}
+		}
+
+		Ok(false)
 	}
 }
 

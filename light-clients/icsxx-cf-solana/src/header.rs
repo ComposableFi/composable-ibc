@@ -7,10 +7,11 @@ use crate::{
 	},
 };
 use alloc::vec::Vec;
+use derive_more::Deref;
 use ibc::Height;
 use proto_utils::BadMessage;
 use solana_sdk::{clock::Slot, hash::Hash, signature::Signature};
-use std::{collections::BTreeSet, convert::From, ops::Deref};
+use std::{collections::BTreeSet, convert::From};
 
 #[derive(Clone, PartialEq, Eq, Debug)]
 pub struct Header {
@@ -67,7 +68,7 @@ impl Header {
 /// 3. Doesn't contain duplicates
 /// 4. All shreds have the same slot
 /// 5. Only contains data shreds
-#[derive(Clone, PartialEq, Eq, Debug)]
+#[derive(Clone, PartialEq, Eq, Debug, Deref)]
 pub struct PreCheckedShreds(Vec<Shred>);
 
 impl PreCheckedShreds {
@@ -75,14 +76,6 @@ impl PreCheckedShreds {
 	/// least one shred and all the shreds have same slot.
 	pub(crate) fn slot(&self) -> Slot {
 		self.0[0].slot()
-	}
-}
-
-impl Deref for PreCheckedShreds {
-	type Target = [Shred];
-
-	fn deref(&self) -> &Self::Target {
-		&self.0
 	}
 }
 
