@@ -11,7 +11,7 @@ use std::time::Duration;
 
 #[derive(Clone, Debug, PartialEq, Eq)]
 pub struct ClientState {
-	/// Highest available guest block height.
+	/// Highest available Solana slot number.
 	pub latest_height: Slot,
 
 	pub trusting_period_ns: u64,
