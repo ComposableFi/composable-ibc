@@ -54,8 +54,6 @@
 //! TODO: check if `Legacy` variants of shreds are still being used in Solana. If not, get rif of
 //! them, not breaking the encoding
 
-#[cfg(test)]
-pub(crate) use self::shred_code::MAX_CODE_SHREDS_PER_SLOT;
 pub use self::shred_data::ShredData;
 use self::{shred_code::ShredCode, traits::Shred as _};
 use crate::solana::Error;
@@ -77,7 +75,7 @@ pub mod legacy;
 pub mod merkle;
 pub mod shred_code;
 pub mod shred_data;
-mod traits;
+pub(crate) mod traits;
 
 pub type Nonce = u32;
 const_assert_eq!(SIZE_OF_NONCE, 4);

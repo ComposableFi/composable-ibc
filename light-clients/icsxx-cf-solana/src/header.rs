@@ -38,12 +38,12 @@ impl Header {
 	pub fn calculate_hash(&self) -> Result<Hash, Error> {
 		let data_shreds = self.shreds.iter().filter(|s| s.is_data()).collect::<Vec<_>>();
 		if data_shreds.is_empty() {
-			return Err(Error::NoDataShreds)
+			return Err(Error::NoDataShreds);
 		}
 
 		let last_data_shred = data_shreds.last().unwrap();
 		if !last_data_shred.last_in_slot() {
-			return Err(Error::LastShredNotLastInSlot)
+			return Err(Error::LastShredNotLastInSlot);
 		}
 
 		let completed_data_indexes = data_shreds
@@ -52,9 +52,10 @@ impl Header {
 			.collect::<BTreeSet<_>>();
 		let consumed = last_data_shred.index() + 1;
 		let completed_ranges = get_completed_data_ranges(0, &completed_data_indexes, consumed);
-		let slot = self.slot();
-		let entries = get_slot_entries_in_block(slot, completed_ranges, &data_shreds)?;
+		let entries = get_slot_entries_in_block(self.slot(), completed_ranges, &data_shreds)?;
 		let blockhash = entries.last().map(|entry| entry.hash).ok_or(Error::EntriesAreEmpty)?;
+
+		// FIXME: verify the hash
 
 		Ok(blockhash)
 	}
@@ -100,7 +101,7 @@ impl TryFrom<Vec<Shred>> for PreCheckedShreds {
 	/// properties of the `PreCheckedShreds` type (see the `PreCheckedShreds`'s documentation).
 	fn try_from(shreds: Vec<Shred>) -> Result<Self, Self::Error> {
 		if shreds.is_empty() {
-			return Err(Error::ShardsAreEmpty)
+			return Err(Error::ShardsAreEmpty);
 		}
 
 		let mut shreds_set = BTreeSet::new();

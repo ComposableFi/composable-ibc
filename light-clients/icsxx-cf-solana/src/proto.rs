@@ -16,12 +16,12 @@ macro_rules! define_proto {
 }
 
 define_proto!(ClientState; test_client_state; Self {
-	genesis_hash: lib::hash::CryptoHash::test(24).to_vec(),
 	latest_height: 8,
-	epoch_commitment: lib::hash::CryptoHash::test(11).to_vec(),
-	prev_epoch_commitment: lib::hash::CryptoHash::test(12).to_vec(),
 	is_frozen: false,
+	current_leader: Default::default(),
+	genesis_time: 0,
 	trusting_period_ns: 30 * 24 * 3600 * 1_000_000_000,
+	slot_duration: 0,
 });
 
 define_proto!(ConsensusState; test_consensus_state; {
@@ -31,22 +31,9 @@ define_proto!(ConsensusState; test_consensus_state; {
 
 define_proto!(ClientMessage; test_client_message; Header::test().into());
 
-define_proto!(Header; test_header; {
-	// TODO(mina86): Construct a proper signed header.
-	Self {
-		shreds: vec![
-			Shred {
-				data: vec![1; 10],
-				slot: 1,
-				index: 1,
-				parent: vec![0; 32],
-				..Default::default()
-			},
-		],
-	}
-});
+define_proto!(Header; test_header; todo!("test_header"));
 
-define_proto!(Misbehaviour; test_misbehaviour; { panic!() });
+define_proto!(Misbehaviour; test_misbehaviour; todo!("test_misbehaviour"));
 
 // import_proto!(ClientMessage);
 // import_proto!(ClientState);

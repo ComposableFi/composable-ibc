@@ -50,6 +50,7 @@ prost-build = { version = "0.12", default-features = false }
 [dev-dependencies]
 insta = { version = "1.34.0" }
 rand = { version = "0.8.5" }
+hex = "0.4.3"
 
 guestchain = { git = "https://github.com/ComposableFi/emulated-light-client/", default-features = false, features = ["test_utils"] }
 lib = { git = "https://github.com/ComposableFi/emulated-light-client/", default-features = false, features = ["test_utils"] }

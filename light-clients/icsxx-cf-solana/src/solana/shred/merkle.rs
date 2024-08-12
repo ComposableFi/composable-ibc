@@ -30,7 +30,7 @@ use std::{io::Cursor, ops::Range};
 const_assert_eq!(SIZE_OF_MERKLE_ROOT, 32);
 pub(crate) const SIZE_OF_MERKLE_ROOT: usize = std::mem::size_of::<Hash>();
 const_assert_eq!(SIZE_OF_MERKLE_PROOF_ENTRY, 20);
-const SIZE_OF_MERKLE_PROOF_ENTRY: usize = std::mem::size_of::<MerkleProofEntry>();
+pub const SIZE_OF_MERKLE_PROOF_ENTRY: usize = std::mem::size_of::<MerkleProofEntry>();
 const_assert_eq!(ShredData::SIZE_OF_PAYLOAD, 1203);
 
 // Defense against second preimage attack:
@@ -130,7 +130,7 @@ impl Shred {
 
 impl ShredData {
 	// proof_size is the number of merkle proof entries.
-	fn proof_size(&self) -> Result<u8, Error> {
+	pub(crate) fn proof_size(&self) -> Result<u8, Error> {
 		match self.common_header.shred_variant {
 			ShredVariant::MerkleData { proof_size, .. } => Ok(proof_size),
 			_ => Err(Error::InvalidShredVariant),
@@ -155,7 +155,7 @@ impl ShredData {
 	}
 
 	// Where the merkle proof starts in the shred binary.
-	fn proof_offset(&self) -> Result<usize, Error> {
+	pub(crate) fn proof_offset(&self) -> Result<usize, Error> {
 		let ShredVariant::MerkleData { proof_size, chained, resigned } =
 			self.common_header.shred_variant
 		else {
@@ -197,13 +197,13 @@ impl ShredData {
 		get_merkle_root(index, node, proof)
 	}
 
-	fn merkle_proof(&self) -> Result<impl Iterator<Item = &MerkleProofEntry>, Error> {
+	pub(crate) fn merkle_proof(&self) -> Result<impl Iterator<Item = &MerkleProofEntry>, Error> {
 		let proof_size = self.proof_size()?;
 		let proof_offset = self.proof_offset()?;
 		get_merkle_proof(&self.payload, proof_offset, proof_size)
 	}
 
-	fn merkle_node(&self) -> Result<Hash, Error> {
+	pub(crate) fn merkle_node(&self) -> Result<Hash, Error> {
 		let proof_offset = self.proof_offset()?;
 		get_merkle_node(&self.payload, SIZE_OF_SIGNATURE..proof_offset)
 	}
@@ -285,7 +285,7 @@ impl ShredData {
 
 impl ShredCode {
 	// proof_size is the number of merkle proof entries.
-	fn proof_size(&self) -> Result<u8, Error> {
+	pub(crate) fn proof_size(&self) -> Result<u8, Error> {
 		match self.common_header.shred_variant {
 			ShredVariant::MerkleCode { proof_size, .. } => Ok(proof_size),
 			_ => Err(Error::InvalidShredVariant),
@@ -308,7 +308,7 @@ impl ShredCode {
 	}
 
 	// Where the merkle proof starts in the shred binary.
-	fn proof_offset(&self) -> Result<usize, Error> {
+	pub(crate) fn proof_offset(&self) -> Result<usize, Error> {
 		let ShredVariant::MerkleCode { proof_size, chained, resigned } =
 			self.common_header.shred_variant
 		else {
@@ -358,13 +358,13 @@ impl ShredCode {
 		get_merkle_root(index, node, proof)
 	}
 
-	fn merkle_proof(&self) -> Result<impl Iterator<Item = &MerkleProofEntry>, Error> {
+	pub(crate) fn merkle_proof(&self) -> Result<impl Iterator<Item = &MerkleProofEntry>, Error> {
 		let proof_size = self.proof_size()?;
 		let proof_offset = self.proof_offset()?;
 		get_merkle_proof(&self.payload, proof_offset, proof_size)
 	}
 
-	fn merkle_node(&self) -> Result<Hash, Error> {
+	pub(crate) fn merkle_node(&self) -> Result<Hash, Error> {
 		let proof_offset = self.proof_offset()?;
 		get_merkle_node(&self.payload, SIZE_OF_SIGNATURE..proof_offset)
 	}
