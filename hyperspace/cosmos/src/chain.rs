@@ -92,11 +92,8 @@ where
 
 	async fn finality_notifications(
 		&self,
-	) -> Result<
-		Pin<Box<dyn Stream<Item = <Self as IbcProvider>::FinalityEvent> + Send + Sync>>,
-		Error,
-	> {
-		let ws_client = self.rpc_client.clone();
+	) -> Result<Pin<Box<dyn Stream<Item = <Self as IbcProvider>::FinalityEvent> + Send + Sync>>, Error> {
+		let ws_client = self.rpc_ws_client().clone();
 		let subscription = ws_client
 			.subscribe(Query::from(EventType::NewBlock))
 			.await
@@ -148,7 +145,7 @@ where
 		// .and_eq("update_client.header", hex::encode(&update.header.unwrap_or_default()))
 		use tendermint::abci::Event as AbciEvent;
 
-		let mut client = ServiceClient::connect(self.grpc_url.to_string())
+		let mut client = ServiceClient::connect(self.grpc_url().to_string())
 			.await
 			.map_err(|e| Error::from(e.to_string()))?;
 		let mut resp = client
@@ -261,11 +258,12 @@ where
 	}
 
 	async fn reconnect(&mut self) -> anyhow::Result<()> {
-		let (rpc_client, ws_driver) = WebSocketClient::new(self.websocket_url.clone())
+		// TODO: don't reconnect if the url is not presented
+		let (rpc_client, ws_driver) = WebSocketClient::new(self.websocket_url().clone())
 			.await
 			.map_err(|e| Error::RpcError(format!("{e:?}")))?;
 		self.join_handles.lock().await.push(tokio::spawn(ws_driver.run()));
-		self.rpc_client = rpc_client;
+		self.rpc_ws_client = Some(rpc_client);
 		log::info!(target: "hyperspace_cosmos", "Reconnected to cosmos chain");
 		Ok(())
 	}
