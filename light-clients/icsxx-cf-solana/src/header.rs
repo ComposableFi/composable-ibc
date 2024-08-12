@@ -66,6 +66,7 @@ impl Header {
 /// 2. Is sorted
 /// 3. Doesn't contain duplicates
 /// 4. All shreds have the same slot
+/// 5. Only contains data shreds
 #[derive(Clone, PartialEq, Eq, Debug)]
 pub struct PreCheckedShreds(Vec<Shred>);
 
@@ -119,6 +120,19 @@ impl TryFrom<Vec<Shred>> for PreCheckedShreds {
 
 			if prev.index() == this.index() {
 				return Err(Error::ShredsContainDuplicates);
+			}
+
+			if !prev.is_data() {
+				return Err(Error::ShredIsNotData);
+			}
+		}
+
+		// Check if the last shred is the last in the slot, because it was ignored by
+		// the previous cycle.
+		if shreds.len() > 1 {
+			let last = shreds.last().unwrap();
+			if !last.is_data() {
+				return Err(Error::ShredIsNotData);
 			}
 		}
 

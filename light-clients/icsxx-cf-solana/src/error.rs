@@ -32,6 +32,7 @@ pub enum Error {
 	ShredsNotSorted,
 	ShredsContainDuplicates,
 	ShredsFromDifferentSlots,
+	ShredIsNotData,
 	Solana(crate::solana::Error),
 	NoDataShreds,
 	LastShredNotLastInSlot,
