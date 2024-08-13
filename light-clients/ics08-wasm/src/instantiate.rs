@@ -16,3 +16,5 @@ pub struct InstantiateMessage {
 	#[cfg_attr(feature = "cosmwasm", serde(with = "Base64", default))]
 	pub checksum: Bytes,
 }
+
+
