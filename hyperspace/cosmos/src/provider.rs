@@ -211,7 +211,7 @@ where
 	// necessary height field, as `height` is removed from `Attribute` from ibc-rs v0.22.0
 	async fn ibc_events(&self) -> Pin<Box<dyn Stream<Item = IbcEvent> + Send + 'static>> {
 		// Create websocket client. Like what `EventMonitor::subscribe()` does in `hermes`
-		let ws_client = self.rpc_client.clone();
+		let ws_client = self.rpc_ws_client();
 
 		let query_all = vec![
 			Query::from(EventType::NewBlock),
@@ -466,7 +466,7 @@ where
 		// Instead, we need to pull block height via `/abci_info` and then fetch block
 		// metadata at the given height via `/blockchain` endpoint.
 		let abci_info = self
-			.rpc_client
+			.rpc_http_client
 			.abci_info()
 			.await
 			.map_err(|e| Error::RpcError(format!("{e:?}")))?;
@@ -476,7 +476,7 @@ where
 		// TODO: Replace this query with `/header`, once it's available.
 		//  https://github.com/informalsystems/tendermint-rs/pull/1101
 		let blocks = self
-			.rpc_client
+			.rpc_http_client
 			.blockchain(abci_info.last_block_height, abci_info.last_block_height)
 			.await
 			.map_err(|e| {
@@ -505,7 +505,7 @@ where
 	) -> Result<Vec<u64>, Self::Error> {
 		let mut grpc_client =
 			ibc_proto::ibc::core::channel::v1::query_client::QueryClient::connect(
-				self.grpc_url.clone().to_string(),
+				self.grpc_url().to_string(),
 			)
 			.await
 			.map_err(|e| Error::from(e.to_string()))?;
@@ -541,7 +541,7 @@ where
 		);
 		let mut grpc_client =
 			ibc_proto::ibc::core::channel::v1::query_client::QueryClient::connect(
-				self.grpc_url.clone().to_string(),
+				self.grpc_url().to_string(),
 			)
 			.await
 			.map_err(|e| Error::from(e.to_string()))?;
@@ -574,7 +574,7 @@ where
 	) -> Result<Vec<u64>, Self::Error> {
 		let mut grpc_client =
 			ibc_proto::ibc::core::channel::v1::query_client::QueryClient::connect(
-				self.grpc_url.clone().to_string(),
+				self.grpc_url().to_string(),
 			)
 			.await
 			.map_err(|e| Error::from(e.to_string()))?;
@@ -605,7 +605,7 @@ where
 	) -> Result<Vec<u64>, Self::Error> {
 		let mut grpc_client =
 			ibc_proto::ibc::core::channel::v1::query_client::QueryClient::connect(
-				self.grpc_url.clone().to_string(),
+				self.grpc_url().to_string(),
 			)
 			.await
 			.map_err(|e| Error::from(e.to_string()))?;
@@ -638,7 +638,7 @@ where
 	) -> Result<QueryChannelsResponse, Self::Error> {
 		let mut grpc_client =
 			ibc_proto::ibc::core::channel::v1::query_client::QueryClient::connect(
-				self.grpc_url.clone().to_string(),
+				self.grpc_url().to_string(),
 			)
 			.await
 			.map_err(|e| Error::from(format!("{e:?}")))?;
@@ -889,7 +889,7 @@ where
 	) -> Result<Vec<PrefixedCoin>, Self::Error> {
 		let denom = &asset_id;
 		let mut grpc_client = ibc_proto::cosmos::bank::v1beta1::query_client::QueryClient::connect(
-			self.grpc_url.clone().to_string(),
+			self.grpc_url().to_string(),
 		)
 		.await
 		.map_err(|e| Error::from(format!("{e:?}")))?;
@@ -956,7 +956,7 @@ where
 		let height = TmHeight::try_from(block_number)
 			.map_err(|e| Error::from(format!("Invalid block number: {e}")))?;
 		let response = self
-			.rpc_client
+			.rpc_ws_client()
 			.block(height)
 			.await
 			.map_err(|e| Error::RpcError(e.to_string()))?;
@@ -969,7 +969,7 @@ where
 			pagination: Some(PageRequest { limit: u32::MAX as _, ..Default::default() }),
 		});
 		let grpc_client = ibc_proto::ibc::core::client::v1::query_client::QueryClient::new(
-			self.grpc_client.clone(),
+			self.grpc_client().clone(),
 		);
 		let response = grpc_client
 			.clone()
@@ -998,7 +998,7 @@ where
 		});
 		let mut grpc_client =
 			ibc_proto::ibc::core::channel::v1::query_client::QueryClient::connect(
-				self.grpc_url.clone().to_string(),
+				self.grpc_url().to_string(),
 			)
 			.await
 			.map_err(|e| Error::from(format!("{e:?}")))?;
@@ -1025,7 +1025,7 @@ where
 	) -> Result<Vec<IdentifiedConnection>, Self::Error> {
 		let mut grpc_client =
 			ibc_proto::ibc::core::connection::v1::query_client::QueryClient::connect(
-				self.grpc_url.clone().to_string(),
+				self.grpc_url().to_string(),
 			)
 			.await
 			.map_err(|e| Error::from(format!("{e:?}")))?;
@@ -1098,7 +1098,7 @@ where
 
 		let response: Response = loop {
 			let response = self
-				.rpc_client
+				.rpc_ws_client()
 				.tx_search(
 					Query::eq("tx.hash", tx_id.hash.to_string()),
 					false,
@@ -1165,7 +1165,7 @@ where
 
 		let response: Response = loop {
 			let response = self
-				.rpc_client
+				.rpc_ws_client()
 				.tx_search(
 					Query::eq("tx.hash", tx_id.hash.to_string()),
 					false,
@@ -1233,7 +1233,7 @@ where
 
 		let response: Response = loop {
 			let response = self
-				.rpc_client
+				.rpc_ws_client()
 				.tx_search(
 					Query::eq("tx.hash", tx_id.hash.to_string()),
 					false,
@@ -1318,7 +1318,7 @@ where
 			}
 		};
 		// let resp = MsgClient::connect(
-		// 	Endpoint::try_from(self.grpc_url.to_string())
+		// 	Endpoint::try_from(self.grpc_url().to_string())
 		// 		.map_err(|e| Error::from(format!("Failed to parse grpc url: {:?}", e)))?,
 		// )
 		// .await

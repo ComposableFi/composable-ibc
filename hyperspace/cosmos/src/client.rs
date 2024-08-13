@@ -129,18 +129,18 @@ pub struct MnemonicEntry {
 pub struct CosmosClient<H> {
 	/// Chain name
 	pub name: String,
-	/// Chain rpc client
-	pub rpc_client: WebSocketClient,
+	/// Chain websocket rpc client
+	pub rpc_ws_client: Option<WebSocketClient>,
 	/// Chain http rpc client
 	pub rpc_http_client: HttpClient,
 	/// Reusable GRPC client
-	pub grpc_client: tonic::transport::Channel,
+	pub grpc_client: Option<tonic::transport::Channel>,
 	/// Chain rpc address
 	pub rpc_url: Url,
 	/// Chain grpc address
-	pub grpc_url: Url,
+	pub grpc_url: Option<Url>,
 	/// Websocket chain ws client
-	pub websocket_url: Url,
+	pub websocket_url: Option<Url>,
 	/// Chain Id
 	pub chain_id: ChainId,
 	/// Light client id on counterparty chain
@@ -186,9 +186,9 @@ pub struct CosmosClientConfig {
 	/// rpc url for cosmos
 	pub rpc_url: Url,
 	/// grpc url for cosmos
-	pub grpc_url: Url,
+	pub grpc_url: Option<Url>,
 	/// websocket url for cosmos
-	pub websocket_url: Url,
+	pub websocket_url: Option<Url>,
 	/// Cosmos chain Id
 	pub chain_id: String,
 	/// Light client id on counterparty chain
@@ -251,17 +251,32 @@ where
 {
 	/// Initializes a [`CosmosClient`] given a [`CosmosClientConfig`]
 	pub async fn new(config: CosmosClientConfig) -> Result<Self, Error> {
-		let (rpc_client, rpc_driver) = WebSocketClient::new(config.websocket_url.clone())
-			.await
-			.map_err(|e| Error::RpcError(format!("failed to connect to Websocket {:?}", e)))?;
+		let mut rpc_client = None;
+
+		let mut join_handles = vec![];
+		if let Some(websocket_url) = &config.websocket_url {
+			let rpc_driver;
+			(rpc_client, rpc_driver) = WebSocketClient::new(websocket_url.clone())
+				.await
+				.map(|(x, y)| (Some(x), y))
+				.map_err(|e| Error::RpcError(format!("failed to connect to Websocket {:?}", e)))?;
+			join_handles.push(tokio::spawn(rpc_driver.run()));
+		} else {
+			log::warn!(target: "hyperspace_cosmos", "No websocket url provided for cosmos chain");
+		}
 		let rpc_http_client = HttpClient::new(config.rpc_url.clone())
 			.map_err(|e| Error::RpcError(format!("failed to connect to RPC {:?}", e)))?;
-		let ws_driver_jh = tokio::spawn(rpc_driver.run());
-		let grpc_client = tonic::transport::Endpoint::new(config.grpc_url.to_string())
-			.map_err(|e| Error::RpcError(format!("failed to create a GRPC endpoint {:?}", e)))?
-			.connect()
-			.await
-			.map_err(|e| Error::RpcError(format!("failed to connect to GRPC {:?}", e)))?;
+		let mut grpc_client = None;
+		if let Some(grpc_url) = &config.grpc_url {
+			grpc_client = tonic::transport::Endpoint::new(grpc_url.to_string())
+				.map_err(|e| Error::RpcError(format!("failed to connect to RPC {:?}", e)))?
+				.connect()
+				.await
+				.map(Some)
+				.map_err(|e| Error::RpcError(format!("failed to connect to RPC {:?}", e)))?;
+		} else {
+			log::warn!(target: "hyperspace_cosmos", "No grpc url provided for cosmos chain");
+		}
 
 		let chain_id = ChainId::from(config.chain_id);
 		let light_client =
@@ -279,7 +294,7 @@ where
 		Ok(Self {
 			name: config.name,
 			chain_id,
-			rpc_client,
+			rpc_ws_client: rpc_client,
 			rpc_http_client,
 			grpc_client,
 			rpc_url: config.rpc_url,
@@ -308,8 +323,24 @@ where
 				max_packets_to_process: config.common.max_packets_to_process as usize,
 				skip_tokens_list: config.skip_tokens_list.unwrap_or_default(),
 			},
-			join_handles: Arc::new(TokioMutex::new(vec![ws_driver_jh])),
+			join_handles: Arc::new(TokioMutex::new(join_handles)),
 		})
+	}
+
+	pub fn grpc_url(&self) -> Url {
+		self.grpc_url.clone().expect("grpc url is not set")
+	}
+
+	pub fn websocket_url(&self) -> Url {
+		self.websocket_url.clone().expect("rpc url is not set")
+	}
+
+	pub fn grpc_client(&self) -> &tonic::transport::Channel {
+		self.grpc_client.as_ref().expect("grpc client is not set")
+	}
+
+	pub fn rpc_ws_client(&self) -> WebSocketClient {
+		self.rpc_ws_client.as_ref().expect("rpc client is not set").clone()
 	}
 
 	pub fn client_id(&self) -> ClientId {
@@ -366,16 +397,17 @@ where
 		)?;
 
 		// Simulate transaction
-		let res = simulate_tx(self.grpc_url.clone(), tx, tx_bytes.clone()).await?;
+		let res = simulate_tx(self.grpc_url(), tx, tx_bytes.clone()).await?;
 		res.result
 			.map(|r| log::debug!(target: "hyperspace_cosmos", "Simulated transaction: events: {:?}\nlogs: {}", r.events, r.log));
 
 		// Broadcast transaction
-		let hash = broadcast_tx(&self.rpc_client, tx_bytes).await?;
-		log::debug!(target: "hyperspace_cosmos", "🤝 Transaction sent with hash: {:?}", hash);
+		let client = &self.rpc_ws_client();
+		let hash = broadcast_tx(client, tx_bytes).await?;
+		log::info!(target: "hyperspace_cosmos", "🤝 Transaction sent with hash: {:?}", hash);
 
 		// wait for confirmation
-		confirm_tx(&self.rpc_client, hash).await
+		confirm_tx(client, hash).await
 	}
 
 	pub async fn fetch_light_block_with_cache(
@@ -460,7 +492,7 @@ where
 
 	/// Uses the GRPC client to retrieve the account sequence
 	pub async fn query_account(&self) -> Result<BaseAccount, Error> {
-		let mut client = QueryClient::connect(self.grpc_url.clone().to_string())
+		let mut client = QueryClient::connect(self.grpc_url().to_string())
 			.await
 			.map_err(|e| Error::from(format!("GRPC client error: {:?}", e)))?;
 
