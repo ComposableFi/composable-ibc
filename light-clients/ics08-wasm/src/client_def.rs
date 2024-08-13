@@ -77,12 +77,8 @@ where
 		client_state: Self::ClientState,
 		client_msg: Self::ClientMessage,
 	) -> Result<(), Error> {
-		self.inner.verify_client_message(
-			ctx,
-			client_id,
-			*client_state.inner,
-			client_msg.into_inner(),
-		)
+		self.inner
+			.verify_client_message(ctx, client_id, *client_state.inner, *client_msg.inner)
 	}
 
 	fn update_state<Ctx: ReaderContext>(
@@ -92,15 +88,12 @@ where
 		client_state: Self::ClientState,
 		client_msg: Self::ClientMessage,
 	) -> Result<(Self::ClientState, ConsensusUpdateResult<Ctx>), Error> {
-		let (inner_client_state, inner_consensus_update_result) = self.inner.update_state(
-			ctx,
-			client_id,
-			*client_state.inner,
-			client_msg.into_inner(),
-		)?;
+		let (inner_client_state, inner_consensus_update_result) =
+			self.inner
+				.update_state(ctx, client_id, *client_state.inner, *client_msg.inner)?;
 		let client_state = ClientState {
 			data: client_state.data.clone(),
-			code_id: client_state.code_id.clone(),
+			checksum: client_state.checksum.clone(),
 			inner: Box::new(inner_client_state),
 			latest_height: client_state.latest_height,
 			_phantom: PhantomData,
@@ -115,10 +108,10 @@ where
 	) -> Result<Self::ClientState, Error> {
 		let inner_client_state = self
 			.inner
-			.update_state_on_misbehaviour(*client_state.inner, client_msg.into_inner())?;
+			.update_state_on_misbehaviour(*client_state.inner, *client_msg.inner)?;
 		Ok(ClientState {
 			data: client_state.data.clone(),
-			code_id: client_state.code_id.clone(),
+			checksum: client_state.checksum.clone(),
 			inner: Box::new(inner_client_state),
 			latest_height: client_state.latest_height,
 			_phantom: PhantomData,
@@ -132,12 +125,8 @@ where
 		client_state: Self::ClientState,
 		client_msg: Self::ClientMessage,
 	) -> Result<bool, Error> {
-		self.inner.check_for_misbehaviour(
-			ctx,
-			client_id,
-			*client_state.inner,
-			client_msg.into_inner(),
-		)
+		self.inner
+			.check_for_misbehaviour(ctx, client_id, *client_state.inner, *client_msg.inner)
 	}
 
 	fn verify_upgrade_and_update_state<Ctx: ReaderContext>(
@@ -165,7 +154,7 @@ where
 					ClientState {
 						inner: Box::new(client_state),
 						data: old_client_state.data.clone(),
-						code_id: old_client_state.code_id.clone(),
+						checksum: old_client_state.checksum.clone(),
 						latest_height: old_client_state.latest_height,
 						_phantom: Default::default(),
 					},
@@ -192,7 +181,7 @@ where
 			)?;
 		let client_state = ClientState {
 			data: old_client_state.data.clone(),
-			code_id: old_client_state.code_id.clone(),
+			checksum: old_client_state.checksum.clone(),
 			inner: Box::new(inner_client_state),
 			latest_height: old_client_state.latest_height,
 			_phantom: PhantomData,

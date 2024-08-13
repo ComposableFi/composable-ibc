@@ -19,7 +19,7 @@ jobs:
       group: check-${{ github.ref }}
       cancel-in-progress: true
     container:
-      image: paritytech/ci-unified:bullseye-1.71.0-v20230727
+      image: paritytech/ci-unified:bullseye-1.74.0-v20240109
     runs-on: ubuntu-latest
     steps:
     - uses: actions/checkout@v2

@@ -20,8 +20,8 @@ use serde::{Deserialize, Serialize};
 
 use crate::{
 	context::Context,
-	ics23::{ConsensusStates, FakeInner, ProcessedStates},
-	msg::ExecuteMsg,
+	ics23::{ConsensusStates, ProcessedStates},
+	msg::SudoMsg,
 };
 use cosmwasm_std::{to_binary, Addr, CosmosMsg, StdResult, WasmMsg};
 use ibc::core::{
@@ -32,12 +32,8 @@ use ibc::core::{
 	ics23_commitment::{commitment::CommitmentProofBytes, merkle::MerkleProof},
 	ics24_host::identifier::ClientId,
 };
-use ibc_proto::{
-	google::protobuf::Any,
-	ibc::core::commitment::v1::{MerklePath, MerkleProof as RawMerkleProof},
-};
+use ibc_proto::ibc::core::commitment::v1::{MerklePath, MerkleProof as RawMerkleProof};
 use prost::Message;
-use tendermint_proto::Protobuf;
 
 use ics07_tendermint::{
 	client_state::{ClientState, UpgradeOptions},
@@ -46,10 +42,7 @@ use ics07_tendermint::{
 	HostFunctionsProvider,
 };
 
-use ics08_wasm::{
-	client_state::ClientState as WasmClientState,
-	consensus_state::ConsensusState as WasmConsensusState, SUBJECT_PREFIX, SUBSTITUTE_PREFIX,
-};
+use ics08_wasm::{SUBJECT_PREFIX, SUBSTITUTE_PREFIX};
 
 /// CwTemplateContract is a wrapper around Addr that provides a lot of helpers
 /// for working with this.
@@ -61,7 +54,7 @@ impl CwTemplateContract {
 		self.0.clone()
 	}
 
-	pub fn call<T: Into<ExecuteMsg>>(&self, msg: T) -> StdResult<CosmosMsg> {
+	pub fn call<T: Into<SudoMsg>>(&self, msg: T) -> StdResult<CosmosMsg> {
 		let msg = to_binary(&msg.into())?;
 		Ok(WasmMsg::Execute { contract_addr: self.addr().into(), msg, funds: vec![] }.into())
 	}
@@ -98,8 +91,8 @@ pub fn verify_upgrade_and_update_state<H: HostFunctionsProvider + 'static>(
 	ctx: &mut Context<H>,
 	client_id: ClientId,
 	old_client_state: ClientState<H>,
-	upgrade_client_state: WasmClientState<FakeInner, FakeInner, FakeInner>,
-	upgrade_consensus_state: WasmConsensusState<FakeInner>,
+	upgrade_client_state: ClientState<H>,
+	upgrade_consensus_state: ConsensusState,
 	proof_upgrade_client: CommitmentProofBytes,
 	proof_upgrade_consensus_state: CommitmentProofBytes,
 ) -> Result<(ClientState<H>, ConsensusState), Ics02Error> {
@@ -162,32 +155,30 @@ pub fn verify_upgrade_and_update_state<H: HostFunctionsProvider + 'static>(
 		)
 		.unwrap();
 
-	let any = Any::decode(&mut upgrade_client_state.data.as_slice()).unwrap();
-	let upgrade_client_state_inner = ClientState::<H>::decode_vec(&any.value).unwrap();
 	let new_client_state = old_client_state.upgrade(
-		upgrade_client_state_inner.latest_height,
+		upgrade_client_state.latest_height,
 		UpgradeOptions {
-			unbonding_period: upgrade_client_state_inner.unbonding_period,
-			proof_specs: upgrade_client_state_inner.proof_specs.clone(),
-			upgrade_path: upgrade_client_state_inner.upgrade_path.clone(),
+			unbonding_period: upgrade_client_state.unbonding_period,
+			proof_specs: upgrade_client_state.proof_specs.clone(),
+			upgrade_path: upgrade_client_state.upgrade_path.clone(),
 		},
-		upgrade_client_state_inner.chain_id,
+		upgrade_client_state.chain_id,
 	);
 
-	let any = Any::decode(&mut upgrade_consensus_state.data.as_slice()).unwrap();
-	let upgrade_consensus_state_inner = ConsensusState::decode_vec(&any.value).unwrap();
-	Ok((new_client_state, upgrade_consensus_state_inner))
+	Ok((new_client_state, upgrade_consensus_state))
 }
 
 pub fn check_substitute_and_update_state<H: HostFunctionsProvider + 'static>(
 	ctx: &mut Context<H>,
 ) -> Result<(ClientState<H>, ConsensusState), Ics02Error> {
-	let mut subject_client_state = ctx.client_state_prefixed(SUBJECT_PREFIX).map_err(|_| {
-		Ics02Error::implementation_specific("subject client state not found".to_string())
-	})?;
-	let substitute_client_state = ctx.client_state_prefixed(SUBSTITUTE_PREFIX).map_err(|_| {
-		Ics02Error::implementation_specific("substitute client state not found".to_string())
-	})?;
+	let mut subject_client_state =
+		ctx.client_state_prefixed(SUBJECT_PREFIX.as_bytes()).map_err(|_| {
+			Ics02Error::implementation_specific("subject client state not found".to_string())
+		})?;
+	let substitute_client_state =
+		ctx.client_state_prefixed(SUBSTITUTE_PREFIX.as_bytes()).map_err(|_| {
+			Ics02Error::implementation_specific("substitute client state not found".to_string())
+		})?;
 
 	if subject_client_state.trust_level != substitute_client_state.trust_level ||
 		subject_client_state.unbonding_period != substitute_client_state.unbonding_period ||
@@ -199,32 +190,22 @@ pub fn check_substitute_and_update_state<H: HostFunctionsProvider + 'static>(
 	}
 
 	let height = substitute_client_state.latest_height();
-	let substitute_consensus_state =
-		ctx.consensus_state_prefixed(height, SUBSTITUTE_PREFIX).map_err(|_| {
+	let substitute_consensus_state = ctx
+		.consensus_state_prefixed(height, SUBSTITUTE_PREFIX.as_bytes())
+		.map_err(|_| {
 			Ics02Error::implementation_specific("substitute consensus state not found".to_string())
 		})?;
 
 	let mut process_states = ProcessedStates::new(ctx.storage_mut());
-	let substitute_processed_time = process_states
-		.get_processed_time(height, &mut SUBSTITUTE_PREFIX.to_vec())
-		.unwrap();
-	let substitute_processed_height = process_states
-		.get_processed_height(height, &mut SUBSTITUTE_PREFIX.to_vec())
-		.unwrap();
-	let substitute_iteration_key = process_states
-		.get_iteration_key(height, &mut SUBSTITUTE_PREFIX.to_vec())
-		.unwrap();
-	process_states.set_processed_time(
-		height,
-		substitute_processed_time,
-		&mut SUBJECT_PREFIX.to_vec(),
-	);
-	process_states.set_processed_height(
-		height,
-		substitute_processed_height,
-		&mut SUBJECT_PREFIX.to_vec(),
-	);
-	process_states.set_iteration_key(substitute_iteration_key, &mut SUBJECT_PREFIX.to_vec());
+	let substitute_processed_time =
+		process_states.get_processed_time(height, SUBSTITUTE_PREFIX).unwrap();
+	let substitute_processed_height =
+		process_states.get_processed_height(height, SUBSTITUTE_PREFIX).unwrap();
+	let substitute_iteration_key =
+		process_states.get_iteration_key(height, SUBSTITUTE_PREFIX).unwrap();
+	process_states.set_processed_time(height, substitute_processed_time, SUBJECT_PREFIX);
+	process_states.set_processed_height(height, substitute_processed_height, SUBJECT_PREFIX);
+	process_states.set_iteration_key(substitute_iteration_key, SUBJECT_PREFIX);
 
 	subject_client_state.latest_height = substitute_client_state.latest_height;
 	subject_client_state.chain_id = substitute_client_state.chain_id;
@@ -242,8 +223,7 @@ pub fn prune_oldest_consensus_state<H: HostFunctionsProvider + 'static>(
 	let mut processed_states = ProcessedStates::new(ctx.storage_mut());
 	if let Some(earliest_height) = processed_states.get_earliest_height(client_state.latest_height)
 	{
-		let processed_time =
-			processed_states.get_processed_time(earliest_height, &mut Vec::new()).unwrap();
+		let processed_time = processed_states.get_processed_time(earliest_height, "").unwrap();
 		let elapsed = Duration::from_nanos(current_time - processed_time);
 		if client_state.expired(elapsed) {
 			processed_states.remove_states_at_height(earliest_height);

@@ -140,10 +140,10 @@ impl From<Packet> for PacketInfo {
 	fn from(packet: Packet) -> Self {
 		Self {
 			sequence: packet.sequence.into(),
-			source_port: packet.source_port.to_string().as_bytes().to_vec(),
-			source_channel: packet.source_channel.to_string().as_bytes().to_vec(),
-			destination_port: packet.destination_port.to_string().as_bytes().to_vec(),
-			destination_channel: packet.destination_channel.to_string().as_bytes().to_vec(),
+			source_port: packet.source_port.to_string().into_bytes(),
+			source_channel: packet.source_channel.to_string().into_bytes(),
+			destination_port: packet.destination_port.to_string().into_bytes(),
+			destination_channel: packet.destination_channel.to_string().into_bytes(),
 			data: packet.data,
 			timeout_height: (
 				packet.timeout_height.revision_number,

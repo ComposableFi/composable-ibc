@@ -23,10 +23,10 @@ use crate::{
 use ibc::{
 	core::{
 		ics02_client::{
-			client_consensus::ConsensusState as _,
 			client_state::ClientType,
 			context::{ClientKeeper, ClientReader, ClientTypes},
 			error::Error,
+			events::Checksum,
 		},
 		ics24_host::identifier::ClientId,
 	},
@@ -184,8 +184,29 @@ impl<'a, H: HostFunctionsProvider + 'static> ClientKeeper for Context<'a, H> {
 		client_state: Self::AnyClientState,
 	) -> Result<(), Error> {
 		let client_states = ReadonlyClientStates::new(self.storage());
-		let data = client_states.get().ok_or_else(|| Error::client_not_found(client_id.clone()))?;
-		let encoded = Self::encode_client_state(client_state, data)?;
+		let checksum = match self.checksum.clone() {
+			None => {
+				let encoded_wasm_client_state = client_states
+					.get()
+					.ok_or_else(|| Error::client_not_found(client_id.clone()))?;
+				let any = Any::decode(&*encoded_wasm_client_state).map_err(Error::decode)?;
+				let wasm_client_state = ics08_wasm::client_state::ClientState::<
+					FakeInner,
+					FakeInner,
+					FakeInner,
+				>::decode_vec(&any.value)
+				.map_err(|e| {
+					Error::implementation_specific(format!(
+							"[client_state]: error decoding client state bytes to WasmConsensusState {}",
+							e
+						))
+				})?;
+				wasm_client_state.checksum
+			},
+			Some(x) => x,
+		};
+
+		let encoded = Self::encode_client_state(client_state, checksum)?;
 		let mut client_state_storage = ClientStates::new(self.storage_mut());
 		client_state_storage.insert(encoded);
 		Ok(())
@@ -218,7 +239,7 @@ impl<'a, H: HostFunctionsProvider + 'static> ClientKeeper for Context<'a, H> {
 		timestamp: Timestamp,
 	) -> Result<(), Error> {
 		let mut processed_state = ProcessedStates::new(self.storage_mut());
-		processed_state.set_processed_time(height, timestamp.nanoseconds(), &mut Vec::new());
+		processed_state.set_processed_time(height, timestamp.nanoseconds(), "");
 
 		Ok(())
 	}
@@ -230,8 +251,8 @@ impl<'a, H: HostFunctionsProvider + 'static> ClientKeeper for Context<'a, H> {
 		host_height: Height,
 	) -> Result<(), Error> {
 		let mut processed_state = ProcessedStates::new(self.storage_mut());
-		processed_state.set_processed_height(height, host_height.revision_height, &mut Vec::new());
-		processed_state.set_iteration_key(height, &mut Vec::new());
+		processed_state.set_processed_height(height, host_height.revision_height, "");
+		processed_state.set_iteration_key(height, "");
 		Ok(())
 	}
 
@@ -271,18 +292,11 @@ impl<'a, H: Clone> Context<'a, H> {
 
 	pub fn encode_client_state(
 		client_state: ClientState<H>,
-		encoded_wasm_client_state: Vec<u8>,
+		checksum: Checksum,
 	) -> Result<Vec<u8>, Error> {
-		let any = Any::decode(&*encoded_wasm_client_state).map_err(Error::decode)?;
 		let mut wasm_client_state =
-			ics08_wasm::client_state::ClientState::<FakeInner, FakeInner, FakeInner>::decode_vec(
-				&any.value,
-			)
-			.map_err(|e| {
-				Error::implementation_specific(format!(
-					"[client_state]: error decoding client state bytes to WasmConsensusState {e}"
-				))
-			})?;
+			ics08_wasm::client_state::ClientState::<FakeInner, FakeInner, FakeInner>::default();
+		wasm_client_state.checksum = checksum;
 		wasm_client_state.data = client_state.to_any().encode_to_vec();
 		wasm_client_state.latest_height = client_state.latest_height();
 		let vec1 = wasm_client_state.to_any().encode_to_vec();
@@ -292,7 +306,6 @@ impl<'a, H: Clone> Context<'a, H> {
 	pub fn encode_consensus_state(consensus_state: ConsensusState) -> Vec<u8> {
 		let wasm_consensus_state = ics08_wasm::consensus_state::ConsensusState {
 			data: consensus_state.to_any().encode_to_vec(),
-			timestamp: consensus_state.timestamp().nanoseconds(),
 			inner: Box::new(FakeInner),
 		};
 		wasm_consensus_state.to_any().encode_to_vec()

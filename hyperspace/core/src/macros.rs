@@ -808,7 +808,7 @@ macro_rules! chains {
 					Self::Wasm(chain) => {
 						let messages = messages
 							.into_iter()
-							.map(|msg| wrap_any_msg_into_wasm(msg, chain.code_id.clone()))
+							.map(|msg| wrap_any_msg_into_wasm(msg, chain.checksum.clone()))
 							.collect::<Result<Vec<_>, _>>()?;
 						chain.inner.submit(messages).await.map_err(AnyError::into)
 					},
@@ -989,15 +989,15 @@ macro_rules! chains {
 
 		impl AnyConfig {
 			pub async fn into_client(self) -> anyhow::Result<AnyChain> {
-				let maybe_wasm_code_id = self.wasm_code_id();
+				let maybe_wasm_checksum = self.wasm_checksum();
 				let chain = match self {
 					$(
 						$(#[$($meta)*])*
 						AnyConfig::$name(config) => AnyChain::$name(<$client>::new(config).await?),
 					)*
 				};
-				if let Some(code_id) = maybe_wasm_code_id {
-					Ok(AnyChain::Wasm(WasmChain { inner: Box::new(chain), code_id }))
+				if let Some(checksum) = maybe_wasm_checksum {
+					Ok(AnyChain::Wasm(WasmChain { inner: Box::new(chain), checksum }))
 				} else {
 					Ok(chain)
 				}
@@ -1036,25 +1036,25 @@ macro_rules! chains {
 				}
 			}
 
-			pub fn wasm_code_id(&self) -> Option<CodeId> {
-				let maybe_code_id = match self {
+			pub fn wasm_checksum(&self) -> Option<Checksum> {
+				let maybe_checksum = match self {
 					$(
 						$(#[$($meta)*])*
-						Self::$name(chain) => chain.wasm_code_id.as_ref(),
+						Self::$name(chain) => chain.wasm_checksum.as_ref(),
 					)*
 				};
-				let maybe_code_id =
-					maybe_code_id.map(|s| hex::decode(s).expect("Wasm code id is hex-encoded"));
+				let maybe_checksum =
+					maybe_checksum.map(|s| hex::decode(s).expect("Wasm checksum is hex-encoded"));
 
-				maybe_code_id
+					maybe_checksum
 			}
 
-			pub fn set_wasm_code_id(&mut self, code_id: String) {
+			pub fn set_wasm_checksum(&mut self, checksum: String) {
 				match self {
 					$(
 						$(#[$($meta)*])*
 						Self::$name(chain) => {
-							chain.wasm_code_id = Some(code_id);
+							chain.wasm_checksum = Some(checksum);
 						},
 					)*
 				}

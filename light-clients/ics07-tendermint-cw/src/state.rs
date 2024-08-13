@@ -25,10 +25,13 @@ use ics07_tendermint::{client_state::ClientState, consensus_state::ConsensusStat
 use prost::Message;
 
 /// Retrieves raw bytes from storage and deserializes them into [`ClientState`]
-pub fn get_client_state<H: Clone>(deps: Deps) -> Result<ClientState<H>, Error> {
+pub fn get_client_state<H: Clone>(
+	deps: Deps,
+	client_id: ClientId,
+) -> Result<ClientState<H>, Error> {
 	deps.storage
-		.get(&"clientState".to_string().into_bytes())
-		.ok_or_else(|| Error::unknown_client_state_type("08-wasm-0".to_string()))
+		.get(b"clientState")
+		.ok_or_else(|| Error::unknown_client_state_type(client_id.to_string()))
 		.and_then(|client_state| deserialize_client_state(client_state, deps))
 }
 
@@ -81,5 +84,5 @@ fn deserialize_consensus_state(consensus_state: Vec<u8>) -> Result<ConsensusStat
 }
 
 pub fn get_consensus_state_key(height: Height) -> Vec<u8> {
-	["consensusStates/".to_string().into_bytes(), format!("{height}").into_bytes()].concat()
+	format!("consensusStates/{height}").into_bytes()
 }

@@ -27,7 +27,7 @@ where
 			let packets: Vec<ibc_primitives::PacketInfo> = api
 				.query_send_packet_info(
 					at,
-					channel_id.to_string().as_bytes().to_vec(),
+					channel_id.to_string().into_bytes(),
 					port_id.as_bytes().to_vec(),
 					vec![sequence],
 				)
@@ -45,7 +45,7 @@ where
 			let packets: Vec<ibc_primitives::PacketInfo> = api
 				.query_recv_packet_info(
 					at,
-					channel_id.to_string().as_bytes().to_vec(),
+					channel_id.to_string().into_bytes(),
 					port_id.as_bytes().to_vec(),
 					vec![sequence],
 				)
@@ -63,7 +63,7 @@ where
 			let packets: Vec<ibc_primitives::PacketInfo> = api
 				.query_recv_packet_info(
 					at,
-					channel_id.to_string().as_bytes().to_vec(),
+					channel_id.to_string().into_bytes(),
 					port_id.as_bytes().to_vec(),
 					vec![sequence],
 				)
@@ -81,7 +81,7 @@ where
 			let packets: Vec<ibc_primitives::PacketInfo> = api
 				.query_send_packet_info(
 					at,
-					channel_id.to_string().as_bytes().to_vec(),
+					channel_id.to_string().into_bytes(),
 					port_id.as_bytes().to_vec(),
 					vec![sequence],
 				)
@@ -99,7 +99,7 @@ where
 			let packets: Vec<ibc_primitives::PacketInfo> = api
 				.query_send_packet_info(
 					at,
-					channel_id.to_string().as_bytes().to_vec(),
+					channel_id.to_string().into_bytes(),
 					port_id.as_bytes().to_vec(),
 					vec![sequence],
 				)
@@ -117,7 +117,7 @@ where
 			let packets: Vec<ibc_primitives::PacketInfo> = api
 				.query_send_packet_info(
 					at,
-					channel_id.to_string().as_bytes().to_vec(),
+					channel_id.to_string().into_bytes(),
 					port_id.as_bytes().to_vec(),
 					vec![sequence],
 				)
