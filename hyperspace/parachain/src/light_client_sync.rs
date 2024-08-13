@@ -209,7 +209,7 @@ where
 		let mut count = 0;
 		while session_end_block <= latest_finalized_height && count < limit {
 			log::debug!(
-				target: "hyperspace",
+				target: "hyperspace_parachain",
 				"Getting message for session end block: #{} (finalized #{}) ({}/{})",
 				session_end_block, latest_finalized_height, count + 1, limit
 			);

@@ -92,7 +92,7 @@ sp-weights = { git = "https://github.com/paritytech/substrate", branch = "polkad
 
 [dev-dependencies]
 derive_more = "0.99.17"
-clap = { version = "3.2.0", features = ["derive"] }
+clap = { version = "4.4.11", features = ["derive"] }
 state-machine = { package = "sp-state-machine", git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.43" }
 prost = "0.11"
 primitives = { path = "../primitives", package = "hyperspace-primitives", features = [

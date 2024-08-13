@@ -136,6 +136,14 @@ pub struct PacketInfo {
 	pub ack: Option<Vec<u8>>,
 }
 
+impl Display for PacketInfo {
+	fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+		write!(f, "PacketInfo {{ height: {}, seq: {}, src_chan: {}/{}, dst_chan: {}/{}, data: {}, timeout_height: {}-{}, timeout_timestamp: {}, ack: {} }}",
+			   self.height.unwrap_or(0), self.sequence, self.source_port, self.source_channel, self.destination_port, self.destination_channel,
+			   String::from_utf8(self.data.clone()).unwrap_or_else(|_| hex::encode(&self.data)), self.timeout_height.revision_number, self.timeout_height.revision_height, self.timeout_timestamp, self.ack.clone().map(|ack| String::from_utf8(ack.clone()).unwrap_or_else(|_| hex::encode(&ack))).unwrap_or_default())
+	}
+}
+
 impl TryFrom<RawPacketInfo> for PacketInfo {
 	type Error = ();
 

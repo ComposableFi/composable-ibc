@@ -332,7 +332,7 @@ where
 		} else {
 			error.to_string()
 		};
-		log::debug!(target: "hyperspace", "Handling error: {err_str}");
+		log::debug!(target: "hyperspace_parachain", "Handling error: {err_str}");
 
 		if err_str.contains("MaxSlotsExceeded") {
 			self.common_state.rpc_call_delay = self.common_state.rpc_call_delay * 2;
@@ -366,7 +366,7 @@ where
 		self.relay_client = relay_client;
 		self.para_client = para_client;
 
-		log::info!(target: "hyperspace", "Reconnected to relay chain and parachain");
+		log::info!(target: "hyperspace_parachain", "Reconnected to relay chain and parachain");
 
 		Ok(())
 	}
