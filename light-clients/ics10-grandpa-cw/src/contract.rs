@@ -19,9 +19,9 @@ use crate::{
 	log,
 	msg::{
 		CheckForMisbehaviourMsg, CheckSubstituteAndUpdateStateMsg, ContractResult, ExecuteMsg,
-		ExportMetadataMsg, InstantiateMsg, QueryMsg, QueryResponse, StatusMsg, UpdateStateMsg,
-		UpdateStateOnMisbehaviourMsg, VerifyClientMessage, VerifyMembershipMsg, MigrateMsg,
-		VerifyNonMembershipMsg, VerifyUpgradeAndUpdateStateMsg
+		ExportMetadataMsg, InstantiateMsg, MigrateMsg, QueryMsg, QueryResponse, StatusMsg,
+		UpdateStateMsg, UpdateStateOnMisbehaviourMsg, VerifyClientMessage, VerifyMembershipMsg,
+		VerifyNonMembershipMsg, VerifyUpgradeAndUpdateStateMsg,
 	},
 	state::{get_client_state, get_consensus_state},
 	Bytes,

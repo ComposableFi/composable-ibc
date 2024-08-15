@@ -20,8 +20,8 @@ use hyperspace_core::{
 
 #[tokio::main]
 async fn main() -> Result<()> {
-	logging::setup_logging();
 	let cli = Cli::parse();
+	logging::setup_logging(cli.debug);
 
 	match &cli.subcommand {
 		Subcommand::Relay(cmd) => cmd.run().await,

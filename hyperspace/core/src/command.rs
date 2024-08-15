@@ -35,6 +35,8 @@ use std::{num::NonZeroU64, path::PathBuf, str::FromStr, time::Duration};
 pub struct Cli {
 	#[structopt(subcommand)]
 	pub subcommand: Subcommand,
+	#[clap(long = "debug", short = 'd', global = true, action)]
+	pub debug: bool,
 }
 
 /// Possible subcommands of the main binary.
@@ -80,7 +82,7 @@ pub struct Cmd {
 	/// Relayer chain B config path (mandatory).
 	#[clap(long, global = true)]
 	config_b: Option<String>,
-    /// Relayer core config path (mandatory).
+	/// Relayer core config path (mandatory).
 	#[clap(long, global = true)]
 	config_core: Option<String>,
 	/// Port id for channel creation
@@ -293,10 +295,18 @@ impl Cmd {
 	}
 
 	pub async fn save_config(&self, new_config: &Config) -> Result<()> {
-		let path_a = self.out_config_a.as_ref().cloned().or_else(|| self.config_a.clone())
-            .ok_or(anyhow::anyhow!("--config-a is mandatory"))?;
-		let path_b = self.out_config_b.as_ref().cloned().or_else(|| self.config_b.clone())
-            .ok_or(anyhow::anyhow!("--config-b is mandatory"))?;
+		let path_a = self
+			.out_config_a
+			.as_ref()
+			.cloned()
+			.or_else(|| self.config_a.clone())
+			.ok_or(anyhow::anyhow!("--config-a is mandatory"))?;
+		let path_b = self
+			.out_config_b
+			.as_ref()
+			.cloned()
+			.or_else(|| self.config_b.clone())
+			.ok_or(anyhow::anyhow!("--config-b is mandatory"))?;
 		write_config(path_a, &new_config.chain_a).await?;
 		write_config(path_b, &new_config.chain_b).await
 	}

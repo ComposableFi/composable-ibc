@@ -14,9 +14,10 @@
 
 use log::LevelFilter;
 
-pub fn setup_logging() {
+pub fn setup_logging(debug: bool) {
 	env_logger::builder()
-		.filter_module("hyper", LevelFilter::Info)
+		.filter(None, if debug { LevelFilter::Debug } else { LevelFilter::Info })
+		.filter_module("hyper", if debug { LevelFilter::Debug } else { LevelFilter::Info })
 		.format_module_path(false)
 		.init();
 }
