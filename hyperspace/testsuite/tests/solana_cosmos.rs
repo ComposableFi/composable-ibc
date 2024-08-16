@@ -54,9 +54,9 @@ pub struct Args {
 
 impl Default for Args {
 	fn default() -> Self {
-		let relay = std::env::var("RELAY_HOST").unwrap_or_else(|_| "192.168.12.123".to_string());
-		let solana = std::env::var("SOLANA_HOST").unwrap_or_else(|_| "192.168.12.123".to_string());
-		let cosmos = std::env::var("COSMOS_HOST").unwrap_or_else(|_| "192.168.12.123".to_string());
+		let relay = std::env::var("RELAY_HOST").unwrap_or_else(|_| "127.0.0.1".to_string());
+		let solana = std::env::var("SOLANA_HOST").unwrap_or_else(|_| "127.0.0.1".to_string());
+		let cosmos = std::env::var("COSMOS_HOST").unwrap_or_else(|_| "127.0.0.1".to_string());
 		let wasm_path = std::env::var("WASM_PATH").unwrap_or_else(|_| {
 			"../../target/wasm32-unknown-unknown/release/cf_guest_cw.wasm".to_string()
 		});
