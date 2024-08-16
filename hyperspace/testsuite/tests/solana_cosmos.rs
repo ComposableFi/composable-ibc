@@ -142,7 +142,7 @@ async fn setup_clients() -> (AnyChain, AnyChain) {
         chain_id: "test-1".to_string(),
         client_id: None,
         connection_id: None,
-        account_prefix: "centauri".to_string(),
+        account_prefix: "pica".to_string(),
         fee_denom: "stake".to_string(),
         fee_amount: "92233720368547899".to_string(),
         gas_limit: (i64::MAX - 1) as u64,
@@ -224,7 +224,7 @@ async fn solana_to_cosmos_ibc_messaging_full_integration_test() {
 	use std::str::FromStr;
 	logging::setup_logging();
 
-	let asset_id_a = AnyAssetId::Solana("33WVSef9zaw49KbNdPGTmACVRnAXzN3o1fsqbUrLp2mh".to_string());
+	let asset_id_a = AnyAssetId::Solana("So11111111111111111111111111111111111111112".to_string());
 	let asset_id_b = AnyAssetId::Cosmos("stake".to_string());
 	let (mut chain_a, mut chain_b) = setup_clients().await;
 	let (handle, channel_a, channel_b, connection_id_a, connection_id_b) =
@@ -254,15 +254,15 @@ async fn solana_to_cosmos_ibc_messaging_full_integration_test() {
 
 	// no timeouts + connection delay
 
-	// ibc_messaging_with_connection_delay(
-	// 	&mut chain_a,
-	// 	&mut chain_b,
-	// 	asset_id_a.clone(),
-	// 	asset_id_b.clone(),
-	// 	channel_a,
-	// 	channel_b,
-	// )
-	// .await;
+	ibc_messaging_with_connection_delay(
+		&mut chain_a,
+		&mut chain_b,
+		asset_id_a.clone(),
+		asset_id_b.clone(),
+		channel_a,
+		channel_b,
+	)
+	.await;
 
 	// timeouts + connection delay
 	ibc_messaging_packet_height_timeout_with_connection_delay(

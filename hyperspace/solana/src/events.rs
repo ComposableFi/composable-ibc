@@ -697,7 +697,7 @@ pub async fn get_previous_transactions(
 			GetConfirmedSignaturesForAddress2Config {
 				limit: Some(200),
 				before: before_hash,
-				commitment: Some(CommitmentConfig::finalized()),
+				commitment: Some(CommitmentConfig::confirmed()),
 				..Default::default()
 			},
 		)
@@ -718,7 +718,7 @@ pub async fn get_previous_transactions(
 			method: "getTransaction".to_string(),
 			params: (
 				signature,
-				Param { commitment: "finalized".to_string(), maxSupportedTransactionVersion: 0 },
+				Param { commitment: "confirmed".to_string(), maxSupportedTransactionVersion: 0 },
 			),
 		};
 		body.push(payload);

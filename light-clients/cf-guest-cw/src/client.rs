@@ -56,7 +56,7 @@ impl<'a> ClientReader for Context<'a> {
 	fn client_type(&self, client_id: &ClientId) -> Result<ClientType, Error> {
 		let clients = ReadonlyClients::new(self.storage());
 		if !clients.contains_key(client_id) {
-			return Err(Error::client_not_found(client_id.clone()))
+			return Err(Error::client_not_found(client_id.clone()));
 		}
 
 		let data = clients
@@ -190,7 +190,28 @@ impl<'a> ClientKeeper for Context<'a> {
 		client_state: Self::AnyClientState,
 	) -> Result<(), Error> {
 		let client_states = ReadonlyClientStates::new(self.storage());
-		let data = client_states.get().ok_or_else(|| Error::client_not_found(client_id.clone()))?;
+		let checksum = match self.checksum.clone() {
+			None => {
+				let encoded_wasm_client_state = client_states
+					.get()
+					.ok_or_else(|| Error::client_not_found(client_id.clone()))?;
+				let any = Any::decode(&*encoded_wasm_client_state).map_err(Error::decode)?;
+				let wasm_client_state = ics08_wasm::client_state::ClientState::<
+					FakeInner,
+					FakeInner,
+					FakeInner,
+				>::decode_vec(&any.value)
+				.map_err(|e| {
+					Error::implementation_specific(format!(
+							"[client_state]: error decoding client state bytes to WasmConsensusState {}",
+							e
+						))
+				})?;
+				wasm_client_state.checksum
+			},
+			Some(x) => x,
+		};
+
 		let encoded = Self::encode_client_state(client_state, checksum)?;
 		let mut client_state_storage = ClientStates::new(self.storage_mut());
 		client_state_storage.insert(encoded);
@@ -276,18 +297,11 @@ impl<'a> Context<'a> {
 
 	pub fn encode_client_state(
 		client_state: ClientState<crate::crypto::PubKey>,
-		encoded_wasm_client_state: Vec<u8>,
+		checksum: Vec<u8>,
 	) -> Result<Vec<u8>, Error> {
-		let any = Any::decode(&*encoded_wasm_client_state).map_err(Error::decode)?;
 		let mut wasm_client_state =
-			ics08_wasm::client_state::ClientState::<FakeInner, FakeInner, FakeInner>::decode_vec(
-				&any.value,
-			)
-			.map_err(|e| {
-				Error::implementation_specific(format!(
-					"[client_state]: error decoding client state bytes to WasmConsensusState {e}"
-				))
-			})?;
+			ics08_wasm::client_state::ClientState::<FakeInner, FakeInner, FakeInner>::default();
+		wasm_client_state.checksum = checksum;
 		wasm_client_state.data =
 			ibc_proto::google::protobuf::Any::from(&client_state).encode_to_vec();
 		wasm_client_state.latest_height = client_state.latest_height();

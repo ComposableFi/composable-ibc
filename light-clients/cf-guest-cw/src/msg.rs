@@ -119,7 +119,7 @@ impl ContractResult {
 pub enum SudoMsg {
 	MigrateClientStore(MigrateClientStoreMsg),
 	UpdateStateOnMisbehaviour(UpdateStateOnMisbehaviourMsgRaw),
-	UpdateState(UpdateStateMsgRaw),
+	UpdateState(UpdateStateMsgRawSdk50),
 	VerifyMembership(VerifyMembershipMsgRaw),
 	VerifyNonMembership(VerifyNonMembershipMsgRaw),
 	VerifyUpgradeAndUpdateState(VerifyUpgradeAndUpdateStateMsgRaw),
@@ -127,13 +127,13 @@ pub enum SudoMsg {
 
 #[cw_serde]
 pub enum QueryMsg {
-	CheckForMisbehaviour(CheckForMisbehaviourMsgRaw),
-	ClientTypeMsg(ClientTypeMsg),
-	GetLatestHeightsMsg(GetLatestHeightsMsg),
+	CheckForMisbehaviour(CheckForMisbehaviourMsgRaw2),
+	// ClientTypeMsg(ClientTypeMsg),
+	// GetLatestHeightsMsg(GetLatestHeightsMsg),
 	ExportMetadata(ExportMetadataMsg),
 	Status(StatusMsg),
 	TimestampAtHeight(TimestampAtHeightMsg),
-	VerifyClientMessage(VerifyClientMessageRaw),
+	VerifyClientMessage(VerifyClientMessageRaw2),
 }
 
 #[cw_serde]

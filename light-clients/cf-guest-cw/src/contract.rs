@@ -257,8 +257,9 @@ pub fn query(deps: Deps, env: Env, msg: QueryMsg) -> StdResult<Binary> {
 	let client_id = ClientId::from_str("08-wasm-0").expect("client id is valid");
 	//deps.api.debug("In query");
 	match msg {
-		QueryMsg::ClientTypeMsg(_) => unimplemented!("ClientTypeMsg"),
-		QueryMsg::GetLatestHeightsMsg(_) => unimplemented!("GetLatestHeightsMsg"),
+		// QueryMsg::ClientTypeMsg(_) => unimplemented!("ClientTypeMsg"),
+		// QueryMsg::GetLatestHeightsMsg(_) => unimplemented!("GetLatestHeightsMsg"),
+
 		QueryMsg::ExportMetadata(ExportMetadataMsg {}) => {
 			let ro_proceeded_state = ReadonlyProcessedStates::new(deps.storage);
 			to_binary(&QueryResponse::success().genesis_metadata(ro_proceeded_state.get_metadata()))
