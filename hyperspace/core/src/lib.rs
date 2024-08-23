@@ -250,12 +250,12 @@ async fn process_some_finality_event<A: Chain, B: Chain>(
 	// 	timeout_msgs.len()
 	// );
 
-	let ready_packets = vec![];
-	let mut timeout_msgs = vec![];
+	let ready_packets: Vec<Any> = vec![];
+	let mut timeout_msgs: Vec<Any> = vec![];
 
 	process_updates(source, sink, metrics, mode, updates, &mut msgs, ready_packets.clone()).await?;
 
-	// msgs.extend(ready_packets);
+	msgs.extend(ready_packets);
 
 	process_messages(sink, metrics, msgs).await?;
 
