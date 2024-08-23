@@ -9,8 +9,8 @@ use lib::hash::CryptoHash;
 use serde::{Deserialize, Serialize};
 use solana_ibc::events::Epoch;
 use solana_transaction_status::EncodedConfirmedTransactionWithStatusMeta;
-use tokio::runtime::Runtime;
 use std::str::FromStr;
+use tokio::runtime::Runtime;
 
 use base64::Engine;
 use ibc::{
@@ -471,14 +471,19 @@ pub fn get_events_from_logs(logs: Vec<String>) -> (Vec<solana_ibc::events::Event
 	let height = height_str.parse::<u64>().unwrap();
 	let events: Vec<solana_ibc::events::Event> = serialized_events
 		.iter()
-		.map(|event| {
-			let decoded_event = base64::prelude::BASE64_STANDARD.decode(event).unwrap();
-			let decoded_event: solana_ibc::events::Event =
-				borsh::BorshDeserialize::try_from_slice(&decoded_event).map_err(|e| {
-					log::error!("These are logs {:?}", logs);
-					log::error!("This is decoded event {:?}", decoded_event);
-				}).unwrap();
-			decoded_event
+		.filter_map(|event| {
+			let decoded_event = base64::prelude::BASE64_STANDARD.decode(event);
+			if let Ok(decoded_event) = decoded_event {
+				let decoded_event: solana_ibc::events::Event =
+					borsh::BorshDeserialize::try_from_slice(&decoded_event).map_err(|e| {
+						log::error!("These are logs {:?}", logs);
+						log::error!("This is decoded event {:?}", decoded_event);
+					});
+				if let Ok(decoded_event) = decoded_event {
+					return Some(decoded_event);
+				}
+			}
+			None
 		})
 		.collect();
 	(events, height)
@@ -617,7 +622,7 @@ pub async fn get_signatures_upto_height(
 				// 	solana_transaction_status::EncodedTransaction::Json(e) => {
 				// 		println!("Error in transaction {:?}", e.signatures);
 				// 	},
-				//   _ => panic!("WTF")	
+				//   _ => panic!("WTF")
 				// }
 				continue;
 			}
@@ -776,11 +781,16 @@ pub struct Response {
 #[test]
 pub fn testing_signatures() {
 	println!("I am testing signatures");
-	let rpc = RpcClient::new("https://mainnet.helius-rpc.com/?api-key=65520d87-04b2-43a5-b5d5-35d5db0601b3".to_string());
+	let rpc = RpcClient::new(
+		"https://mainnet.helius-rpc.com/?api-key=65520d87-04b2-43a5-b5d5-35d5db0601b3".to_string(),
+	);
 	let program_id = Pubkey::from_str("2HLLVco5HvwWriNbUhmVwA2pCetRkpgrqwnjcsZdyTKT").unwrap();
 	let upto_height = 116806;
 	println!("I am testing signatures");
-	let signatures = Runtime::new().unwrap().block_on(get_signatures_upto_height(rpc, program_id, upto_height));
+	let signatures =
+		Runtime::new()
+			.unwrap()
+			.block_on(get_signatures_upto_height(rpc, program_id, upto_height));
 	signatures.0.iter().for_each(|sig| {
 		println!("Height {}", sig.1.block_height);
 	})
