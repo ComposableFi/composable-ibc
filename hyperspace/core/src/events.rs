@@ -96,6 +96,7 @@ pub async fn parse_events(
 
 					let connection_proof =
 						CommitmentProofBytes::try_from(connection_response.proof)?;
+					log::info!("Connection Proof {:?}", connection_proof.as_bytes());
 					let prefix: CommitmentPrefix = source.connection_prefix();
 					let client_state_response = source
 						.query_client_state(

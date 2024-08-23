@@ -1051,7 +1051,10 @@ deserialize consensus state"
 			})
 			// .payer(Arc::new(keypair))
 			.signer(&*authority)
-			.send()
+			.send_with_spinner_and_config(RpcSendTransactionConfig {
+				skip_preflight: true,
+				..Default::default()
+			})
 			.await
 			.unwrap();
 		let rpc = program.async_rpc();

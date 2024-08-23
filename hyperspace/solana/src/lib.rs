@@ -381,7 +381,7 @@ impl IbcProvider for SolanaClient {
 		consensus_height: Height,
 	) -> Result<QueryConsensusStateResponse, Self::Error> {
 		use ibc_proto_new::Protobuf;
-		let (trie, at_height) = self.get_trie(at.revision_height, true).await;
+		let (trie, at_height) = self.get_trie(at.revision_height + 1, true).await;
 		let storage = self.get_ibc_storage().await;
 		let revision_height = consensus_height.revision_height;
 		let revision_number = consensus_height.revision_number;
@@ -397,7 +397,7 @@ impl IbcProvider for SolanaClient {
 			.unwrap(),
 		);
 		log::info!("query_client_consensus before prove trie");
-		let (_, consensus_state_proof) = trie
+		let (val, consensus_state_proof) = trie
 			.prove(&consensus_state_trie_key)
 			.map_err(|_| Error::Custom("value is sealed and cannot be fetched".to_owned()))?;
 		log::info!("query_client_consensus before search clients");
@@ -444,6 +444,20 @@ deserialize consensus state"
 			log::info!("Fetching latest header");
 			chain_account.head().unwrap().clone()
 		};
+		// let block_header = chain_account.head().unwrap().clone();
+		log::info!(
+			"proof {:?} state root {:?}, trie key {:?} and value {:?}",
+			consensus_state_proof,
+			block_header.state_root,
+			consensus_state_trie_key,
+			val
+		);
+		let result = consensus_state_proof.verify(
+			&block_header.state_root,
+			&consensus_state_trie_key,
+			val.as_ref(),
+		);
+		log::info!("Result {}", result);
 		Ok(QueryConsensusStateResponse {
 			consensus_state: Some(cs_state.into()),
 			proof: borsh::to_vec(&(block_header, &consensus_state_proof)).unwrap(),
@@ -457,19 +471,19 @@ deserialize consensus state"
 		client_id: ClientId,
 	) -> Result<QueryClientStateResponse, Self::Error> {
 		log::info!("Quering solana client state at height {:?} {:?}", at, client_id);
-		let (trie, at_height) = self.get_trie(at.revision_height, true).await;
+		let (trie, at_height) = self.get_trie(at.revision_height + 1, true).await;
 		let storage = self.get_ibc_storage().await;
 		let new_client_id =
 			ibc_core_host_types::identifiers::ClientId::from_str(client_id.as_str()).unwrap();
 		let client_state_trie_key =
 			TrieKey::for_client_state(ClientIdx::try_from(new_client_id).unwrap());
-		let (_, client_state_proof) = trie
+		let (val, client_state_proof) = trie
 			.prove(&client_state_trie_key)
 			.map_err(|_| Error::Custom("value is sealed and cannot be fetched".to_owned()))?;
 		let client_state = events::get_client_state_at_height(
 			self.rpc_client(),
 			self.solana_ibc_program_id,
-			at.revision_height,
+			at.revision_height + 1,
 		)
 		.await
 		.unwrap_or_else(|| {
@@ -509,6 +523,20 @@ deserialize client state"
 			log::info!("Fetching latest header");
 			chain_account.head().unwrap().clone()
 		};
+		// let block_header = chain_account.head().unwrap().clone();
+		log::info!(
+			"proof {:?} state root {:?}, trie key {:?} and value {:?}",
+			client_state_proof,
+			block_header.state_root,
+			client_state_trie_key,
+			val
+		);
+		let result = client_state_proof.verify(
+			&block_header.state_root,
+			&client_state_trie_key,
+			val.as_ref(),
+		);
+		log::info!("Result {}", result);
 		Ok(QueryClientStateResponse {
 			client_state: Some(any_client_state.into()),
 			proof: borsh::to_vec(&(block_header, &client_state_proof)).unwrap(),
@@ -522,7 +550,7 @@ deserialize client state"
 		connection_id: ConnectionId,
 	) -> Result<QueryConnectionResponse, Self::Error> {
 		use ibc_proto_new::Protobuf;
-		let (trie, at_height) = self.get_trie(at.revision_height, true).await;
+		let (trie, at_height) = self.get_trie(at.revision_height + 1, true).await;
 		let storage = self.get_ibc_storage().await;
 		let connection_idx = ConnectionIdx::try_from(
 			ibc_core_host_types::identifiers::ConnectionId::from_str(connection_id.as_str())
@@ -586,6 +614,7 @@ deserialize client state"
 			}),
 			delay_period: inner_connection_end.delay_period().as_nanos() as u64,
 		};
+		log::info!("This is after connection end {:?}", connection_end);
 		let chain_account = self.get_chain_storage().await;
 		let block_header = if !self.common_state.handshake_completed {
 			log::info!("Fetching previous block header");
@@ -600,6 +629,27 @@ deserialize client state"
 			log::info!("Fetching latest header");
 			chain_account.head().unwrap().clone()
 		};
+		// let block_header = chain_account.head().unwrap().clone();
+		log::info!(
+			"proof {:?} state root {:?}, trie key {:?} and value {:?}",
+			connection_end_proof,
+			block_header.state_root,
+			connection_end_trie_key,
+			val
+		);
+		log::info!("Block header {:?}", block_header);
+		let result = connection_end_proof.verify(
+			&block_header.state_root,
+			&connection_end_trie_key,
+			val.as_ref(),
+		);
+		log::info!("Result {}", result);
+		log::info!("connection end {:?}", connection_end);
+		let mut proof = borsh::to_vec(&(block_header.clone(), &connection_end_proof)).unwrap();
+		log::info!("This is proof {:?}", proof);
+		let (header, proof): (BlockHeader, sealable_trie::proof::Proof) =
+			borsh::BorshDeserialize::deserialize_reader(&mut &proof[..]).unwrap();
+		log::info!("This is deserialized proof {:?}", proof);
 		Ok(QueryConnectionResponse {
 			connection: Some(connection_end),
 			proof: borsh::to_vec(&(block_header, &connection_end_proof)).unwrap(),

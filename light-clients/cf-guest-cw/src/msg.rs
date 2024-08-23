@@ -172,6 +172,7 @@ pub struct VerifyMembershipMsgRaw {
 	pub delay_time_period: u64,
 }
 
+#[derive(Debug)]
 pub struct VerifyMembershipMsg {
 	pub prefix: CommitmentPrefix,
 	pub proof: CommitmentProofBytes,

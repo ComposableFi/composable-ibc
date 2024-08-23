@@ -126,6 +126,7 @@ fn process_message(
 		ExecuteMsg::VerifyMembership(msg) => {
 			let _ = ctx.client_state(&client_id)?;
 			let msg = VerifyMembershipMsg::try_from(msg)?;
+			// panic!("Message {:?}", msg.proof.as_bytes());
 			// crate::helpers::verify_delay_passed(
 			// 	ctx,
 			// 	msg.height,

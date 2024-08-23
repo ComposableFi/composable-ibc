@@ -7185,6 +7185,7 @@ version = "0.0.0"
 dependencies = [
  "base64 0.21.7",
  "borsh 0.10.3",
+ "bs58 0.5.1",
  "bytemuck",
  "derive_more",
  "sha2 0.10.8",
@@ -15687,7 +15688,6 @@ version = "0.0.3"
 dependencies = [
  "base64 0.21.7",
  "borsh 0.10.3",
- "bs58 0.5.1",
  "bytemuck",
  "derive_more",
  "guestchain",
