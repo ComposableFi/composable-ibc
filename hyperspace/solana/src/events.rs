@@ -474,7 +474,10 @@ pub fn get_events_from_logs(logs: Vec<String>) -> (Vec<solana_ibc::events::Event
 		.map(|event| {
 			let decoded_event = base64::prelude::BASE64_STANDARD.decode(event).unwrap();
 			let decoded_event: solana_ibc::events::Event =
-				borsh::BorshDeserialize::try_from_slice(&decoded_event).unwrap();
+				borsh::BorshDeserialize::try_from_slice(&decoded_event).map_err(|e| {
+					log::error!("These are logs {:?}", logs);
+					log::error!("This is decoded event {:?}", decoded_event);
+				}).unwrap();
 			decoded_event
 		})
 		.collect();
