@@ -763,7 +763,7 @@ pub async fn find_suitable_proof_height_for_client(
 	latest_client_height: Height,
 ) -> Option<Height> {
 	let start_height = if start_height < Height::new(1, 6708370) {
-		return Height::new(1, 6708370);
+		Height::new(1, 6708370)
 	} else {
 		start_height
 	};
