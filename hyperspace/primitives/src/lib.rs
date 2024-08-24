@@ -762,11 +762,6 @@ pub async fn find_suitable_proof_height_for_client(
 	timestamp_to_match: Option<Timestamp>,
 	latest_client_height: Height,
 ) -> Option<Height> {
-	let start_height = if start_height < Height::new(1, 6708370) {
-		Height::new(1, 6708370)
-	} else {
-		start_height
-	};
 	log::info!(
 		target: "hyperspace",
 		"Searching for suitable proof height for client {} ({}) starting at {}, {:?}, latest_client_height={}",
