@@ -403,12 +403,6 @@ pub async fn query_ready_and_timed_out_packets(
 		.take(max_packets_to_process)
 		.collect::<Vec<_>>();
 
-		let acks = if acks.len() > 0 {
-			vec![acks[0]]
-		} else {
-			acks
-		};
-
 		let acknowledgements =
 			source.query_received_packets(channel_id, port_id.clone(), acks).await?;
 		log::trace!(target: "hyperspace", "Got acknowledgements for channel {:?}: {:?}", channel_id, acknowledgements);
