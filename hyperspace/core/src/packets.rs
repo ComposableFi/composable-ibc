@@ -193,12 +193,6 @@ pub async fn query_ready_and_timed_out_packets(
 		.take(max_packets_to_process)
 		.collect::<Vec<_>>();
 	
-		let seqs = if seqs.len() > 0 {
-			vec![seqs[0]]
-		} else {
-			seqs
-		};
-
 		log::info!(target: "hyperspace", "Found {} undelivered packets for {:?}/{:?} for {seqs:?}", seqs.len(), channel_id, port_id.clone());
 
 		let mut send_packets = source.query_send_packets(channel_id, port_id.clone(), seqs).await?;
