@@ -469,7 +469,7 @@ pub async fn get_latest_height(rpc: RpcClient, program_id: Pubkey) -> (CryptoHas
 				.iter()
 				.filter_map(|event| match event {
 					solana_ibc::events::Event::BlockFinalised(e) => {
-						finality_event = (e.block_hash, u64::from(e.block_height));
+						finality_event = (e.block_hash.clone(), u64::from(e.block_height));
 						Some(e.clone())
 					},
 					_ => None,
