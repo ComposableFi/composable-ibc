@@ -469,7 +469,7 @@ pub fn get_latest_height(rpc: RpcClient, program_id: Pubkey) -> u64 {
 				.iter()
 				.filter_map(|event| match event {
 					solana_ibc::events::Event::BlockFinalised(e) => {
-						latest_height = e.block_height;
+						latest_height = u64::from(e.block_height);
 						Some(e.clone())
 					},
 					_ => None,
