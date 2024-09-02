@@ -447,6 +447,42 @@ pub async fn get_client_state_at_height(
 	None
 }
 
+pub fn get_latest_height(rpc: RpcClient, program_id: Pubkey) -> u64 {
+	let mut latest_height = 0;
+	while latest_height == 0 {
+		let mut before_hash = None;
+		let (transactions, last_searched_hash) =
+			get_previous_transactions(&rpc, program_id, before_hash, SearchIn::GuestChain).await;
+		if transactions.is_empty() {
+			break;
+		}
+		before_hash = Some(
+			anchor_client::solana_sdk::signature::Signature::from_str(&last_searched_hash).unwrap(),
+		);
+		for tx in transactions {
+			let logs = match tx.result.transaction.meta.clone().unwrap().log_messages {
+				solana_transaction_status::option_serializer::OptionSerializer::Some(e) => e,
+				_ => Vec::new(),
+			};
+			let (events, _height) = get_events_from_logs(logs);
+			let finalized_events: Vec<solana_ibc::events::BlockFinalised> = events
+				.iter()
+				.filter_map(|event| match event {
+					solana_ibc::events::Event::BlockFinalised(e) => {
+						latest_height = e.block_height;
+						Some(e.clone())
+					},
+					_ => None,
+				})
+				.collect();
+			if latest_height > 0 {
+				break;
+			}
+		}
+	}
+	return latest_height;
+}
+
 pub fn get_events_from_logs(logs: Vec<String>) -> (Vec<solana_ibc::events::Event<'static>>, u64) {
 	let serialized_events: Vec<&str> = logs
 		.iter()

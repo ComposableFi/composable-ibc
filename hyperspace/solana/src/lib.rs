@@ -105,7 +105,10 @@ use solana_ibc::storage::{SequenceKind, Serialised};
 
 use trie_ids::{ClientIdx, ConnectionIdx, PortChannelPK, Tag, TrieKey};
 
-use crate::{client::TransactionSender, events::{get_events_from_logs, SearchIn}};
+use crate::{
+	client::TransactionSender,
+	events::{get_events_from_logs, SearchIn},
+};
 pub use crate::{
 	client::{DeliverIxType, SolanaClient, SolanaClientConfig},
 	events::convert_new_event_to_old,
@@ -189,6 +192,10 @@ impl IbcProvider for SolanaClient {
 		};
 		log::info!("This is client state {:?}", client_state);
 		let latest_cp_client_height = u64::from(client_state.0.latest_height);
+		if finality_height <= latest_cp_client_height {
+			log::info!("This height {} is already processed", finality_height);
+			return Ok(Vec::new());
+		}
 		println!("This is counterparty client height {:?}", latest_cp_client_height);
 		let (all_signatures, new_block_events) = events::get_signatures_upto_height(
 			self.rpc_client(),
@@ -1162,7 +1169,7 @@ deserialize client state"
 				&rpc_client,
 				self.solana_ibc_program_id,
 				before_hash,
-				SearchIn::IBC
+				SearchIn::IBC,
 			)
 			.await;
 			before_hash = Some(
@@ -1276,7 +1283,7 @@ deserialize client state"
 				&rpc_client,
 				self.solana_ibc_program_id,
 				before_hash,
-				SearchIn::IBC
+				SearchIn::IBC,
 			)
 			.await;
 			before_hash = Some(
@@ -1326,7 +1333,7 @@ deserialize client state"
 				}
 			})
 			.collect();
-			if is_sequence_greater && !is_maximum_seq_found  {
+			if is_sequence_greater && !is_maximum_seq_found {
 				log::info!("Sequence number found in logs is lesser than the set of sequence which we are looking for");
 				return Ok(Vec::new());
 			}
@@ -1945,6 +1952,15 @@ impl Chain for SolanaClient {
 		let (tx, rx) = unbounded_channel();
 		let ws_url = self.ws_url.clone();
 		let program_id = self.solana_ibc_program_id;
+		// get the latest block and send it
+		let height = events::get_latest_height(self.rpc_client(), program_id);
+		if height > 0 {
+			let finality_event = FinalityEvent::Guest {
+				blockhash: finality_event.block_hash,
+				block_height: u64::from(finality_event.block_height),
+			};
+			let _ = tx.send(finality_event).unwrap();
+		}
 		tokio::task::spawn_blocking(move || {
 			let (_logs_subscription, receiver) = PubsubClient::logs_subscribe(
 				&ws_url,
