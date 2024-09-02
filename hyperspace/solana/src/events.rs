@@ -447,7 +447,7 @@ pub async fn get_client_state_at_height(
 	None
 }
 
-pub fn get_latest_height(rpc: RpcClient, program_id: Pubkey) -> u64 {
+pub async fn get_latest_height(rpc: RpcClient, program_id: Pubkey) -> u64 {
 	let mut latest_height = 0;
 	while latest_height == 0 {
 		let mut before_hash = None;
