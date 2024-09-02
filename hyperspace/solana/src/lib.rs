@@ -1953,11 +1953,11 @@ impl Chain for SolanaClient {
 		let ws_url = self.ws_url.clone();
 		let program_id = self.solana_ibc_program_id;
 		// get the latest block and send it
-		let height = events::get_latest_height(self.rpc_client(), program_id).await;
-		if height > 0 {
+		let finality_event = events::get_latest_height(self.rpc_client(), program_id).await;
+		if finality_event.1 > 0 {
 			let finality_event = FinalityEvent::Guest {
-				blockhash: finality_event.block_hash,
-				block_height: u64::from(finality_event.block_height),
+				blockhash: finality_event.0,
+				block_height: u64::from(finality_event.1),
 			};
 			let _ = tx.send(finality_event).unwrap();
 		}

@@ -447,9 +447,9 @@ pub async fn get_client_state_at_height(
 	None
 }
 
-pub async fn get_latest_height(rpc: RpcClient, program_id: Pubkey) -> u64 {
-	let mut latest_height = 0;
-	while latest_height == 0 {
+pub async fn get_latest_height(rpc: RpcClient, program_id: Pubkey) -> (CryptoHash, u64) {
+	let mut finality_event = (CryptoHash::default(), 0);
+	while finality_event.1 == 0 {
 		let mut before_hash = None;
 		let (transactions, last_searched_hash) =
 			get_previous_transactions(&rpc, program_id, before_hash, SearchIn::GuestChain).await;
@@ -469,18 +469,18 @@ pub async fn get_latest_height(rpc: RpcClient, program_id: Pubkey) -> u64 {
 				.iter()
 				.filter_map(|event| match event {
 					solana_ibc::events::Event::BlockFinalised(e) => {
-						latest_height = u64::from(e.block_height);
+						finality_event = (e.block_hash, u64::from(e.block_height));
 						Some(e.clone())
 					},
 					_ => None,
 				})
 				.collect();
-			if latest_height > 0 {
+			if finality_event.1 > 0 {
 				break;
 			}
 		}
 	}
-	return latest_height;
+	finality_event
 }
 
 pub fn get_events_from_logs(logs: Vec<String>) -> (Vec<solana_ibc::events::Event<'static>>, u64) {
