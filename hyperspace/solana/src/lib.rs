@@ -1955,6 +1955,7 @@ impl Chain for SolanaClient {
 		// get the latest block and send it
 		let finality_event = events::get_latest_height(self.rpc_client(), program_id).await;
 		if finality_event.1 > 0 {
+			log::info!("Processing block after reconnection {}", finality_event.1);
 			let finality_event = FinalityEvent::Guest {
 				blockhash: finality_event.0,
 				block_height: u64::from(finality_event.1),
