@@ -1953,15 +1953,14 @@ impl Chain for SolanaClient {
 		let ws_url = self.ws_url.clone();
 		let program_id = self.solana_ibc_program_id;
 		// get the latest block and send it
-		let finality_event = events::get_latest_height(self.rpc_client(), program_id).await;
-		if finality_event.1 > 0 {
-			log::info!("Processing block after reconnection {}", finality_event.1);
-			let finality_event = FinalityEvent::Guest {
-				blockhash: finality_event.0,
-				block_height: u64::from(finality_event.1),
-			};
-			let _ = tx.send(finality_event).unwrap();
-		}
+		let chain_storage = self.get_chain_storage().await;
+		let header = chain_storage.head().unwrap();
+		log::info!("Processing block after reconnection {}", header.block_height);
+		let finality_event = FinalityEvent::Guest {
+			blockhash: header.calc_hash(),
+			block_height: u64::from(header.block_height),
+		};
+		let _ = tx.send(finality_event).unwrap();
 		tokio::task::spawn_blocking(move || {
 			let (_logs_subscription, receiver) = PubsubClient::logs_subscribe(
 				&ws_url,
