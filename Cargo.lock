@@ -1653,6 +1653,64 @@ dependencies = [
 ]
 
 [[package]]
+name = "cf-solana"
+version = "0.0.0"
+dependencies = [
+ "arrayvec 0.7.4",
+ "base64 0.21.7",
+ "blake3",
+ "bs58 0.5.1",
+ "bytemuck",
+ "cf-guest 0.0.0",
+ "derive_more",
+ "ibc-client-tendermint-types",
+ "ibc-core-client-context",
+ "ibc-core-commitment-types",
+ "ibc-core-host",
+ "ibc-primitives 0.50.0",
+ "ibc-proto 0.41.0",
+ "lib",
+ "prost 0.12.3",
+ "prost-build 0.12.3",
+ "proto-utils",
+ "solana-program",
+ "stdx",
+ "trie-ids",
+]
+
+[[package]]
+name = "cf-solana"
+version = "0.1.0"
+dependencies = [
+ "borsh 0.10.3",
+ "bytemuck",
+ "cf-solana 0.0.0",
+ "derive_more",
+ "ed25519-consensus",
+ "guestchain",
+ "ibc 0.15.0",
+ "ibc-core-client-context",
+ "ibc-core-client-types",
+ "ibc-core-handler-types",
+ "ibc-core-host-types",
+ "ibc-derive 0.1.0",
+ "ibc-primitives 0.50.0",
+ "ibc-proto 0.18.0",
+ "insta",
+ "lib",
+ "memory",
+ "prost 0.11.9",
+ "prost 0.12.3",
+ "prost-build 0.11.9",
+ "rand 0.8.5",
+ "sealable-trie",
+ "serde",
+ "stdx",
+ "tendermint-proto 0.34.1",
+ "trie-ids",
+]
+
+[[package]]
 name = "cfg-expr"
 version = "0.15.8"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -15270,6 +15328,7 @@ dependencies = [
  "base64 0.21.7",
  "bytemuck",
  "cf-guest 0.0.0",
+ "cf-solana 0.0.0",
  "derive_more",
  "guestchain",
  "hex-literal 0.4.1",

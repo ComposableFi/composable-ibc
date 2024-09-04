@@ -1,0 +1,49 @@
+[package]
+name = "cf-solana"
+authors = ["Michal Nazarewicz <mina86@mina86.com>", "Dhruv D Jain <dhruv@iamsizzling.com>"]
+version = "0.1.0"
+edition = "2021"
+
+[dependencies]
+borsh = "0.10"
+bytemuck = { version = "1.14", default-features = false, features = ["must_cast"]}
+derive_more = { version = "0.99", features = ["from"], default-features = false  }
+prost = { version = "0.11" ,features = ["prost-derive"], default-features = false }
+prost-12 = { package = "prost", version = "0.12", default-features = false }
+ed25519-consensus = { version = "2", default-features = false }
+serde = { version = "1.0", default-features = false, features = ["derive"] }
+
+# New IBC
+ibc-core-client-context = { git = "https://github.com/mina86/ibc-rs", rev = "f07276383091f75b7ee8bff6fd434f8214ac5054", default-features = false }
+ibc-core-client-types = { git = "https://github.com/mina86/ibc-rs", rev = "f07276383091f75b7ee8bff6fd434f8214ac5054", default-features = false }
+ibc-core-handler-types = { git = "https://github.com/mina86/ibc-rs", rev = "f07276383091f75b7ee8bff6fd434f8214ac5054", default-features = false }
+ibc-core-host-types = { git = "https://github.com/mina86/ibc-rs", rev = "f07276383091f75b7ee8bff6fd434f8214ac5054", default-features = false }
+ibc-primitives = { git = "https://github.com/mina86/ibc-rs", rev = "f07276383091f75b7ee8bff6fd434f8214ac5054", default-features = false }
+
+# Old IBC
+ibc = { path = "../../ibc/modules", default-features = false }
+ibc-proto = { path = "../../ibc/proto", default-features = false }
+ibc-derive = { path = "../../ibc/derive", default-features = false }
+
+tendermint-proto = { git = "https://github.com/mina86/tendermint-rs", rev = "45fbd500d731effb95a98257630feb46f6c41d06", default-features = false }
+
+guestchain        = { path = "../../../emulated-light-client/common/guestchain", default-features = false }
+lib               = { path = "../../../emulated-light-client/common/lib", features = ["borsh"], default-features = false }
+trie-ids          = { path = "../../../emulated-light-client/common/trie-ids", default-features = false }
+sealable-trie     = { path = "../../../emulated-light-client/common/sealable-trie", features = ["borsh"], default-features = false }
+stdx              = { path = "../../../emulated-light-client/common/stdx", default-features = false }
+cf-solana-upstream = { package = "cf-solana", path = "../../../emulated-light-client/common/cf-solana", default-features = false }
+
+[build-dependencies]
+prost-build = { version = "0.11", default-features = false }
+
+[dev-dependencies]
+insta = { version = "1.34.0" }
+rand = { version = "0.8.5" }
+
+guestchain        = { path = "../../../emulated-light-client/common/guestchain", default-features = false, features = ["test_utils"] }
+lib               = { path = "../../../emulated-light-client/common/lib", default-features = false, features = ["test_utils"] }
+memory            = { path = "../../../emulated-light-client/common/memory", default-features = false, features = ["test_utils"] }
+
+[features]
+std = []

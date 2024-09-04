@@ -58,7 +58,7 @@ pub fn generate<A: sealable_trie::Allocator>(
 	path: ibc::path::Path,
 ) -> Result<IbcProof, GenerateError> {
 	let path = convert_old_path_to_new(path);
-	cf_guest_upstream::proof::generate(block_header, trie, path)
+	cf_guest_upstream::proof::generate_for_block(block_header, trie, path)
 }
 
 /// Verifies a proof for given entry or lack of entry.
@@ -101,7 +101,7 @@ pub fn verify_bytes(
 	path: ibc::path::Path,
 	value: Option<&[u8]>,
 ) -> Result<(), VerifyError> {
-	cf_guest_upstream::proof::verify(prefix, proof, root, convert_old_path_to_new(path), value)
+	cf_guest_upstream::proof::verify_for_block(prefix, proof, root, convert_old_path_to_new(path), value)
 }
 
 fn convert_old_path_to_new(path: ibc::path::Path) -> ibc_core_host_types::path::Path {
