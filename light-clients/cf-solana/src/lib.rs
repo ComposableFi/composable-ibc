@@ -4,13 +4,13 @@ extern crate alloc;
 #[cfg(any(feature = "std", test))]
 extern crate std;
 
-mod client;
-mod proto;
+pub mod client;
+pub mod proto;
 mod error;
-mod header;
-mod client_def;
-mod consensus;
-mod message;
+pub mod header;
+pub mod client_def;
+pub mod consensus;
+pub mod message;
 mod misbehaviour;
 mod client_impls;
 

@@ -9381,6 +9381,7 @@ dependencies = [
  "beefy-light-client-primitives",
  "borsh 0.10.3",
  "cf-guest 0.0.1",
+ "cf-solana 0.1.0",
  "chrono",
  "cumulus-primitives-core",
  "derive_more",

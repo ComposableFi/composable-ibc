@@ -1118,6 +1118,10 @@ pub mod pallet {
 					let latest_height = guest.latest_height();
 					AnyClientState::wrap(&guest)
 				},
+				AnyClientState::Solana(solana) => {
+					let latest_height = solana.latest_height();
+					AnyClientState::wrap(&solana)
+				},
 				AnyClientState::Wasm(_) => return Err(Error::<T>::ClientFreezeFailed.into()),
 				#[cfg(any(test, feature = "testing"))]
 				AnyClientState::Mock(mut ms) => {
