@@ -57,8 +57,16 @@ pub fn convert_new_client_state_to_old(
 		// 			Some(Height::new(height.revision_number(), height.revision_height()))
 		// 		}),
 		// 	}),
+		solana_ibc::client_state::AnyClientState::Mock(_) => unimplemented!(),
 		solana_ibc::client_state::AnyClientState::Wasm(_) => unimplemented!(),
-		solana_ibc::client_state::AnyClientState::Rollup(_) => unimplemented!(),
+		solana_ibc::client_state::AnyClientState::Rollup(cs) => {
+			AnyClientState::Rollup(cf_solana_og::ClientState {
+				latest_slot: cs.latest_slot,
+				witness_account: cs.witness_account,
+				trusting_period_ns: cs.trusting_period_ns,
+				is_frozen: cs.is_frozen,
+			})
+		},
 	}
 }
 
@@ -101,6 +109,16 @@ pub fn convert_old_client_state_to_new(
 			.try_into()
 			.unwrap(),
 		),
+		#[allow(deprecated)]
+		AnyClientState::Rollup(cs) => {
+			let cs = cs.0;
+			solana_ibc::client_state::AnyClientState::Rollup(cf_solana_og::ClientState {
+				latest_slot: cs.latest_slot,
+				witness_account: cs.witness_account,
+				trusting_period_ns: cs.trusting_period_ns,
+				is_frozen: cs.is_frozen,
+			})
+		},
 		// AnyClientState::Mock(cs) =>
 		// 	solana_ibc::client_state::AnyClientState::Mock(MockClientState {
 		// 		header: ibc_testkit::testapp::ibc::clients::mock::header::MockHeader {

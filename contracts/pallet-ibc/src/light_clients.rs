@@ -66,12 +66,12 @@ const GUEST_CONSENSUS_STATE_TYPE_URL: &'static str = cf_guest::proto::ConsensusS
 const GUEST_HEADER_TYPE_URL: &'static str = cf_guest::proto::Header::IBC_TYPE_URL;
 const GUEST_MISBEHAVIOUR_TYPE_URL: &'static str = cf_guest::proto::Misbehaviour::IBC_TYPE_URL;
 
-const SOLANA_CLIENT_MESSAGE_TYPE_URL: &'static str = cf_solana::proto::ClientMessage::IBC_TYPE_URL;
-const SOLANA_CLIENT_STATE_TYPE_URL: &'static str = cf_solana::proto::ClientState::IBC_TYPE_URL;
-const SOLANA_CONSENSUS_STATE_TYPE_URL: &'static str =
+const ROLLUP_CLIENT_MESSAGE_TYPE_URL: &'static str = cf_solana::proto::ClientMessage::IBC_TYPE_URL;
+const ROLLUP_CLIENT_STATE_TYPE_URL: &'static str = cf_solana::proto::ClientState::IBC_TYPE_URL;
+const ROLLUP_CONSENSUS_STATE_TYPE_URL: &'static str =
 	cf_solana::proto::ConsensusState::IBC_TYPE_URL;
-const SOLANA_HEADER_TYPE_URL: &'static str = cf_solana::proto::Header::IBC_TYPE_URL;
-const SOLANA_MISBEHAVIOUR_TYPE_URL: &'static str = cf_solana::proto::Misbehaviour::IBC_TYPE_URL;
+const ROLLUP_HEADER_TYPE_URL: &'static str = cf_solana::proto::Header::IBC_TYPE_URL;
+const ROLLUP_MISBEHAVIOUR_TYPE_URL: &'static str = cf_solana::proto::Misbehaviour::IBC_TYPE_URL;
 
 #[derive(Clone, Default, PartialEq, Debug, Eq)]
 pub struct HostFunctionsManager;
@@ -340,7 +340,7 @@ pub enum AnyClient {
 	Tendermint(ics07_tendermint::client_def::TendermintClient<HostFunctionsManager>),
 	Wasm(ics08_wasm::client_def::WasmClient<AnyClient, AnyClientState, AnyConsensusState>),
 	Guest(cf_guest::client_def::GuestClient<PubKey>),
-	Solana(cf_solana::client_def::SolanaClient),
+	Rollup(cf_solana::client_def::SolanaClient),
 	#[cfg(any(test, feature = "testing"))]
 	Mock(ibc::mock::client_def::MockClient),
 }
@@ -352,7 +352,7 @@ pub enum AnyUpgradeOptions {
 	Tendermint(ics07_tendermint::client_state::UpgradeOptions),
 	Wasm(Box<Self>),
 	Guest(cf_guest::client::UpgradeOptions),
-	Solana(cf_solana::client::UpgradeOptions),
+	Rollup(cf_solana::client::UpgradeOptions),
 	#[cfg(any(test, feature = "testing"))]
 	Mock(()),
 }
@@ -369,8 +369,8 @@ pub enum AnyClientState {
 	Wasm(ics08_wasm::client_state::ClientState<AnyClient, Self, AnyConsensusState>),
 	#[ibc(proto_url = "GUEST_CLIENT_STATE_TYPE_URL")]
 	Guest(cf_guest::ClientState<PubKey>),
-	#[ibc(proto_url = "SOLANA_CLIENT_STATE_TYPE_URL")]
-	Solana(cf_solana::ClientState),
+	#[ibc(proto_url = "ROLLUP_CLIENT_STATE_TYPE_URL")]
+	Rollup(cf_solana::ClientState),
 	#[cfg(any(test, feature = "testing"))]
 	#[ibc(proto_url = "MOCK_CLIENT_STATE_TYPE_URL")]
 	Mock(ibc::mock::client_state::MockClientState),
@@ -430,7 +430,7 @@ impl AnyClientState {
 			AnyClientState::Tendermint(client_state) => client_state.latest_height(),
 			AnyClientState::Wasm(client_state) => client_state.latest_height(),
 			AnyClientState::Guest(client_state) => client_state.latest_height(),
-			AnyClientState::Solana(client_state) => client_state.latest_height(),
+			AnyClientState::Rollup(client_state) => client_state.latest_height(),
 			#[cfg(any(test, feature = "testing"))]
 			AnyClientState::Mock(client_state) => client_state.latest_height(),
 		}
@@ -449,8 +449,8 @@ pub enum AnyConsensusState {
 	Wasm(ics08_wasm::consensus_state::ConsensusState<Self>),
 	#[ibc(proto_url = "GUEST_CONSENSUS_STATE_TYPE_URL")]
 	Guest(cf_guest::ConsensusState),
-	#[ibc(proto_url = "SOLANA_CONSENSUS_STATE_TYPE_URL")]
-	Solana(cf_solana::ConsensusState),
+	#[ibc(proto_url = "ROLLUP_CONSENSUS_STATE_TYPE_URL")]
+	Rollup(cf_solana::ConsensusState),
 	#[cfg(any(test, feature = "testing"))]
 	#[ibc(proto_url = "MOCK_CONSENSUS_STATE_TYPE_URL")]
 	Mock(ibc::mock::client_state::MockConsensusState),
@@ -478,8 +478,8 @@ pub enum AnyClientMessage {
 	Wasm(ics08_wasm::client_message::ClientMessage<Self>),
 	#[ibc(proto_url = "GUEST_CLIENT_MESSAGE_TYPE_URL")]
 	Guest(cf_guest::ClientMessage<PubKey>),
-	#[ibc(proto_url = "SOLANA_CLIENT_MESSAGE_TYPE_URL")]
-	Solana(cf_solana::ClientMessage),
+	#[ibc(proto_url = "ROLLUP_CLIENT_MESSAGE_TYPE_URL")]
+	Rollup(cf_solana::ClientMessage),
 	#[cfg(any(test, feature = "testing"))]
 	#[ibc(proto_url = "MOCK_CLIENT_MESSAGE_TYPE_URL")]
 	Mock(ibc::mock::header::MockClientMessage),
@@ -557,15 +557,15 @@ impl TryFrom<Any> for AnyClientMessage {
 				cf_guest::Misbehaviour::decode_vec(&value.value)
 					.map_err(ics02_client::error::Error::decode_raw_header)?,
 			))),
-			SOLANA_CLIENT_MESSAGE_TYPE_URL => Ok(Self::Solana(
+			ROLLUP_CLIENT_MESSAGE_TYPE_URL => Ok(Self::Rollup(
 				cf_solana::ClientMessage::decode_vec(&value.value)
 					.map_err(ics02_client::error::Error::decode_raw_header)?,
 			)),
-			SOLANA_HEADER_TYPE_URL => Ok(Self::Solana(cf_solana::ClientMessage::from(
+			ROLLUP_HEADER_TYPE_URL => Ok(Self::Rollup(cf_solana::ClientMessage::from(
 				cf_solana::Header::decode_vec(&value.value)
 					.map_err(ics02_client::error::Error::decode_raw_header)?,
 			))),
-			SOLANA_MISBEHAVIOUR_TYPE_URL => Ok(Self::Solana(cf_solana::ClientMessage::from(
+			ROLLUP_MISBEHAVIOUR_TYPE_URL => Ok(Self::Rollup(cf_solana::ClientMessage::from(
 				cf_solana::Misbehaviour::decode_vec(&value.value)
 					.map_err(ics02_client::error::Error::decode_raw_header)?,
 			))),
@@ -603,8 +603,8 @@ impl From<AnyClientMessage> for Any {
 			AnyClientMessage::Guest(msg) => {
 				Any { type_url: GUEST_CLIENT_MESSAGE_TYPE_URL.to_string(), value: msg.encode_vec() }
 			},
-			AnyClientMessage::Solana(msg) => Any {
-				type_url: SOLANA_CLIENT_MESSAGE_TYPE_URL.to_string(),
+			AnyClientMessage::Rollup(msg) => Any {
+				type_url: ROLLUP_CLIENT_MESSAGE_TYPE_URL.to_string(),
 				value: msg.encode_vec(),
 			},
 			#[cfg(any(test, feature = "testing"))]

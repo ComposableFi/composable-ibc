@@ -1,5 +1,5 @@
 [package]
-name = "hyperspace-solana"
+name = "hyperspace-mantis"
 version = "0.1.0"
 edition = "2021"
 
@@ -92,6 +92,7 @@ cf-guest-og = { path = "../../../emulated-light-client/common/cf-guest" ,package
 guestchain = { path = "../../../emulated-light-client/common/guestchain" ,default-features = false }
 
 cf-solana-og = { path = "../../../emulated-light-client/common/cf-solana", package = "cf-solana", features = ["serde"] }
+cf-solana = { path = "../../light-clients/cf-solana", default-features = false }
 
 #Contract
 solana-ibc = { path = "../../../emulated-light-client/solana/solana-ibc/programs/solana-ibc" ,features = ["no-entrypoint"]}
