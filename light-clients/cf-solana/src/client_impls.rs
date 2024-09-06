@@ -292,7 +292,7 @@ impl ClientState {
 		let maybe_existing_consensus =
 			CommonContext::consensus_state(ctx, client_id, header_height).ok();
 		if maybe_existing_consensus.is_none() {
-			let new_consensus_state = ConsensusState::try_from(&header).unwrap();
+			let new_consensus_state = ConsensusState::from(&header);
 			let new_client_state = self.with_header(&header);
 
 			ctx.set_client_state(client_id, new_client_state.into())?;
@@ -387,7 +387,7 @@ impl ClientState {
 				// that what we’ve been sent is the same thing we have.  If it
 				// isn’t, that’s evidence of misbehaviour.
 				let existing_state = state.try_into().map_err(error)?;
-				let header_state = ConsensusState::try_from(&header).unwrap();
+				let header_state = ConsensusState::from(&header);
 				existing_state != header_state
 			},
 

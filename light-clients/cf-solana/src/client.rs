@@ -15,7 +15,7 @@ super::wrap!(impl Eq for ClientState);
 
 impl ClientState {
 	pub fn with_header(&self, header: &cf_solana_upstream::Header) -> Self {
-		Self(self.0.with_header(&header))
+		Self(self.0.with_header(header))
 	}
 
 	pub fn frozen(&self) -> Self {

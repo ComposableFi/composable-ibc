@@ -12,7 +12,7 @@ impl guestchain::PubKey for PubKey {
 		self.0.as_bytes().to_vec()
 	}
 
-	fn as_bytes<'a>(&'a self) -> alloc::borrow::Cow<'a, [u8]> {
+	fn as_bytes(&self) -> alloc::borrow::Cow<'_, [u8]> {
 		alloc::borrow::Cow::Borrowed(&self.0.as_bytes()[..])
 	}
 
@@ -59,7 +59,7 @@ impl guestchain::Signature for Signature {
 		self.0.to_vec()
 	}
 
-	fn as_bytes<'a>(&'a self) -> alloc::borrow::Cow<'a, [u8]> {
+	fn as_bytes(&self) -> alloc::borrow::Cow<'_, [u8]> {
 		self.0.to_vec().into()
 	}
 

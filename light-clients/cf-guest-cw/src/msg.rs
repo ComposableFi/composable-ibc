@@ -301,11 +301,11 @@ impl VerifyClientMessage {
 		let client_message = match raw {
 			ClientMessageRaw::Header(header) => {
 				let any = Any::decode(&mut header.data.as_slice())?;
-				ClientMessage::decode_vec(&any.value)?.into()
+				ClientMessage::decode_vec(&any.value)?
 			},
 			ClientMessageRaw::Misbehaviour(misbehaviour) => {
 				let any = Any::decode(&mut misbehaviour.data.as_slice())?;
-				ClientMessage::decode_vec(&any.value)?.into()
+				ClientMessage::decode_vec(&any.value)?
 			},
 		};
 		Ok(client_message)

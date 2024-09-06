@@ -21,13 +21,9 @@ use crate::{error::Error, ClientMessage, ClientState, ConsensusState as ClientCo
 type Result<T = (), E = ibc::core::ics02_client::error::Error> = ::core::result::Result<T, E>;
 
 #[derive(Clone, Debug, PartialEq, Eq)]
+#[derive(Default)]
 pub struct SolanaClient {}
 
-impl Default for SolanaClient {
-	fn default() -> Self {
-		Self {}
-	}
-}
 
 impl ClientDef for SolanaClient
 {
@@ -181,7 +177,7 @@ impl ClientDef for SolanaClient
 
 		let path = ibc_core_host_types::path::ChannelEndPath(convert(port_id), convert(channel_id));
 		let value = expected_channel_end.clone().encode_vec();
-		verify(proof, root, path.into(), Some(value)).map_err(|e| e.into())
+		verify(proof, root, path.into(), Some(value))
 	}
 
 	fn verify_client_full_state<Ctx: ReaderContext>(
@@ -199,7 +195,7 @@ impl ClientDef for SolanaClient
 
 		let path = ibc_core_host_types::path::ClientStatePath(convert(client_id));
 		let value = expected_client_state.encode_to_vec().map_err(Ics02ClientError::encode)?;
-		verify(proof, root, path.into(), Some(value)).map_err(|e| e.into())
+		verify(proof, root, path.into(), Some(value))
 	}
 
 	fn verify_packet_data<Ctx: ReaderContext>(
