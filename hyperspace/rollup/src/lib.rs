@@ -131,7 +131,7 @@ mod msgs;
 mod test_provider;
 mod utils;
 
-const SOLANA_IBC_STORAGE_SEED: &[u8] = b"private";
+const solana_ibc_STORAGE_SEED: &[u8] = b"private";
 const TRIE_SEED: &[u8] = b"trie";
 const CHAIN_SEED: &[u8] = b"chain";
 pub const NUMBER_OF_BLOCKS_TO_PROCESS_PER_ITER: u64 = 250;
@@ -1996,18 +1996,19 @@ impl Chain for RollupClient {
 			// }
 
 			let (signature_chunking_transactions, further_transactions) =
-				if let MsgEnvelope::Client(ClientMsg::UpdateClient(e)) = message {
-					self.send_deliver(
-						DeliverIxType::UpdateClient {
-							client_message: e.client_message,
-							client_id: e.client_id,
-						},
-						chunk_account,
-						max_tries,
-					)
-					.await?
-				// msg!("Packet Update Signature {:?}", signature);
-				} else if let MsgEnvelope::Packet(PacketMsg::Recv(e)) = message {
+				// if let MsgEnvelope::Client(ClientMsg::UpdateClient(e)) = message {
+				// 	self.send_deliver(
+				// 		DeliverIxType::UpdateClient {
+				// 			client_message: e.client_message,
+				// 			client_id: e.client_id,
+				// 		},
+				// 		chunk_account,
+				// 		max_tries,
+				// 	)
+				// 	.await?
+				// // msg!("Packet Update Signature {:?}", signature);
+				// } else
+				 if let MsgEnvelope::Packet(PacketMsg::Recv(e)) = message {
 					let packet_data: ibc_app_transfer_types::packet::PacketData =
 						serde_json::from_slice(&e.packet.data).unwrap();
 					self.send_deliver(

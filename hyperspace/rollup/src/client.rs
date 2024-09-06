@@ -3,6 +3,7 @@ use anchor_client::{
 		nonblocking::rpc_client::RpcClient as AsyncRpcClient, rpc_config::RpcSendTransactionConfig,
 	},
 	solana_sdk::{
+		account::ReadableAccount,
 		address_lookup_table::program,
 		commitment_config::{CommitmentConfig, CommitmentLevel},
 		compute_budget::ComputeBudgetInstruction,
@@ -48,15 +49,18 @@ use std::{
 use tendermint_light_client_verifier_new::types::{TrustedBlockState, UntrustedBlockState};
 use tendermint_rpc::Url;
 
-use super::{CHAIN_SEED, SOLANA_IBC_STORAGE_SEED, TRIE_SEED};
+use super::{solana_ibc_STORAGE_SEED, CHAIN_SEED, TRIE_SEED};
 use crate::{
 	error::Error,
 	utils::{new_ed25519_instruction_with_signature, non_absent_vote},
 };
 use solana_ibc::{
-	chain::ChainData, events::BlockFinalised, ix_data_account, storage::PrivateStorage, WITNESS_SEED,
+	chain::ChainData, events::BlockFinalised, ix_data_account, storage::PrivateStorage,
 };
-use tendermint_new::vote::{SignedVote, ValidatorIndex};
+use tendermint_new::{
+	chain,
+	vote::{SignedVote, ValidatorIndex},
+};
 
 #[derive(Debug)]
 pub enum DeliverIxType {
@@ -217,15 +221,15 @@ impl RollupClient {
 	}
 
 	pub fn get_ibc_storage_key(&self) -> Pubkey {
-		let storage_seeds = &[SOLANA_IBC_STORAGE_SEED];
+		let storage_seeds = &[solana_ibc_STORAGE_SEED];
 		let ibc_storage =
 			Pubkey::find_program_address(storage_seeds, &self.solana_ibc_program_id).0;
 		ibc_storage
 	}
 
 	pub fn get_witness_key(&self) -> Pubkey {
-		let witness_seeds = &[WITNESS_SEED];
-		let witness = Pubkey::find_program_address(witness_seed, &self.solana_ibc_program_id).0;
+		let witness_seeds = &[b"witness".as_ref()];
+		let witness = Pubkey::find_program_address(witness_seeds, &self.solana_ibc_program_id).0;
 		witness
 	}
 
@@ -256,6 +260,18 @@ impl RollupClient {
 		require_proof: bool,
 	) -> (solana_trie::TrieAccount<Vec<u8>>, bool) {
 		let connection = self.get_db();
+		let witness_key = self.get_witness_key();
+		let witness_account = self.rpc_client().get_account(&witness_key).await.unwrap();
+		let witness_account_info = AccountInfo::new(
+			&witness_key,
+			false,
+			true,
+			&mut witness_account.lamports,
+			&mut witness_account.data,
+			witness_account.owner(),
+			false,
+			witness_account.rent_epoch,
+		);
 		if require_proof {
 			let row = connection.query_row("SELECT * FROM Trie WHERE height=?1", [at], |row| {
 				Ok(Trie {
@@ -268,9 +284,13 @@ impl RollupClient {
 			});
 			if let Ok(trie) = row {
 				log::info!("Does block state roots match {}", trie.match_block_state_root);
+				let trie_acc = solana_trie::TrieAccount::new(trie.data).unwrap();
 				if trie.match_block_state_root {
 					return (
-						solana_trie::TrieAccount::new(trie.data).unwrap(),
+						trie_acc.with_witness_account(
+							&witness_account_info,
+							&self.solana_ibc_program_id,
+						),
 						trie.match_block_state_root,
 					);
 				}
@@ -285,7 +305,7 @@ impl RollupClient {
 			.value
 			.unwrap();
 		let trie = solana_trie::TrieAccount::new(trie_account.data).unwrap();
-		(trie, false)
+		(trie_acc.with_witness_account(&witness_account_info, &self.solana_ibc_program_id), false)
 	}
 
 	pub async fn get_ibc_storage(&self) -> PrivateStorage {
@@ -624,7 +644,6 @@ deserialize consensus state"
 						storage: solana_ibc_storage_key,
 						trie: trie_key,
 						chain: chain_key,
-						witness: witness_key,
 						system_program: system_program::ID,
 						mint_authority: Some(self.solana_ibc_program_id),
 						token_mint: Some(self.solana_ibc_program_id),
@@ -709,10 +728,10 @@ deserialize consensus state"
 					.await
 					.map_or(
 						(
-							Some(self.solana_ibc_program_id),
-							Some(self.solana_ibc_program_id),
-							Some(self.solana_ibc_program_id),
-							Some(self.solana_ibc_program_id),
+							self.solana_ibc_program_id,
+							self.solana_ibc_program_id,
+							self.solana_ibc_program_id,
+							self.solana_ibc_program_id,
 						),
 						|v| v,
 					);
@@ -723,25 +742,55 @@ deserialize consensus state"
 					.instruction(ComputeBudgetInstruction::set_compute_unit_limit(2_000_000u32))
 					.instruction(ComputeBudgetInstruction::request_heap_frame(256 * 1024))
 					// .instruction(ComputeBudgetInstruction::set_compute_unit_price(500000))
-					.accounts(solana_ibc::ix_data_account::Accounts::new(
-						solana_ibc::accounts::Deliver {
-							sender: authority.pubkey(),
-							receiver: receiver_account,
-							storage: solana_ibc_storage_key,
-							trie: trie_key,
-							chain: chain_key,
-							witness: witness_key,
-							system_program: system_program::ID,
-							mint_authority: Some(mint_authority),
-							token_mint,
-							escrow_account,
-							fee_collector: Some(self.get_fee_collector_key()),
-							receiver_token_account: receiver_address,
-							associated_token_program: Some(anchor_spl::associated_token::ID),
-							token_program: Some(anchor_spl::token::ID),
+					.accounts(vec![
+						AccountMeta {
+							is_signer: true,
+							is_writable: true,
+							pubkey: authority.pubkey(),
 						},
-						chunk_account,
-					))
+						AccountMeta {
+							is_signer: false,
+							is_writable: true,
+							pubkey: receiver_account,
+						},
+						AccountMeta {
+							is_signer: false,
+							is_writable: true,
+							pubkey: solana_ibc_storage_key,
+						},
+						AccountMeta { is_signer: false, is_writable: true, pubkey: trie_key },
+						AccountMeta { is_signer: false, is_writable: true, pubkey: witness_key },
+						AccountMeta { is_signer: false, is_writable: true, pubkey: chain_key },
+						AccountMeta { is_signer: false, is_writable: true, pubkey: mint_authority },
+						AccountMeta { is_signer: false, is_writable: true, pubkey: token_mint },
+						AccountMeta { is_signer: false, is_writable: true, pubkey: escrow_account },
+						AccountMeta {
+							is_signer: false,
+							is_writable: true,
+							pubkey: receiver_address,
+						},
+						AccountMeta {
+							is_signer: false,
+							is_writable: true,
+							pubkey: self.get_fee_collector_key(),
+						},
+						AccountMeta {
+							is_signer: false,
+							is_writable: true,
+							pubkey: anchor_spl::associated_token::ID,
+						},
+						AccountMeta {
+							is_signer: false,
+							is_writable: true,
+							pubkey: anchor_spl::token::ID,
+						},
+						AccountMeta {
+							is_signer: false,
+							is_writable: true,
+							pubkey: system_program::ID,
+						},
+						AccountMeta { is_signer: false, is_writable: true, pubkey: chunk_account },
+					])
 					.args(ix_data_account::Instruction)
 					.signer(&*authority)
 					.instructions()
@@ -782,10 +831,10 @@ deserialize consensus state"
 				.await
 				.map_or(
 					(
-						Some(self.solana_ibc_program_id),
-						Some(self.solana_ibc_program_id),
-						Some(self.solana_ibc_program_id),
-						Some(self.solana_ibc_program_id),
+						self.solana_ibc_program_id,
+						self.solana_ibc_program_id,
+						self.solana_ibc_program_id,
+						self.solana_ibc_program_id,
 					),
 					|v| v,
 				);
@@ -796,25 +845,47 @@ deserialize consensus state"
 					.instruction(ComputeBudgetInstruction::set_compute_unit_limit(2_000_000u32))
 					.instruction(ComputeBudgetInstruction::request_heap_frame(256 * 1024))
 					// .instruction(ComputeBudgetInstruction::set_compute_unit_price(50_000))
-					.accounts(solana_ibc::ix_data_account::Accounts::new(
-						solana_ibc::accounts::Deliver {
-							sender: authority.pubkey(),
-							receiver: sender_account,
-							storage: solana_ibc_storage_key,
-							trie: trie_key,
-							chain: chain_key,
-							witness: witness_key,
-							system_program: system_program::ID,
-							mint_authority: Some(mint_authority),
-							token_mint,
-							escrow_account,
-							fee_collector: Some(self.get_fee_collector_key()),
-							receiver_token_account: sender_address,
-							associated_token_program: Some(anchor_spl::associated_token::ID),
-							token_program: Some(anchor_spl::token::ID),
+					.accounts(vec![
+						AccountMeta {
+							is_signer: true,
+							is_writable: true,
+							pubkey: authority.pubkey(),
 						},
-						chunk_account,
-					))
+						AccountMeta { is_signer: false, is_writable: true, pubkey: sender_account },
+						AccountMeta {
+							is_signer: false,
+							is_writable: true,
+							pubkey: solana_ibc_storage_key,
+						},
+						AccountMeta { is_signer: false, is_writable: true, pubkey: trie_key },
+						AccountMeta { is_signer: false, is_writable: true, pubkey: witness_key },
+						AccountMeta { is_signer: false, is_writable: true, pubkey: chain_key },
+						AccountMeta { is_signer: false, is_writable: true, pubkey: mint_authority },
+						AccountMeta { is_signer: false, is_writable: true, pubkey: token_mint },
+						AccountMeta { is_signer: false, is_writable: true, pubkey: escrow_account },
+						AccountMeta { is_signer: false, is_writable: true, pubkey: sender_address },
+						AccountMeta {
+							is_signer: false,
+							is_writable: true,
+							pubkey: self.get_fee_collector_key(),
+						},
+						AccountMeta {
+							is_signer: false,
+							is_writable: true,
+							pubkey: anchor_spl::associated_token::ID,
+						},
+						AccountMeta {
+							is_signer: false,
+							is_writable: true,
+							pubkey: anchor_spl::token::ID,
+						},
+						AccountMeta {
+							is_signer: false,
+							is_writable: true,
+							pubkey: system_program::ID,
+						},
+						AccountMeta { is_signer: false, is_writable: true, pubkey: chunk_account },
+					])
 					.args(ix_data_account::Instruction)
 					.signer(&*authority)
 					.instructions()
@@ -837,25 +908,63 @@ deserialize consensus state"
 					.instruction(ComputeBudgetInstruction::set_compute_unit_limit(2_000_000u32))
 					.instruction(ComputeBudgetInstruction::request_heap_frame(256 * 1024))
 					// .instruction(ComputeBudgetInstruction::set_compute_unit_price(50_000))
-					.accounts(solana_ibc::ix_data_account::Accounts::new(
-						solana_ibc::accounts::Deliver {
-							sender: authority.pubkey(),
-							receiver: Some(sender),
-							storage: solana_ibc_storage_key,
-							trie: trie_key,
-							chain: chain_key,
-							witness: witness_key,
-							system_program: system_program::ID,
-							mint_authority: Some(self.solana_ibc_program_id),
-							fee_collector: Some(self.get_fee_collector_key()),
-							token_mint: Some(self.solana_ibc_program_id),
-							escrow_account: Some(self.solana_ibc_program_id),
-							receiver_token_account: Some(self.solana_ibc_program_id),
-							associated_token_program: Some(self.solana_ibc_program_id),
-							token_program: Some(self.solana_ibc_program_id),
+					.accounts(vec![
+						AccountMeta {
+							is_signer: true,
+							is_writable: true,
+							pubkey: authority.pubkey(),
 						},
-						chunk_account,
-					))
+						AccountMeta { is_signer: false, is_writable: true, pubkey: sender },
+						AccountMeta {
+							is_signer: false,
+							is_writable: true,
+							pubkey: solana_ibc_storage_key,
+						},
+						AccountMeta { is_signer: false, is_writable: true, pubkey: trie_key },
+						AccountMeta { is_signer: false, is_writable: true, pubkey: witness_key },
+						AccountMeta { is_signer: false, is_writable: true, pubkey: chain_key },
+						AccountMeta {
+							is_signer: false,
+							is_writable: true,
+							pubkey: self.solana_ibc_program_id,
+						},
+						AccountMeta {
+							is_signer: false,
+							is_writable: true,
+							pubkey: self.solana_ibc_program_id,
+						},
+						AccountMeta {
+							is_signer: false,
+							is_writable: true,
+							pubkey: self.solana_ibc_program_id,
+						},
+						AccountMeta {
+							is_signer: false,
+							is_writable: true,
+							pubkey: self.solana_ibc_program_id,
+						},
+						AccountMeta {
+							is_signer: false,
+							is_writable: true,
+							pubkey: self.get_fee_collector_key(),
+						},
+						AccountMeta {
+							is_signer: false,
+							is_writable: true,
+							pubkey: self.solana_ibc_program_id,
+						},
+						AccountMeta {
+							is_signer: false,
+							is_writable: true,
+							pubkey: self.solana_ibc_program_id,
+						},
+						AccountMeta {
+							is_signer: false,
+							is_writable: true,
+							pubkey: system_program::ID,
+						},
+						AccountMeta { is_signer: false, is_writable: true, pubkey: chunk_account },
+					])
 					// .args(solana_ibc::instruction::Deliver { message: message.clone() })
 					.args(ix_data_account::Instruction)
 					.signer(&*authority)
@@ -889,7 +998,7 @@ deserialize consensus state"
 					Pubkey::from_str("96gYZGLnJYVFmbjzopPSU6QiEV5fGqZNyN9nmNhvrZU5").unwrap();
 				let ix = program
 					.request()
-					// 	.instruction(anchor_lang::solana_program::system_instruction::transfer(
+					// 	.instruction(anchor_lang::solana_program::system_program::transfer(
 					//     &authority.pubkey(),
 					//     &jito_address,
 					//     400000,
@@ -897,25 +1006,67 @@ deserialize consensus state"
 					.instruction(ComputeBudgetInstruction::set_compute_unit_limit(2_000_000u32))
 					.instruction(ComputeBudgetInstruction::request_heap_frame(128 * 1024))
 					// .instruction(ComputeBudgetInstruction::set_compute_unit_price(50_000))
-					.accounts(solana_ibc::ix_data_account::Accounts::new(
-						solana_ibc::accounts::Deliver {
-							sender: authority.pubkey(),
-							receiver: Some(self.solana_ibc_program_id),
-							storage: solana_ibc_storage_key,
-							trie: trie_key,
-							chain: chain_key,
-							witness: witness_key,
-							system_program: system_program::ID,
-							mint_authority: Some(self.solana_ibc_program_id),
-							fee_collector: Some(self.get_fee_collector_key()),
-							token_mint: Some(self.solana_ibc_program_id),
-							escrow_account: Some(self.solana_ibc_program_id),
-							receiver_token_account: Some(self.solana_ibc_program_id),
-							associated_token_program: Some(self.solana_ibc_program_id),
-							token_program: Some(self.solana_ibc_program_id),
+					.accounts(vec![
+						AccountMeta {
+							is_signer: true,
+							is_writable: true,
+							pubkey: authority.pubkey(),
 						},
-						chunk_account,
-					))
+						AccountMeta {
+							is_signer: false,
+							is_writable: true,
+							pubkey: self.solana_ibc_program_id,
+						},
+						AccountMeta {
+							is_signer: false,
+							is_writable: true,
+							pubkey: solana_ibc_storage_key,
+						},
+						AccountMeta { is_signer: false, is_writable: true, pubkey: trie_key },
+						AccountMeta { is_signer: false, is_writable: true, pubkey: witness_key },
+						AccountMeta { is_signer: false, is_writable: true, pubkey: chain_key },
+						AccountMeta {
+							is_signer: false,
+							is_writable: true,
+							pubkey: self.solana_ibc_program_id,
+						},
+						AccountMeta {
+							is_signer: false,
+							is_writable: true,
+							pubkey: self.solana_ibc_program_id,
+						},
+						AccountMeta {
+							is_signer: false,
+							is_writable: true,
+							pubkey: self.solana_ibc_program_id,
+						},
+						AccountMeta {
+							is_signer: false,
+							is_writable: true,
+							pubkey: self.solana_ibc_program_id,
+						},
+						AccountMeta {
+							is_signer: false,
+							is_writable: true,
+							pubkey: self.solana_ibc_program_id,
+						},
+						AccountMeta {
+							is_signer: false,
+							is_writable: true,
+							pubkey: self.solana_ibc_program_id,
+						},
+						AccountMeta {
+							is_signer: false,
+							is_writable: true,
+							pubkey: self.solana_ibc_program_id,
+						},
+						AccountMeta {
+							is_signer: false,
+							is_writable: true,
+							pubkey: system_program::ID,
+						},
+						AccountMeta { is_signer: false, is_writable: true, pubkey: chunk_account },
+					])
 					.args(ix_data_account::Instruction)
 					.payer(authority.clone())
 					.signer(&*authority)
@@ -975,6 +1126,7 @@ deserialize consensus state"
 		let solana_ibc_storage_key = self.get_ibc_storage_key();
 		let trie_key = self.get_trie_key();
 		let chain_key = self.get_chain_key();
+		let witness_key = self.get_witness_key();
 
 		let mint_authority = self.get_mint_auth_key();
 
@@ -1010,12 +1162,12 @@ deserialize consensus state"
 					token.denom.trace_path
 				);
 				let token_mint = Pubkey::from_str(&base_denom.to_string()).unwrap();
-				(Some(escrow_account), token_mint)
+				(escrow_account, token_mint)
 			} else {
 				let token_mint_seeds = ["mint".as_bytes(), hashed_denom.as_ref()];
 				let token_mint =
 					Pubkey::find_program_address(&token_mint_seeds, &self.solana_ibc_program_id).0;
-				(None, token_mint)
+				(self.solana_ibc_program_id, token_mint)
 			};
 
 		let sender_token_address = get_associated_token_address(
@@ -1049,21 +1201,29 @@ deserialize consensus state"
 		let sig = program
 			.request()
 			.instruction(ComputeBudgetInstruction::set_compute_unit_limit(2_000_000u32))
-			.accounts(solana_ibc::accounts::SendTransfer {
-				sender: authority.pubkey(),
-				receiver: Some(authority.pubkey()),
-				storage: solana_ibc_storage_key,
-				trie: trie_key,
-				chain: chain_key,
-				witness: witness_key,
-				system_program: system_program::ID,
-				mint_authority: Some(mint_authority),
-				token_mint: Some(token_mint),
-				escrow_account,
-				fee_collector: Some(self.get_fee_collector_key()),
-				receiver_token_account: Some(sender_token_address),
-				token_program: Some(anchor_spl::token::ID),
-			})
+			.accounts(vec![
+				AccountMeta { is_signer: true, is_writable: true, pubkey: authority.pubkey() },
+				AccountMeta {
+					is_signer: false,
+					is_writable: true,
+					pubkey: self.solana_ibc_program_id,
+				},
+				AccountMeta { is_signer: false, is_writable: true, pubkey: solana_ibc_storage_key },
+				AccountMeta { is_signer: false, is_writable: true, pubkey: trie_key },
+				AccountMeta { is_signer: false, is_writable: true, pubkey: witness_key },
+				AccountMeta { is_signer: false, is_writable: true, pubkey: chain_key },
+				AccountMeta { is_signer: false, is_writable: true, pubkey: mint_authority },
+				AccountMeta { is_signer: false, is_writable: true, pubkey: token_mint },
+				AccountMeta { is_signer: false, is_writable: true, pubkey: escrow_account },
+				AccountMeta { is_signer: false, is_writable: true, pubkey: sender_token_address },
+				AccountMeta {
+					is_signer: false,
+					is_writable: true,
+					pubkey: self.get_fee_collector_key(),
+				},
+				AccountMeta { is_signer: false, is_writable: true, pubkey: anchor_spl::token::ID },
+				AccountMeta { is_signer: false, is_writable: true, pubkey: system_program::ID },
+			])
 			.args(solana_ibc::instruction::SendTransfer {
 				hashed_full_denom: hashed_denom,
 				msg: new_msg_transfer,
@@ -1096,7 +1256,7 @@ pub async fn get_accounts(
 	channel_id: &ibc_core_host_types::identifiers::ChannelId,
 	rpc: &AsyncRpcClient,
 	refund: bool,
-) -> Result<(Option<Pubkey>, Option<Pubkey>, Option<Pubkey>, Option<Pubkey>), ParsePubkeyError> {
+) -> Result<(Pubkey, Pubkey, Pubkey, Pubkey), ParsePubkeyError> {
 	if Pubkey::from_str(&denom.base_denom.to_string()).is_ok() {
 		log::info!("Receiver chain source");
 		let hashed_denom = CryptoHash::digest(denom.base_denom.as_str().as_bytes());
@@ -1105,7 +1265,7 @@ pub async fn get_accounts(
 		let token_mint = Pubkey::from_str(&denom.base_denom.to_string())?;
 		let receiver_account = Pubkey::from_str(&receiver)?;
 		let receiver_address = get_associated_token_address(&receiver_account, &token_mint);
-		Ok((Some(escrow_account), Some(token_mint), Some(receiver_account), Some(receiver_address)))
+		Ok((escrow_account, token_mint, receiver_account, receiver_address))
 	} else {
 		log::info!("Not receiver chain source");
 		let mut full_token = denom.clone();
@@ -1121,7 +1281,7 @@ pub async fn get_accounts(
 		if token_mint_info.is_err() {
 			return Err(ParsePubkeyError::Invalid);
 		}
-		Ok((Some(program_id), Some(token_mint), Some(receiver_account), Some(receiver_address)))
+		Ok((program_id, token_mint, receiver_account, receiver_address))
 	}
 }
 

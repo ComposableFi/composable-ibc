@@ -95,7 +95,7 @@ cf-solana-og = { path = "../../../emulated-light-client/common/cf-solana", packa
 cf-solana = { path = "../../light-clients/cf-solana", default-features = false }
 
 #Contract
-solana-ibc = { path = "../../../emulated-light-client/solana/solana-ibc/programs/solana-ibc" ,features = ["no-entrypoint", "witness"]}
+solana-ibc = { path = "../../../emulated-light-client/solana/solana-ibc/programs/solana-ibc", features = ["no-entrypoint"]}
 solana-write-account = { path = "../../../emulated-light-client/solana/write-account" ,features = ["library"] }
 solana-signature-verifier = { path = "../../../emulated-light-client/solana/signature-verifier" }
 
