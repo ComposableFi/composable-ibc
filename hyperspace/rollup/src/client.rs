@@ -54,7 +54,7 @@ use crate::{
 	utils::{new_ed25519_instruction_with_signature, non_absent_vote},
 };
 use solana_ibc::{
-	chain::ChainData, events::BlockFinalised, ix_data_account, storage::PrivateStorage,
+	chain::ChainData, events::BlockFinalised, ix_data_account, storage::PrivateStorage, WITNESS_SEED,
 };
 use tendermint_new::vote::{SignedVote, ValidatorIndex};
 
@@ -221,6 +221,12 @@ impl RollupClient {
 		let ibc_storage =
 			Pubkey::find_program_address(storage_seeds, &self.solana_ibc_program_id).0;
 		ibc_storage
+	}
+
+	pub fn get_witness_key(&self) -> Pubkey {
+		let witness_seeds = &[WITNESS_SEED];
+		let witness = Pubkey::find_program_address(witness_seed, &self.solana_ibc_program_id).0;
+		witness
 	}
 
 	pub fn get_chain_key(&self) -> Pubkey {
@@ -390,6 +396,7 @@ impl RollupClient {
 		let solana_ibc_storage_key = self.get_ibc_storage_key();
 		let trie_key = self.get_trie_key();
 		let chain_key = self.get_chain_key();
+		let witness_key = self.get_witness_key();
 		// while tries < max_tries {
 		// 	println!("Try For Tx: {}", tries);
 		// 	let mut status = true;
@@ -617,6 +624,7 @@ deserialize consensus state"
 						storage: solana_ibc_storage_key,
 						trie: trie_key,
 						chain: chain_key,
+						witness: witness_key,
 						system_program: system_program::ID,
 						mint_authority: Some(self.solana_ibc_program_id),
 						token_mint: Some(self.solana_ibc_program_id),
@@ -722,6 +730,7 @@ deserialize consensus state"
 							storage: solana_ibc_storage_key,
 							trie: trie_key,
 							chain: chain_key,
+							witness: witness_key,
 							system_program: system_program::ID,
 							mint_authority: Some(mint_authority),
 							token_mint,
@@ -794,6 +803,7 @@ deserialize consensus state"
 							storage: solana_ibc_storage_key,
 							trie: trie_key,
 							chain: chain_key,
+							witness: witness_key,
 							system_program: system_program::ID,
 							mint_authority: Some(mint_authority),
 							token_mint,
@@ -834,6 +844,7 @@ deserialize consensus state"
 							storage: solana_ibc_storage_key,
 							trie: trie_key,
 							chain: chain_key,
+							witness: witness_key,
 							system_program: system_program::ID,
 							mint_authority: Some(self.solana_ibc_program_id),
 							fee_collector: Some(self.get_fee_collector_key()),
@@ -893,6 +904,7 @@ deserialize consensus state"
 							storage: solana_ibc_storage_key,
 							trie: trie_key,
 							chain: chain_key,
+							witness: witness_key,
 							system_program: system_program::ID,
 							mint_authority: Some(self.solana_ibc_program_id),
 							fee_collector: Some(self.get_fee_collector_key()),
@@ -1043,6 +1055,7 @@ deserialize consensus state"
 				storage: solana_ibc_storage_key,
 				trie: trie_key,
 				chain: chain_key,
+				witness: witness_key,
 				system_program: system_program::ID,
 				mint_authority: Some(mint_authority),
 				token_mint: Some(token_mint),
