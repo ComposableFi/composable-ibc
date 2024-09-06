@@ -84,13 +84,13 @@ pub enum DeliverIxType {
 
 /// Implements the [`crate::Chain`] trait for solana
 #[derive(Clone)]
-pub struct SolanaClient {
+pub struct RollupClient {
 	/// Chain name
 	pub name: String,
 	/// rpc url for solana
 	pub rpc_url: String,
 	/// rpc url for trie proofs
-	pub trie_rpc_url: Url,
+	pub trie_rpc_url: String,
 	/// websocket url for solana
 	pub ws_url: String,
 	/// Solana chain Id
@@ -125,7 +125,7 @@ pub struct SolanaClient {
 }
 
 #[derive(std::fmt::Debug, Serialize, Deserialize, Clone)]
-pub struct SolanaClientConfig {
+pub struct RollupClientConfig {
 	/// Chain name
 	pub name: String,
 	/// rpc url for solana
@@ -209,7 +209,7 @@ impl From<Vec<u8>> for KeyEntry {
 	}
 }
 
-impl SolanaClient {
+impl RollupClient {
 	pub fn get_trie_key(&self) -> Pubkey {
 		let trie_seeds = &[TRIE_SEED];
 		let trie = Pubkey::find_program_address(trie_seeds, &self.solana_ibc_program_id).0;
@@ -324,7 +324,7 @@ impl SolanaClient {
 	}
 
 	#[allow(dead_code)]
-	pub async fn new(config: SolanaClientConfig) -> Result<Self, Error> {
+	pub async fn new(config: RollupClientConfig) -> Result<Self, Error> {
 		let db_url = config.trie_db_path.as_str();
 		let conn = rusqlite::Connection::open(db_url).unwrap();
 		let count = conn.query_row("SELECT COUNT(*) FROM Trie", [], |row| {
@@ -953,7 +953,7 @@ deserialize consensus state"
 	pub async fn send_transfer_inner(
 		&self,
 		msg: MsgTransfer<PrefixedCoin>,
-	) -> Result<<SolanaClient as IbcProvider>::TransactionId, Error> {
+	) -> Result<<RollupClient as IbcProvider>::TransactionId, Error> {
 		let keypair = self.keybase.keypair();
 		println!("submitting tx now, {}", keypair.pubkey());
 		let authority = Arc::new(keypair);

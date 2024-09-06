@@ -685,6 +685,7 @@ pub async fn get_events_upto_height(
 ) -> Vec<ibc_core_handler_types::events::IbcEvent> {
 	let mut current_height = upto_height;
 	let mut before_hash = None;
+	let mut all_ibc_events = vec![];
 	while current_height >= upto_height {
 		let (transactions, last_searched_hash) =
 			get_previous_transactions(&rpc, program_id, before_hash, SearchIn::GuestChain).await;
@@ -711,6 +712,7 @@ pub async fn get_events_upto_height(
 			}
 		}
 	}
+	all_ibc_events
 }
 
 pub async fn get_previous_transactions(

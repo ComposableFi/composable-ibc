@@ -57,15 +57,15 @@ pub fn convert_new_client_state_to_old(
 		// 			Some(Height::new(height.revision_number(), height.revision_height()))
 		// 		}),
 		// 	}),
-		solana_ibc::client_state::AnyClientState::Mock(_) => unimplemented!(),
+		// solana_ibc::client_state::AnyClientState::Mock(_) => unimplemented!(),
 		solana_ibc::client_state::AnyClientState::Wasm(_) => unimplemented!(),
 		solana_ibc::client_state::AnyClientState::Rollup(cs) => {
-			AnyClientState::Rollup(cf_solana_og::ClientState {
+			AnyClientState::Rollup(cf_solana::ClientState(cf_solana_og::ClientState {
 				latest_slot: cs.latest_slot,
 				witness_account: cs.witness_account,
 				trusting_period_ns: cs.trusting_period_ns,
 				is_frozen: cs.is_frozen,
-			})
+			}))
 		},
 	}
 }

@@ -19,6 +19,7 @@ use futures::future::join_all;
 use guestchain::{BlockHeader, Epoch, PubKey, Validator};
 use ibc_core_channel_types::msgs::PacketMsg;
 use ibc_core_client_types::msgs::ClientMsg;
+use ibc_core_commitment_types::commitment::CommitmentRoot;
 use ibc_core_handler_types::msgs::MsgEnvelope;
 use ics07_tendermint::{
 	client_message::ClientMessage, client_state::ClientState as TmClientState,
@@ -115,7 +116,7 @@ use crate::{
 	events::{get_events_from_logs, SearchIn},
 };
 pub use crate::{
-	client::{DeliverIxType, SolanaClient, SolanaClientConfig},
+	client::{DeliverIxType, RollupClient, RollupClientConfig},
 	events::convert_new_event_to_old,
 };
 
@@ -147,7 +148,7 @@ pub struct InnerAny {
 }
 
 #[async_trait::async_trait]
-impl IbcProvider for SolanaClient {
+impl IbcProvider for RollupClient {
 	type FinalityEvent = FinalityEvent;
 
 	type TransactionId = String;
@@ -167,7 +168,9 @@ impl IbcProvider for SolanaClient {
 		log::info!("Came into rollup lts events");
 		let (finality_blockhash, finality_height) = match finality_event {
 			FinalityEvent::Guest { blockhash, block_height } => (blockhash, block_height),
-			FinalityEvent::Rollup { slot, previous_blockhash, blockhash } => (blockhash, slot),
+			FinalityEvent::Rollup { slot, previous_blockhash, blockhash } => {
+				(CryptoHash::default(), slot)
+			},
 		};
 		log::info!("This is rollup height {:?}", finality_height);
 		let client_id = self.client_id();
@@ -197,7 +200,7 @@ impl IbcProvider for SolanaClient {
 			unreachable!()
 		};
 		log::info!("This is client state {:?}", client_state);
-		let latest_cp_client_height = u64::from(client_state.0.latest_height);
+		let latest_cp_client_height = u64::from(client_state.0.latest_slot);
 		println!("This is counterparty client height {:?}", latest_cp_client_height);
 		let new_block_events = events::get_events_upto_height(
 			self.rpc_client(),
@@ -205,8 +208,6 @@ impl IbcProvider for SolanaClient {
 			latest_cp_client_height + 1,
 		)
 		.await;
-
-		let earliest_block_header = all_signatures.last();
 
 		log::info!("This is all events {:?}", new_block_events);
 		let block_events: Vec<IbcEvent> = new_block_events
@@ -230,14 +231,16 @@ impl IbcProvider for SolanaClient {
 		let slot_data = response.result.1;
 		let bank_hash = slot_data.delta_hash_proof.calculate_bank_hash();
 		let header = cf_solana_og::Header {
-			slot: response.result.0,
+			slot: NonZeroU64::new(response.result.0).unwrap(),
 			bank_hash,
 			delta_hash_proof: slot_data.delta_hash_proof,
 			witness_proof: slot_data.witness_proof,
 		};
 		let msg = MsgUpdateAnyClient::<LocalClientTypes> {
 			client_id: self.client_id(),
-			client_message: AnyClientMessage::Rollup(cf_solana_og::ClientMessage::from(header)),
+			client_message: AnyClientMessage::Rollup(cf_solana::ClientMessage(
+				cf_solana_og::ClientMessage::from(header),
+			)),
 			signer: counterparty.account_id(),
 		};
 
@@ -254,7 +257,7 @@ impl IbcProvider for SolanaClient {
 		let ws_url = self.ws_url.clone();
 		let program_id = self.solana_ibc_program_id;
 		tokio::task::spawn_blocking(move || {
-			let (_block_subscription, receiver) = PubsubClient::block_subscribe(
+			let (_logs_subscription, receiver) = PubsubClient::logs_subscribe(
 				&ws_url,
 				RpcTransactionLogsFilter::Mentions(vec![program_id.to_string()]),
 				RpcTransactionLogsConfig { commitment: Some(CommitmentConfig::finalized()) },
@@ -263,17 +266,25 @@ impl IbcProvider for SolanaClient {
 
 			loop {
 				match receiver.recv() {
-					Ok(block) => {
-						let block = block.value;
-						let tx = block.block.unwrap();
-						log::info!("Found finality event");
+					Ok(logs) => {
+						let (events, proof_height) =
+							events::get_ibc_events_from_logs(logs.value.logs);
+						// log::info!("These are events {:?} ", events);
+						// log::info!("Total {:?} events", events.len());
 						let mut broke = false;
-						let finality_event = FinalityEvent::Rollup {
-							slot: block.slot,
-							previous_blockhash: tx.previous_blockhash,
-							blockhash: tx.blockhash,
-						};
-						let _ = tx.send(finality_event).map_err(|_| broke = true);
+						events.iter().for_each(|event| {
+							log::info!("Came into ibc events rollup");
+							let height = Height::new(1, proof_height);
+							let converted_event =
+								events::convert_new_event_to_old(event.clone(), height);
+							if let Some(event) = converted_event {
+								log::info!("Sending message");
+								tx.send(event.clone()).unwrap_or_else(|_| {
+									log::info!("Broke");
+									broke = true;
+								});
+							}
+						});
 						if broke {
 							break;
 						}
@@ -914,7 +925,7 @@ deserialize client state"
 	) -> Result<(Height, ibc::timestamp::Timestamp), Self::Error> {
 		let rpc = self.rpc_client();
 		let slot = rpc.get_slot().await.unwrap();
-		let timestamp = rpc.get_block_time(slot).await.unwrap();
+		let timestamp = rpc.get_block_time(slot).await.unwrap() as u64;
 		Ok((Height::new(1, slot), Timestamp::from_nanoseconds(timestamp * 10u64.pow(9)).unwrap()))
 	}
 
@@ -1584,20 +1595,21 @@ deserialize client state"
 		Self::Error,
 	> {
 		let (height, timestamp) = self.latest_height_and_timestamp().await?;
-		println!("This is height on solana {:?}", latest_height_timestamp);
+		println!("This is height on solana {:?} and timestamp {:?}", height, timestamp);
 		let client_state = cf_solana_og::ClientState {
-			latest_slot: height.revision_height,
-			witness_account: todo!(),
+			latest_slot: NonZeroU64::new(height.revision_height).unwrap(),
+			// TODO: derive witness account from program id
+			witness_account: Pubkey::default().into(),
 			trusting_period_ns: 86400 * 7 * 10u64.pow(9), // 1 week
 			is_frozen: false,
 		};
 		let consensus_state = cf_solana_og::ConsensusState {
-			trie_root: lib::hash::CryptoHash::DEFAULT,
-			timestamp_sec: NonZeroU64::new(timestamp.nanoseconds() / 10u64.pow(9)),
+			trie_root: CommitmentRoot::from_bytes(lib::hash::CryptoHash::default().as_slice()),
+			timestamp_sec: NonZeroU64::new(timestamp.nanoseconds() / 10u64.pow(9)).unwrap(),
 		};
 		Ok((
-			AnyClientState::Rollup(client_state),
-			AnyConsensusState::Rollup(consensus_state.into()),
+			AnyClientState::Rollup(cf_solana::ClientState(client_state)),
+			AnyConsensusState::Rollup(cf_solana::ConsensusState(consensus_state.into())),
 		))
 	}
 
@@ -1731,7 +1743,7 @@ deserialize client state"
 	}
 }
 
-impl KeyProvider for SolanaClient {
+impl KeyProvider for RollupClient {
 	fn account_id(&self) -> ibc::signer::Signer {
 		let key_entry = &self.keybase;
 		let public_key = key_entry.public_key;
@@ -1740,7 +1752,7 @@ impl KeyProvider for SolanaClient {
 }
 
 #[async_trait::async_trait]
-impl MisbehaviourHandler for SolanaClient {
+impl MisbehaviourHandler for RollupClient {
 	async fn check_for_misbehaviour<C: Chain>(
 		&self,
 		_counterparty: &C,
@@ -1751,7 +1763,7 @@ impl MisbehaviourHandler for SolanaClient {
 }
 
 #[async_trait::async_trait]
-impl LightClientSync for SolanaClient {
+impl LightClientSync for RollupClient {
 	async fn is_synced<C: Chain>(&self, _counterparty: &C) -> Result<bool, anyhow::Error> {
 		Ok(true)
 	}
@@ -1855,7 +1867,7 @@ impl LightClientSync for SolanaClient {
 }
 
 #[async_trait::async_trait]
-impl Chain for SolanaClient {
+impl Chain for RollupClient {
 	fn name(&self) -> &str {
 		&self.name
 	}
@@ -1880,8 +1892,11 @@ impl Chain for SolanaClient {
 		tokio::task::spawn_blocking(move || {
 			let (_block_subscription, receiver) = PubsubClient::block_subscribe(
 				&ws_url,
-				RpcTransactionLogsFilter::Mentions(vec![program_id.to_string()]),
-				RpcTransactionLogsConfig { commitment: Some(CommitmentConfig::finalized()) },
+				RpcBlockSubscribeFilter::MentionsAccountOrProgram(program_id.to_string()),
+				Some(RpcBlockSubscribeConfig {
+					commitment: Some(CommitmentConfig::finalized()),
+					..Default::default()
+				}),
 			)
 			.unwrap();
 
@@ -1889,13 +1904,13 @@ impl Chain for SolanaClient {
 				match receiver.recv() {
 					Ok(block) => {
 						let block = block.value;
-						let tx = block.block.unwrap();
+						let confirmed_block = block.block.unwrap();
 						log::info!("Found finality event");
 						let mut broke = false;
 						let finality_event = FinalityEvent::Rollup {
 							slot: block.slot,
-							previous_blockhash: tx.previous_blockhash,
-							blockhash: tx.blockhash,
+							previous_blockhash: confirmed_block.previous_blockhash,
+							blockhash: confirmed_block.blockhash,
 						};
 						let _ = tx.send(finality_event).map_err(|_| broke = true);
 						if broke {

@@ -1,4 +1,4 @@
-use crate::{client::SolanaClient, error::Error, events};
+use crate::{client::RollupClient, error::Error, events};
 use anchor_client::{
 	solana_client::{
 		pubsub_client::PubsubClient,
@@ -16,7 +16,7 @@ use primitives::TestProvider;
 use tokio::sync::mpsc::unbounded_channel;
 
 #[async_trait::async_trait]
-impl TestProvider for SolanaClient {
+impl TestProvider for RollupClient {
 	/// Initiate an ibc transfer on chain.
 	async fn send_transfer(&self, msg: MsgTransfer<PrefixedCoin>) -> Result<(), Self::Error> {
 		let hash = self.send_transfer_inner(msg).await?;

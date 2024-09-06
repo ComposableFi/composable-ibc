@@ -23,6 +23,7 @@ primitives = { path = "../primitives", package = "hyperspace-primitives" }
 parachain = { path = "../parachain", package = "hyperspace-parachain" }
 cosmos = { path = "../cosmos", package = "hyperspace-cosmos", optional = true }
 solana = { path = "../solana", package = "hyperspace-solana", optional = true }
+rollup = { path = "../rollup", package = "hyperspace-rollup", optional = true }
 #near = { path = "near", package = "hyperspace-near", optional = true }
 metrics = { path = "../metrics", package = "hyperspace-metrics" }
 
@@ -85,6 +86,7 @@ cosmos = { path = "../cosmos", package = "hyperspace-cosmos", features = [
     "testing",
 ] }
 solana = { path = "../solana", package = "hyperspace-solana" }
+rollup = { path = "../rollup", package = "hyperspace-rollup" }
 trie-ids = { path = "../../../emulated-light-client/common/trie-ids" ,features = ["borsh"] }
 
 ibc-new-primitives = { git = "https://github.com/mina86/ibc-rs", rev = "f07276383091f75b7ee8bff6fd434f8214ac5054", default-features = false, features = ["borsh", "serde"] , package="ibc-primitives" }
@@ -114,6 +116,7 @@ build-metadata-from-ws = []
 #near = ["dep:near"]
 cosmos = ["dep:cosmos"]
 solana = ["dep:solana"]
-testing = ["primitives/testing", "parachain/testing", "cosmos/testing", "solana/testing"]
-default = ["cosmos", "solana"]
+rollup = ["dep:rollup"]
+testing = ["primitives/testing", "parachain/testing", "cosmos/testing", "solana/testing", "rollup/testing"]
+default = ["cosmos", "solana", "rollup"]
 composable-beefy = []
