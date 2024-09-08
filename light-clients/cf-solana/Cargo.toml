@@ -14,11 +14,11 @@ ed25519-consensus = { version = "2", default-features = false }
 serde = { version = "1.0", default-features = false, features = ["derive"] }
 
 # New IBC
-ibc-core-client-context = { git = "https://github.com/mina86/ibc-rs", rev = "f07276383091f75b7ee8bff6fd434f8214ac5054", default-features = false }
-ibc-core-client-types = { git = "https://github.com/mina86/ibc-rs", rev = "f07276383091f75b7ee8bff6fd434f8214ac5054", default-features = false }
-ibc-core-handler-types = { git = "https://github.com/mina86/ibc-rs", rev = "f07276383091f75b7ee8bff6fd434f8214ac5054", default-features = false }
-ibc-core-host-types = { git = "https://github.com/mina86/ibc-rs", rev = "f07276383091f75b7ee8bff6fd434f8214ac5054", default-features = false }
-ibc-primitives = { git = "https://github.com/mina86/ibc-rs", rev = "f07276383091f75b7ee8bff6fd434f8214ac5054", default-features = false }
+ibc-core-client-context = { git = "https://github.com/mina86/ibc-rs", rev = "e1be8c9292c82c1e7c158067f0014fb292ee652d", default-features = false }
+ibc-core-client-types = { git = "https://github.com/mina86/ibc-rs", rev = "e1be8c9292c82c1e7c158067f0014fb292ee652d", default-features = false }
+ibc-core-handler-types = { git = "https://github.com/mina86/ibc-rs", rev = "e1be8c9292c82c1e7c158067f0014fb292ee652d", default-features = false }
+ibc-core-host-types = { git = "https://github.com/mina86/ibc-rs", rev = "e1be8c9292c82c1e7c158067f0014fb292ee652d", default-features = false }
+ibc-primitives = { git = "https://github.com/mina86/ibc-rs", rev = "e1be8c9292c82c1e7c158067f0014fb292ee652d", default-features = false }
 
 # Old IBC
 ibc = { path = "../../ibc/modules", default-features = false }

@@ -48,6 +48,13 @@ pub fn convert_new_consensus_state_to_old(
 				timestamp_sec: cs.timestamp_sec,
 			}))
 		},
+		solana_ibc::consensus_state::AnyConsensusState::Guest(cs) => {
+			AnyConsensusState::Guest(cf_guest::ConsensusState(cf_guest_og::ConsensusState {
+				block_hash: cs.block_hash,
+				timestamp_ns: cs.timestamp_ns,
+			}))
+		},
+		_ => unimplemented!(),
 	}
 }
 
@@ -79,6 +86,13 @@ pub fn convert_old_consensus_state_to_new(
 			solana_ibc::consensus_state::AnyConsensusState::Rollup(cf_solana_og::ConsensusState {
 				trie_root: cs.trie_root,
 				timestamp_sec: cs.timestamp_sec,
+			})
+		},
+		AnyConsensusState::Guest(cs) => {
+			let cs = cs.0;
+			solana_ibc::consensus_state::AnyConsensusState::Guest(cf_guest_og::ConsensusState {
+				block_hash: cs.block_hash,
+				timestamp_ns: cs.timestamp_ns,
 			})
 		},
 		// AnyConsensusState::Mock(cs) => solana_ibc::consensus_state::AnyConsensusState::Mock(

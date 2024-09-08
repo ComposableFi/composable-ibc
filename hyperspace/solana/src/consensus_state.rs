@@ -38,11 +38,17 @@ pub fn convert_new_consensus_state_to_old(
 		// 		},
 		// 		root: CommitmentRoot { bytes: cs.root.into_vec() },
 		// 	}),
-		solana_ibc::consensus_state::AnyConsensusState::Wasm(_) =>
-			panic!("Guest consensus not supported"),
-		solana_ibc::consensus_state::AnyConsensusState::Rollup(_) => unimplemented!(),
+		solana_ibc::consensus_state::AnyConsensusState::Wasm(_) => {
+			panic!("Guest consensus not supported")
+		},
+		solana_ibc::consensus_state::AnyConsensusState::Rollup(cs) => {
+			AnyConsensusState::Rollup(cf_solana::ConsensusState(cf_solana_og::ConsensusState {
+				trie_root: cs.trie_root,
+				timestamp_sec: cs.timestamp_sec,
+			}))
+		},
+		_ => unimplemented!()
 	}
-
 }
 
 pub fn convert_old_consensus_state_to_new(
@@ -67,6 +73,13 @@ pub fn convert_old_consensus_state_to_new(
 				.try_into()
 				.unwrap(),
 			)
+		},
+		AnyConsensusState::Rollup(cs) => {
+			let cs = cs.0;
+			solana_ibc::consensus_state::AnyConsensusState::Rollup(cf_solana_og::ConsensusState {
+				trie_root: cs.trie_root,
+				timestamp_sec: cs.timestamp_sec,
+			})
 		},
 		// AnyConsensusState::Mock(cs) => solana_ibc::consensus_state::AnyConsensusState::Mock(
 		// 	ibc_testkit::testapp::ibc::clients::mock::consensus_state::MockConsensusState {

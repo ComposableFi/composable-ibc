@@ -228,8 +228,10 @@ impl RollupClient {
 	}
 
 	pub fn get_witness_key(&self) -> Pubkey {
-		let witness_seeds = &[b"witness".as_ref()];
+		let trie_key = self.get_trie_key();
+		let witness_seeds = &[b"witness", trie_key.as_ref()];
 		let witness = Pubkey::find_program_address(witness_seeds, &self.solana_ibc_program_id).0;
+		log::info!("Witness key {}", witness);
 		witness
 	}
 
@@ -258,44 +260,26 @@ impl RollupClient {
 		&self,
 		at: u64,
 		require_proof: bool,
-	) -> (solana_trie::TrieAccount<Vec<u8>>, bool) {
+	) -> (solana_trie::TrieAccount<Vec<u8>, ()>, bool) {
 		let connection = self.get_db();
-		let witness_key = self.get_witness_key();
-		let witness_account = self.rpc_client().get_account(&witness_key).await.unwrap();
-		let witness_account_info = AccountInfo::new(
-			&witness_key,
-			false,
-			true,
-			&mut witness_account.lamports,
-			&mut witness_account.data,
-			witness_account.owner(),
-			false,
-			witness_account.rent_epoch,
-		);
-		if require_proof {
-			let row = connection.query_row("SELECT * FROM Trie WHERE height=?1", [at], |row| {
-				Ok(Trie {
-					id: row.get(0)?,
-					height: row.get(1)?,
-					data: row.get(2)?,
-					state_root: row.get(3)?,
-					match_block_state_root: row.get(4)?,
-				})
-			});
-			if let Ok(trie) = row {
-				log::info!("Does block state roots match {}", trie.match_block_state_root);
-				let trie_acc = solana_trie::TrieAccount::new(trie.data).unwrap();
-				if trie.match_block_state_root {
-					return (
-						trie_acc.with_witness_account(
-							&witness_account_info,
-							&self.solana_ibc_program_id,
-						),
-						trie.match_block_state_root,
-					);
-				}
-			}
-		}
+		// if require_proof {
+		// 	let row = connection.query_row("SELECT * FROM Trie WHERE height=?1", [at], |row| {
+		// 		Ok(Trie {
+		// 			id: row.get(0)?,
+		// 			height: row.get(1)?,
+		// 			data: row.get(2)?,
+		// 			state_root: row.get(3)?,
+		// 			match_block_state_root: row.get(4)?,
+		// 		})
+		// 	});
+		// 	if let Ok(trie) = row {
+		// 		log::info!("Does block state roots match {}", trie.match_block_state_root);
+		// 		let trie_acc = solana_trie::TrieAccount::new(trie.data).unwrap();
+		// 		if trie.match_block_state_root {
+		// 			return (trie_acc, trie.match_block_state_root);
+		// 		}
+		// 	}
+		// }
 		let trie_key = self.get_trie_key();
 		let rpc_client = self.rpc_client();
 		let trie_account = rpc_client
@@ -305,7 +289,7 @@ impl RollupClient {
 			.value
 			.unwrap();
 		let trie = solana_trie::TrieAccount::new(trie_account.data).unwrap();
-		(trie_acc.with_witness_account(&witness_account_info, &self.solana_ibc_program_id), false)
+		(trie, false)
 	}
 
 	pub async fn get_ibc_storage(&self) -> PrivateStorage {

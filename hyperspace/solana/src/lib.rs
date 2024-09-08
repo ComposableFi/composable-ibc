@@ -2246,7 +2246,7 @@ impl Chain for SolanaClient {
 									&transaction,
 									RpcSendTransactionConfig {
 										skip_preflight: true,
-										max_retries: Some(0),
+										// max_retries: Some(0),
 										..RpcSendTransactionConfig::default()
 									},
 								)

@@ -67,6 +67,17 @@ pub fn convert_new_client_state_to_old(
 				is_frozen: cs.is_frozen,
 			}))
 		},
+		solana_ibc::client_state::AnyClientState::Guest(cs) => {
+			AnyClientState::Guest(cf_guest::ClientState(cf_guest_og::ClientState::new(
+				cs.genesis_hash,
+				cs.latest_height,
+				cs.trusting_period_ns,
+				cs.epoch_commitment,
+				Some(cs.prev_epoch_commitment),
+				cs.is_frozen,
+			)))
+		},
+		_ => unimplemented!(),
 	}
 }
 
@@ -118,6 +129,17 @@ pub fn convert_old_client_state_to_new(
 				trusting_period_ns: cs.trusting_period_ns,
 				is_frozen: cs.is_frozen,
 			})
+		},
+		AnyClientState::Guest(cs) => {
+			let cs = cs.0;
+			solana_ibc::client_state::AnyClientState::Guest(cf_guest_og::ClientState::new(
+				cs.genesis_hash,
+				cs.latest_height,
+				cs.trusting_period_ns,
+				cs.epoch_commitment,
+				Some(cs.prev_epoch_commitment),
+				cs.is_frozen,
+			))
 		},
 		// AnyClientState::Mock(cs) =>
 		// 	solana_ibc::client_state::AnyClientState::Mock(MockClientState {

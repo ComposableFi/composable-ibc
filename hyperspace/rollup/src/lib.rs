@@ -356,36 +356,9 @@ deserialize consensus state"
 		log::info!("this is consensus state {:?}", consensus_state);
 		log::info!("This is inner any consensus state {:?}", inner_any);
 		let chain_account = self.get_chain_storage().await;
-		let block_header = if !self.common_state.handshake_completed {
-			log::info!("Fetching previous block header");
-			events::get_header_from_height(
-				self.rpc_client(),
-				self.solana_ibc_program_id,
-				at.revision_height,
-			)
-			.await
-			.expect(&format!("No block header found for height {:?}", at.revision_height))
-		} else {
-			log::info!("Fetching latest header");
-			chain_account.head().unwrap().clone()
-		};
-		// let block_header = chain_account.head().unwrap().clone();
-		log::info!(
-			"proof {:?} state root {:?}, trie key {:?} and value {:?}",
-			consensus_state_proof,
-			block_header.state_root,
-			consensus_state_trie_key,
-			val
-		);
-		let result = consensus_state_proof.verify(
-			&block_header.state_root,
-			&consensus_state_trie_key,
-			val.as_ref(),
-		);
-		log::info!("Result {}", result);
 		Ok(QueryConsensusStateResponse {
 			consensus_state: Some(cs_state.into()),
-			proof: borsh::to_vec(&(block_header, &consensus_state_proof)).unwrap(),
+			proof: borsh::to_vec(&consensus_state_proof).unwrap(),
 			proof_height: Some(at.into()),
 		})
 	}
@@ -435,36 +408,9 @@ deserialize client state"
 		// log::info!("This is inner any client state {:?}", inner_any);
 		let any_client_state = convert_new_client_state_to_old(client_state);
 		let chain_account = self.get_chain_storage().await;
-		let block_header = if !self.common_state.handshake_completed {
-			log::info!("Fetching previous block header");
-			events::get_header_from_height(
-				self.rpc_client(),
-				self.solana_ibc_program_id,
-				at.revision_height,
-			)
-			.await
-			.expect(&format!("No block header found for height {:?}", at.revision_height))
-		} else {
-			log::info!("Fetching latest header");
-			chain_account.head().unwrap().clone()
-		};
-		// let block_header = chain_account.head().unwrap().clone();
-		log::info!(
-			"proof {:?} state root {:?}, trie key {:?} and value {:?}",
-			client_state_proof,
-			block_header.state_root,
-			client_state_trie_key,
-			val
-		);
-		let result = client_state_proof.verify(
-			&block_header.state_root,
-			&client_state_trie_key,
-			val.as_ref(),
-		);
-		log::info!("Result {}", result);
 		Ok(QueryClientStateResponse {
 			client_state: Some(any_client_state.into()),
-			proof: borsh::to_vec(&(block_header, &client_state_proof)).unwrap(),
+			proof: borsh::to_vec(&client_state_proof).unwrap(),
 			proof_height: Some(at.into()),
 		})
 	}
@@ -539,45 +485,9 @@ deserialize client state"
 			}),
 			delay_period: inner_connection_end.delay_period().as_nanos() as u64,
 		};
-		log::info!("This is after connection end {:?}", connection_end);
-		let chain_account = self.get_chain_storage().await;
-		let block_header = if !self.common_state.handshake_completed {
-			log::info!("Fetching previous block header");
-			events::get_header_from_height(
-				self.rpc_client(),
-				self.solana_ibc_program_id,
-				at.revision_height,
-			)
-			.await
-			.expect(&format!("No block header found for height {:?}", at.revision_height))
-		} else {
-			log::info!("Fetching latest header");
-			chain_account.head().unwrap().clone()
-		};
-		// let block_header = chain_account.head().unwrap().clone();
-		log::info!(
-			"proof {:?} state root {:?}, trie key {:?} and value {:?}",
-			connection_end_proof,
-			block_header.state_root,
-			connection_end_trie_key,
-			val
-		);
-		log::info!("Block header {:?}", block_header);
-		let result = connection_end_proof.verify(
-			&block_header.state_root,
-			&connection_end_trie_key,
-			val.as_ref(),
-		);
-		log::info!("Result {}", result);
-		log::info!("connection end {:?}", connection_end);
-		let mut proof = borsh::to_vec(&(block_header.clone(), &connection_end_proof)).unwrap();
-		log::info!("This is proof {:?}", proof);
-		let (header, proof): (BlockHeader, sealable_trie::proof::Proof) =
-			borsh::BorshDeserialize::deserialize_reader(&mut &proof[..]).unwrap();
-		log::info!("This is deserialized proof {:?}", proof);
 		Ok(QueryConnectionResponse {
 			connection: Some(connection_end),
-			proof: borsh::to_vec(&(block_header, &connection_end_proof)).unwrap(),
+			proof: borsh::to_vec(&connection_end_proof).unwrap(),
 			proof_height: Some(at.into()),
 		})
 	}
@@ -639,23 +549,9 @@ deserialize client state"
 				.collect(),
 			version: inner_channel_end.version.to_string(),
 		};
-		let block_header = if !self.common_state.handshake_completed {
-			log::info!("Fetching previous block header");
-			events::get_header_from_height(
-				self.rpc_client(),
-				self.solana_ibc_program_id,
-				at.revision_height,
-			)
-			.await
-			.expect(&format!("No block header found for height {:?}", at.revision_height))
-		} else {
-			log::info!("Fetching latest block header");
-			let chain_account = self.get_chain_storage().await;
-			chain_account.head().unwrap().clone()
-		};
 		Ok(QueryChannelResponse {
 			channel: Some(channel_end),
-			proof: borsh::to_vec(&(block_header, &channel_end_proof)).unwrap(),
+			proof: borsh::to_vec(&channel_end_proof).unwrap(),
 			proof_height: Some(at.into()),
 		})
 	}
@@ -751,30 +647,7 @@ deserialize client state"
 		let (val, proof) = trie
 			.prove(&trie_key)
 			.map_err(|_| Error::Custom("value is sealed and cannot be fetched".to_owned()))?;
-		log::info!("This is proof {:?}", proof);
-		let chain_account = self.get_chain_storage().await;
-		let block_header_at_height = if at_height {
-			log::info!("Fetching block header at height");
-			events::get_header_from_height(
-				self.rpc_client(),
-				self.solana_ibc_program_id,
-				at.revision_height,
-			)
-			.await
-			.expect(&format!("No block header found for height {:?}", at.revision_height))
-		} else {
-			log::info!("Block header not found at height, so fetching latest height");
-			chain_account.head().unwrap().clone()
-		};
-		let result = proof.verify(&block_header_at_height.state_root, &trie_key, val.as_ref());
-		log::info!("latest Block header height {}", block_header_at_height.block_height);
-		log::info!("state root {:?}", &block_header_at_height.state_root);
-		log::info!("trie root {:?}", &trie.hash());
-		log::info!("trie key {:?}", trie_key);
-		log::info!("Value {:?}", val.as_ref());
-		log::info!("This is value in proof verify {:?}", val);
-		log::info!("This is result of time out packet proof verify lts {:?}", result);
-		Ok(borsh::to_vec(&(block_header_at_height.clone(), &proof)).unwrap())
+		Ok(borsh::to_vec(&proof).unwrap())
 	}
 
 	async fn query_packet_commitment(
@@ -801,17 +674,10 @@ deserialize client state"
 			.map_err(|_| Error::Custom("value is sealed and cannot be fetched".to_owned()))?;
 		let commitment =
 			packet_commitment.ok_or(Error::Custom("No value at given key".to_owned()))?;
-		let block_header = events::get_header_from_height(
-			self.rpc_client(),
-			self.solana_ibc_program_id,
-			at.revision_height,
-		)
-		.await
-		.expect(&format!("No block header found for height {:?}", at.revision_height));
 		log::info!("This is packet commitment {:?}", commitment.0.to_vec());
 		Ok(QueryPacketCommitmentResponse {
 			commitment: commitment.0.to_vec(),
-			proof: borsh::to_vec(&(block_header, &packet_commitment_proof)).unwrap(),
+			proof: borsh::to_vec(&packet_commitment_proof).unwrap(),
 			proof_height: Some(at.into()),
 		})
 	}
@@ -843,17 +709,10 @@ deserialize client state"
 			.prove(&packet_ack_trie_key)
 			.map_err(|_| Error::Custom("value is sealed and cannot be fetched".to_owned()))?;
 		let ack = packet_ack.ok_or(Error::Custom("No value at given key".to_owned()))?;
-		let block_header = events::get_header_from_height(
-			self.rpc_client(),
-			self.solana_ibc_program_id,
-			at.revision_height,
-		)
-		.await
-		.expect(&format!("No block header found for height {:?}", at.revision_height));
 		log::info!("This is packet ack {:?}", ack.0.to_vec());
 		Ok(QueryPacketAcknowledgementResponse {
 			acknowledgement: ack.0.to_vec(),
-			proof: borsh::to_vec(&(block_header, packet_ack_proof)).unwrap(),
+			proof: borsh::to_vec(&packet_ack_proof).unwrap(),
 			proof_height: Some(at.into()),
 		})
 	}
@@ -1596,6 +1455,7 @@ deserialize client state"
 	> {
 		let (height, timestamp) = self.latest_height_and_timestamp().await?;
 		println!("This is height on solana {:?} and timestamp {:?}", height, timestamp);
+		let (trie_data, _at_height) = self.get_trie(0, false).await;
 		let client_state = cf_solana_og::ClientState {
 			latest_slot: NonZeroU64::new(height.revision_height).unwrap(),
 			// TODO: derive witness account from program id
@@ -1604,7 +1464,7 @@ deserialize client state"
 			is_frozen: false,
 		};
 		let consensus_state = cf_solana_og::ConsensusState {
-			trie_root: CommitmentRoot::from_bytes(lib::hash::CryptoHash::default().as_slice()),
+			trie_root: CommitmentRoot::from_bytes(trie_data.hash().as_slice()),
 			timestamp_sec: NonZeroU64::new(timestamp.nanoseconds() / 10u64.pow(9)).unwrap(),
 		};
 		Ok((

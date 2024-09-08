@@ -50,6 +50,8 @@ pub fn convert_old_msgs_to_new(messages: Vec<Ics26Envelope<LocalClientTypes>>) -
 					let header = match &e.client_message {
 						pallet_ibc::light_clients::AnyClientMessage::Tendermint(msg) =>
 							ibc_proto::google::protobuf::Any::from(msg.clone()),
+					  pallet_ibc::light_clients::AnyClientMessage::Guest(msg) =>
+							ibc_proto::google::protobuf::Any::from(msg.clone()),
 						_ => panic!("Not supported"),
 					};
 					let new_any_header = Any { type_url: header.type_url, value: header.value };

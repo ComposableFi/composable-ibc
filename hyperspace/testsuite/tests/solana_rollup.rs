@@ -57,13 +57,13 @@ impl Default for Args {
 		Args {
 			// chain_a: format!("https://devnet.helius-rpc.com/?api-key=bc5c0cfc-46df-4781-978f-af6ca7a202c2"),
 			chain_a: format!("http://{solana}:8899"),
-			chain_b: format!("http://{rollup}:26657"),
+			chain_b: format!("http://{rollup}:9000"),
 			connection_prefix_a: "ibc".to_string(),
 			connection_prefix_b: "ibc".to_string(),
 			solana_ws: format!("ws://{solana}:8900"),
 			// solana_ws:
 			// format!("wss://devnet.helius-rpc.com/?api-key=bc5c0cfc-46df-4781-978f-af6ca7a202c2"),
-			rollup_ws: format!("ws://{rollup}:8901"),
+			rollup_ws: format!("ws://{rollup}:9001"),
 			rollup_trie_db_rpc: format!("http://{rollup}:42069")
 		}
 	}
@@ -111,19 +111,19 @@ async fn setup_clients() -> (AnyChain, AnyChain) {
 	};
 
 	let mut config_b = RollupClientConfig {
-		name: "solana".to_string(),
+		name: "mantis".to_string(),
 		client_id: None,
 		connection_id: None,
-		commitment_prefix: args.connection_prefix_a.as_bytes().to_vec(),
+		commitment_prefix: args.connection_prefix_b.as_bytes().to_vec(),
 		wasm_checksum: None,
-		rpc_url: args.chain_a.clone().parse().unwrap(),
-		ws_url: args.solana_ws.clone().parse().unwrap(),
-		chain_id: "solana-1".to_string(),
-		account_prefix: args.connection_prefix_a.clone(),
+		rpc_url: args.chain_b.clone().parse().unwrap(),
+		ws_url: args.rollup_ws.clone().parse().unwrap(),
+		chain_id: "mantis-1".to_string(),
+		account_prefix: args.connection_prefix_b.clone(),
 		fee_denom: "stake".to_string(),
 		fee_amount: "4000".to_string(),
 		gas_limit: 100000000,
-		store_prefix: args.connection_prefix_a,
+		store_prefix: args.connection_prefix_b,
 		max_tx_size: 320000,
 		common_state_config: CommonClientConfig {
 			skip_optional_client_updates: true,
@@ -144,7 +144,7 @@ async fn setup_clients() -> (AnyChain, AnyChain) {
 		signature_verifier_program_id: "C6r1VEbn3mSpecgrZ7NdBvWUtYVJWrDPv4uU9Xs956gc".to_string(),
 		trie_db_path: "../../../solana-ibc-indexer/indexer.db3".to_string(),
 		transaction_sender: "RPC".to_string(),
-    trie_rpc_url: todo!(),
+    trie_rpc_url: args.rollup_trie_db_rpc.clone().parse().unwrap(),
 	};
 
 	// println!("This is config b {:?}", config_b);

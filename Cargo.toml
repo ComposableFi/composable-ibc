@@ -62,18 +62,18 @@ curve25519-dalek = { git = "https://github.com/solana-labs/curve25519-dalek.git"
 anchor-client = { git = "https://github.com/dhruvja/anchor" }
 anchor-lang = { git = "https://github.com/dhruvja/anchor" }
 
-ibc                         = { git = "https://github.com/mina86/ibc-rs", rev = "f07276383091f75b7ee8bff6fd434f8214ac5054", default-features = false, features = ["borsh", "serde"] }
-ibc-client-tendermint-types = { git = "https://github.com/mina86/ibc-rs", rev = "f07276383091f75b7ee8bff6fd434f8214ac5054", default-features = false }
-ibc-core-channel-types      = { git = "https://github.com/mina86/ibc-rs", rev = "f07276383091f75b7ee8bff6fd434f8214ac5054", default-features = false }
-ibc-core-client-context     = { git = "https://github.com/mina86/ibc-rs", rev = "f07276383091f75b7ee8bff6fd434f8214ac5054", default-features = false }
-ibc-core-client-types       = { git = "https://github.com/mina86/ibc-rs", rev = "f07276383091f75b7ee8bff6fd434f8214ac5054", default-features = false }
-ibc-core-commitment-types   = { git = "https://github.com/mina86/ibc-rs", rev = "f07276383091f75b7ee8bff6fd434f8214ac5054", default-features = false }
-ibc-core-connection-types   = { git = "https://github.com/mina86/ibc-rs", rev = "f07276383091f75b7ee8bff6fd434f8214ac5054", default-features = false }
-ibc-core-host               = { git = "https://github.com/mina86/ibc-rs", rev = "f07276383091f75b7ee8bff6fd434f8214ac5054", default-features = false }
-ibc-core-host-types         = { git = "https://github.com/mina86/ibc-rs", rev = "f07276383091f75b7ee8bff6fd434f8214ac5054", default-features = false }
-ibc-primitives              = { git = "https://github.com/mina86/ibc-rs", rev = "f07276383091f75b7ee8bff6fd434f8214ac5054", default-features = false }
-ibc-testkit                 = { git = "https://github.com/mina86/ibc-rs", rev = "f07276383091f75b7ee8bff6fd434f8214ac5054", default-features = false }
-# ibc-testkit               = { git = "https://github.com/mina86/ibc-rs", rev = "f07276383091f75b7ee8bff6fd434f8214ac5054" }
+ibc                         = { git = "https://github.com/mina86/ibc-rs", rev = "e1be8c9292c82c1e7c158067f0014fb292ee652d", default-features = false, features = ["borsh", "serde"] }
+ibc-client-tendermint-types = { git = "https://github.com/mina86/ibc-rs", rev = "e1be8c9292c82c1e7c158067f0014fb292ee652d", default-features = false }
+ibc-core-channel-types      = { git = "https://github.com/mina86/ibc-rs", rev = "e1be8c9292c82c1e7c158067f0014fb292ee652d", default-features = false }
+ibc-core-client-context     = { git = "https://github.com/mina86/ibc-rs", rev = "e1be8c9292c82c1e7c158067f0014fb292ee652d", default-features = false }
+ibc-core-client-types       = { git = "https://github.com/mina86/ibc-rs", rev = "e1be8c9292c82c1e7c158067f0014fb292ee652d", default-features = false }
+ibc-core-commitment-types   = { git = "https://github.com/mina86/ibc-rs", rev = "e1be8c9292c82c1e7c158067f0014fb292ee652d", default-features = false }
+ibc-core-connection-types   = { git = "https://github.com/mina86/ibc-rs", rev = "e1be8c9292c82c1e7c158067f0014fb292ee652d", default-features = false }
+ibc-core-host               = { git = "https://github.com/mina86/ibc-rs", rev = "e1be8c9292c82c1e7c158067f0014fb292ee652d", default-features = false }
+ibc-core-host-types         = { git = "https://github.com/mina86/ibc-rs", rev = "e1be8c9292c82c1e7c158067f0014fb292ee652d", default-features = false }
+ibc-primitives              = { git = "https://github.com/mina86/ibc-rs", rev = "e1be8c9292c82c1e7c158067f0014fb292ee652d", default-features = false }
+ibc-testkit                 = { git = "https://github.com/mina86/ibc-rs", rev = "e1be8c9292c82c1e7c158067f0014fb292ee652d", default-features = false }
+# ibc-testkit               = { git = "https://github.com/mina86/ibc-rs", rev = "e1be8c9292c82c1e7c158067f0014fb292ee652d" }
 #ibc = { path = "../ibc-rs-mina/ibc" }
 #ibc-app-nft-transfer = { path = "../ibc-rs-mina/ibc-apps/ics721-nft-transfer" }
 #ibc-app-nft-transfer-types = { path = "../ibc-rs-mina/ibc-apps/ics721-nft-transfer/types" }
