@@ -748,7 +748,7 @@ pub async fn get_previous_transactions(
 			return (transactions, last_searched_hash);
 		}
 		log::error!("Couldnt get transactions after 5 retries");
-		log::info!("These are signatures {}", tx_signatures);
+		log::info!("These are signatures {:?}", tx_signatures);
 		(vec![], "".to_string())
 	})
 	.await
