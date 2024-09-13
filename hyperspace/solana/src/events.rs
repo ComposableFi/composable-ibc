@@ -476,8 +476,8 @@ pub fn get_events_from_logs(logs: Vec<String>) -> (Vec<solana_ibc::events::Event
 			if let Ok(decoded_event) = decoded_event {
 				let decoded_event: Result<solana_ibc::events::Event, String> =
 					borsh::BorshDeserialize::try_from_slice(&decoded_event).map_err(|e| {
-						log::error!("These are logs {:?}", logs);
-						log::error!("This is decoded event {:?}", decoded_event);
+						// log::error!("These are logs {:?}", logs);
+						// log::error!("This is decoded event {:?}", decoded_event);
 						e.to_string()
 					});
 				if let Ok(decoded_event) = decoded_event {
@@ -709,7 +709,7 @@ pub async fn get_previous_transactions(
 		.get_signatures_for_address_with_config(
 			&search_address, // Since ibc storage is only used for ibc and not for guest chain
 			GetConfirmedSignaturesForAddress2Config {
-				limit: Some(200),
+				limit: Some(10),
 				before: before_hash,
 				commitment: Some(CommitmentConfig::finalized()),
 				..Default::default()
@@ -723,6 +723,7 @@ pub async fn get_previous_transactions(
 	let last_searched_hash = transaction_signatures
 		.last()
 		.map_or("".to_string(), |sig| sig.signature.clone());
+	let tx_signatures = transaction_signatures.clone();
 	let mut body = vec![];
 	for sig in transaction_signatures {
 		let signature = sig.signature.clone();
@@ -747,6 +748,7 @@ pub async fn get_previous_transactions(
 			return (transactions, last_searched_hash);
 		}
 		log::error!("Couldnt get transactions after 5 retries");
+		log::info!("These are signatures {}", tx_signatures);
 		(vec![], "".to_string())
 	})
 	.await
