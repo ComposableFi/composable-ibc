@@ -709,7 +709,7 @@ pub async fn get_previous_transactions(
 		.get_signatures_for_address_with_config(
 			&search_address, // Since ibc storage is only used for ibc and not for guest chain
 			GetConfirmedSignaturesForAddress2Config {
-				limit: Some(10),
+				limit: Some(150),
 				before: before_hash,
 				commitment: Some(CommitmentConfig::finalized()),
 				..Default::default()
