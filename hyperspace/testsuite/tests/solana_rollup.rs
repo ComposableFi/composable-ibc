@@ -162,8 +162,8 @@ async fn setup_clients() -> (AnyChain, AnyChain) {
 
 	let AnyChain::Solana(chain_a) = &mut chain_a_wrapped else { unreachable!() };
 
-	// let clients_on_a = chain_a_wrapped.query_clients().await.unwrap();
-	// let clients_on_b = chain_b_wrapped.query_clients().await.unwrap();
+	let clients_on_a = chain_a_wrapped.query_clients().await.unwrap();
+	let clients_on_b = chain_b_wrapped.query_clients().await.unwrap();
 
 	// if !clients_on_a.is_empty() && !clients_on_b.is_empty() {
 	// 	chain_a_wrapped.set_client_id(clients_on_b[0].clone());
@@ -171,12 +171,12 @@ async fn setup_clients() -> (AnyChain, AnyChain) {
 	// 	return (chain_a_wrapped, chain_b_wrapped)
 	// }
 
-	let (client_a, client_b) =
-		create_clients(&mut chain_a_wrapped, &mut chain_b_wrapped).await.unwrap();
-	chain_a_wrapped.set_client_id(client_a);
-	chain_b_wrapped.set_client_id(client_b);
-	// chain_b_wrapped.set_client_id(ClientId::new("07-tendermint", 2).unwrap());
-	// chain_a_wrapped.set_client_id(ClientId::new("08-wasm", 2).unwrap());
+	// let (client_a, client_b) =
+	// 	create_clients(&mut chain_a_wrapped, &mut chain_b_wrapped).await.unwrap();
+	// chain_a_wrapped.set_client_id(client_a);
+	// chain_b_wrapped.set_client_id(client_b);
+	chain_b_wrapped.set_client_id(ClientId::new("cf-solana", 11).unwrap());
+	chain_a_wrapped.set_client_id(ClientId::new("cf-guest", 10).unwrap());
 	(chain_a_wrapped, chain_b_wrapped)
 }
 

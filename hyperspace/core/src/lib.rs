@@ -218,7 +218,7 @@ async fn process_some_finality_event<A: Chain, B: Chain>(
 		.query_latest_ibc_events(finality_event, &*sink)
 		.await
 		.map_err(|e| anyhow!("Failed to fetch IBC events for finality event {e}"))?;
-	log::trace!(target: "hyperspace", "Received updates count: {}", updates.len());
+	log::info!(target: "hyperspace", "Received updates count: {} for chain {}", updates.len(), source.name());
 	// query packets that can now be sent, at this sink height because of connection
 	// delay.
 	let (ready_packets, mut timeout_msgs) =
@@ -228,7 +228,7 @@ async fn process_some_finality_event<A: Chain, B: Chain>(
 
 	let mut msgs = Vec::new();
 
-	log::trace!(
+	log::info!(
 		target: "hyperspace",
 		"{} has undelivered seqs: [{:?}:{}, {:?}:{}, {:?}:{}]", source.name(),
 		UndeliveredType::Acks, source.has_undelivered_sequences(UndeliveredType::Acks),
@@ -236,7 +236,7 @@ async fn process_some_finality_event<A: Chain, B: Chain>(
 		UndeliveredType::Recvs, source.has_undelivered_sequences(UndeliveredType::Recvs),
 	);
 
-	log::trace!(
+	log::info!(
 		target: "hyperspace",
 		"{} has undelivered seqs: [{:?}:{}, {:?}:{}, {:?}:{}]", sink.name(),
 		UndeliveredType::Acks, sink.has_undelivered_sequences(UndeliveredType::Acks),

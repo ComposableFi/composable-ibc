@@ -196,7 +196,7 @@ impl IbcProvider for SolanaClient {
 		let (all_signatures, new_block_events) = events::get_signatures_upto_height(
 			self.rpc_client(),
 			self.solana_ibc_program_id,
-			latest_cp_client_height + 1,
+			latest_cp_client_height,
 		)
 		.await;
 
@@ -220,6 +220,11 @@ impl IbcProvider for SolanaClient {
 				&& u64::from(block_header.block_height) != finality_height)
 				|| epoch.is_none()
 			{
+				log::info!(
+					"Skipping for height {} and finality height {}",
+					block_header.block_height,
+					finality_height
+				);
 				continue;
 			}
 
@@ -381,7 +386,7 @@ impl IbcProvider for SolanaClient {
 		consensus_height: Height,
 	) -> Result<QueryConsensusStateResponse, Self::Error> {
 		use ibc_proto_new::Protobuf;
-		let (trie, at_height) = self.get_trie(at.revision_height + 1, true).await;
+		let (trie, at_height) = self.get_trie(at.revision_height, true).await;
 		let storage = self.get_ibc_storage().await;
 		let revision_height = consensus_height.revision_height;
 		let revision_number = consensus_height.revision_number;
@@ -446,11 +451,12 @@ deserialize consensus state"
 		};
 		// let block_header = chain_account.head().unwrap().clone();
 		log::info!(
-			"proof {:?} state root {:?}, trie key {:?} and value {:?}",
+			"proof {:?} state root {:?}, trie key {:?} and value {:?} and trie root {:?}",
 			consensus_state_proof,
 			block_header.state_root,
 			consensus_state_trie_key,
-			val
+			val,
+			trie.hash()
 		);
 		let result = consensus_state_proof.verify(
 			&block_header.state_root,
@@ -471,7 +477,7 @@ deserialize consensus state"
 		client_id: ClientId,
 	) -> Result<QueryClientStateResponse, Self::Error> {
 		log::info!("Quering solana client state at height {:?} {:?}", at, client_id);
-		let (trie, at_height) = self.get_trie(at.revision_height + 1, true).await;
+		let (trie, at_height) = self.get_trie(at.revision_height, true).await;
 		let storage = self.get_ibc_storage().await;
 		let new_client_id =
 			ibc_core_host_types::identifiers::ClientId::from_str(client_id.as_str()).unwrap();
@@ -531,6 +537,14 @@ deserialize client state"
 			client_state_trie_key,
 			val
 		);
+		let state_any = any_client_state.clone().encode_vec();
+		log::info!(
+			"This is any client state {:?} and any client state {:?}",
+			state_any,
+			Into::<Any>::into(any_client_state.clone())
+		);
+		let hash = cf_guest::digest_with_client_id(&client_id, state_any.as_slice());
+		log::info!("hash proof {:?} and derived hash {}", val, hash);
 		let result = client_state_proof.verify(
 			&block_header.state_root,
 			&client_state_trie_key,
@@ -550,7 +564,7 @@ deserialize client state"
 		connection_id: ConnectionId,
 	) -> Result<QueryConnectionResponse, Self::Error> {
 		use ibc_proto_new::Protobuf;
-		let (trie, at_height) = self.get_trie(at.revision_height + 1, true).await;
+		let (trie, at_height) = self.get_trie(at.revision_height, true).await;
 		let storage = self.get_ibc_storage().await;
 		let connection_idx = ConnectionIdx::try_from(
 			ibc_core_host_types::identifiers::ConnectionId::from_str(connection_id.as_str())
@@ -586,6 +600,10 @@ deserialize client state"
 		log::info!("This is new connection end {:?}", inner_connection_end);
 		log::info!("Borsh serialized connection end {:?}", borsh::to_vec(&inner_connection_end));
 		log::info!("This is in any {:?}", inner_connection_end.clone().encode_vec());
+		log::info!(
+			"What i get hashed value {:?}",
+			CryptoHash::digest(inner_connection_end.clone().encode_vec().as_slice())
+		);
 		log::info!("This is the hashed value {:?}", val);
 		let inner_any = inner_connection_end.clone().encode_vec();
 		let inner_counterparty = inner_connection_end.counterparty();
@@ -616,7 +634,7 @@ deserialize client state"
 		};
 		log::info!("This is after connection end {:?}", connection_end);
 		let chain_account = self.get_chain_storage().await;
-		let block_header = if !self.common_state.handshake_completed {
+		let block_header = if (!self.common_state.handshake_completed && at_height) {
 			log::info!("Fetching previous block header");
 			events::get_header_from_height(
 				self.rpc_client(),
@@ -1169,7 +1187,7 @@ deserialize client state"
 					ordering,
 					counterparty: Some(ChanCounterparty {
 						port_id: channel.counterparty().port_id.to_string(),
-						channel_id: channel.counterparty().channel_id.clone().unwrap().to_string(),
+						channel_id: channel.counterparty().channel_id.clone().map_or,
 					}),
 					connection_hops: channel
 						.connection_hops
@@ -2037,17 +2055,32 @@ impl Chain for SolanaClient {
 
 	async fn submit(&self, messages: Vec<Any>) -> Result<Self::TransactionId, Error> {
 		let keypair = self.keybase.keypair();
-		println!("submitting tx now, {}", keypair.pubkey());
+		log::info!("submitting tx now, {} with messages {}", keypair.pubkey(), messages.len());
+		log::info!("Messages {:?}", messages);
 		let authority = Arc::new(keypair);
 		let program = self.program();
+
+		if *self.is_transaction_processing.lock().unwrap() {
+			log::info!("Waiting for other thread to complete");
+			sleep(Duration::from_millis(500))
+		}
+
+		*self.is_transaction_processing.lock().unwrap() = true;
 
 		// Build, sign, and send program instruction
 		let mut signature = String::new();
 		let rpc = program.async_rpc();
 
 		let mut all_transactions = Vec::new();
+		let mut index = -1;
+
+		let mut messages_indeed = vec![];
 
 		for message in messages {
+			index += 1;
+			if index > 1 {
+				break;
+			}
 			let storage = self.get_ibc_storage().await;
 			let my_message = Ics26Envelope::<LocalClientTypes>::try_from(message.clone()).unwrap();
 			let new_messages = convert_old_msgs_to_new(vec![my_message]);
@@ -2059,11 +2092,13 @@ impl Chain for SolanaClient {
 			let instruction_len = instruction_data.len() as u32;
 			instruction_data.splice(..0, instruction_len.to_le_bytes());
 
+			messages_indeed.push(message.clone());
+
 			let balance = program.async_rpc().get_balance(&authority.pubkey()).await.unwrap();
-			println!("This is balance {}", balance);
-			println!("This is start of payload ---------------------------------");
-			println!("{:?}", message);
-			println!("This is end of payload ----------------------------------");
+			log::info!("This is balance {}", balance);
+			log::info!("This is start of payload ---------------------------------");
+			log::info!("{:?}", message);
+			log::info!("This is end of payload ----------------------------------");
 
 			let max_tries = 5;
 
@@ -2103,18 +2138,19 @@ impl Chain for SolanaClient {
 			// }
 
 			let (signature_chunking_transactions, further_transactions) =
-				if let MsgEnvelope::Client(ClientMsg::UpdateClient(e)) = message {
-					self.send_deliver(
-						DeliverIxType::UpdateClient {
-							client_message: e.client_message,
-							client_id: e.client_id,
-						},
-						chunk_account,
-						max_tries,
-					)
-					.await?
-				// msg!("Packet Update Signature {:?}", signature);
-				} else if let MsgEnvelope::Packet(PacketMsg::Recv(e)) = message {
+				// if let MsgEnvelope::Client(ClientMsg::UpdateClient(e)) = message {
+				// 	self.send_deliver(
+				// 		DeliverIxType::UpdateClient {
+				// 			client_message: e.client_message,
+				// 			client_id: e.client_id,
+				// 		},
+				// 		chunk_account,
+				// 		max_tries,
+				// 	)
+				// 	.await?
+				// // msg!("Packet Update Signature {:?}", signature);
+				// } else
+				 if let MsgEnvelope::Packet(PacketMsg::Recv(e)) = message {
 					let packet_data: ibc_app_transfer_types::packet::PacketData =
 						serde_json::from_slice(&e.packet.data).unwrap();
 					self.send_deliver(
@@ -2226,6 +2262,7 @@ impl Chain for SolanaClient {
 		}
 
 		let total_transactions_length = all_transactions.iter().fold(0, |acc, tx| acc + tx.len());
+		let mut failure = false;
 
 		match self.transaction_sender {
 			TransactionSender::RPC => {
@@ -2233,24 +2270,35 @@ impl Chain for SolanaClient {
 				log::info!("Total transactions {:?}", length);
 				let start_time = Instant::now();
 				for transactions_iter in all_transactions {
+					log::info!("Came inside all events");
 					let mut tries = 0;
 					let before_time = Instant::now();
 					for mut transaction in transactions_iter {
 						loop {
-							sleep(Duration::from_secs(1));
-							log::info!("Current Try: {}", tries);
+							log::info!("Current Try in solana: {}", tries);
 							let blockhash = rpc.get_latest_blockhash().await.unwrap();
+							log::info!("Blockhash in solana {:?} and {:?}", blockhash, messages_indeed.clone());
 							transaction.sign(&[&*authority], blockhash);
-							let sig = rpc
-								.send_transaction_with_config(
-									&transaction,
-									RpcSendTransactionConfig {
-										skip_preflight: true,
-										// max_retries: Some(0),
-										..RpcSendTransactionConfig::default()
-									},
-								)
-								.await;
+							let tx = transaction.clone();
+							log::info!("Signed now in solana {:?}", messages_indeed.clone());
+							let sync_rpc = self.program().rpc();
+							let rpc = self.rpc_client();
+							let messagessss = messages_indeed.clone();
+							let sig = spawn_blocking(move || {
+								log::info!("Sending transaction {:?}", messagessss.clone());
+								sync_rpc
+									.send_transaction_with_config(
+										&tx,
+										RpcSendTransactionConfig {
+											skip_preflight: true,
+											max_retries: Some(0),
+											..RpcSendTransactionConfig::default()
+										},
+									)
+									.unwrap()
+							})
+							.await;
+							log::info!("This is sig {:?}", sig);
 
 							if let Ok(si) = sig {
 								signature = si.to_string();
@@ -2270,6 +2318,8 @@ impl Chain for SolanaClient {
 												e
 											);
 											success = true;
+											failure = true;
+											log::error!("Failure {}", failure);
 											break;
 										},
 										None => {
@@ -2287,6 +2337,7 @@ impl Chain for SolanaClient {
 												break;
 											} else if status_retry < usize::MAX {
 												// Retry twice a second
+												log::info!("Retyring since blockhash is not valid");
 												sleep(Duration::from_millis(500));
 												continue;
 											}
@@ -2296,11 +2347,13 @@ impl Chain for SolanaClient {
 								if !success {
 									tries += 1;
 									continue;
+									sleep(Duration::from_secs(1));
 								}
 								break;
 							} else {
 								log::error!("Error {:?}", sig);
 								tries += 1;
+								sleep(Duration::from_secs(1));
 								continue;
 							}
 						}
@@ -2309,6 +2362,7 @@ impl Chain for SolanaClient {
 						let success_rate = 100 / (tries + 1);
 						log::info!("Time taken {}", diff.as_millis());
 						log::info!("Success rate {}", success_rate);
+						log::info!("Failure {}", failure);
 					}
 				}
 				let end_time = Instant::now();
@@ -2418,7 +2472,11 @@ impl Chain for SolanaClient {
 		// Wait for finalizing the transaction
 		if !self.common_state.handshake_completed {
 			loop {
-				log::info!("Finalizing Transaction");
+				log::info!("Finalizing Transaction {}", failure);
+				if failure {
+					log::error!("Breaking due to error");
+					break;
+				}
 				let result = rpc
 					.confirm_transaction_with_commitment(
 						&Signature::from_str(&signature).unwrap(),
@@ -2435,6 +2493,8 @@ impl Chain for SolanaClient {
 			}
 		}
 
+		*self.is_transaction_processing.lock().unwrap() = false;
+		log::info!("Finished processing transaction");
 		Ok(signature)
 	}
 

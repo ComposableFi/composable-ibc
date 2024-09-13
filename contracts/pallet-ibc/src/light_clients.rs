@@ -79,7 +79,19 @@ pub struct HostFunctionsManager;
 /// Ed25519 public key (a.k.a. verifying key).
 #[derive(Clone, Debug, Eq, Hash, PartialEq)]
 #[repr(transparent)]
-pub struct PubKey(ed25519_dalek::VerifyingKey);
+pub struct PubKey(pub ed25519_dalek::VerifyingKey);
+
+impl PubKey {
+	pub fn to_bytes(&self) -> [u8; 32] {
+		self.0.as_bytes().clone()
+	}
+}
+
+impl Signature {
+	pub fn to_bytes(&self) -> [u8; 64] {
+		self.0.to_bytes()
+	}
+}
 
 impl guestchain::PubKey for PubKey {
 	type Signature = Signature;
@@ -127,7 +139,7 @@ impl Ord for PubKey {
 /// Ed25519 signature.
 #[derive(Clone, PartialEq, Eq, Debug)]
 #[repr(transparent)]
-pub struct Signature(ed25519_dalek::Signature);
+pub struct Signature(pub ed25519_dalek::Signature);
 
 impl guestchain::Signature for Signature {
 	fn to_vec(&self) -> Vec<u8> {

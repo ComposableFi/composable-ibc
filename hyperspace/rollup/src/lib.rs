@@ -113,7 +113,7 @@ use trie_ids::{ClientIdx, ConnectionIdx, PortChannelPK, Tag, TrieKey};
 
 use crate::{
 	client::TransactionSender,
-	events::{get_events_from_logs, SearchIn},
+	events::{get_events_from_logs, SearchIn, TrieResponse},
 };
 pub use crate::{
 	client::{DeliverIxType, RollupClient, RollupClientConfig},
@@ -222,12 +222,22 @@ impl IbcProvider for RollupClient {
 			id: 10,
 			method: "getLatestSlotData".to_string(),
 		};
-		let response = reqwest::blocking::Client::new()
-			.post(self.trie_rpc_url.clone())
-			.json(&body)
-			.send()
-			.unwrap();
-		let response: events::TrieResponse = response.json().unwrap();
+		let url = self.trie_rpc_url.clone();
+		let response = tokio::task::spawn_blocking(move || {
+			for _ in 0..5 {
+				let response =
+					reqwest::blocking::Client::new().post(url.clone()).json(&body).send();
+				let response = skip_fail!(response);
+				let response: std::result::Result<events::TrieResponse, reqwest::Error> =
+					response.json();
+				let transactions = skip_fail!(response);
+				return transactions;
+			}
+			log::error!("Couldnt get transactions after 5 retries");
+			panic!("WTF");
+		})
+		.await
+		.unwrap();
 		let slot_data = response.result.1;
 		let bank_hash = slot_data.delta_hash_proof.calculate_bank_hash();
 		let header = cf_solana_og::Header {
@@ -244,8 +254,12 @@ impl IbcProvider for RollupClient {
 			signer: counterparty.account_id(),
 		};
 
+		let has_init_event = block_events
+			.iter()
+			.find(|eve| matches!(eve, IbcEvent::OpenConfirmConnection(_)));
+
 		let update_type =
-			if block_events.len() > 0 { UpdateType::Mandatory } else { UpdateType::Optional };
+			if (block_events.len() > 0) { UpdateType::Mandatory } else { UpdateType::Optional };
 
 		let update = (msg.to_any(), Height::new(1, response.result.0), block_events, update_type);
 
@@ -355,7 +369,6 @@ deserialize consensus state"
 		let inner_any = consensus_state.clone().encode_vec();
 		log::info!("this is consensus state {:?}", consensus_state);
 		log::info!("This is inner any consensus state {:?}", inner_any);
-		let chain_account = self.get_chain_storage().await;
 		Ok(QueryConsensusStateResponse {
 			consensus_state: Some(cs_state.into()),
 			proof: borsh::to_vec(&consensus_state_proof).unwrap(),
@@ -1456,16 +1469,21 @@ deserialize client state"
 		let (height, timestamp) = self.latest_height_and_timestamp().await?;
 		println!("This is height on solana {:?} and timestamp {:?}", height, timestamp);
 		let (trie_data, _at_height) = self.get_trie(0, false).await;
+		let witness_key = self.get_witness_key();
+		let storage = self.get_ibc_storage().await;
+		let (slot, slot_timestamp, trie_root) =
+			storage.local_consensus_state.iter().last().unwrap();
+		let slot_time = self.rpc_client().get_block_time(slot.clone()).await.unwrap();
+		log::info!("Slot time and timestamp\n{}\n{}", slot_time, slot_timestamp);
 		let client_state = cf_solana_og::ClientState {
-			latest_slot: NonZeroU64::new(height.revision_height).unwrap(),
-			// TODO: derive witness account from program id
-			witness_account: Pubkey::default().into(),
+			latest_slot: NonZeroU64::new(slot.clone()).unwrap(),
+			witness_account: witness_key.into(),
 			trusting_period_ns: 86400 * 7 * 10u64.pow(9), // 1 week
 			is_frozen: false,
 		};
 		let consensus_state = cf_solana_og::ConsensusState {
-			trie_root: CommitmentRoot::from_bytes(trie_data.hash().as_slice()),
-			timestamp_sec: NonZeroU64::new(timestamp.nanoseconds() / 10u64.pow(9)).unwrap(),
+			trie_root: CommitmentRoot::from_bytes(trie_root.as_slice()),
+			timestamp_sec: NonZeroU64::new(slot_time as u64).unwrap(),
 		};
 		Ok((
 			AnyClientState::Rollup(cf_solana::ClientState(client_state)),
@@ -1753,6 +1771,7 @@ impl Chain for RollupClient {
 			let (_block_subscription, receiver) = PubsubClient::block_subscribe(
 				&ws_url,
 				RpcBlockSubscribeFilter::MentionsAccountOrProgram(program_id.to_string()),
+				// RpcBlockSubscribeFilter::All,
 				Some(RpcBlockSubscribeConfig {
 					commitment: Some(CommitmentConfig::finalized()),
 					..Default::default()
@@ -1763,9 +1782,11 @@ impl Chain for RollupClient {
 			loop {
 				match receiver.recv() {
 					Ok(block) => {
+						sleep(Duration::from_secs(10));
+						log::info!("Found rollup event");
 						let block = block.value;
 						let confirmed_block = block.block.unwrap();
-						log::info!("Found finality event");
+						// log::info!("Found finality event");
 						let mut broke = false;
 						let finality_event = FinalityEvent::Rollup {
 							slot: block.slot,
@@ -1790,7 +1811,7 @@ impl Chain for RollupClient {
 
 	async fn submit(&self, messages: Vec<Any>) -> Result<Self::TransactionId, Error> {
 		let keypair = self.keybase.keypair();
-		println!("submitting tx now, {}", keypair.pubkey());
+		log::info!("submitting tx now, {}", keypair.pubkey());
 		let authority = Arc::new(keypair);
 		let program = self.program();
 
@@ -1799,8 +1820,13 @@ impl Chain for RollupClient {
 		let rpc = program.async_rpc();
 
 		let mut all_transactions = Vec::new();
+		let mut index = -1;
 
 		for message in messages {
+			index += 1;
+			if index > 1 {
+				break;
+			}
 			let storage = self.get_ibc_storage().await;
 			let my_message = Ics26Envelope::<LocalClientTypes>::try_from(message.clone()).unwrap();
 			let new_messages = convert_old_msgs_to_new(vec![my_message]);
@@ -1813,10 +1839,10 @@ impl Chain for RollupClient {
 			instruction_data.splice(..0, instruction_len.to_le_bytes());
 
 			let balance = program.async_rpc().get_balance(&authority.pubkey()).await.unwrap();
-			println!("This is balance {}", balance);
-			println!("This is start of payload ---------------------------------");
-			println!("{:?}", message);
-			println!("This is end of payload ----------------------------------");
+			log::info!("This is balance {}", balance);
+			log::info!("This is start of payload ---------------------------------");
+			log::info!("{:?}", message);
+			log::info!("This is end of payload ----------------------------------");
 
 			let max_tries = 5;
 
@@ -1856,19 +1882,18 @@ impl Chain for RollupClient {
 			// }
 
 			let (signature_chunking_transactions, further_transactions) =
-				// if let MsgEnvelope::Client(ClientMsg::UpdateClient(e)) = message {
-				// 	self.send_deliver(
-				// 		DeliverIxType::UpdateClient {
-				// 			client_message: e.client_message,
-				// 			client_id: e.client_id,
-				// 		},
-				// 		chunk_account,
-				// 		max_tries,
-				// 	)
-				// 	.await?
-				// // msg!("Packet Update Signature {:?}", signature);
-				// } else
-				 if let MsgEnvelope::Packet(PacketMsg::Recv(e)) = message {
+				if let MsgEnvelope::Client(ClientMsg::UpdateClient(e)) = message {
+					self.send_deliver(
+						DeliverIxType::UpdateClient {
+							client_message: e.client_message,
+							client_id: e.client_id,
+						},
+						chunk_account,
+						max_tries,
+					)
+					.await?
+				// msg!("Packet Update Signature {:?}", signature);
+				} else if let MsgEnvelope::Packet(PacketMsg::Recv(e)) = message {
 					let packet_data: ibc_app_transfer_types::packet::PacketData =
 						serde_json::from_slice(&e.packet.data).unwrap();
 					self.send_deliver(
@@ -1980,6 +2005,7 @@ impl Chain for RollupClient {
 		}
 
 		let total_transactions_length = all_transactions.iter().fold(0, |acc, tx| acc + tx.len());
+		let mut failure = false;
 
 		match self.transaction_sender {
 			TransactionSender::RPC => {
@@ -1992,19 +2018,27 @@ impl Chain for RollupClient {
 					for mut transaction in transactions_iter {
 						loop {
 							sleep(Duration::from_secs(1));
-							log::info!("Current Try: {}", tries);
+							log::info!("Current Try in rollup: {}", tries);
 							let blockhash = rpc.get_latest_blockhash().await.unwrap();
+							log::info!("Blockhash {:?}", blockhash);
 							transaction.sign(&[&*authority], blockhash);
-							let sig = rpc
-								.send_transaction_with_config(
-									&transaction,
-									RpcSendTransactionConfig {
-										skip_preflight: true,
-										max_retries: Some(0),
-										..RpcSendTransactionConfig::default()
-									},
-								)
-								.await;
+							let tx = transaction.clone();
+							log::info!("Signed now ");
+							let sync_rpc = self.program().rpc();
+							let rpc = self.rpc_client();
+							let sig = spawn_blocking(move || {
+								sync_rpc
+									.send_transaction_with_config(
+										&tx,
+										RpcSendTransactionConfig {
+											skip_preflight: true,
+											max_retries: Some(0),
+											..RpcSendTransactionConfig::default()
+										},
+									)
+									.unwrap()
+							})
+							.await;
 
 							if let Ok(si) = sig {
 								signature = si.to_string();
@@ -2024,6 +2058,7 @@ impl Chain for RollupClient {
 												e
 											);
 											success = true;
+											failure = true;
 											break;
 										},
 										None => {
@@ -2172,7 +2207,11 @@ impl Chain for RollupClient {
 		// Wait for finalizing the transaction
 		if !self.common_state.handshake_completed {
 			loop {
-				log::info!("Finalizing Transaction");
+				log::info!("Finalizing Transaction {}", failure);
+				if failure {
+					log::error!("Breaking due to error");
+					break;
+				}
 				let result = rpc
 					.confirm_transaction_with_commitment(
 						&Signature::from_str(&signature).unwrap(),

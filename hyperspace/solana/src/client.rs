@@ -120,6 +120,7 @@ pub struct SolanaClient {
 	pub trie_db_path: String,
 	// Sets whether to use JITO or RPC for submitting transactions
 	pub transaction_sender: TransactionSender,
+	pub is_transaction_processing: Arc<Mutex<bool>>,
 }
 
 #[derive(std::fmt::Debug, Serialize, Deserialize, Clone)]
@@ -245,26 +246,26 @@ impl SolanaClient {
 		require_proof: bool,
 	) -> (solana_trie::TrieAccount<Vec<u8>, ()>, bool) {
 		let connection = self.get_db();
-		// if require_proof {
-		// 	let row = connection.query_row("SELECT * FROM Trie WHERE height=?1", [at], |row| {
-		// 		Ok(Trie {
-		// 			id: row.get(0)?,
-		// 			height: row.get(1)?,
-		// 			data: row.get(2)?,
-		// 			state_root: row.get(3)?,
-		// 			match_block_state_root: row.get(4)?,
-		// 		})
-		// 	});
-		// 	if let Ok(trie) = row {
-		// 		log::info!("Does block state roots match {}", trie.match_block_state_root);
-		// 		if trie.match_block_state_root {
-		// 			return (
-		// 				solana_trie::TrieAccount::new(trie.data).unwrap(),
-		// 				trie.match_block_state_root,
-		// 			);
-		// 		}
-		// 	}
-		// }
+		if require_proof {
+			let row = connection.query_row("SELECT * FROM Trie WHERE height=?1", [at], |row| {
+				Ok(Trie {
+					id: row.get(0)?,
+					height: row.get(1)?,
+					data: row.get(2)?,
+					state_root: row.get(3)?,
+					match_block_state_root: row.get(4)?,
+				})
+			});
+			if let Ok(trie) = row {
+				log::info!("Does block state roots match {}", trie.match_block_state_root);
+				if trie.match_block_state_root {
+					return (
+						solana_trie::TrieAccount::new(trie.data).unwrap(),
+						trie.match_block_state_root,
+					);
+				}
+			}
+		}
 		let trie_key = self.get_trie_key();
 		let rpc_client = self.rpc_client();
 		let trie_account = rpc_client
@@ -364,6 +365,7 @@ impl SolanaClient {
 			channel_whitelist: Arc::new(Mutex::new(config.channel_whitelist.into_iter().collect())),
 			trie_db_path: config.trie_db_path,
 			transaction_sender,
+			is_transaction_processing: Arc::new(Mutex::new(false))
 		})
 	}
 

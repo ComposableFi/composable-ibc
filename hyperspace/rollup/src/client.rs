@@ -54,6 +54,7 @@ use crate::{
 	error::Error,
 	utils::{new_ed25519_instruction_with_signature, non_absent_vote},
 };
+use guestchain::{PubKey, Signature as _};
 use solana_ibc::{
 	chain::ChainData, events::BlockFinalised, ix_data_account, storage::PrivateStorage,
 };
@@ -407,128 +408,29 @@ impl RollupClient {
 		// let sig =
 		match instruction_type {
 			DeliverIxType::UpdateClient { ref client_message, ref client_id } => {
-				let header =
-					ibc_client_tendermint_types::Header::try_from(client_message.clone()).unwrap();
-				let trusted_state = {
-					let storage = self.get_ibc_storage().await;
-					log::info!("This is client ID {:?}", client_id);
-					let client_store = storage
-							.clients
-							.iter()
-							.find(|&client| client.client_id.as_str() == client_id.as_str())
-							.ok_or("Client not found with the given client id while sending update client message".to_owned())
-							.unwrap();
-					let serialized_consensus_state = client_store
-						.consensus_states
-						.deref()
-						.get(
-							&ibc_core_client_types::Height::new(
-								header.trusted_height.revision_number(),
-								header.trusted_height.revision_height(),
-							)
-							.unwrap(),
-						)
-						.ok_or(Error::Custom("No value at given key".to_owned()))
-						.unwrap();
-					let consensus_state = serialized_consensus_state
-						.state()
-						.map_err(|_| {
-							Error::Custom(
-								"Could not
-deserialize consensus state"
-									.to_owned(),
-							)
-						})
-						.unwrap();
-					let trusted_consensus_state = match consensus_state {
-						solana_ibc::consensus_state::AnyConsensusState::Tendermint(e) => e,
-						_ => panic!(),
-					};
+				let header = cf_guest_og::Header::<pallet_ibc::light_clients::PubKey>::try_from(
+					client_message.clone(),
+				)
+				.unwrap();
 
-					header
-						.check_trusted_next_validator_set::<tendermint::crypto::default::Sha256>(
-							trusted_consensus_state.inner(),
-						)
-						.unwrap();
+				let mut pubkeys = vec![];
+				let mut final_signatures = vec![];
+				let mut messages = vec![];
 
-					TrustedBlockState {
-						chain_id: &self.chain_id.to_string().try_into().unwrap(),
-						header_time: trusted_consensus_state.timestamp(),
-						height: header.trusted_height.revision_height().try_into().unwrap(),
-						next_validators: &header.trusted_next_validator_set,
-						next_validators_hash: trusted_consensus_state.next_validators_hash(),
-					}
-				};
-
-				let untrusted_state = UntrustedBlockState {
-					signed_header: &header.signed_header,
-					validators: &header.validator_set,
-					// NB: This will skip the
-					// VerificationPredicates::next_validators_match check for the
-					// untrusted state.
-					next_validators: None,
-				};
-				let signed_header = untrusted_state.signed_header;
-				let validator_set = trusted_state.next_validators;
-				let signatures = &signed_header.commit.signatures;
-				// log::info!("These are signatures {:?}", signatures);
-
-				let mut seen_validators = HashSet::new();
-
-				// Get non-absent votes from the signatures
-				let non_absent_votes =
-					signatures.iter().enumerate().flat_map(|(idx, signature)| {
-						non_absent_vote(
-							signature,
-							ValidatorIndex::try_from(idx).unwrap(),
-							&signed_header.commit,
-						)
-						.map(|vote| (signature, vote))
-					});
-				let mut pubkeys = Vec::new();
-				let mut final_signatures = Vec::new();
-				let mut messages = Vec::new();
-				for (_signature, vote) in non_absent_votes {
-					// Ensure we only count a validator's power once
-					if seen_validators.contains(&vote.validator_address) {
-						// return Err(VerificationError::duplicate_validator(
-						// 	vote.validator_address,
-						// ))
-						panic!("Duplicate validator");
-					} else {
-						seen_validators.insert(vote.validator_address);
-					}
-
-					let validator = match validator_set.validator(vote.validator_address) {
-						Some(validator) => validator,
-						None => continue, // Cannot find matching validator, so we skip the vote
-					};
-
-					let signed_vote =
-						SignedVote::from_vote(vote.clone(), signed_header.header.chain_id.clone())
-							.unwrap();
-
-					// Check vote is valid
-					let sign_bytes = signed_vote.sign_bytes();
-					pubkeys.push(validator.pub_key.to_bytes());
-					final_signatures.push(signed_vote.signature().clone().into_bytes());
-					messages.push(sign_bytes);
-
-					// if validator
-					// 	.verify_signature::<V>(&sign_bytes, signed_vote.signature())
-					// 	.is_err()
-					// {
-					// 	panic!("invalid signature");
-					// 	// return Err(VerificationError::invalid_signature(
-					// 	// 	signed_vote.signature().as_bytes().to_vec(),
-					// 	// 	Box::new(validator),
-					// 	// 	sign_bytes,
-					// 	// ))
-					// }
-
-					// TODO: Break out of the loop when we have enough voting power.
-					// See https://github.com/informalsystems/tendermint-rs/issues/235
+				let fp = guestchain::block::Fingerprint::from_hash(
+					&header.genesis_hash,
+					header.block_header.block_height,
+					&header.block_hash,
+				);
+				let mut validators =
+					header.epoch.validators().iter().map(Some).collect::<Vec<Option<&_>>>();
+				for (idx, sig) in header.signatures {
+					let validator = validators.get_mut(usize::from(idx)).unwrap().take().unwrap();
+					pubkeys.push(validator.pubkey().clone());
+					final_signatures.push(sig.to_vec());
+					messages.push(fp.as_slice());
 				}
+
 				// log::info!("Pubkeys {:?}", pubkeys);
 				// log::info!("final_signatures {:?}", final_signatures);
 				// log::info!("messages {:?}", messages);
@@ -584,17 +486,17 @@ deserialize consensus state"
 					for (pubkey, signature, message) in
 						izip!(&temp_pubkeys, &temp_signatures, &temp_messages,)
 					{
-						let pubkey = pubkey.as_slice().try_into().unwrap();
-						let signature = signature.as_slice().try_into().unwrap();
-						let message = message.as_slice().try_into().unwrap();
-						let entry: Entry = Entry { pubkey, signature, message };
+						let pubkey = pubkey.0.as_bytes();
+						let sig = signature.as_slice().try_into().unwrap();
+						let message = message.clone();
+						let entry: Entry = Entry { pubkey, signature: sig, message };
 						entries.push(entry);
 					}
 					let ix = program
 						.request()
 						.instruction(ComputeBudgetInstruction::set_compute_unit_limit(300_000))
 						// .instruction(ComputeBudgetInstruction::set_compute_unit_price(50_000))
-						.instruction(new_instruction(entries.as_slice()).unwrap())
+						.instruction(new_instruction(entries.clone().as_slice()).unwrap())
 						.instruction(instruction)
 						.instructions()
 						.unwrap();
@@ -622,22 +524,65 @@ deserialize consensus state"
 					.instruction(ComputeBudgetInstruction::set_compute_unit_limit(2_000_000u32))
 					.instruction(ComputeBudgetInstruction::request_heap_frame(256 * 1024))
 					// .instruction(ComputeBudgetInstruction::set_compute_unit_price(50_000))
-					.accounts(solana_ibc::accounts::Deliver {
-						sender: authority.pubkey(),
-						receiver: Some(self.solana_ibc_program_id),
-						storage: solana_ibc_storage_key,
-						trie: trie_key,
-						chain: chain_key,
-						system_program: system_program::ID,
-						mint_authority: Some(self.solana_ibc_program_id),
-						token_mint: Some(self.solana_ibc_program_id),
-						escrow_account: Some(self.solana_ibc_program_id),
-						fee_collector: Some(self.get_fee_collector_key()),
-						receiver_token_account: Some(self.solana_ibc_program_id),
-						associated_token_program: Some(self.solana_ibc_program_id),
-						token_program: Some(self.solana_ibc_program_id),
-					})
 					.accounts(vec![
+						AccountMeta {
+							is_signer: true,
+							is_writable: true,
+							pubkey: authority.pubkey(),
+						},
+						AccountMeta {
+							is_signer: false,
+							is_writable: true,
+							pubkey: self.solana_ibc_program_id,
+						},
+						AccountMeta {
+							is_signer: false,
+							is_writable: true,
+							pubkey: solana_ibc_storage_key,
+						},
+						AccountMeta { is_signer: false, is_writable: true, pubkey: trie_key },
+						AccountMeta { is_signer: false, is_writable: true, pubkey: witness_key },
+						AccountMeta { is_signer: false, is_writable: true, pubkey: chain_key },
+						AccountMeta {
+							is_signer: false,
+							is_writable: true,
+							pubkey: self.solana_ibc_program_id,
+						},
+						AccountMeta {
+							is_signer: false,
+							is_writable: true,
+							pubkey: self.solana_ibc_program_id,
+						},
+						AccountMeta {
+							is_signer: false,
+							is_writable: true,
+							pubkey: self.solana_ibc_program_id,
+						},
+						AccountMeta {
+							is_signer: false,
+							is_writable: true,
+							pubkey: self.solana_ibc_program_id,
+						},
+						AccountMeta {
+							is_signer: false,
+							is_writable: true,
+							pubkey: self.solana_ibc_program_id,
+						},
+						AccountMeta {
+							is_signer: false,
+							is_writable: true,
+							pubkey: self.solana_ibc_program_id,
+						},
+						AccountMeta {
+							is_signer: false,
+							is_writable: true,
+							pubkey: self.solana_ibc_program_id,
+						},
+						AccountMeta {
+							is_signer: false,
+							is_writable: true,
+							pubkey: system_program::ID,
+						},
 						AccountMeta {
 							pubkey: signatures_account_pda,
 							is_signer: false,

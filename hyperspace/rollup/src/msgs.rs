@@ -26,9 +26,11 @@ use ibc_core_handler_types::msgs::MsgEnvelope;
 use ibc_core_host_types::identifiers::{ChannelId, ClientId, ConnectionId, PortId, Sequence};
 use ibc_new_primitives::{Signer, Timestamp};
 use ibc_proto_new::{google::protobuf::Any, ibc::core::connection::v1::Version};
-use ics08_wasm::client_state::WASM_CLIENT_STATE_TYPE_URL;
 use primitives::mock::LocalClientTypes;
 use std::str::FromStr;
+use prost::Message;
+
+const ROLLUP_CLIENT_STATE_TYPE_URL: &'static str = cf_solana::proto::ClientState::IBC_TYPE_URL;
 
 use crate::{
 	client_state::convert_old_client_state_to_new,
@@ -134,7 +136,7 @@ pub fn convert_old_msgs_to_new(messages: Vec<Ics26Envelope<LocalClientTypes>>) -
 						signer: Signer::from(e.signer.as_ref().to_string()),
 						client_id_on_b: ClientId::from_str(e.client_id.as_str()).unwrap(),
 						client_state_of_b_on_a: Any {
-							type_url: WASM_CLIENT_STATE_TYPE_URL.to_string(),
+							type_url: ROLLUP_CLIENT_STATE_TYPE_URL.to_string(),
 							value: encoded_cs.value,
 						},
 						versions_on_a: e
@@ -203,7 +205,7 @@ pub fn convert_old_msgs_to_new(messages: Vec<Ics26Envelope<LocalClientTypes>>) -
 						conn_id_on_b: ConnectionId::from_str(e.counterparty_connection_id.as_str())
 							.unwrap(),
 						client_state_of_a_on_b: Any {
-							type_url: WASM_CLIENT_STATE_TYPE_URL.to_string(),
+							type_url: ROLLUP_CLIENT_STATE_TYPE_URL.to_string(),
 							value: encoded_cs.value,
 						},
 						proof_conn_end_on_b: CommitmentProofBytes::try_from(

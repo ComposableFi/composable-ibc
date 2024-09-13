@@ -683,7 +683,7 @@ pub async fn get_events_upto_height(
 	program_id: Pubkey,
 	upto_height: u64,
 ) -> Vec<ibc_core_handler_types::events::IbcEvent> {
-	let mut current_height = upto_height;
+	let mut current_height = rpc.get_slot().await.unwrap();
 	let mut before_hash = None;
 	let mut all_ibc_events = vec![];
 	while current_height >= upto_height {
@@ -707,6 +707,7 @@ pub async fn get_events_upto_height(
 			let (ibc_events, _) = get_ibc_events_from_logs(logs);
 			all_ibc_events.extend(ibc_events);
 			current_height = tx.result.slot;
+			log::info!("Current height {} and upto height {}", current_height, upto_height);
 			if current_height < upto_height {
 				break;
 			}
