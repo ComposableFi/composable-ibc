@@ -18,10 +18,9 @@ use crate::{
 	error::ContractError,
 	log,
 	msg::{
-		CheckForMisbehaviourMsg, CheckSubstituteAndUpdateStateMsg, ContractResult, ExecuteMsg,
-		ExportMetadataMsg, InstantiateMsg, MigrateMsg, QueryMsg, QueryResponse, StatusMsg,
-		UpdateStateMsg, UpdateStateOnMisbehaviourMsg, VerifyClientMessage, VerifyMembershipMsg,
-		VerifyNonMembershipMsg, VerifyUpgradeAndUpdateStateMsg,
+		CheckForMisbehaviourMsg, ContractResult, ExportMetadataMsg, QueryMsg, QueryResponse,
+		StatusMsg, SudoMsg, UpdateStateMsg, UpdateStateOnMisbehaviourMsg, VerifyClientMessage,
+		VerifyMembershipMsg, VerifyNonMembershipMsg, VerifyUpgradeAndUpdateStateMsg,
 	},
 	state::{get_client_state, get_consensus_state},
 	Bytes,
