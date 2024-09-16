@@ -92,8 +92,8 @@ async fn setup_clients() -> (AnyChain, AnyChain) {
 	let mut config_b = CosmosClientConfig {
 		name: "cosmos".to_string(),
 		rpc_url: args.chain_b.clone().parse().unwrap(),
-		grpc_url: args.cosmos_grpc.clone().parse().unwrap(),
-		websocket_url: args.cosmos_ws.clone().parse().unwrap(),
+		grpc_url: args.cosmos_grpc.clone().parse().map(Some).unwrap(),
+		websocket_url: args.cosmos_ws.clone().parse().map(Some).unwrap(),
 		chain_id: "ibcgo-1".to_string(),
 		client_id: None,
 		connection_id: None,
@@ -171,7 +171,7 @@ async fn setup_clients() -> (AnyChain, AnyChain) {
 #[tokio::test]
 #[ignore]
 async fn parachain_to_cosmos_ibc_messaging_full_integration_test() {
-	logging::setup_logging();
+	logging::setup_logging(true);
 
 	let asset_id_a = AnyAssetId::Parachain(1);
 	let asset_id_b = AnyAssetId::Cosmos(
@@ -238,7 +238,7 @@ async fn parachain_to_cosmos_ibc_messaging_full_integration_test() {
 #[tokio::test]
 #[ignore]
 async fn cosmos_to_parachain_ibc_messaging_full_integration_test() {
-	logging::setup_logging();
+	logging::setup_logging(true);
 
 	let (chain_a, chain_b) = setup_clients().await;
 	let (mut chain_b, mut chain_a) = (chain_a, chain_b);

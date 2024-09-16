@@ -131,7 +131,7 @@ async fn setup_clients() -> (ParachainClient<DefaultConfig>, ParachainClient<Def
 
 #[tokio::test]
 async fn parachain_to_parachain_ibc_messaging_full_integration_test() {
-	logging::setup_logging();
+	logging::setup_logging(true);
 	use hyperspace_testsuite::setup_connection_and_channel;
 	use ibc::core::ics24_host::identifier::PortId;
 	let (mut chain_a, mut chain_b) = setup_clients().await;
