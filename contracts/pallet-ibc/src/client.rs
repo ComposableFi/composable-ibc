@@ -275,6 +275,7 @@ where
 				let cs_state = ics10_grandpa::consensus_state::ConsensusState {
 					timestamp,
 					root: header.state_root().as_ref().to_vec().into(),
+					relaychain_hashes: vec![],
 				};
 				let cs = AnyConsensusState::Grandpa(cs_state);
 

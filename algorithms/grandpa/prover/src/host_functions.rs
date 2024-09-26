@@ -35,12 +35,4 @@ impl HostFunctions for HostFunctionsProvider {
 	fn ed25519_verify(sig: &Signature, msg: &[u8], pubkey: &Public) -> bool {
 		pubkey.verify(&msg, sig)
 	}
-
-	fn insert_relay_header_hashes(_headers: &[<Self::Header as Header>::Hash]) {
-		unimplemented!()
-	}
-
-	fn contains_relay_header_hash(_hash: <Self::Header as Header>::Hash) -> bool {
-		unimplemented!()
-	}
 }

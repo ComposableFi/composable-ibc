@@ -39,11 +39,12 @@ pub const GRANDPA_CONSENSUS_STATE_TYPE_URL: &str = "/ibc.lightclients.grandpa.v1
 pub struct ConsensusState {
 	pub timestamp: Time,
 	pub root: CommitmentRoot,
+	pub relaychain_hashes: Vec<H256>,
 }
 
 impl ConsensusState {
-	pub fn new(root: Vec<u8>, timestamp: Time) -> Self {
-		Self { timestamp, root: root.into() }
+	pub fn new(root: Vec<u8>, timestamp: Time, relaychain_hashes: Vec<H256>) -> Self {
+		Self { timestamp, root: root.into(), relaychain_hashes }
 	}
 
 	pub fn to_any(&self) -> Any {
@@ -57,6 +58,7 @@ impl ConsensusState {
 		parachain_header_proof: ParachainHeaderProofs,
 		para_id: u32,
 		relay_state_root: H256,
+		relaychain_hashes: Vec<H256>,
 	) -> Result<(Height, Self), Error>
 	where
 		H: grandpa_client_primitives::HostFunctions,
@@ -85,7 +87,7 @@ impl ConsensusState {
 
 		Ok((
 			Height::new(para_id as u64, parachain_header.number as u64),
-			Self { root: root.into(), timestamp },
+			Self { root: root.into(), timestamp, relaychain_hashes },
 		))
 	}
 }
@@ -120,7 +122,12 @@ impl TryFrom<RawConsensusState> for ConsensusState {
 			Error::Custom(format!("Invalid consensus state: invalid timestamp {e}"))
 		})?;
 
-		Ok(Self { root: raw.root.into(), timestamp })
+		let relaychain_hashes = raw
+			.relaychain_hashes
+			.into_iter()
+			.map(|hash| H256::from_slice(&hash))
+			.collect::<Vec<_>>();
+		Ok(Self { root: raw.root.into(), timestamp, relaychain_hashes })
 	}
 }
 
@@ -129,7 +136,17 @@ impl From<ConsensusState> for RawConsensusState {
 		let tpb::Timestamp { seconds, nanos } = value.timestamp.into();
 		let timestamp = prost_types::Timestamp { seconds, nanos };
 
-		RawConsensusState { timestamp: Some(timestamp), root: value.root.into_vec() }
+		let relaychain_hashes = value
+			.relaychain_hashes
+			.into_iter()
+			.map(|hash| hash.as_bytes().to_vec())
+			.collect::<Vec<Vec<u8>>>();
+
+		RawConsensusState {
+			timestamp: Some(timestamp),
+			root: value.root.into_vec(),
+			relaychain_hashes,
+		}
 	}
 }
 
@@ -142,6 +159,7 @@ pub mod test_util {
 		AnyConsensusState::Grandpa(ConsensusState {
 			timestamp: Time::now(),
 			root: vec![0; 32].into(),
+			relaychain_hashes: vec![],
 		})
 	}
 }

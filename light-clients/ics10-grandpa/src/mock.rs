@@ -65,19 +65,6 @@ impl grandpa_client_primitives::HostFunctions for HostFunctionsManager {
 	fn ed25519_verify(sig: &ed25519::Signature, msg: &[u8], pub_key: &ed25519::Public) -> bool {
 		pub_key.verify(&msg, sig)
 	}
-
-	fn insert_relay_header_hashes(headers: &[<Self::Header as Header>::Hash]) {
-		HEADER_HASHES.with(|set| {
-			let mut set_mut = set.borrow_mut();
-			for hash in headers {
-				set_mut.insert(hash.clone());
-			}
-		})
-	}
-
-	fn contains_relay_header_hash(hash: <Self::Header as Header>::Hash) -> bool {
-		HEADER_HASHES.with(|set| set.borrow().contains(&hash))
-	}
 }
 
 impl light_client_common::HostFunctions for HostFunctionsManager {

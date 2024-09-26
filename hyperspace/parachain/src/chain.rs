@@ -36,7 +36,9 @@ use ibc_proto::google::protobuf::Any;
 use ics10_grandpa::client_message::{ClientMessage, Misbehaviour, RelayChainHeader};
 use itertools::Itertools;
 use jsonrpsee_ws_client::WsClientBuilder;
-use light_client_common::config::{EventRecordT, RuntimeCall, RuntimeTransactions};
+use light_client_common::config::{
+	AsInner, EventRecordT, RuntimeCall, RuntimeStorage, RuntimeTransactions,
+};
 use pallet_ibc::light_clients::AnyClientMessage;
 use primitives::{
 	mock::LocalClientTypes, Chain, CommonClientState, IbcProvider, MisbehaviourHandler,
@@ -68,7 +70,7 @@ type BeefyJustification =
 
 /// An encoded justification proving that the given header has been finalized
 #[derive(Clone, serde::Serialize, serde::Deserialize)]
-struct JustificationNotification(sp_core::Bytes);
+pub struct JustificationNotification(sp_core::Bytes);
 
 #[async_trait::async_trait]
 impl<T: light_client_common::config::Config + Send + Sync + Clone + 'static> Chain
@@ -496,9 +498,30 @@ where
 						));
 					}
 
+					let parachain_header_bytes = {
+						let key = T::Storage::paras_heads(self.para_id);
+						let data = self
+							.relay_client
+							.storage()
+							.at(common_ancestor_header.hash())
+							.fetch(&key)
+							.await?
+							.expect("Header exists in its own changeset; qed");
+						<T::Storage as RuntimeStorage>::HeadData::from_inner(data)
+					};
+
+					let para_header = sp_runtime::generic::Header::<
+						u32,
+						sp_runtime::traits::BlakeTwo256,
+					>::decode(&mut parachain_header_bytes.as_ref())?;
+					let para_block_number = para_header.number;
+
 					let misbehaviour = ClientMessage::Misbehaviour(Misbehaviour {
 						first_finality_proof: header.finality_proof,
 						second_finality_proof: trusted_finality_proof,
+						// consensus state height which gives us our relaychain base header against
+						// which we validate misbehaviour
+						para_height: para_block_number.into(),
 					});
 
 					counterparty

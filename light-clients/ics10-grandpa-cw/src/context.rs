@@ -72,39 +72,6 @@ impl<'a, H> Context<'a, H> {
 	pub fn storage_mut(&mut self) -> &mut dyn Storage {
 		self.deps.storage
 	}
-
-	pub fn insert_relay_header_hashes(&mut self, headers: &[H256]) {
-		if headers.is_empty() {
-			return
-		}
-
-		let mut xs = GRANDPA_HEADER_HASHES_STORAGE.load(self.storage()).unwrap_or_default();
-		xs.reserve(headers.len());
-		for header in headers {
-			xs.push(*header);
-			let _ = GRANDPA_HEADER_HASHES_SET_STORAGE
-				.save(self.storage_mut(), header.0.to_vec(), &())
-				.map_err(|e| {
-					self.log(&format!("error saving hash to set: {e:?}"));
-				});
-		}
-		if xs.len() > GRANDPA_BLOCK_HASHES_CACHE_SIZE {
-			let drained = xs.drain(0..xs.len() - GRANDPA_BLOCK_HASHES_CACHE_SIZE);
-			for hash in drained {
-				GRANDPA_HEADER_HASHES_SET_STORAGE.remove(self.storage_mut(), hash.0.to_vec());
-			}
-		}
-		GRANDPA_HEADER_HASHES_STORAGE
-			.save(self.storage_mut(), &xs)
-			.expect("error saving header hashes");
-	}
-
-	pub fn contains_relay_header_hash(&self, hash: H256) -> bool {
-		GRANDPA_HEADER_HASHES_STORAGE
-			.load(self.storage())
-			.unwrap_or_default()
-			.contains(&hash)
-	}
 }
 
 impl<'a, H> Context<'a, H>

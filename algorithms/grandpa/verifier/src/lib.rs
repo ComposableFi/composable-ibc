@@ -54,7 +54,7 @@ where
 	Host: HostFunctions,
 	Host::BlakeTwo256: Hasher<Out = H256>,
 {
-	let ParachainHeadersWithFinalityProof { finality_proof, parachain_headers, latest_para_height } =
+	let ParachainHeadersWithFinalityProof { finality_proof, parachain_header, latest_para_height } =
 		proof;
 
 	// 1. First validate unknown headers.
@@ -102,51 +102,48 @@ where
 	justification.verify::<Host>(client_state.current_set_id, &client_state.current_authorities)?;
 
 	// 3. verify state proofs of parachain headers in finalized relay chain headers.
-	let mut para_heights = vec![];
-	for (hash, proofs) in parachain_headers {
-		if finalized.binary_search(&hash).is_err() {
-			// seems relay hash isn't in the finalized chain.
-			continue
-		}
-		let relay_chain_header =
-			headers.header(&hash).expect("Headers have been checked by AncestryChain; qed");
 
-		let ParachainHeaderProofs { extrinsic_proof, extrinsic, state_proof } = proofs;
-		let proof = StorageProof::new(state_proof);
-		let key = parachain_header_storage_key(client_state.para_id);
-		// verify patricia-merkle state proofs
-		let header = state_machine::read_proof_check::<Host::BlakeTwo256, _>(
-			relay_chain_header.state_root(),
-			proof,
-			&[key.as_ref()],
-		)
-		.map_err(|err| anyhow!("error verifying parachain header state proof: {err}"))?
-		.remove(key.as_ref())
-		.flatten()
-		.ok_or_else(|| anyhow!("Invalid proof, parachain header not found"))?;
-		let parachain_header = H::decode(&mut &header[..])?;
-		para_heights.push(parachain_header.number().clone().into());
-		// Timestamp extrinsic should be the first inherent and hence the first extrinsic
-		// https://github.com/paritytech/substrate/blob/d602397a0bbb24b5d627795b797259a44a5e29e9/primitives/trie/src/lib.rs#L99-L101
-		let key = codec::Compact(0u64).encode();
-		// verify extrinsic proof for timestamp extrinsic
-		sp_trie::verify_trie_proof::<LayoutV0<Host::BlakeTwo256>, _, _, _>(
-			parachain_header.extrinsics_root(),
-			&extrinsic_proof,
-			&vec![(key, Some(&extrinsic[..]))],
-		)
-		.map_err(|_| anyhow!("Invalid extrinsic proof"))?;
-	}
+	let (hash, proofs) = parachain_header;
+	finalized
+		.binary_search(&hash)
+		.map_err(|err| anyhow!("error searching for relaychain hash: {err}"))?;
+	let relay_chain_header =
+		headers.header(&hash).expect("Headers have been checked by AncestryChain; qed");
+
+	let ParachainHeaderProofs { extrinsic_proof, extrinsic, state_proof } = proofs;
+	let proof = StorageProof::new(state_proof);
+	let key = parachain_header_storage_key(client_state.para_id);
+	// verify patricia-merkle state proofs
+	let header = state_machine::read_proof_check::<Host::BlakeTwo256, _>(
+		relay_chain_header.state_root(),
+		proof,
+		&[key.as_ref()],
+	)
+	.map_err(|err| anyhow!("error verifying parachain header state proof: {err}"))?
+	.remove(key.as_ref())
+	.flatten()
+	.ok_or_else(|| anyhow!("Invalid proof, parachain header not found"))?;
+	let parachain_header = H::decode(&mut &header[..])?;
+	// Timestamp extrinsic should be the first inherent and hence the first extrinsic
+	// https://github.com/paritytech/substrate/blob/d602397a0bbb24b5d627795b797259a44a5e29e9/primitives/trie/src/lib.rs#L99-L101
+	let key = codec::Compact(0u64).encode();
+	// verify extrinsic proof for timestamp extrinsic
+	sp_trie::verify_trie_proof::<LayoutV0<Host::BlakeTwo256>, _, _, _>(
+		parachain_header.extrinsics_root(),
+		&extrinsic_proof,
+		&vec![(key, Some(&extrinsic[..]))],
+	)
+	.map_err(|_| anyhow!("Invalid extrinsic proof"))?;
 
 	// 4. set new client state, optionally rotating authorities
 	client_state.latest_relay_hash = target.hash();
 	client_state.latest_relay_height = (*target.number()).into();
-	if let Some(max_height) = para_heights.into_iter().max() {
-		if max_height != latest_para_height {
-			Err(anyhow!("Latest parachain header height doesn't match the one in the proof"))?;
-		}
-		client_state.latest_para_height = max_height;
+
+	if *parachain_header.number() != latest_para_height {
+		Err(anyhow!("Latest parachain header height doesn't match the one in the proof"))?;
 	}
+	client_state.latest_para_height = *parachain_header.number();
+
 	if let Some(scheduled_change) = find_scheduled_change::<H>(&target) {
 		client_state.current_set_id += 1;
 		client_state.current_authorities = scheduled_change.next_authorities;
