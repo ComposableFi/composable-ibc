@@ -320,7 +320,7 @@ impl IbcProvider for RollupClient {
 		consensus_height: Height,
 	) -> Result<QueryConsensusStateResponse, Self::Error> {
 		use ibc_proto_new::Protobuf;
-		let (trie, at_height) = self.get_trie(at.revision_height + 1, true).await;
+		let (trie, at_height) = self.get_trie(at.revision_height, true).await;
 		let storage = self.get_ibc_storage().await;
 		let revision_height = consensus_height.revision_height;
 		let revision_number = consensus_height.revision_number;
@@ -382,7 +382,7 @@ deserialize consensus state"
 		client_id: ClientId,
 	) -> Result<QueryClientStateResponse, Self::Error> {
 		log::info!("Quering solana client state at height {:?} {:?}", at, client_id);
-		let (trie, at_height) = self.get_trie(at.revision_height + 1, true).await;
+		let (trie, at_height) = self.get_trie(at.revision_height, true).await;
 		let storage = self.get_ibc_storage().await;
 		let new_client_id =
 			ibc_core_host_types::identifiers::ClientId::from_str(client_id.as_str()).unwrap();
@@ -434,7 +434,7 @@ deserialize client state"
 		connection_id: ConnectionId,
 	) -> Result<QueryConnectionResponse, Self::Error> {
 		use ibc_proto_new::Protobuf;
-		let (trie, at_height) = self.get_trie(at.revision_height + 1, true).await;
+		let (trie, at_height) = self.get_trie(at.revision_height, true).await;
 		let storage = self.get_ibc_storage().await;
 		let connection_idx = ConnectionIdx::try_from(
 			ibc_core_host_types::identifiers::ConnectionId::from_str(connection_id.as_str())
@@ -2039,6 +2039,8 @@ impl Chain for RollupClient {
 									.unwrap()
 							})
 							.await;
+
+							log::info!("This is sig {:?}", sig);
 
 							if let Ok(si) = sig {
 								signature = si.to_string();

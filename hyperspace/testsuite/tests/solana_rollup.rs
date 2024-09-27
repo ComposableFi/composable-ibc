@@ -56,8 +56,8 @@ impl Default for Args {
 
 		Args {
 			// chain_a: format!("https://devnet.helius-rpc.com/?api-key=bc5c0cfc-46df-4781-978f-af6ca7a202c2"),
-			chain_a: format!("http://{solana}:8899"),
-			chain_b: format!("http://{rollup}:9000"),
+			chain_a: format!("http://{solana}:9000"),
+			chain_b: format!("http://{rollup}:8899"),
 			connection_prefix_a: "ibc".to_string(),
 			connection_prefix_b: "ibc".to_string(),
 			solana_ws: format!("ws://{solana}:8900"),
@@ -171,12 +171,12 @@ async fn setup_clients() -> (AnyChain, AnyChain) {
 	// 	return (chain_a_wrapped, chain_b_wrapped)
 	// }
 
-	// let (client_a, client_b) =
-	// 	create_clients(&mut chain_a_wrapped, &mut chain_b_wrapped).await.unwrap();
-	// chain_a_wrapped.set_client_id(client_a);
-	// chain_b_wrapped.set_client_id(client_b);
-	chain_b_wrapped.set_client_id(ClientId::new("cf-solana", 11).unwrap());
-	chain_a_wrapped.set_client_id(ClientId::new("cf-guest", 10).unwrap());
+	let (client_a, client_b) =
+		create_clients(&mut chain_a_wrapped, &mut chain_b_wrapped).await.unwrap();
+	chain_a_wrapped.set_client_id(client_a);
+	chain_b_wrapped.set_client_id(client_b);
+	// chain_b_wrapped.set_client_id(ClientId::new("cf-solana", 11).unwrap());
+	// chain_a_wrapped.set_client_id(ClientId::new("cf-guest", 10).unwrap());
 	(chain_a_wrapped, chain_b_wrapped)
 }
 
@@ -188,8 +188,8 @@ async fn solana_to_rollup_ibc_messaging_full_integration_test() {
 	use std::str::FromStr;
 	logging::setup_logging();
 
-	let asset_id_a = AnyAssetId::Solana("So11111111111111111111111111111111111111112".to_string());
-	let asset_id_b = AnyAssetId::Rollup("So11111111111111111111111111111111111111112".to_string());
+	let asset_id_a = AnyAssetId::Solana("33WVSef9zaw49KbNdPGTmACVRnAXzN3o1fsqbUrLp2mh".to_string());
+	let asset_id_b = AnyAssetId::Rollup("33WVSef9zaw49KbNdPGTmACVRnAXzN3o1fsqbUrLp2mh".to_string());
 	let (mut chain_a, mut chain_b) = setup_clients().await;
 	let (handle, channel_a, channel_b, connection_id_a, connection_id_b) =
 		setup_connection_and_channel(&mut chain_a, &mut chain_b, Duration::from_secs(10)).await;

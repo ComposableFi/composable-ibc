@@ -634,6 +634,11 @@ deserialize client state"
 		};
 		log::info!("This is after connection end {:?}", connection_end);
 		let chain_account = self.get_chain_storage().await;
+		log::info!(
+			"Proof height {:?}, Latest Height {:?}",
+			at.revision_height,
+			chain_account.head().unwrap().block_height
+		);
 		let block_header = if (!self.common_state.handshake_completed && at_height) {
 			log::info!("Fetching previous block header");
 			events::get_header_from_height(
@@ -1187,7 +1192,7 @@ deserialize client state"
 					ordering,
 					counterparty: Some(ChanCounterparty {
 						port_id: channel.counterparty().port_id.to_string(),
-						channel_id: channel.counterparty().channel_id.clone().map_or,
+						channel_id: "".to_string(),
 					}),
 					connection_hops: channel
 						.connection_hops
@@ -2277,15 +2282,19 @@ impl Chain for SolanaClient {
 						loop {
 							log::info!("Current Try in solana: {}", tries);
 							let blockhash = rpc.get_latest_blockhash().await.unwrap();
-							log::info!("Blockhash in solana {:?} and {:?}", blockhash, messages_indeed.clone());
+							// log::info!(
+							// 	"Blockhash in solana {:?} and {:?}",
+							// 	blockhash,
+							// 	messages_indeed.clone()
+							// );
 							transaction.sign(&[&*authority], blockhash);
 							let tx = transaction.clone();
-							log::info!("Signed now in solana {:?}", messages_indeed.clone());
+							// log::info!("Signed now in solana {:?}", messages_indeed.clone());
 							let sync_rpc = self.program().rpc();
 							let rpc = self.rpc_client();
 							let messagessss = messages_indeed.clone();
 							let sig = spawn_blocking(move || {
-								log::info!("Sending transaction {:?}", messagessss.clone());
+								// log::info!("Sending transaction {:?}", messagessss.clone());
 								sync_rpc
 									.send_transaction_with_config(
 										&tx,
@@ -2567,34 +2576,34 @@ impl Chain for SolanaClient {
 	}
 }
 
-#[test]
-pub fn test_seq() {
-	let program_id = Pubkey::from_str("2HLLVco5HvwWriNbUhmVwA2pCetRkpgrqwnjcsZdyTKT").unwrap();
-	let port_id = PortId::from_str("transfer").unwrap();
-	let channel_id = ChannelId::from_str("channel-0").unwrap();
-	let rpc_client = RpcClient::new("https://api.devnet.solana.com".to_string());
-	let trie_seeds = &[TRIE_SEED];
-	let trie_key = Pubkey::find_program_address(trie_seeds, &program_id).0;
-	let trie_account = rpc_client
-		.get_account_with_commitment(&trie_key, CommitmentConfig::processed())
-		// .await
-		.unwrap()
-		.value
-		.unwrap();
-	let trie = solana_trie::TrieAccount::new(trie_account.data).unwrap();
-	let new_port_id = ibc_core_host_types::identifiers::PortId::from_str(port_id.as_str()).unwrap();
-	let new_channel_id = ibc_core_host_types::identifiers::ChannelId::new(channel_id.sequence());
-	let trie_comp = PortChannelPK::try_from(new_port_id, new_channel_id).unwrap();
-	let key = TrieKey::new(Tag::Receipt, trie_comp);
-	let packet_receipt_sequences: Vec<u64> = trie
-		.get_subtrie(&key)
-		.unwrap()
-		.iter()
-		.map(|c| {
-			u64::from_be_bytes(
-				Vec::<u8>::try_from(c.sub_key.clone()).unwrap().as_slice().try_into().unwrap(),
-			)
-		})
-		.collect();
-	println!("{:?}", packet_receipt_sequences);
-}
+// #[test]
+// pub fn test_seq() {
+// 	let program_id = Pubkey::from_str("2HLLVco5HvwWriNbUhmVwA2pCetRkpgrqwnjcsZdyTKT").unwrap();
+// 	let port_id = PortId::from_str("transfer").unwrap();
+// 	let channel_id = ChannelId::from_str("channel-0").unwrap();
+// 	let rpc_client = RpcClient::new("https://api.devnet.solana.com".to_string());
+// 	let trie_seeds = &[TRIE_SEED];
+// 	let trie_key = Pubkey::find_program_address(trie_seeds, &program_id).0;
+// 	let trie_account = rpc_client
+// 		.get_account_with_commitment(&trie_key, CommitmentConfig::processed())
+// 		// .await
+// 		.unwrap()
+// 		.value
+// 		.unwrap();
+// 	let trie = solana_trie::TrieAccount::new(trie_account.data).unwrap();
+// 	let new_port_id = ibc_core_host_types::identifiers::PortId::from_str(port_id.as_str()).unwrap();
+// 	let new_channel_id = ibc_core_host_types::identifiers::ChannelId::new(channel_id.sequence());
+// 	let trie_comp = PortChannelPK::try_from(new_port_id, new_channel_id).unwrap();
+// 	let key = TrieKey::new(Tag::Receipt, trie_comp);
+// 	let packet_receipt_sequences: Vec<u64> = trie
+// 		.get_subtrie(&key)
+// 		.unwrap()
+// 		.iter()
+// 		.map(|c| {
+// 			u64::from_be_bytes(
+// 				Vec::<u8>::try_from(c.sub_key.clone()).unwrap().as_slice().try_into().unwrap(),
+// 			)
+// 		})
+// 		.collect();
+// 	println!("{:?}", packet_receipt_sequences);
+// }

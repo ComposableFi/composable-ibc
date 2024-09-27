@@ -237,8 +237,9 @@ pub fn convert_new_event_to_old(
 					destination_channel: ChannelId::from_str(e.chan_id_on_b().as_str()).unwrap(),
 					data: e.packet_data().to_vec(),
 					timeout_height: match e.timeout_height_on_b() {
-						ibc_core_channel_types::timeout::TimeoutHeight::Never =>
-							Height { revision_height: 0, revision_number: 0 },
+						ibc_core_channel_types::timeout::TimeoutHeight::Never => {
+							Height { revision_height: 0, revision_number: 0 }
+						},
 						ibc_core_channel_types::timeout::TimeoutHeight::At(h) => Height {
 							revision_height: h.revision_height(),
 							revision_number: h.revision_number(),
@@ -263,8 +264,9 @@ pub fn convert_new_event_to_old(
 					destination_channel: ChannelId::from_str(e.chan_id_on_b().as_str()).unwrap(),
 					data: e.packet_data().to_vec(),
 					timeout_height: match e.timeout_height_on_b() {
-						ibc_core_channel_types::timeout::TimeoutHeight::Never =>
-							Height { revision_height: 0, revision_number: 0 },
+						ibc_core_channel_types::timeout::TimeoutHeight::Never => {
+							Height { revision_height: 0, revision_number: 0 }
+						},
 						ibc_core_channel_types::timeout::TimeoutHeight::At(h) => Height {
 							revision_height: h.revision_height(),
 							revision_number: h.revision_number(),
@@ -289,8 +291,9 @@ pub fn convert_new_event_to_old(
 					destination_channel: ChannelId::from_str(e.chan_id_on_b().as_str()).unwrap(),
 					data: e.packet_data().to_vec(),
 					timeout_height: match e.timeout_height_on_b() {
-						ibc_core_channel_types::timeout::TimeoutHeight::Never =>
-							Height { revision_height: 0, revision_number: 0 },
+						ibc_core_channel_types::timeout::TimeoutHeight::Never => {
+							Height { revision_height: 0, revision_number: 0 }
+						},
 						ibc_core_channel_types::timeout::TimeoutHeight::At(h) => Height {
 							revision_height: h.revision_height(),
 							revision_number: h.revision_number(),
@@ -316,8 +319,9 @@ pub fn convert_new_event_to_old(
 					destination_channel: ChannelId::from_str(e.chan_id_on_b().as_str()).unwrap(),
 					data: Vec::new(),
 					timeout_height: match e.timeout_height_on_b() {
-						ibc_core_channel_types::timeout::TimeoutHeight::Never =>
-							Height { revision_height: 0, revision_number: 0 },
+						ibc_core_channel_types::timeout::TimeoutHeight::Never => {
+							Height { revision_height: 0, revision_number: 0 }
+						},
 						ibc_core_channel_types::timeout::TimeoutHeight::At(h) => Height {
 							revision_height: h.revision_height(),
 							revision_number: h.revision_number(),
@@ -342,8 +346,9 @@ pub fn convert_new_event_to_old(
 					destination_channel: ChannelId::from_str(e.chan_id_on_b().as_str()).unwrap(),
 					data: Vec::new(), // Not sure about this
 					timeout_height: match e.timeout_height_on_b() {
-						ibc_core_channel_types::timeout::TimeoutHeight::Never =>
-							Height { revision_height: 0, revision_number: 0 },
+						ibc_core_channel_types::timeout::TimeoutHeight::Never => {
+							Height { revision_height: 0, revision_number: 0 }
+						},
 						ibc_core_channel_types::timeout::TimeoutHeight::At(h) => Height {
 							revision_height: h.revision_height(),
 							revision_number: h.revision_number(),
@@ -695,7 +700,7 @@ pub async fn get_previous_transactions(
 		.get_signatures_for_address_with_config(
 			&search_address, // Since ibc storage is only used for ibc and not for guest chain
 			GetConfirmedSignaturesForAddress2Config {
-				limit: Some(200),
+				limit: Some(1),
 				before: before_hash,
 				commitment: Some(CommitmentConfig::confirmed()),
 				..Default::default()
@@ -785,16 +790,19 @@ pub fn testing_signatures() {
 
 #[tokio::test]
 pub async fn testing_events_final() {
-	let rpc = RpcClient::new("http://127.0.0.1:8899".to_string());
-	let mut last_hash = None;
+	let rpc = RpcClient::new(
+		"https://mainnet.helius-rpc.com/?api-key=5ae782d8-6bf6-489c-b6df-ef7e6289e193".to_string(),
+	);
+	let mut last_hash = None; 
 	loop {
 		let (events, prev) = get_previous_transactions(
 			&rpc,
-			Pubkey::from_str("9FeHRJLHJSEw4dYZrABHWTRKruFjxDmkLtPmhM5WFYL7").unwrap(),
+			Pubkey::from_str("2HLLVco5HvwWriNbUhmVwA2pCetRkpgrqwnjcsZdyTKT").unwrap(),
 			last_hash,
-			SearchIn::IBC,
+			SearchIn::GuestChain,
 		)
 		.await;
+		println!("Events {:?} and prev {}", events, prev);
 		if events.is_empty() {
 			println!("No events found");
 			break;
@@ -823,16 +831,17 @@ pub fn testing_events() {
 		.iter()
 		.filter_map(|tx| match tx {
 			solana_ibc::events::Event::IbcEvent(e) => match e {
-				ibc_core_handler_types::events::IbcEvent::WriteAcknowledgement(packet) =>
-					if packet.chan_id_on_a().as_str() == &channel_id.to_string() &&
-						packet.port_id_on_a().as_str() == port_id.as_str() &&
-						seqs.iter().find(|&&seq| packet.seq_on_a().value() == seq).is_some()
+				ibc_core_handler_types::events::IbcEvent::WriteAcknowledgement(packet) => {
+					if packet.chan_id_on_a().as_str() == &channel_id.to_string()
+						&& packet.port_id_on_a().as_str() == port_id.as_str()
+						&& seqs.iter().find(|&&seq| packet.seq_on_a().value() == seq).is_some()
 					{
 						println!("We found packet");
 						Some(packet)
 					} else {
 						None
-					},
+					}
+				},
 				_ => None,
 			},
 			_ => None,

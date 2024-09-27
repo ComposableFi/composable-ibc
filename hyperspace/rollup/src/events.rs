@@ -178,7 +178,7 @@ pub fn convert_new_event_to_old(
 				channel_id: Some(ChannelId::from_str(e.chan_id_on_a().as_str()).unwrap()),
 				connection_id: ConnectionId::from_str(e.conn_id_on_b().as_str()).unwrap(),
 				counterparty_port_id: PortId::from_str(e.port_id_on_b().as_str()).unwrap(),
-				counterparty_channel_id: None,
+				counterparty_channel_id:  Some(ChannelId::from_str(e.chan_id_on_b().as_str()).unwrap()),
 			};
 			Some(IbcEvent::OpenTryChannel(eve))
 		},
@@ -189,7 +189,7 @@ pub fn convert_new_event_to_old(
 				channel_id: Some(ChannelId::from_str(e.chan_id_on_a().as_str()).unwrap()),
 				connection_id: ConnectionId::from_str(e.conn_id_on_a().as_str()).unwrap(),
 				counterparty_port_id: PortId::from_str(e.port_id_on_b().as_str()).unwrap(),
-				counterparty_channel_id: None,
+				counterparty_channel_id: Some(ChannelId::from_str(e.chan_id_on_b().as_str()).unwrap()),
 			};
 			Some(IbcEvent::OpenAckChannel(eve))
 		},
@@ -200,7 +200,7 @@ pub fn convert_new_event_to_old(
 				channel_id: Some(ChannelId::from_str(e.chan_id_on_a().as_str()).unwrap()),
 				connection_id: ConnectionId::from_str(e.conn_id_on_b().as_str()).unwrap(),
 				counterparty_port_id: PortId::from_str(e.port_id_on_b().as_str()).unwrap(),
-				counterparty_channel_id: None,
+				counterparty_channel_id:  Some(ChannelId::from_str(e.chan_id_on_b().as_str()).unwrap()),
 			};
 			Some(IbcEvent::OpenConfirmChannel(eve))
 		},

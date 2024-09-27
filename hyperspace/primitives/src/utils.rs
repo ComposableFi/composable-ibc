@@ -199,6 +199,7 @@ pub async fn create_channel(
 	let tx_id = chain_a.submit(vec![msg]).await?;
 	log::info!("This is tx id {:?}", tx_id);
 	let channel_id_a = chain_a.query_channel_id_from_tx_hash(tx_id).await?;
+	log::info!("This is channel id on a {:?}", channel_id_a);
 	chain_a.add_channel_to_whitelist(channel_id_a);
 
 	log::info!(target: "hyperspace", "============= Wait till both chains have completed channel handshake =============");
