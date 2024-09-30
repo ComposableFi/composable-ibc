@@ -624,7 +624,6 @@ pub async fn get_signatures_upto_height(
 			};
 			let (events, _proof_height) = get_events_from_logs(logs.clone());
 			let (ibc_events, _) = get_ibc_events_from_logs(logs);
-			all_ibc_events.extend(ibc_events);
 			for event in events {
 				match event {
 					solana_ibc::events::Event::NewBlock(e) => {
@@ -653,6 +652,7 @@ pub async fn get_signatures_upto_height(
 			if current_height < upto_height {
 				break;
 			}
+			all_ibc_events.extend(ibc_events);
 		}
 	}
 	(
@@ -700,7 +700,7 @@ pub async fn get_previous_transactions(
 		.get_signatures_for_address_with_config(
 			&search_address, // Since ibc storage is only used for ibc and not for guest chain
 			GetConfirmedSignaturesForAddress2Config {
-				limit: Some(1),
+				limit: Some(100),
 				before: before_hash,
 				commitment: Some(CommitmentConfig::confirmed()),
 				..Default::default()
@@ -793,7 +793,7 @@ pub async fn testing_events_final() {
 	let rpc = RpcClient::new(
 		"https://mainnet.helius-rpc.com/?api-key=5ae782d8-6bf6-489c-b6df-ef7e6289e193".to_string(),
 	);
-	let mut last_hash = None; 
+	let mut last_hash = None;
 	loop {
 		let (events, prev) = get_previous_transactions(
 			&rpc,

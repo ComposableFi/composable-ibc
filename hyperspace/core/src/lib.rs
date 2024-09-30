@@ -251,6 +251,10 @@ async fn process_some_finality_event<A: Chain, B: Chain>(
 	);
 
 	process_updates(source, sink, metrics, mode, updates, &mut msgs, ready_packets.clone()).await?;
+	// if msgs.len() < 2 && !source.common_state().handshake_completed {
+	// 	log::info!("-------------------------------------------Skipping the update--------------------------------------------");
+	// 	msgs = vec![];
+	// }
 
 	msgs.extend(ready_packets);
 

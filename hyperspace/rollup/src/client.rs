@@ -52,6 +52,7 @@ use tendermint_rpc::Url;
 use super::{solana_ibc_STORAGE_SEED, CHAIN_SEED, TRIE_SEED};
 use crate::{
 	error::Error,
+	events,
 	utils::{new_ed25519_instruction_with_signature, non_absent_vote},
 };
 use guestchain::{PubKey, Signature as _};
@@ -263,24 +264,33 @@ impl RollupClient {
 		require_proof: bool,
 	) -> (solana_trie::TrieAccount<Vec<u8>, ()>, bool) {
 		let connection = self.get_db();
-		// if require_proof {
-		// 	let row = connection.query_row("SELECT * FROM Trie WHERE height=?1", [at], |row| {
-		// 		Ok(Trie {
-		// 			id: row.get(0)?,
-		// 			height: row.get(1)?,
-		// 			data: row.get(2)?,
-		// 			state_root: row.get(3)?,
-		// 			match_block_state_root: row.get(4)?,
-		// 		})
-		// 	});
-		// 	if let Ok(trie) = row {
-		// 		log::info!("Does block state roots match {}", trie.match_block_state_root);
-		// 		let trie_acc = solana_trie::TrieAccount::new(trie.data).unwrap();
-		// 		if trie.match_block_state_root {
-		// 			return (trie_acc, trie.match_block_state_root);
-		// 		}
-		// 	}
-		// }
+		if require_proof {
+			let body = events::PayloadWithSingleParam::<Vec<u64>> {
+				jsonrpc: "2.0".to_string(),
+				id: 10,
+				method: "getSlotData".to_string(),
+				params: vec![at],
+			};
+			let url = self.trie_rpc_url.clone();
+			let response = tokio::task::spawn_blocking(move || {
+				for _ in 0..5 {
+					let response =
+						reqwest::blocking::Client::new().post(url.clone()).json(&body).send();
+					let response = crate::utils::skip_fail!(response);
+					let response: std::result::Result<events::SingleTrieResponse, reqwest::Error> =
+						response.json();
+					let transactions = crate::utils::skip_fail!(response);
+					return transactions;
+				}
+				log::error!("Couldnt get transactions after 5 retries");
+				panic!("WTF");
+			})
+			.await
+			.unwrap();
+			let trie = solana_trie::TrieAccount::new(response.result.root_account.data().to_vec())
+				.unwrap();
+			return (trie, false);
+		}
 		let trie_key = self.get_trie_key();
 		let rpc_client = self.rpc_client();
 		let trie_account = rpc_client

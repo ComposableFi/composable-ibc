@@ -174,11 +174,13 @@ pub fn convert_new_event_to_old(
 		ibc_core_handler_types::events::IbcEvent::OpenTryChannel(e) => {
 			let eve = ChanOpenTry {
 				height,
-				port_id: PortId::from_str(e.port_id_on_a().as_str()).unwrap(),
-				channel_id: Some(ChannelId::from_str(e.chan_id_on_a().as_str()).unwrap()),
+				port_id: PortId::from_str(e.port_id_on_b().as_str()).unwrap(),
+				channel_id: Some(ChannelId::from_str(e.chan_id_on_b().as_str()).unwrap()),
 				connection_id: ConnectionId::from_str(e.conn_id_on_b().as_str()).unwrap(),
-				counterparty_port_id: PortId::from_str(e.port_id_on_b().as_str()).unwrap(),
-				counterparty_channel_id:  Some(ChannelId::from_str(e.chan_id_on_b().as_str()).unwrap()),
+				counterparty_port_id: PortId::from_str(e.port_id_on_a().as_str()).unwrap(),
+				counterparty_channel_id: Some(
+					ChannelId::from_str(e.chan_id_on_a().as_str()).unwrap(),
+				),
 			};
 			Some(IbcEvent::OpenTryChannel(eve))
 		},
@@ -189,18 +191,22 @@ pub fn convert_new_event_to_old(
 				channel_id: Some(ChannelId::from_str(e.chan_id_on_a().as_str()).unwrap()),
 				connection_id: ConnectionId::from_str(e.conn_id_on_a().as_str()).unwrap(),
 				counterparty_port_id: PortId::from_str(e.port_id_on_b().as_str()).unwrap(),
-				counterparty_channel_id: Some(ChannelId::from_str(e.chan_id_on_b().as_str()).unwrap()),
+				counterparty_channel_id: Some(
+					ChannelId::from_str(e.chan_id_on_b().as_str()).unwrap(),
+				),
 			};
 			Some(IbcEvent::OpenAckChannel(eve))
 		},
 		ibc_core_handler_types::events::IbcEvent::OpenConfirmChannel(e) => {
 			let eve = ChanOpenConfirm {
 				height,
-				port_id: PortId::from_str(e.port_id_on_a().as_str()).unwrap(),
-				channel_id: Some(ChannelId::from_str(e.chan_id_on_a().as_str()).unwrap()),
+				port_id: PortId::from_str(e.port_id_on_b().as_str()).unwrap(),
+				channel_id: Some(ChannelId::from_str(e.chan_id_on_b().as_str()).unwrap()),
 				connection_id: ConnectionId::from_str(e.conn_id_on_b().as_str()).unwrap(),
-				counterparty_port_id: PortId::from_str(e.port_id_on_b().as_str()).unwrap(),
-				counterparty_channel_id:  Some(ChannelId::from_str(e.chan_id_on_b().as_str()).unwrap()),
+				counterparty_port_id: PortId::from_str(e.port_id_on_a().as_str()).unwrap(),
+				counterparty_channel_id: Some(
+					ChannelId::from_str(e.chan_id_on_a().as_str()).unwrap(),
+				),
 			};
 			Some(IbcEvent::OpenConfirmChannel(eve))
 		},
@@ -237,8 +243,9 @@ pub fn convert_new_event_to_old(
 					destination_channel: ChannelId::from_str(e.chan_id_on_b().as_str()).unwrap(),
 					data: e.packet_data().to_vec(),
 					timeout_height: match e.timeout_height_on_b() {
-						ibc_core_channel_types::timeout::TimeoutHeight::Never =>
-							Height { revision_height: 0, revision_number: 0 },
+						ibc_core_channel_types::timeout::TimeoutHeight::Never => {
+							Height { revision_height: 0, revision_number: 0 }
+						},
 						ibc_core_channel_types::timeout::TimeoutHeight::At(h) => Height {
 							revision_height: h.revision_height(),
 							revision_number: h.revision_number(),
@@ -263,8 +270,9 @@ pub fn convert_new_event_to_old(
 					destination_channel: ChannelId::from_str(e.chan_id_on_b().as_str()).unwrap(),
 					data: e.packet_data().to_vec(),
 					timeout_height: match e.timeout_height_on_b() {
-						ibc_core_channel_types::timeout::TimeoutHeight::Never =>
-							Height { revision_height: 0, revision_number: 0 },
+						ibc_core_channel_types::timeout::TimeoutHeight::Never => {
+							Height { revision_height: 0, revision_number: 0 }
+						},
 						ibc_core_channel_types::timeout::TimeoutHeight::At(h) => Height {
 							revision_height: h.revision_height(),
 							revision_number: h.revision_number(),
@@ -289,8 +297,9 @@ pub fn convert_new_event_to_old(
 					destination_channel: ChannelId::from_str(e.chan_id_on_b().as_str()).unwrap(),
 					data: e.packet_data().to_vec(),
 					timeout_height: match e.timeout_height_on_b() {
-						ibc_core_channel_types::timeout::TimeoutHeight::Never =>
-							Height { revision_height: 0, revision_number: 0 },
+						ibc_core_channel_types::timeout::TimeoutHeight::Never => {
+							Height { revision_height: 0, revision_number: 0 }
+						},
 						ibc_core_channel_types::timeout::TimeoutHeight::At(h) => Height {
 							revision_height: h.revision_height(),
 							revision_number: h.revision_number(),
@@ -316,8 +325,9 @@ pub fn convert_new_event_to_old(
 					destination_channel: ChannelId::from_str(e.chan_id_on_b().as_str()).unwrap(),
 					data: Vec::new(),
 					timeout_height: match e.timeout_height_on_b() {
-						ibc_core_channel_types::timeout::TimeoutHeight::Never =>
-							Height { revision_height: 0, revision_number: 0 },
+						ibc_core_channel_types::timeout::TimeoutHeight::Never => {
+							Height { revision_height: 0, revision_number: 0 }
+						},
 						ibc_core_channel_types::timeout::TimeoutHeight::At(h) => Height {
 							revision_height: h.revision_height(),
 							revision_number: h.revision_number(),
@@ -342,8 +352,9 @@ pub fn convert_new_event_to_old(
 					destination_channel: ChannelId::from_str(e.chan_id_on_b().as_str()).unwrap(),
 					data: Vec::new(), // Not sure about this
 					timeout_height: match e.timeout_height_on_b() {
-						ibc_core_channel_types::timeout::TimeoutHeight::Never =>
-							Height { revision_height: 0, revision_number: 0 },
+						ibc_core_channel_types::timeout::TimeoutHeight::Never => {
+							Height { revision_height: 0, revision_number: 0 }
+						},
 						ibc_core_channel_types::timeout::TimeoutHeight::At(h) => Height {
 							revision_height: h.revision_height(),
 							revision_number: h.revision_number(),
@@ -696,6 +707,10 @@ pub async fn get_events_upto_height(
 			anchor_client::solana_sdk::signature::Signature::from_str(&last_searched_hash).unwrap(),
 		);
 		for tx in transactions {
+			current_height = tx.result.slot;
+			if current_height < upto_height {
+				break;
+			}
 			let transaction_err = tx.result.transaction.meta.clone().unwrap().err;
 			if transaction_err.is_some() {
 				continue;
@@ -706,11 +721,7 @@ pub async fn get_events_upto_height(
 			};
 			let (ibc_events, _) = get_ibc_events_from_logs(logs);
 			all_ibc_events.extend(ibc_events);
-			current_height = tx.result.slot;
 			log::info!("Current height {} and upto height {}", current_height, upto_height);
-			if current_height < upto_height {
-				break;
-			}
 		}
 	}
 	all_ibc_events
@@ -750,7 +761,7 @@ pub async fn get_previous_transactions(
 	let mut body = vec![];
 	for sig in transaction_signatures {
 		let signature = sig.signature.clone();
-		let payload = Payload {
+		let payload = Payload::<Param> {
 			jsonrpc: "2.0".to_string(),
 			id: 1 as u64,
 			method: "getTransaction".to_string(),
@@ -778,11 +789,11 @@ pub async fn get_previous_transactions(
 }
 
 #[derive(Debug, Serialize, Deserialize)]
-pub struct Payload {
-	jsonrpc: String,
-	id: u64,
-	method: String,
-	params: (String, Param),
+pub struct Payload<T> {
+	pub jsonrpc: String,
+	pub id: u64,
+	pub method: String,
+	pub params: (String, T),
 }
 
 #[derive(Debug, Serialize, Deserialize)]
@@ -792,6 +803,13 @@ pub struct PayloadWithoutParams {
 	pub method: String,
 }
 
+#[derive(Debug, Serialize, Deserialize)]
+pub struct PayloadWithSingleParam<T> {
+	pub jsonrpc: String,
+	pub id: u64,
+	pub method: String,
+	pub params: T
+}
 
 #[derive(Debug, Serialize, Deserialize)]
 pub struct Param {
@@ -818,15 +836,22 @@ pub struct TrieResponse {
 	pub id: u64,
 }
 
+#[derive(Debug, Serialize, Deserialize)]
+pub struct SingleTrieResponse {
+	pub jsonrpc: String,
+	pub result: SlotData,
+	pub id: u64,	
+}
+
 /// Data provided by the Witnessed Trie Geyser plugin.
 #[derive(Clone, Debug, PartialEq, Eq, serde::Serialize, serde::Deserialize)]
 pub struct SlotData {
-    /// Proof of the accounts delta hash.
-    pub delta_hash_proof: cf_solana_og::proof::DeltaHashProof,
-    /// Trie root account.
-    pub root_account: cf_solana_og::proof::AccountHashData,
-    /// Proof of the witness trie.
-    pub witness_proof: cf_solana_og::proof::AccountProof,
+	/// Proof of the accounts delta hash.
+	pub delta_hash_proof: cf_solana_og::proof::DeltaHashProof,
+	/// Trie root account.
+	pub root_account: cf_solana_og::proof::AccountHashData,
+	/// Proof of the witness trie.
+	pub witness_proof: cf_solana_og::proof::AccountProof,
 }
 
 #[test]
@@ -871,13 +896,14 @@ pub async fn testing_events_final() {
 #[test]
 pub fn test_slot_data() {
 	let url = "http://127.0.0.1:42069".to_string();
-	let body = PayloadWithoutParams {
+	let body = crate::events::PayloadWithSingleParam::<Vec<u64>> {
 		jsonrpc: "2.0".to_string(),
 		id: 10,
-		method: "getLatestSlotData".to_string()
+		method: "getSlotData".to_string(),
+		params: vec![663],
 	};
 	let response = reqwest::blocking::Client::new().post(url.clone()).json(&body).send().unwrap();
-	let response: TrieResponse = response.json().unwrap();
+	let response: SingleTrieResponse = response.json().unwrap();
 	println!("response {:?}", response.result);
 }
 
@@ -900,16 +926,17 @@ pub fn testing_events() {
 		.iter()
 		.filter_map(|tx| match tx {
 			solana_ibc::events::Event::IbcEvent(e) => match e {
-				ibc_core_handler_types::events::IbcEvent::WriteAcknowledgement(packet) =>
-					if packet.chan_id_on_a().as_str() == &channel_id.to_string() &&
-						packet.port_id_on_a().as_str() == port_id.as_str() &&
-						seqs.iter().find(|&&seq| packet.seq_on_a().value() == seq).is_some()
+				ibc_core_handler_types::events::IbcEvent::WriteAcknowledgement(packet) => {
+					if packet.chan_id_on_a().as_str() == &channel_id.to_string()
+						&& packet.port_id_on_a().as_str() == port_id.as_str()
+						&& seqs.iter().find(|&&seq| packet.seq_on_a().value() == seq).is_some()
 					{
 						println!("We found packet");
 						Some(packet)
 					} else {
 						None
-					},
+					}
+				},
 				_ => None,
 			},
 			_ => None,

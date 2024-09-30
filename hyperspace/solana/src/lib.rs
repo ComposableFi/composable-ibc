@@ -160,9 +160,11 @@ impl IbcProvider for SolanaClient {
 		T: Chain,
 	{
 		log::info!("Came into solana lts events");
-		let (finality_blockhash, finality_height) = match finality_event {
-			FinalityEvent::Guest { blockhash, block_height } => (blockhash, block_height),
-		};
+		// let (finality_blockhash, finality_height) = match finality_event {
+		// 	FinalityEvent::Guest { blockhash, block_height } => (blockhash, block_height),
+		// };
+		let chain_account = self.get_chain_storage().await;
+		let finality_height = chain_account.head().unwrap().block_height.into();
 		log::info!("This is solaan height {:?}", finality_height);
 		let client_id = self.client_id();
 		let latest_cp_height = counterparty.latest_height_and_timestamp().await?.0;
@@ -196,7 +198,7 @@ impl IbcProvider for SolanaClient {
 		let (all_signatures, new_block_events) = events::get_signatures_upto_height(
 			self.rpc_client(),
 			self.solana_ibc_program_id,
-			latest_cp_client_height,
+			latest_cp_client_height + 1,
 		)
 		.await;
 
@@ -210,7 +212,6 @@ impl IbcProvider for SolanaClient {
 			})
 			.collect();
 
-		let chain_account = self.get_chain_storage().await;
 		let mut updates = Vec::new();
 		let mut rev_all_signatures = all_signatures.clone();
 		// Reversing so that updates are sent in ascending order of their height.
@@ -313,6 +314,10 @@ impl IbcProvider for SolanaClient {
 					if !block_events.is_empty()
 						|| time_since_last_update > MIN_TIME_UNTIL_UPDATE * 1_000_000_000
 					{
+						log::info!(
+							"--------------------------Updating at {}---------------------------",
+							finality_height
+						);
 						UpdateType::Mandatory
 					} else {
 						UpdateType::Optional
@@ -436,7 +441,7 @@ deserialize consensus state"
 		log::info!("this is consensus state {:?}", consensus_state);
 		log::info!("This is inner any consensus state {:?}", inner_any);
 		let chain_account = self.get_chain_storage().await;
-		let block_header = if !self.common_state.handshake_completed {
+		let block_header = if (!self.common_state.handshake_completed && at_height) {
 			log::info!("Fetching previous block header");
 			events::get_header_from_height(
 				self.rpc_client(),
@@ -489,7 +494,7 @@ deserialize consensus state"
 		let client_state = events::get_client_state_at_height(
 			self.rpc_client(),
 			self.solana_ibc_program_id,
-			at.revision_height + 1,
+			at.revision_height,
 		)
 		.await
 		.unwrap_or_else(|| {
@@ -516,7 +521,7 @@ deserialize client state"
 		// log::info!("This is inner any client state {:?}", inner_any);
 		let any_client_state = convert_new_client_state_to_old(client_state);
 		let chain_account = self.get_chain_storage().await;
-		let block_header = if !self.common_state.handshake_completed {
+		let block_header = if (!self.common_state.handshake_completed && at_height) {
 			log::info!("Fetching previous block header");
 			events::get_header_from_height(
 				self.rpc_client(),
@@ -564,7 +569,15 @@ deserialize client state"
 		connection_id: ConnectionId,
 	) -> Result<QueryConnectionResponse, Self::Error> {
 		use ibc_proto_new::Protobuf;
-		let (trie, at_height) = self.get_trie(at.revision_height, true).await;
+		let chain_account = self.get_chain_storage().await;
+		let proof_height = if u64::from(chain_account.head().unwrap().block_height) == at.revision_height {
+			log::info!("Using existing proof height {}", at.revision_height);
+			at.revision_height
+		} else {
+			log::info!("Using incremented proof height {}", at.revision_height + 1);
+			at.revision_height
+		};
+		let (trie, at_height) = self.get_trie(proof_height, true).await;
 		let storage = self.get_ibc_storage().await;
 		let connection_idx = ConnectionIdx::try_from(
 			ibc_core_host_types::identifiers::ConnectionId::from_str(connection_id.as_str())
@@ -633,10 +646,9 @@ deserialize client state"
 			delay_period: inner_connection_end.delay_period().as_nanos() as u64,
 		};
 		log::info!("This is after connection end {:?}", connection_end);
-		let chain_account = self.get_chain_storage().await;
 		log::info!(
 			"Proof height {:?}, Latest Height {:?}",
-			at.revision_height,
+			proof_height,
 			chain_account.head().unwrap().block_height
 		);
 		let block_header = if (!self.common_state.handshake_completed && at_height) {
@@ -644,7 +656,7 @@ deserialize client state"
 			events::get_header_from_height(
 				self.rpc_client(),
 				self.solana_ibc_program_id,
-				at.revision_height,
+				proof_height,
 			)
 			.await
 			.expect(&format!("No block header found for height {:?}", at.revision_height))
@@ -737,7 +749,7 @@ deserialize client state"
 				.collect(),
 			version: inner_channel_end.version.to_string(),
 		};
-		let block_header = if !self.common_state.handshake_completed {
+		let block_header = if (!self.common_state.handshake_completed && at_height) {
 			log::info!("Fetching previous block header");
 			events::get_header_from_height(
 				self.rpc_client(),
@@ -2082,10 +2094,6 @@ impl Chain for SolanaClient {
 		let mut messages_indeed = vec![];
 
 		for message in messages {
-			index += 1;
-			if index > 1 {
-				break;
-			}
 			let storage = self.get_ibc_storage().await;
 			let my_message = Ics26Envelope::<LocalClientTypes>::try_from(message.clone()).unwrap();
 			let new_messages = convert_old_msgs_to_new(vec![my_message]);
