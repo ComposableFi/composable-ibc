@@ -4,7 +4,7 @@
 pub struct MsgPushNewWasmCode {
 	#[prost(string, tag = "1")]
 	pub signer: ::prost::alloc::string::String,
-	#[prost(bytes = "vec", tag = "3")]
+	#[prost(bytes = "vec", tag = "2")]
 	pub code: ::prost::alloc::vec::Vec<u8>,
 }
 /// Response in case of successful handling

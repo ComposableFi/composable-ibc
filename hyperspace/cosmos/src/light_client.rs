@@ -60,13 +60,13 @@ impl LightClient {
 
 	pub fn prepare_state(&self, trusted: Height) -> Result<LightClientState, Error> {
 		let trusted_height =
-			TMHeight::try_from(trusted.revision_height).map_err(|e| Error::from(e.to_string()))?;
+			TMHeight::try_from(trusted.revision_height).map_err(|e| Error::from(e.to_string())).unwrap();
 
 		use tendermint_light_client::components::io::Io;
 		let trusted_block = self
 			.io
 			.fetch_light_block(AtHeight::At(trusted_height))
-			.map_err(|e| Error::from(e.to_string()))?;
+			.map_err(|e| Error::from(e.to_string())).unwrap();
 		let mut store = MemoryStore::new();
 		store.insert(trusted_block, Status::Trusted);
 		Ok(LightClientState::new(store))
@@ -80,15 +80,15 @@ impl LightClient {
 		client_state: &ClientState<HostFunctionsManager>,
 	) -> Result<LightBlock, Error> {
 		let target_height =
-			TMHeight::try_from(target.revision_height).map_err(|e| Error::from(e.to_string()))?;
+			TMHeight::try_from(target.revision_height).map_err(|e| Error::from(e.to_string())).unwrap();
 
-		let client = self.prepare_tendermint_light_client(client_state)?;
-		let mut state = self.prepare_state(trusted)?;
+		let client = self.prepare_tendermint_light_client(client_state).unwrap();
+		let mut state = self.prepare_state(trusted).unwrap();
 
 		// Verify the target header
 		let target = client
 			.verify_to_target(target_height, &mut state)
-			.map_err(|e| Error::from(e.to_string()))?;
+			.map_err(|e| Error::from(e.to_string())).unwrap();
 		Ok(target)
 	}
 }

@@ -26,7 +26,7 @@ use ibc_proto::{
 #[cfg(feature = "cosmwasm")]
 use serde::{Deserializer, Serializer};
 
-pub const WASM_PUSH_WASM_CODE_TYPE_URL: &str = "/ibc.lightclients.wasm.v1.MsgPushNewWasmCode";
+pub const WASM_PUSH_WASM_CODE_TYPE_URL: &str = "/ibc.lightclients.wasm.v1.MsgStoreCode";
 
 #[derive(Clone, PartialEq, Debug, Eq)]
 pub struct MsgPushNewWasmCode {

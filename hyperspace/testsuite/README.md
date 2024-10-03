@@ -89,6 +89,7 @@ Using the testsuite is straight forward and the following pseudocode describes t
     }
 
 ```
+/Users/mykyta/development/composable/composable-ibc-1-oct/hyperspace/testsuite/README.md
 
 ## Running parachain tests
 

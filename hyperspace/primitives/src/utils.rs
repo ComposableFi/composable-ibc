@@ -67,8 +67,8 @@ pub async fn create_clients(
 	chain_a: &mut impl Chain,
 	chain_b: &mut impl Chain,
 ) -> Result<(ClientId, ClientId), anyhow::Error> {
-	let (client_state_a, cs_state_a) = chain_a.initialize_client_state().await?;
-	let (client_state_b, cs_state_b) = chain_b.initialize_client_state().await?;
+	let (client_state_a, cs_state_a) = chain_a.initialize_client_state().await.unwrap();
+	let (client_state_b, cs_state_b) = chain_b.initialize_client_state().await.unwrap();
 
 	let msg = MsgCreateAnyClient::<LocalClientTypes> {
 		client_state: client_state_b,

@@ -1080,7 +1080,8 @@ where
 			.light_client
 			.verify(latest_height_timestamp.0, latest_height_timestamp.0, &client_state)
 			.await
-			.map_err(|e| Error::from(format!("Invalid light block {e}")))?;
+			.unwrap();
+			// .map_err(|e| Error::from(format!("Invalid light block {e}")))?;
 		let consensus_state = ConsensusState::from(light_block.signed_header.header);
 		Ok((
 			AnyClientState::Tendermint(client_state),
@@ -1300,6 +1301,9 @@ where
 			resp.height.value(),
 		);
 		let deliver_tx_result = resp.tx_result;
+		for i in deliver_tx_result.clone().events.iter(){
+			println!("{:?}", i);
+		}
 		let mut result = deliver_tx_result
 			.events
 			.iter()

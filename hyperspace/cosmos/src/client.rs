@@ -259,21 +259,21 @@ where
 			(rpc_client, rpc_driver) = WebSocketClient::new(websocket_url.clone())
 				.await
 				.map(|(x, y)| (Some(x), y))
-				.map_err(|e| Error::RpcError(format!("{:?}", e)))?;
+				.map_err(|e| Error::RpcError(format!(" ws url, websocket_url.clone() : {:?}, {:?}", config.websocket_url.clone(), e)))?;
 			join_handles.push(tokio::spawn(rpc_driver.run()));
 		} else {
 			log::warn!(target: "hyperspace_cosmos", "No websocket url provided for cosmos chain");
 		}
 		let rpc_http_client = HttpClient::new(config.rpc_url.clone())
-			.map_err(|e| Error::RpcError(format!("{:?}", e)))?;
+			.map_err(|e| Error::RpcError(format!("2 {:?}", e)))?;
 		let mut grpc_client = None;
 		if let Some(grpc_url) = &config.grpc_url {
 			grpc_client = tonic::transport::Endpoint::new(grpc_url.to_string())
-				.map_err(|e| Error::RpcError(format!("{:?}", e)))?
+				.map_err(|e| Error::RpcError(format!("3 {:?}", e)))?
 				.connect()
 				.await
 				.map(Some)
-				.map_err(|e| Error::RpcError(format!("{:?}", e)))?;
+				.map_err(|e| Error::RpcError(format!("4 {:?}", e)))?;
 		} else {
 			log::warn!(target: "hyperspace_cosmos", "No grpc url provided for cosmos chain");
 		}

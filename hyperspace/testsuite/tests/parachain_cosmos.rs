@@ -51,18 +51,21 @@ impl Default for Args {
 		let para = std::env::var("PARA_HOST").unwrap_or_else(|_| "127.0.0.1".to_string());
 		let cosmos = std::env::var("COSMOS_HOST").unwrap_or_else(|_| "127.0.0.1".to_string());
 		let wasm_path = std::env::var("WASM_PATH").unwrap_or_else(|_| {
-			"../../target/wasm32-unknown-unknown/release/ics10_grandpa_cw.wasm".to_string()
+			// "../../target/wasm32-unknown-unknown/release/ics10_grandpa_cw.wasm".to_string()
+			// "/Users/mykyta/development/composable/composable-tendermint/icsxx_ethereum_cw_local.opt.wasm".to_string()
+			// "/Users/mykyta/development/composable/composable-ibc-1-oct/ics10_grandpa_cw.wasm".to_string()
+			"/Users/mykyta/development/composable/composable-tendermint/icsxx_ethereum_cw_local.opt.wasm".to_string()
 		});
 
 		Args {
-			chain_a: format!("ws://{para}:9188"),
-			chain_b: format!("http://{cosmos}:26657"),
+			chain_a: format!("ws://{para}:9988"),
+			chain_b: format!("http://{cosmos}:36657"),
 			relay_chain: format!("ws://{relay}:9944"),
 			para_id: 2000,
 			connection_prefix_a: "ibc/".to_string(),
 			connection_prefix_b: "ibc".to_string(),
 			cosmos_grpc: format!("http://{cosmos}:9090"),
-			cosmos_ws: format!("ws://{cosmos}:26657/websocket"),
+			cosmos_ws: format!("ws://{cosmos}:36657/websocket"),
 			wasm_path,
 		}
 	}
@@ -94,17 +97,17 @@ async fn setup_clients() -> (AnyChain, AnyChain) {
 		rpc_url: args.chain_b.clone().parse().unwrap(),
 		grpc_url: Some(args.cosmos_grpc.clone().parse().unwrap()),
 		websocket_url: Some(args.cosmos_ws.clone().parse().unwrap()),
-		chain_id: "ibcgo-1".to_string(),
+		chain_id: "centauri-1".to_string(),
 		client_id: None,
 		connection_id: None,
-		account_prefix: "cosmos".to_string(),
-		fee_denom: "stake".to_string(),
+		account_prefix: "pica".to_string(),
+		fee_denom: "pica".to_string(),
 		fee_amount: "4000".to_string(),
 		gas_limit: (i64::MAX - 1) as u64,
 		store_prefix: args.connection_prefix_b,
 		max_tx_size: 200000,
 		mnemonic:
-			"oxygen fall sure lava energy veteran enroll frown question detail include maximum"
+			"sense state fringe stool behind explain area quit ugly affair develop thumb clinic weasel choice atom gesture spare sea renew penalty second upon peace"
 				.to_string(),
 		wasm_checksum: None,
 		channel_whitelist: vec![],
