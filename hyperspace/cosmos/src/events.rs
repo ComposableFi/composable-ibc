@@ -189,7 +189,7 @@ pub fn update_client_try_from_abci_event(
 			common: attributes,
 			header: extract_header_from_tx(abci_event)
 				.ok()
-				.map(|h| h.encode_vec().expect("header should encode")),
+				.map(|h| h.clone().encode_vec()),
 		}
 	})
 }

@@ -350,7 +350,7 @@ where
 			})),
 			signer: counterparty.account_id(),
 		};
-		let value = msg.encode_vec()?;
+		let value = msg.clone().encode_vec();
 		Any { value, type_url: msg.type_url() }
 	};
 
@@ -687,7 +687,7 @@ where
 			client_message: AnyClientMessage::Grandpa(ClientMessage::Header(grandpa_header)),
 			signer: counterparty.account_id(),
 		};
-		let value = msg.encode_vec()?;
+		let value = msg.clone().encode_vec();
 		Any { value, type_url: msg.type_url() }
 	};
 

@@ -197,9 +197,7 @@ where
 					)),
 					signer: counterparty.account_id(),
 				};
-				let value = msg.encode_vec().map_err(|e| {
-					Error::from(format!("Failed to encode MsgUpdateClient {msg:?}: {e:?}"))
-				})?;
+				let value = msg.clone().encode_vec();
 				Any { value, type_url: msg.type_url() }
 			};
 			updates.push((update_client_header, height, events, update_type));

@@ -141,7 +141,7 @@ pub async fn parse_events(
 						host_consensus_state_proof,
 					};
 
-					let value = msg.encode_vec()?;
+					let value = msg.clone().encode_vec();
 					let msg = Any { value, type_url: msg.type_url() };
 					messages.push(msg)
 				}
@@ -224,7 +224,7 @@ pub async fn parse_events(
 						signer: sink.account_id(),
 					};
 
-					let value = msg.encode_vec()?;
+					let value = msg.clone().encode_vec();
 					let msg = Any { value, type_url: msg.type_url() };
 					messages.push(msg)
 				}
@@ -267,7 +267,7 @@ pub async fn parse_events(
 						signer: sink.account_id(),
 					};
 
-					let value = msg.encode_vec()?;
+					let value = msg.clone().encode_vec();
 					let msg = Any { value, type_url: msg.type_url() };
 					messages.push(msg)
 				}
@@ -334,7 +334,7 @@ pub async fn parse_events(
 						signer: sink.account_id(),
 					};
 
-					let value = msg.encode_vec()?;
+					let value = msg.clone().encode_vec();
 					let msg = Any { value, type_url: msg.type_url() };
 					messages.push(msg)
 				}
@@ -371,7 +371,7 @@ pub async fn parse_events(
 						signer: sink.account_id(),
 					};
 
-					let value = msg.encode_vec()?;
+					let value = msg.clone().encode_vec();
 					let msg = Any { value, type_url: msg.type_url() };
 					messages.push(msg)
 				},
@@ -403,7 +403,7 @@ pub async fn parse_events(
 						signer: sink.account_id(),
 					};
 
-					let value = msg.encode_vec()?;
+					let value = msg.clone().encode_vec();
 					let msg = Any { value, type_url: msg.type_url() };
 					messages.push(msg)
 				},
@@ -435,7 +435,7 @@ pub async fn parse_events(
 					signer: sink.account_id(),
 				};
 
-				let value = msg.encode_vec()?;
+				let value = msg.clone().encode_vec();
 				let msg = Any { value, type_url: msg.type_url() };
 				messages.push(msg)
 			},
@@ -509,7 +509,7 @@ pub async fn parse_events(
 					signer: sink.account_id(),
 				};
 
-				let value = msg.encode_vec()?;
+				let value = msg.clone().encode_vec();
 				let msg = Any { value, type_url: msg.type_url() };
 				messages.push(msg);
 				log::debug!(target: "hyperspace", "Sending packet {:?}", packet);
@@ -566,7 +566,7 @@ pub async fn parse_events(
 					signer: sink.account_id(),
 				};
 
-				let value = msg.encode_vec()?;
+				let value = msg.clone().encode_vec();
 				let msg = Any { value, type_url: msg.type_url() };
 				messages.push(msg)
 			},

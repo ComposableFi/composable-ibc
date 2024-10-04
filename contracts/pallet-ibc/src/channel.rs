@@ -16,7 +16,6 @@ use crate::{
 };
 use ibc::{
 	core::{
-		ics02_client::error::Error as ICS02Error,
 		ics04_channel::{
 			channel::ChannelEnd,
 			commitment::{AcknowledgementCommitment, PacketCommitment as PacketCommitmentType},
