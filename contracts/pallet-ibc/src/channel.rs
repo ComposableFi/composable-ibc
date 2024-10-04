@@ -202,8 +202,7 @@ where
 		height: Height,
 	) -> Result<Timestamp, ICS04Error> {
 		let encoded_height = height
-			.encode_vec()
-			.map_err(|e| ICS04Error::ics02_client(ICS02Error::encode(e)))?;
+			.encode_vec();
 		let client_id_bytes = client_id.as_bytes().to_vec();
 		let timestamp =
 			ClientUpdateTime::<T>::get(client_id_bytes, encoded_height).ok_or_else(|| {
@@ -225,9 +224,8 @@ where
 		client_id: &ClientId,
 		height: Height,
 	) -> Result<Height, ICS04Error> {
-		let encoded_height = height
-			.encode_vec()
-			.map_err(|e| ICS04Error::ics02_client(ICS02Error::encode(e)))?;
+		let encoded_height = height.clone()
+			.encode_vec();
 		let client_id_bytes = client_id.as_bytes().to_vec();
 		let host_height = ClientUpdateHeight::<T>::get(client_id_bytes, encoded_height)
 			.ok_or_else(|| {

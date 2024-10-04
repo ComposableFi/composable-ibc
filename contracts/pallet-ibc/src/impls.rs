@@ -948,8 +948,7 @@ where
 		let msg = ibc_proto::google::protobuf::Any {
 			type_url: msg.type_url(),
 			value: msg
-				.encode_vec()
-				.map_err(|e| IbcHandlerError::Other { msg: Some(e.to_string()) })?,
+				.clone().encode_vec(),
 		};
 		let res = ibc::core::ics26_routing::handler::deliver::<_>(&mut ctx, msg)
 			.map_err(|e| IbcHandlerError::ChannelInitError { msg: Some(e.to_string()) })?;
@@ -1064,8 +1063,7 @@ where
 		let msg = ibc_proto::google::protobuf::Any {
 			type_url: msg.type_url(),
 			value: msg
-				.encode_vec()
-				.map_err(|e| IbcHandlerError::Other { msg: Some(e.to_string()) })?,
+				.clone().encode_vec(),
 		};
 		let res = ibc::core::ics26_routing::handler::deliver::<_>(&mut ctx, msg)
 			.map_err(|e| IbcHandlerError::ChannelCloseError { msg: Some(e.to_string()) })?;

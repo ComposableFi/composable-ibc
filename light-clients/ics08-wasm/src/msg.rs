@@ -54,7 +54,7 @@ impl From<MsgPushNewWasmCode> for Any {
 	fn from(value: MsgPushNewWasmCode) -> Self {
 		Any {
 			type_url: WASM_PUSH_WASM_CODE_TYPE_URL.to_string(),
-			value: value.encode_vec().expect("MsgPushNewWasmCode encoding should always succeed"),
+			value: value.clone().encode_vec(),
 		}
 	}
 }

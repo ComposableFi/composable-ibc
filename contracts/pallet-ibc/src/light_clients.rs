@@ -394,25 +394,25 @@ impl From<AnyClientMessage> for Any {
 		match client_msg {
 			AnyClientMessage::Wasm(msg) => Any {
 				type_url: WASM_CLIENT_MESSAGE_TYPE_URL.to_string(),
-				value: msg.encode_vec().expect("encode_vec failed"),
+				value: msg.clone().encode_vec(),
 			},
 			AnyClientMessage::Grandpa(msg) => match msg {
 				ics10_grandpa::client_message::ClientMessage::Header(h) => Any {
 					type_url: GRANDPA_HEADER_TYPE_URL.to_string(),
-					value: h.encode_vec().expect("encode_vec failed"),
+					value: h.clone().encode_vec(),
 				},
 				ics10_grandpa::client_message::ClientMessage::Misbehaviour(m) => Any {
 					type_url: GRANDPA_MISBEHAVIOUR_TYPE_URL.to_string(),
-					value: m.encode_vec().expect("encode_vec failed"),
+					value: m.clone().encode_vec(),
 				},
 			},
 			AnyClientMessage::Beefy(msg) => Any {
 				type_url: BEEFY_CLIENT_MESSAGE_TYPE_URL.to_string(),
-				value: msg.encode_vec().expect("encode_vec failed"),
+				value: msg.clone().encode_vec(),
 			},
 			AnyClientMessage::Tendermint(msg) => Any {
 				type_url: TENDERMINT_CLIENT_MESSAGE_TYPE_URL.to_string(),
-				value: msg.encode_vec().expect("encode_vec failed"),
+				value: msg.clone().encode_vec(),
 			},
 
 			#[cfg(test)]
