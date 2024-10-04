@@ -20,7 +20,7 @@ subxt = { git = "https://github.com/paritytech/subxt",  tag = "v0.29.0", feature
 
 ibc = { path = "../../ibc/modules" }
 ibc-proto = { path = "../../ibc/proto" }
-tendermint-proto = { git = "https://github.com/informalsystems/tendermint-rs", rev = "e81f7bf23d63ffbcd242381d1ce5e35da3515ff1", default-features = false }
+tendermint-proto = { git = "https://github.com/informalsystems/tendermint-rs", rev = "4d81b67c28510db7d2d99ed62ebfa9fdf0e02141", default-features = false }
 
 hyperspace-core = { path = "../core", features = ["testing"] }
 hyperspace-parachain = { path = "../parachain", features = ["testing"] }

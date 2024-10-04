@@ -17,6 +17,7 @@ sha3 = { version = "0.10.1", default-features = false }
 hex = { version = "0.4.3", default-features = false }
 base58 = "0.2.0"
 blake2 = { version = "0.10", default-features = false }
+time = { version = "0.3", default-features = false }
 
 sp-core = { git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.43", default-features = false }
 sp-io = { git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.43", default-features = false }

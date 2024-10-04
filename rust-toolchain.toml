@@ -3,6 +3,6 @@
 # For the time being sticking to version that works.  Setting this to
 # never version will likely require `cargo update -p ahash@0.8.3 &&
 # cargo update -p ahash@0.7.6`.
-channel = "nightly-2024-02-05"
+channel = "nightly-2023-11-16"
 targets = [ "wasm32-unknown-unknown"]
 profile = "minimal"
