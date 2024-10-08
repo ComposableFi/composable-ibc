@@ -26,6 +26,7 @@ hyperspace-core = { path = "../core", features = ["testing"] }
 hyperspace-parachain = { path = "../parachain", features = ["testing"] }
 hyperspace-primitives = { path = "../primitives", features = ["testing"] }
 hyperspace-solana = { path = "../solana", features = ["testing"] }
+hyperspace-rollup = { path = "../rollup", features = ["testing"] }
 pallet-ibc = { path = "../../contracts/pallet-ibc" }
 pallet-ibc-ping = { path = "../../contracts/pallet-ibc/ping" }
 ics10-grandpa = { path = "../../light-clients/ics10-grandpa" }
@@ -55,6 +56,7 @@ hyperspace-core = { path = "../core", features = ["testing"] }
 hyperspace-parachain = { path = "../parachain", features = ["testing"] }
 hyperspace-cosmos = { path = "../cosmos", features = [] }
 hyperspace-solana = { path = "../solana", features = ["testing"] }
+hyperspace-rollup = { path = "../rollup", features = ["testing"] }
 
 # We need this so the tests run sequentially
 [[test]]

@@ -8,12 +8,8 @@ use ibc_core_host_types::path::{
 
 mod ibc {
 	pub use ibc::core::{
-		ics02_client::error::Error as ClientError,
-		ics04_channel::packet::Sequence,
 		ics23_commitment::commitment::{CommitmentPrefix, CommitmentProofBytes, CommitmentRoot},
 		ics24_host::{
-			identifier,
-			identifier::{ChannelId, ClientId, ConnectionId, PortId},
 			path,
 		},
 	};
@@ -58,7 +54,7 @@ pub fn generate<A: sealable_trie::Allocator>(
 	path: ibc::path::Path,
 ) -> Result<IbcProof, GenerateError> {
 	let path = convert_old_path_to_new(path);
-	cf_guest_upstream::proof::generate(block_header, trie, path)
+	cf_guest_upstream::proof::generate_for_block(block_header, trie, path)
 }
 
 /// Verifies a proof for given entry or lack of entry.
@@ -101,7 +97,7 @@ pub fn verify_bytes(
 	path: ibc::path::Path,
 	value: Option<&[u8]>,
 ) -> Result<(), VerifyError> {
-	cf_guest_upstream::proof::verify(prefix, proof, root, convert_old_path_to_new(path), value)
+	cf_guest_upstream::proof::verify_for_block(prefix, proof, root, convert_old_path_to_new(path), value)
 }
 
 fn convert_old_path_to_new(path: ibc::path::Path) -> ibc_core_host_types::path::Path {
@@ -162,13 +158,13 @@ fn convert_old_path_to_new(path: ibc::path::Path) -> ibc_core_host_types::path::
 				channel_id: ibc_core_host_types::identifiers::ChannelId::new(
 					e.channel_id.sequence(),
 				),
-				sequence: u64::from(e.sequence.0).into(),
+				sequence: e.sequence.0.into(),
 			}),
 		::ibc::core::ics24_host::Path::Acks(e) => ibc_core_host_types::path::Path::Ack(AckPath {
 			port_id: ibc_core_host_types::identifiers::PortId::from_str(e.port_id.as_str())
 				.unwrap(),
 			channel_id: ibc_core_host_types::identifiers::ChannelId::new(e.channel_id.sequence()),
-			sequence: u64::from(e.sequence.0).into(),
+			sequence: e.sequence.0.into(),
 		}),
 		::ibc::core::ics24_host::Path::Receipts(e) =>
 			ibc_core_host_types::path::Path::Receipt(ReceiptPath {
@@ -177,7 +173,7 @@ fn convert_old_path_to_new(path: ibc::path::Path) -> ibc_core_host_types::path::
 				channel_id: ibc_core_host_types::identifiers::ChannelId::new(
 					e.channel_id.sequence(),
 				),
-				sequence: u64::from(e.sequence.0).into(),
+				sequence: e.sequence.0.into(),
 			}),
 		::ibc::core::ics24_host::Path::Upgrade(path) => {
 			use ::ibc::core::ics24_host::ClientUpgradePath;
