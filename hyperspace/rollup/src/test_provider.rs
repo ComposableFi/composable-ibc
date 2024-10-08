@@ -2,7 +2,10 @@ use crate::{client::RollupClient, error::Error, events};
 use anchor_client::{
 	solana_client::{
 		pubsub_client::PubsubClient,
-		rpc_config::{RpcTransactionLogsConfig, RpcTransactionLogsFilter},
+		rpc_config::{
+			RpcBlockSubscribeConfig, RpcBlockSubscribeFilter, RpcTransactionLogsConfig,
+			RpcTransactionLogsFilter,
+		},
 	},
 	solana_sdk::commitment_config::CommitmentConfig,
 };
@@ -39,36 +42,24 @@ impl TestProvider for RollupClient {
 		let ws_url = self.ws_url.clone();
 		let program_id = self.solana_ibc_program_id;
 		tokio::task::spawn_blocking(move || {
-			let (_logs_subscription, receiver) = PubsubClient::logs_subscribe(
+			let (_block_subscription, receiver) = PubsubClient::block_subscribe(
 				&ws_url,
-				RpcTransactionLogsFilter::Mentions(vec![program_id.to_string()]),
-				RpcTransactionLogsConfig { commitment: Some(CommitmentConfig::confirmed()) },
+				// RpcBlockSubscribeFilter::MentionsAccountOrProgram(program_id.to_string()),
+				RpcBlockSubscribeFilter::All,
+				Some(RpcBlockSubscribeConfig {
+					commitment: Some(CommitmentConfig::finalized()),
+					..Default::default()
+				}),
 			)
 			.unwrap();
 
 			loop {
 				match receiver.recv() {
 					Ok(logs) => {
-						let (events, _proof_height) =
-							events::get_events_from_logs(logs.clone().value.logs);
-						let finality_events: Vec<&solana_ibc::events::BlockFinalised> = events
-							.iter()
-							.filter_map(|event| match event {
-								solana_ibc::events::Event::BlockFinalised(e) => Some(e),
-								_ => None,
-							})
-							.collect();
-						// Only one finality event is emitted in a transaction
-						if !finality_events.is_empty() {
-							let mut broke = false;
-							assert_eq!(finality_events.len(), 1);
-							let finality_event = finality_events[0].clone();
-							let _ = tx
-								.send(u64::from(finality_event.block_height))
-								.map_err(|_| broke = true);
-							if broke {
-								break
-							}
+						let mut broke = false;
+						let _ = tx.send(u64::from(logs.value.slot)).map_err(|_| broke = true);
+						if broke {
+							break;
 						}
 					},
 					Err(err) => {

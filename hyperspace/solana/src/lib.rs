@@ -651,6 +651,7 @@ deserialize client state"
 			proof_height,
 			chain_account.head().unwrap().block_height
 		);
+		log::info!("at height {:?}", at_height);
 		let block_header = if (!self.common_state.handshake_completed && at_height) {
 			log::info!("Fetching previous block header");
 			events::get_header_from_height(

@@ -656,7 +656,7 @@ impl RollupClient {
 				);
 				let (escrow_account, token_mint, receiver_account, receiver_address) =
 					get_accounts(
-						token.denom.clone(),
+						&token.denom,
 						self.solana_ibc_program_id,
 						receiver,
 						port_id,
@@ -759,7 +759,7 @@ impl RollupClient {
 					token
 				);
 				let (escrow_account, token_mint, sender_account, sender_address) = get_accounts(
-					token.denom.clone(),
+					&token.denom,
 					self.solana_ibc_program_id,
 					&sender_account,
 					port_id,
@@ -1188,7 +1188,7 @@ impl RollupClient {
 }
 
 pub async fn get_accounts(
-	denom: PrefixedDenom,
+	denom: &PrefixedDenom,
 	program_id: Pubkey,
 	receiver: &String,
 	port_id: &ibc_core_host_types::identifiers::PortId,
@@ -1196,7 +1196,9 @@ pub async fn get_accounts(
 	rpc: &AsyncRpcClient,
 	refund: bool,
 ) -> Result<(Pubkey, Pubkey, Pubkey, Pubkey), ParsePubkeyError> {
-	if Pubkey::from_str(&denom.base_denom.to_string()).is_ok() {
+	if (!refund && is_receiver_chain_source(port_id.clone(), channel_id.clone(), denom)
+		|| (refund && is_sender_chain_source(port_id.clone(), channel_id.clone(), denom)))
+	{
 		log::info!("Receiver chain source");
 		let hashed_denom = CryptoHash::digest(denom.base_denom.as_str().as_bytes());
 		let escrow_seeds = ["escrow".as_bytes(), hashed_denom.as_ref()];

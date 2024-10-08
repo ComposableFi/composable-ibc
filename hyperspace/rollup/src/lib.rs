@@ -2,7 +2,10 @@
 extern crate alloc;
 
 use anchor_client::{
-	solana_client::{rpc_client::RpcClient, rpc_config::RpcSendTransactionConfig},
+	solana_client::{
+		nonblocking::pubsub_client::PubsubClient, rpc_client::RpcClient,
+		rpc_config::RpcSendTransactionConfig,
+	},
 	solana_sdk::{
 		compute_budget::ComputeBudgetInstruction,
 		instruction::Instruction,
@@ -15,7 +18,7 @@ use client::FinalityEvent;
 use client_state::convert_new_client_state_to_old;
 use consensus_state::convert_new_consensus_state_to_old;
 use core::{pin::Pin, str::FromStr, time::Duration};
-use futures::future::join_all;
+use futures::{future::join_all, StreamExt};
 use guestchain::{BlockHeader, Epoch, PubKey, Validator};
 use ibc_core_channel_types::msgs::PacketMsg;
 use ibc_core_client_types::msgs::ClientMsg;
@@ -43,7 +46,7 @@ use tokio::{
 
 use anchor_client::{
 	solana_client::{
-		pubsub_client::PubsubClient,
+		// pubsub_client::PubsubClient,
 		rpc_client::GetConfirmedSignaturesForAddress2Config,
 		rpc_config::{
 			RpcBlockSubscribeConfig, RpcBlockSubscribeFilter, RpcTransactionLogsConfig,
@@ -270,17 +273,20 @@ impl IbcProvider for RollupClient {
 		let (tx, rx) = unbounded_channel();
 		let ws_url = self.ws_url.clone();
 		let program_id = self.solana_ibc_program_id;
-		tokio::task::spawn_blocking(move || {
-			let (_logs_subscription, receiver) = PubsubClient::logs_subscribe(
-				&ws_url,
-				RpcTransactionLogsFilter::Mentions(vec![program_id.to_string()]),
-				RpcTransactionLogsConfig { commitment: Some(CommitmentConfig::finalized()) },
-			)
-			.unwrap();
+		tokio::spawn(async move {
+			let client = PubsubClient::new(&ws_url).await.unwrap();
+			let (mut stream, receiver) = client
+				.logs_subscribe(
+					// &ws_url,
+					RpcTransactionLogsFilter::Mentions(vec![program_id.to_string()]),
+					RpcTransactionLogsConfig { commitment: Some(CommitmentConfig::finalized()) },
+				)
+				.await
+				.unwrap();
 
 			loop {
-				match receiver.recv() {
-					Ok(logs) => {
+				match stream.next().await {
+					Some(logs) => {
 						let (events, proof_height) =
 							events::get_ibc_events_from_logs(logs.value.logs);
 						// log::info!("These are events {:?} ", events);
@@ -303,8 +309,8 @@ impl IbcProvider for RollupClient {
 							break;
 						}
 					},
-					Err(err) => {
-						panic!("{}", format!("Disconnected: {err}"));
+					None => {
+						panic!("{}", format!("Disconnected: "));
 					},
 				}
 			}
@@ -1211,7 +1217,7 @@ deserialize client state"
 
 	fn expected_block_time(&self) -> Duration {
 		// solana block time is roughly 400 milliseconds
-		Duration::ZERO
+		Duration::from_millis(400)
 	}
 
 	async fn query_client_update_time_and_height(
@@ -1767,46 +1773,83 @@ impl Chain for RollupClient {
 	> {
 		let (tx, rx) = unbounded_channel();
 		let ws_url = self.ws_url.clone();
+		// let client = PubsubClient::new(&ws_url).await.unwrap();
 		let program_id = self.solana_ibc_program_id;
-		tokio::task::spawn_blocking(move || {
-			let (_block_subscription, receiver) = PubsubClient::block_subscribe(
-				&ws_url,
-				RpcBlockSubscribeFilter::MentionsAccountOrProgram(program_id.to_string()),
-				// RpcBlockSubscribeFilter::All,
-				Some(RpcBlockSubscribeConfig {
-					commitment: Some(CommitmentConfig::finalized()),
-					..Default::default()
-				}),
-			)
-			.unwrap();
+		// tokio::task::spawn_blocking(move || {
+		// let (mut stream, receiver) = client
+		// 	.block_subscribe(
+		// 		// &ws_url,
+		// 		// RpcBlockSubscribeFilter::MentionsAccountOrProgram(program_id.to_string()),
+		// 		RpcBlockSubscribeFilter::All,
+		// 		Some(RpcBlockSubscribeConfig {
+		// 			commitment: Some(CommitmentConfig::finalized()),
+		// 			..Default::default()
+		// 		}),
+		// 	)
+		// 	.await
+		// 	.unwrap();
 
-			loop {
-				match receiver.recv() {
-					Ok(block) => {
-						// sleep(Duration::from_secs(10));
-						log::info!("Found rollup event");
-						let block = block.value;
-						let confirmed_block = block.block.unwrap();
-						// log::info!("Found finality event");
-						let mut broke = false;
-						let finality_event = FinalityEvent::Rollup {
-							slot: block.slot,
-							previous_blockhash: confirmed_block.previous_blockhash,
-							blockhash: confirmed_block.blockhash,
-						};
-						let _ = tx.send(finality_event).map_err(|_| broke = true);
-						if broke {
-							break;
-						}
-					},
-					Err(err) => {
-						panic!("{}", format!("Disconnected: {err}"));
-					},
+		// loop {
+		// 	match stream.next().await {
+		// 		Some(block) => {
+		// 			// sleep(Duration::from_secs(10));
+		// 			// log::info!("Found rollup event");
+		// 			let block = block.value;
+		// 			let confirmed_block = block.block.unwrap();
+		// 			// log::info!("Found finality event");
+		// 			let mut broke = false;
+		// 			let finality_event = FinalityEvent::Rollup {
+		// 				slot: block.slot,
+		// 				previous_blockhash: confirmed_block.previous_blockhash,
+		// 				blockhash: confirmed_block.blockhash,
+		// 			};
+		// 			let _ = tx.send(finality_event).map_err(|_| broke = true);
+		// 			if broke {
+		// 				break;
+		// 			}
+		// 		},
+		// 		None => {
+		// 			log::error!("Disconnected: ");
+		// 			// continue;
+		// 		},
+		// 	}
+		// }
+		// });
+		// Spawn a new task to handle the stream
+		// Spawn a new task to handle the stream
+		tokio::spawn(async move {
+			let client = PubsubClient::new(&ws_url).await.unwrap();
+			let (mut stream, _receiver) = client
+				.block_subscribe(
+					// RpcBlockSubscribeFilter::All,
+					RpcBlockSubscribeFilter::MentionsAccountOrProgram(program_id.to_string()),
+					Some(RpcBlockSubscribeConfig {
+						commitment: Some(CommitmentConfig::finalized()),
+						..Default::default()
+					}),
+				)
+				.await
+				.unwrap();
+
+			while let Some(block) = stream.next().await {
+				let block = block.value;
+				if let Some(confirmed_block) = block.block {
+					let finality_event = FinalityEvent::Rollup {
+						slot: block.slot,
+						previous_blockhash: confirmed_block.previous_blockhash,
+						blockhash: confirmed_block.blockhash,
+					};
+					if tx.send(finality_event).is_err() {
+						// The receiver has been dropped, exit the loop
+						break;
+					}
 				}
 			}
+			log::info!("Finality notifications stream ended");
 		});
 
 		let streams = tokio_stream::wrappers::UnboundedReceiverStream::new(rx);
+		log::info!("THis is stream {:?}", streams);
 		Ok(Box::pin(streams))
 	}
 
@@ -1824,10 +1867,6 @@ impl Chain for RollupClient {
 		let mut index = -1;
 
 		for message in messages {
-			index += 1;
-			if index > 1 {
-				break;
-			}
 			let storage = self.get_ibc_storage().await;
 			let my_message = Ics26Envelope::<LocalClientTypes>::try_from(message.clone()).unwrap();
 			let new_messages = convert_old_msgs_to_new(vec![my_message]);
@@ -2302,3 +2341,62 @@ impl Chain for RollupClient {
 		self.common_state_mut().set_rpc_call_delay(delay)
 	}
 }
+
+// // #[tokio::test]
+// #[test]
+// pub fn test_rollup_client() {
+// 	println!("Starting");
+// 	let bytes = vec![
+// 		85, 115, 101, 100, 32, 72, 84, 84, 80, 32, 77, 101, 116, 104, 111, 100, 32, 105, 115, 32,
+// 		110, 111, 116, 32, 97, 108, 108, 111, 119, 101, 100, 46, 32, 80, 79, 83, 84, 32, 111, 114,
+// 		32, 79, 80, 84, 73, 79, 78, 83, 32, 105, 115, 32, 114, 101, 113, 117, 105, 114, 101, 100,
+// 		10,
+// 	];
+
+// 	match String::from_utf8(bytes) {
+// 		Ok(s) => println!("Converted string: {}", s),
+// 		Err(e) => println!("Failed to convert bytes to string: {}", e),
+// 	}
+// 	// let (tx, rx) = unbounded_channel();
+// 	// let ws_url = "wss://mantis-testnet-rollup.composable-shared-artifacts.composablenodes.tech/ws";
+// 	let ws_url = "wss://devnet.helius-rpc.com/?api-key=5ae782d8-6bf6-489c-b6df-ef7e6289e193";
+// 	let program_id = "2HLLVco5HvwWriNbUhmVwA2pCetRkpgrqwnjcsZdyTKT";
+// 	// tokio::task::spawn_blocking(move || {
+// 	let (_block_subscription, receiver) = PubsubClient::logs_subscribe(
+// 		&ws_url,
+// 		// RpcBlockSubscribeFilter::MentionsAccountOrProgram(program_id.to_string()),
+// 		// RpcBlockSubscribeFilter::All,
+// 		RpcTransactionLogsFilter::All,
+// 		RpcTransactionLogsConfig { commitment: Some(CommitmentConfig::finalized()) },
+// 	)
+// 	.unwrap();
+
+// 	loop {
+// 		match receiver.recv() {
+// 			Ok(block) => {
+// 				// sleep(Duration::from_secs(10));
+// 				log::info!("Found rollup event");
+// 				// let block = block.value;
+// 				// let confirmed_block = block.block.unwrap();
+// 				// // log::info!("Found finality event");
+// 				// let mut broke = false;
+// 				// let finality_event = FinalityEvent::Rollup {
+// 				// 	slot: block.slot,
+// 				// 	previous_blockhash: confirmed_block.previous_blockhash,
+// 				// 	blockhash: confirmed_block.blockhash,
+// 				// };
+// 				// let _ = tx.send(finality_event).map_err(|_| broke = true);
+// 				// if broke {
+// 				// 	break;
+// 				// }
+// 			},
+// 			Err(err) => {
+// 				panic!("{}", format!("Disconnected: {err}"));
+// 			},
+// 		}
+// 	}
+// 	// });
+
+// 	// let streams = tokio_stream::wrappers::UnboundedReceiverStream::new(rx);
+// 	// println!("Streams: {:?}", streams);
+// }

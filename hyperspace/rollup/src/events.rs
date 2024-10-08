@@ -151,12 +151,10 @@ pub fn convert_new_event_to_old(
 				height,
 				client_id: ClientId::from_str(e.client_id_on_a().as_str()).unwrap(),
 				counterparty_client_id: ClientId::from_str(e.client_id_on_b().as_str()).unwrap(),
-				counterparty_connection_id: Some(
-					ConnectionId::from_str(e.conn_id_on_b().as_str()).unwrap(),
-				),
-				connection_id: e
+				counterparty_connection_id: e
 					.conn_id_on_a()
 					.and_then(|conn| Some(ConnectionId::from_str(conn.as_str()).unwrap())),
+				connection_id: Some(ConnectionId::from_str(e.conn_id_on_b().as_str()).unwrap()),
 			});
 			Some(IbcEvent::OpenConfirmConnection(eve))
 		},
@@ -808,7 +806,7 @@ pub struct PayloadWithSingleParam<T> {
 	pub jsonrpc: String,
 	pub id: u64,
 	pub method: String,
-	pub params: T
+	pub params: T,
 }
 
 #[derive(Debug, Serialize, Deserialize)]
@@ -840,7 +838,7 @@ pub struct TrieResponse {
 pub struct SingleTrieResponse {
 	pub jsonrpc: String,
 	pub result: SlotData,
-	pub id: u64,	
+	pub id: u64,
 }
 
 /// Data provided by the Witnessed Trie Geyser plugin.

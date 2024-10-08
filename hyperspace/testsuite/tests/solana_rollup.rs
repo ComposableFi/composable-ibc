@@ -16,9 +16,7 @@ use anchor_lang::prelude::*;
 use core::time::Duration;
 use futures::StreamExt;
 use hyperspace_core::{
-	chain::{AnyAssetId, AnyChain, AnyConfig},
-	logging,
-	substrate::DefaultConfig,
+	chain::{AnyAssetId, AnyChain, AnyConfig}, logging, relay, substrate::DefaultConfig
 };
 use hyperspace_rollup::client::{RollupClient, RollupClientConfig};
 use hyperspace_primitives::{utils::create_clients, CommonClientConfig, IbcProvider, KeyProvider};
@@ -52,18 +50,24 @@ pub struct Args {
 impl Default for Args {
 	fn default() -> Self {
 		let solana = std::env::var("SOLANA_HOST").unwrap_or_else(|_| "127.0.0.1".to_string());
-		let rollup = std::env::var("ROLLUP_HOST").unwrap_or_else(|_| "127.0.0.1".to_string());
+		let rollup = std::env::var("ROLLUP_HOST").unwrap_or_else(|_| "35.190.210.208".to_string());
 
 		Args {
 			// chain_a: format!("https://devnet.helius-rpc.com/?api-key=bc5c0cfc-46df-4781-978f-af6ca7a202c2"),
-			chain_a: format!("http://{solana}:9000"),
-			chain_b: format!("http://{rollup}:8899"),
+			// chain_a: format!("http://{solana}:9000"),
+			chain_a: format!("https://devnet.helius-rpc.com/?api-key=5ae782d8-6bf6-489c-b6df-ef7e6289e193"),
+			// chain_b: format!("http://{rollup}:8899"),
+			chain_b: format!("https://mantis-testnet-rollup.composable-shared-artifacts.composablenodes.tech/rpc"),
 			connection_prefix_a: "ibc".to_string(),
 			connection_prefix_b: "ibc".to_string(),
-			solana_ws: format!("ws://{solana}:9001"),
+			// solana_ws: format!("ws://{solana}:9001"),
+			solana_ws: format!("wss://devnet.helius-rpc.com/?api-key=5ae782d8-6bf6-489c-b6df-ef7e6289e193"),
 			// solana_ws:
 			// format!("wss://devnet.helius-rpc.com/?api-key=bc5c0cfc-46df-4781-978f-af6ca7a202c2"),
-			rollup_ws: format!("ws://{rollup}:8900"),
+			// rollup_ws: format!("ws://{rollup}:8900"),
+			rollup_ws: format!("wss://mantis-testnet-rollup.composable-shared-artifacts.composablenodes.tech/ws"),
+			// rollup_ws: format!("ws://{solana}:8900"),
+			// rollup_trie_db_rpc: format!("http://{rollup}:42069")
 			rollup_trie_db_rpc: format!("http://{rollup}:42069")
 		}
 	}
@@ -103,8 +107,8 @@ async fn setup_clients() -> (AnyChain, AnyChain) {
 			153, 230, 192, 225, 51, 119, 216, 14, 69, 225, 73, 7, 204, 144, 39, 213, 91, 255, 136,
 			38, 95, 131, 197, 4, 101, 186,
 		],
-		solana_ibc_program_id: "2HLLVco5HvwWriNbUhmVwA2pCetRkpgrqwnjcsZdyTKT".to_string(),
-		write_program_id: "FufGpHqMQgGVjtMH9AV8YMrJYq8zaK6USRsJkZP4yDjo".to_string(),
+		solana_ibc_program_id: "8o54PU8EcKtf4AqkFfqNhCWBqwpvFki64WEVNWAUP84c".to_string(),
+		write_program_id: "9tjGWBMR6u6mBzEiW7j6A72KyxzEmcEsW3oV7ijBLmFb".to_string(),
 		signature_verifier_program_id: "C6r1VEbn3mSpecgrZ7NdBvWUtYVJWrDPv4uU9Xs956gc".to_string(),
 		trie_db_path: "../../../solana-ibc-indexer/indexer.db3".to_string(),
 		transaction_sender: "RPC".to_string(),
@@ -171,12 +175,12 @@ async fn setup_clients() -> (AnyChain, AnyChain) {
 	// 	return (chain_a_wrapped, chain_b_wrapped)
 	// }
 
-	// let (client_a, client_b) =
-	// 	create_clients(&mut chain_a_wrapped, &mut chain_b_wrapped).await.unwrap();
-	// chain_a_wrapped.set_client_id(client_a);
-	// chain_b_wrapped.set_client_id(client_b);
-	chain_b_wrapped.set_client_id(ClientId::new("cf-solana", 0).unwrap());
-	chain_a_wrapped.set_client_id(ClientId::new("cf-guest", 0).unwrap());
+	let (client_a, client_b) =
+		create_clients(&mut chain_a_wrapped, &mut chain_b_wrapped).await.unwrap();
+	chain_a_wrapped.set_client_id(client_a);
+	chain_b_wrapped.set_client_id(client_b);
+	// chain_b_wrapped.set_client_id(ClientId::new("cf-solana", 8).unwrap());
+	// chain_a_wrapped.set_client_id(ClientId::new("cf-guest", 8).unwrap());
 	(chain_a_wrapped, chain_b_wrapped)
 }
 
@@ -191,16 +195,18 @@ async fn solana_to_rollup_ibc_messaging_full_integration_test() {
 	let asset_id_a = AnyAssetId::Solana("33WVSef9zaw49KbNdPGTmACVRnAXzN3o1fsqbUrLp2mh".to_string());
 	let asset_id_b = AnyAssetId::Rollup("33WVSef9zaw49KbNdPGTmACVRnAXzN3o1fsqbUrLp2mh".to_string());
 	let (mut chain_a, mut chain_b) = setup_clients().await;
-	// let (handle, channel_a, channel_b, connection_id_a, connection_id_b) =
-	// 	setup_connection_and_channel(&mut chain_a, &mut chain_b, Duration::from_secs(10)).await;
+	let (handle, channel_a, channel_b, connection_id_a, connection_id_b) =
+		setup_connection_and_channel(&mut chain_a, &mut chain_b, Duration::from_secs(10)).await;
 
-	// handle.abort();
+	handle.abort();
 
-	let connection_id_a = ConnectionId::from_str("connection-0").unwrap();
-	let connection_id_b = ConnectionId::from_str("connection-0").unwrap();
+	// relay(chain_a.clone(), chain_b.clone(), None, None, None).await;
 
-	let channel_a = ChannelId::from_str("channel-0").unwrap();
-	let channel_b = ChannelId::from_str("channel-0").unwrap();
+	// let connection_id_a = ConnectionId::from_str("connection-0").unwrap();
+	// let connection_id_b = ConnectionId::from_str("connection-0").unwrap();
+
+	// let channel_a = ChannelId::from_str("channel-0").unwrap();
+	// let channel_b = ChannelId::from_str("channel-0").unwrap();
 
 	log::info!("Channel A: {:?}", channel_a);
 	log::info!("Channel B: {:?}", channel_b);

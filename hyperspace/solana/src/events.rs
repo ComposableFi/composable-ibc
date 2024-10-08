@@ -151,12 +151,10 @@ pub fn convert_new_event_to_old(
 				height,
 				client_id: ClientId::from_str(e.client_id_on_a().as_str()).unwrap(),
 				counterparty_client_id: ClientId::from_str(e.client_id_on_b().as_str()).unwrap(),
-				counterparty_connection_id: Some(
-					ConnectionId::from_str(e.conn_id_on_b().as_str()).unwrap(),
-				),
-				connection_id: e
+				counterparty_connection_id: e
 					.conn_id_on_a()
 					.and_then(|conn| Some(ConnectionId::from_str(conn.as_str()).unwrap())),
+				connection_id: Some(ConnectionId::from_str(e.conn_id_on_b().as_str()).unwrap()),
 			});
 			Some(IbcEvent::OpenConfirmConnection(eve))
 		},
@@ -174,11 +172,13 @@ pub fn convert_new_event_to_old(
 		ibc_core_handler_types::events::IbcEvent::OpenTryChannel(e) => {
 			let eve = ChanOpenTry {
 				height,
-				port_id: PortId::from_str(e.port_id_on_a().as_str()).unwrap(),
-				channel_id: Some(ChannelId::from_str(e.chan_id_on_a().as_str()).unwrap()),
+				port_id: PortId::from_str(e.port_id_on_b().as_str()).unwrap(),
+				channel_id: Some(ChannelId::from_str(e.chan_id_on_b().as_str()).unwrap()),
 				connection_id: ConnectionId::from_str(e.conn_id_on_b().as_str()).unwrap(),
-				counterparty_port_id: PortId::from_str(e.port_id_on_b().as_str()).unwrap(),
-				counterparty_channel_id: None,
+				counterparty_port_id: PortId::from_str(e.port_id_on_a().as_str()).unwrap(),
+				counterparty_channel_id: Some(
+					ChannelId::from_str(e.chan_id_on_a().as_str()).unwrap(),
+				),
 			};
 			Some(IbcEvent::OpenTryChannel(eve))
 		},
@@ -189,18 +189,22 @@ pub fn convert_new_event_to_old(
 				channel_id: Some(ChannelId::from_str(e.chan_id_on_a().as_str()).unwrap()),
 				connection_id: ConnectionId::from_str(e.conn_id_on_a().as_str()).unwrap(),
 				counterparty_port_id: PortId::from_str(e.port_id_on_b().as_str()).unwrap(),
-				counterparty_channel_id: None,
+				counterparty_channel_id: Some(
+					ChannelId::from_str(e.chan_id_on_b().as_str()).unwrap(),
+				),
 			};
 			Some(IbcEvent::OpenAckChannel(eve))
 		},
 		ibc_core_handler_types::events::IbcEvent::OpenConfirmChannel(e) => {
 			let eve = ChanOpenConfirm {
 				height,
-				port_id: PortId::from_str(e.port_id_on_a().as_str()).unwrap(),
-				channel_id: Some(ChannelId::from_str(e.chan_id_on_a().as_str()).unwrap()),
+				port_id: PortId::from_str(e.port_id_on_b().as_str()).unwrap(),
+				channel_id: Some(ChannelId::from_str(e.chan_id_on_b().as_str()).unwrap()),
 				connection_id: ConnectionId::from_str(e.conn_id_on_b().as_str()).unwrap(),
-				counterparty_port_id: PortId::from_str(e.port_id_on_b().as_str()).unwrap(),
-				counterparty_channel_id: None,
+				counterparty_port_id: PortId::from_str(e.port_id_on_a().as_str()).unwrap(),
+				counterparty_channel_id: Some(
+					ChannelId::from_str(e.chan_id_on_a().as_str()).unwrap(),
+				),
 			};
 			Some(IbcEvent::OpenConfirmChannel(eve))
 		},
