@@ -50,14 +50,14 @@ pub struct Args {
 impl Default for Args {
 	fn default() -> Self {
 		let solana = std::env::var("SOLANA_HOST").unwrap_or_else(|_| "127.0.0.1".to_string());
-		let rollup = std::env::var("ROLLUP_HOST").unwrap_or_else(|_| "35.190.210.208".to_string());
+		let rollup = std::env::var("ROLLUP_HOST").unwrap_or_else(|_| "34.140.169.227".to_string());
 
 		Args {
 			// chain_a: format!("https://devnet.helius-rpc.com/?api-key=bc5c0cfc-46df-4781-978f-af6ca7a202c2"),
 			// chain_a: format!("http://{solana}:9000"),
 			chain_a: format!("https://devnet.helius-rpc.com/?api-key=5ae782d8-6bf6-489c-b6df-ef7e6289e193"),
 			// chain_b: format!("http://{rollup}:8899"),
-			chain_b: format!("https://mantis-testnet-rollup.composable-shared-artifacts.composablenodes.tech/rpc"),
+			chain_b: format!("https://mantis-rollup.composable-shared-artifacts.composablenodes.tech/rpc"),
 			connection_prefix_a: "ibc".to_string(),
 			connection_prefix_b: "ibc".to_string(),
 			// solana_ws: format!("ws://{solana}:9001"),
@@ -65,7 +65,7 @@ impl Default for Args {
 			// solana_ws:
 			// format!("wss://devnet.helius-rpc.com/?api-key=bc5c0cfc-46df-4781-978f-af6ca7a202c2"),
 			// rollup_ws: format!("ws://{rollup}:8900"),
-			rollup_ws: format!("wss://mantis-testnet-rollup.composable-shared-artifacts.composablenodes.tech/ws"),
+			rollup_ws: format!("wss://mantis-rollup.composable-shared-artifacts.composablenodes.tech/ws"),
 			// rollup_ws: format!("ws://{solana}:8900"),
 			// rollup_trie_db_rpc: format!("http://{rollup}:42069")
 			rollup_trie_db_rpc: format!("http://{rollup}:42069")
