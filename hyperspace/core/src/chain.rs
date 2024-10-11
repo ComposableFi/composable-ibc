@@ -70,9 +70,9 @@ use primitives::{
 	MisbehaviourHandler, UpdateType,
 };
 use serde::{Deserialize, Serialize};
-#[cfg(feature = "solana")]
+// #[cfg(feature = "solana")]
 use solana::{SolanaClient, SolanaClientConfig};
-#[cfg(feature = "rollup")]
+// #[cfg(feature = "rollup")]
 use rollup::{RollupClient, RollupClientConfig};
 use std::{pin::Pin, time::Duration};
 use tendermint_proto::Protobuf;
@@ -104,9 +104,9 @@ chains! {
 	PicassoKusama(ParachainClientConfig, ParachainClient<PicassoKusamaConfig>),
 	#[cfg(feature = "cosmos")]
 	Cosmos(CosmosClientConfig, CosmosClient<DefaultConfig>),
-	#[cfg(feature = "solana")]
+	// #[cfg(feature = "solana")]
 	Solana(SolanaClientConfig, SolanaClient),
-	#[cfg(feature = "rollup")]
+	// #[cfg(feature = "rollup")]
 	Rollup(RollupClientConfig, RollupClient),
 }
 
