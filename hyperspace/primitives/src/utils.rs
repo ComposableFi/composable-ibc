@@ -137,7 +137,7 @@ pub async fn create_connection(
 	};
 
 	let msg = Any { type_url: msg.type_url(), value: msg.encode_vec() };
-
+	log::info!("This is msg {:?}", msg);
 	let tx_id = chain_a.submit(vec![msg]).await?;
 	let connection_id_a = chain_a.query_connection_id_from_tx_hash(tx_id).await?;
 	chain_a.set_connection_id(connection_id_a.clone());
@@ -195,8 +195,11 @@ pub async fn create_channel(
 
 	let msg = Any { type_url: msg.type_url(), value: msg.encode_vec() };
 
+	log::info!("This is message sent {:?}", msg);
 	let tx_id = chain_a.submit(vec![msg]).await?;
+	log::info!("This is tx id {:?}", tx_id);
 	let channel_id_a = chain_a.query_channel_id_from_tx_hash(tx_id).await?;
+	log::info!("This is channel id on a {:?}", channel_id_a);
 	chain_a.add_channel_to_whitelist(channel_id_a);
 
 	log::info!(target: "hyperspace", "============= Wait till both chains have completed channel handshake =============");

@@ -66,13 +66,32 @@ const GUEST_CONSENSUS_STATE_TYPE_URL: &'static str = cf_guest::proto::ConsensusS
 const GUEST_HEADER_TYPE_URL: &'static str = cf_guest::proto::Header::IBC_TYPE_URL;
 const GUEST_MISBEHAVIOUR_TYPE_URL: &'static str = cf_guest::proto::Misbehaviour::IBC_TYPE_URL;
 
+const ROLLUP_CLIENT_MESSAGE_TYPE_URL: &'static str = cf_solana::proto::ClientMessage::IBC_TYPE_URL;
+const ROLLUP_CLIENT_STATE_TYPE_URL: &'static str = cf_solana::proto::ClientState::IBC_TYPE_URL;
+const ROLLUP_CONSENSUS_STATE_TYPE_URL: &'static str =
+	cf_solana::proto::ConsensusState::IBC_TYPE_URL;
+const ROLLUP_HEADER_TYPE_URL: &'static str = cf_solana::proto::Header::IBC_TYPE_URL;
+const ROLLUP_MISBEHAVIOUR_TYPE_URL: &'static str = cf_solana::proto::Misbehaviour::IBC_TYPE_URL;
+
 #[derive(Clone, Default, PartialEq, Debug, Eq)]
 pub struct HostFunctionsManager;
 
 /// Ed25519 public key (a.k.a. verifying key).
 #[derive(Clone, Debug, Eq, Hash, PartialEq)]
 #[repr(transparent)]
-pub struct PubKey(ed25519_dalek::VerifyingKey);
+pub struct PubKey(pub ed25519_dalek::VerifyingKey);
+
+impl PubKey {
+	pub fn to_bytes(&self) -> [u8; 32] {
+		self.0.as_bytes().clone()
+	}
+}
+
+impl Signature {
+	pub fn to_bytes(&self) -> [u8; 64] {
+		self.0.to_bytes()
+	}
+}
 
 impl guestchain::PubKey for PubKey {
 	type Signature = Signature;
@@ -120,7 +139,7 @@ impl Ord for PubKey {
 /// Ed25519 signature.
 #[derive(Clone, PartialEq, Eq, Debug)]
 #[repr(transparent)]
-pub struct Signature(ed25519_dalek::Signature);
+pub struct Signature(pub ed25519_dalek::Signature);
 
 impl guestchain::Signature for Signature {
 	fn to_vec(&self) -> Vec<u8> {
@@ -278,7 +297,7 @@ impl grandpa_client_primitives::HostFunctions for HostFunctionsManager {
 
 	fn insert_relay_header_hashes(new_hashes: &[<Self::Header as Header>::Hash]) {
 		if new_hashes.is_empty() {
-			return
+			return;
 		}
 
 		GrandpaHeaderHashesSetStorage::mutate(|hashes_set| {
@@ -333,6 +352,7 @@ pub enum AnyClient {
 	Tendermint(ics07_tendermint::client_def::TendermintClient<HostFunctionsManager>),
 	Wasm(ics08_wasm::client_def::WasmClient<AnyClient, AnyClientState, AnyConsensusState>),
 	Guest(cf_guest::client_def::GuestClient<PubKey>),
+	Rollup(cf_solana::client_def::SolanaClient),
 	#[cfg(any(test, feature = "testing"))]
 	Mock(ibc::mock::client_def::MockClient),
 }
@@ -344,6 +364,7 @@ pub enum AnyUpgradeOptions {
 	Tendermint(ics07_tendermint::client_state::UpgradeOptions),
 	Wasm(Box<Self>),
 	Guest(cf_guest::client::UpgradeOptions),
+	Rollup(cf_solana::client::UpgradeOptions),
 	#[cfg(any(test, feature = "testing"))]
 	Mock(()),
 }
@@ -360,6 +381,8 @@ pub enum AnyClientState {
 	Wasm(ics08_wasm::client_state::ClientState<AnyClient, Self, AnyConsensusState>),
 	#[ibc(proto_url = "GUEST_CLIENT_STATE_TYPE_URL")]
 	Guest(cf_guest::ClientState<PubKey>),
+	#[ibc(proto_url = "ROLLUP_CLIENT_STATE_TYPE_URL")]
+	Rollup(cf_solana::ClientState),
 	#[cfg(any(test, feature = "testing"))]
 	#[ibc(proto_url = "MOCK_CLIENT_STATE_TYPE_URL")]
 	Mock(ibc::mock::client_state::MockClientState),
@@ -376,14 +399,16 @@ impl AnyClientState {
 			let client_state = AnyClientState::try_from(any).ok()?;
 
 			match client_state {
-				AnyClientState::Wasm(wasm_client_state) =>
-					any = Any::decode(&*wasm_client_state.data).ok()?,
-				c =>
+				AnyClientState::Wasm(wasm_client_state) => {
+					any = Any::decode(&*wasm_client_state.data).ok()?
+				},
+				c => {
 					if f(&c) {
-						break Some(c)
+						break Some(c);
 					} else {
-						return None
-					},
+						return None;
+					}
+				},
 			};
 		}
 	}
@@ -417,6 +442,7 @@ impl AnyClientState {
 			AnyClientState::Tendermint(client_state) => client_state.latest_height(),
 			AnyClientState::Wasm(client_state) => client_state.latest_height(),
 			AnyClientState::Guest(client_state) => client_state.latest_height(),
+			AnyClientState::Rollup(client_state) => client_state.latest_height(),
 			#[cfg(any(test, feature = "testing"))]
 			AnyClientState::Mock(client_state) => client_state.latest_height(),
 		}
@@ -435,6 +461,8 @@ pub enum AnyConsensusState {
 	Wasm(ics08_wasm::consensus_state::ConsensusState<Self>),
 	#[ibc(proto_url = "GUEST_CONSENSUS_STATE_TYPE_URL")]
 	Guest(cf_guest::ConsensusState),
+	#[ibc(proto_url = "ROLLUP_CONSENSUS_STATE_TYPE_URL")]
+	Rollup(cf_solana::ConsensusState),
 	#[cfg(any(test, feature = "testing"))]
 	#[ibc(proto_url = "MOCK_CONSENSUS_STATE_TYPE_URL")]
 	Mock(ibc::mock::client_state::MockConsensusState),
@@ -462,6 +490,8 @@ pub enum AnyClientMessage {
 	Wasm(ics08_wasm::client_message::ClientMessage<Self>),
 	#[ibc(proto_url = "GUEST_CLIENT_MESSAGE_TYPE_URL")]
 	Guest(cf_guest::ClientMessage<PubKey>),
+	#[ibc(proto_url = "ROLLUP_CLIENT_MESSAGE_TYPE_URL")]
+	Rollup(cf_solana::ClientMessage),
 	#[cfg(any(test, feature = "testing"))]
 	#[ibc(proto_url = "MOCK_CLIENT_MESSAGE_TYPE_URL")]
 	Mock(ibc::mock::header::MockClientMessage),
@@ -494,16 +524,18 @@ impl TryFrom<Any> for AnyClientMessage {
 				ics10_grandpa::client_message::ClientMessage::decode_vec(&value.value)
 					.map_err(ics02_client::error::Error::decode_raw_header)?,
 			)),
-			GRANDPA_HEADER_TYPE_URL =>
+			GRANDPA_HEADER_TYPE_URL => {
 				Ok(Self::Grandpa(ics10_grandpa::client_message::ClientMessage::Header(
 					ics10_grandpa::client_message::Header::decode_vec(&value.value)
 						.map_err(ics02_client::error::Error::decode_raw_header)?,
-				))),
-			GRANDPA_MISBEHAVIOUR_TYPE_URL =>
+				)))
+			},
+			GRANDPA_MISBEHAVIOUR_TYPE_URL => {
 				Ok(Self::Grandpa(ics10_grandpa::client_message::ClientMessage::Misbehaviour(
 					ics10_grandpa::client_message::Misbehaviour::decode_vec(&value.value)
 						.map_err(ics02_client::error::Error::decode_raw_header)?,
-				))),
+				)))
+			},
 			// TODO: beefy header, misbehaviour impl From<Any>
 			BEEFY_CLIENT_MESSAGE_TYPE_URL => Ok(Self::Beefy(
 				ics11_beefy::client_message::ClientMessage::decode_vec(&value.value)
@@ -513,16 +545,18 @@ impl TryFrom<Any> for AnyClientMessage {
 				ics07_tendermint::client_message::ClientMessage::decode_vec(&value.value)
 					.map_err(ics02_client::error::Error::decode_raw_header)?,
 			)),
-			TENDERMINT_HEADER_TYPE_URL =>
+			TENDERMINT_HEADER_TYPE_URL => {
 				Ok(Self::Tendermint(ics07_tendermint::client_message::ClientMessage::Header(
 					ics07_tendermint::client_message::Header::decode_vec(&value.value)
 						.map_err(ics02_client::error::Error::decode_raw_header)?,
-				))),
-			TENDERMINT_MISBEHAVIOUR_TYPE_URL =>
+				)))
+			},
+			TENDERMINT_MISBEHAVIOUR_TYPE_URL => {
 				Ok(Self::Tendermint(ics07_tendermint::client_message::ClientMessage::Misbehaviour(
 					ics07_tendermint::client_message::Misbehaviour::decode_vec(&value.value)
 						.map_err(ics02_client::error::Error::decode_raw_header)?,
-				))),
+				)))
+			},
 			GUEST_CLIENT_MESSAGE_TYPE_URL => Ok(Self::Guest(
 				cf_guest::ClientMessage::decode_vec(&value.value)
 					.map_err(ics02_client::error::Error::decode_raw_header)?,
@@ -533,6 +567,18 @@ impl TryFrom<Any> for AnyClientMessage {
 			))),
 			GUEST_MISBEHAVIOUR_TYPE_URL => Ok(Self::Guest(cf_guest::ClientMessage::from(
 				cf_guest::Misbehaviour::decode_vec(&value.value)
+					.map_err(ics02_client::error::Error::decode_raw_header)?,
+			))),
+			ROLLUP_CLIENT_MESSAGE_TYPE_URL => Ok(Self::Rollup(
+				cf_solana::ClientMessage::decode_vec(&value.value)
+					.map_err(ics02_client::error::Error::decode_raw_header)?,
+			)),
+			ROLLUP_HEADER_TYPE_URL => Ok(Self::Rollup(cf_solana::ClientMessage::from(
+				cf_solana::Header::decode_vec(&value.value)
+					.map_err(ics02_client::error::Error::decode_raw_header)?,
+			))),
+			ROLLUP_MISBEHAVIOUR_TYPE_URL => Ok(Self::Rollup(cf_solana::ClientMessage::from(
+				cf_solana::Misbehaviour::decode_vec(&value.value)
 					.map_err(ics02_client::error::Error::decode_raw_header)?,
 			))),
 			WASM_CLIENT_MESSAGE_TYPE_URL => Ok(Self::Wasm(
@@ -547,24 +593,32 @@ impl TryFrom<Any> for AnyClientMessage {
 impl From<AnyClientMessage> for Any {
 	fn from(client_msg: AnyClientMessage) -> Self {
 		match client_msg {
-			AnyClientMessage::Wasm(msg) =>
-				Any { type_url: WASM_CLIENT_MESSAGE_TYPE_URL.to_string(), value: msg.encode_vec() },
+			AnyClientMessage::Wasm(msg) => {
+				Any { type_url: WASM_CLIENT_MESSAGE_TYPE_URL.to_string(), value: msg.encode_vec() }
+			},
 			AnyClientMessage::Grandpa(msg) => match msg {
-				ics10_grandpa::client_message::ClientMessage::Header(h) =>
-					Any { type_url: GRANDPA_HEADER_TYPE_URL.to_string(), value: h.encode_vec() },
+				ics10_grandpa::client_message::ClientMessage::Header(h) => {
+					Any { type_url: GRANDPA_HEADER_TYPE_URL.to_string(), value: h.encode_vec() }
+				},
 				ics10_grandpa::client_message::ClientMessage::Misbehaviour(m) => Any {
 					type_url: GRANDPA_MISBEHAVIOUR_TYPE_URL.to_string(),
 					value: m.encode_vec(),
 				},
 			},
-			AnyClientMessage::Beefy(msg) =>
-				Any { type_url: BEEFY_CLIENT_MESSAGE_TYPE_URL.to_string(), value: msg.encode_vec() },
+			AnyClientMessage::Beefy(msg) => {
+				Any { type_url: BEEFY_CLIENT_MESSAGE_TYPE_URL.to_string(), value: msg.encode_vec() }
+			},
 			AnyClientMessage::Tendermint(msg) => Any {
 				type_url: TENDERMINT_CLIENT_MESSAGE_TYPE_URL.to_string(),
 				value: msg.encode_vec(),
 			},
-			AnyClientMessage::Guest(msg) =>
-				Any { type_url: GUEST_CLIENT_MESSAGE_TYPE_URL.to_string(), value: msg.encode_vec() },
+			AnyClientMessage::Guest(msg) => {
+				Any { type_url: GUEST_CLIENT_MESSAGE_TYPE_URL.to_string(), value: msg.encode_vec() }
+			},
+			AnyClientMessage::Rollup(msg) => Any {
+				type_url: ROLLUP_CLIENT_MESSAGE_TYPE_URL.to_string(),
+				value: msg.encode_vec(),
+			},
 			#[cfg(any(test, feature = "testing"))]
 			AnyClientMessage::Mock(_msg) => panic!("MockHeader can't be serialized"),
 		}

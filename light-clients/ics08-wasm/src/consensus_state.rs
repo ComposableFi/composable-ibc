@@ -127,6 +127,6 @@ where
 
 impl<AnyConsensusState: Default> Default for ConsensusState<AnyConsensusState> {
 	fn default() -> Self {
-		ConsensusState { data: vec![], inner: Box::new(AnyConsensusState::default()) }
+		ConsensusState { data: vec![], inner: Box::<AnyConsensusState>::default() }
 	}
 }

@@ -1,7 +1,7 @@
 [package]
-name = "cf-guest"
-authors = ["Michal Nazarewicz <mina86@mina86.com>"]
-version = "0.0.1"
+name = "cf-solana"
+authors = ["Michal Nazarewicz <mina86@mina86.com>", "Dhruv D Jain <dhruv@iamsizzling.com>"]
+version = "0.1.0"
 edition = "2021"
 
 [dependencies]
@@ -32,7 +32,7 @@ lib               = { path = "../../../emulated-light-client/common/lib", featur
 trie-ids          = { path = "../../../emulated-light-client/common/trie-ids", default-features = false }
 sealable-trie     = { path = "../../../emulated-light-client/common/sealable-trie", features = ["borsh"], default-features = false }
 stdx              = { path = "../../../emulated-light-client/common/stdx", default-features = false }
-cf-guest-upstream = { package = "cf-guest", path = "../../../emulated-light-client/common/cf-guest", default-features = false }
+cf-solana-upstream = { package = "cf-solana", path = "../../../emulated-light-client/common/cf-solana", default-features = false }
 
 [build-dependencies]
 prost-build = { version = "0.11", default-features = false }

@@ -137,7 +137,7 @@ fn process_message(
 			verify(
 				&CommitmentPrefix::default(),
 				&msg.proof,
-				&consensus_state.root(),
+				consensus_state.root(),
 				msg.path,
 				Some(msg.value.as_ref()),
 			)?;
@@ -157,7 +157,7 @@ fn process_message(
 			verify(
 				&CommitmentPrefix::default(),
 				&msg.proof,
-				&consensus_state.root(),
+				consensus_state.root(),
 				msg.path,
 				None,
 			)
@@ -296,7 +296,7 @@ pub fn query(deps: Deps, env: Env, msg: QueryMsg) -> StdResult<Binary> {
 			let msg = VerifyClientMessage::try_from(msg)?;
 			client
 				.verify_client_message(&ctx, client_id, client_state, msg.client_message)
-				.map_err(|e| ContractError::Client(e))
+				.map_err(ContractError::Client)
 				.map(|_| to_binary(&QueryResponse::success()))?
 		},
 		QueryMsg::TimestampAtHeight(_msg) => todo!(),
@@ -307,7 +307,7 @@ pub fn query(deps: Deps, env: Env, msg: QueryMsg) -> StdResult<Binary> {
 			let msg = CheckForMisbehaviourMsg::try_from(msg)?;
 			client
 				.check_for_misbehaviour(&ctx, client_id, client_state, msg.client_message)
-				.map_err(|e| ContractError::Client(e))
+				.map_err(ContractError::Client)
 				.map(|result| to_binary(&QueryResponse::success().misbehaviour(result)))?
 		},
 	}

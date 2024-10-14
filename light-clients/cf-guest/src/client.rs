@@ -32,7 +32,7 @@ impl<PK: guestchain::PubKey> ClientState<PK> {
 	}
 
 	pub fn with_header(&self, header: &cf_guest_upstream::Header<PK>) -> Self {
-		Self(self.0.with_header(&header))
+		Self(self.0.with_header(header))
 	}
 
 	pub fn frozen(&self) -> Self {

@@ -1,10 +1,10 @@
-type = "solana"
-name = "solana"
-rpc_url = "https://devnet.helius-rpc.com/?api-key=5ae782d8-6bf6-489c-b6df-ef7e6289e193"
-ws_url = "wss://devnet.helius-rpc.com/?api-key=5ae782d8-6bf6-489c-b6df-ef7e6289e193"
-chain_id = "solana-1"
-client_id = "cf-guest-1"
-connection_id = "connection-15"
+type = "rollup"
+name = "mantis"
+rpc_url = "https://mantis-rollup.composable-shared-artifacts.composablenodes.tech/rpc"
+ws_url = "wss://mantis-rollup.composable-shared-artifacts.composablenodes.tech/ws"
+chain_id = "mantis-1"
+client_id = "cf-solana-13"
+connection_id = "connection-0"
 account_prefix = "ibc"
 fee_denom = "stake"
 fee_amount = "4000"
@@ -12,7 +12,7 @@ gas_limit = 100000000
 store_prefix = "ibc"
 max_tx_size = 320000
 commitment_prefix = [105, 98, 99]
-channel_whitelist = [["channel-2", "transfer"]]
+channel_whitelist = [["channel-0", "transfer"]]
 commitment_level = "confirmed"
 private_key = [
                         48, 123, 8, 80, 248, 0, 217, 142, 124, 193, 95, 24, 168, 139, 214, 136, 147, 210, 168,
@@ -20,11 +20,12 @@ private_key = [
                         153, 230, 192, 225, 51, 119, 216, 14, 69, 225, 73, 7, 204, 144, 39, 213, 91, 255, 136,
                         38, 95, 131, 197, 4, 101, 186,
                 ]
-solana_ibc_program_id = "8o54PU8EcKtf4AqkFfqNhCWBqwpvFki64WEVNWAUP84c"
-write_program_id = "9tjGWBMR6u6mBzEiW7j6A72KyxzEmcEsW3oV7ijBLmFb"
+solana_ibc_program_id = "2HLLVco5HvwWriNbUhmVwA2pCetRkpgrqwnjcsZdyTKT"
+write_program_id = "FufGpHqMQgGVjtMH9AV8YMrJYq8zaK6USRsJkZP4yDjo"
 signature_verifier_program_id = "C6r1VEbn3mSpecgrZ7NdBvWUtYVJWrDPv4uU9Xs956gc"
 trie_db_path = "../solana-ibc-indexer/indexer.db3"
 transaction_sender = "RPC"
+trie_rpc_url = "http://34.140.169.227:42069"
 
 [common_state_config]
 skip_optional_client_updates = true

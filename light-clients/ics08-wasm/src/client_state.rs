@@ -211,7 +211,7 @@ impl<AnyClient, AnyClientState: Default, AnyConsensusState> Default
 			data: vec![],
 			checksum: vec![],
 			latest_height: Default::default(),
-			inner: Box::new(AnyClientState::default()),
+			inner: Box::<AnyClientState>::default(),
 			_phantom: Default::default(),
 		}
 	}

@@ -55,6 +55,9 @@ cf-guest = { path = "../../light-clients/cf-guest" }
 guestchain = { path = "../../../emulated-light-client/common/guestchain" , default-features = false }
 ed25519-dalek = { version = "2.1.1", default-features = false, features = ["pkcs8"] }
 
+#rollup
+cf-solana = { path = "../../light-clients/cf-solana" }
+
 grandpa-client-primitives = { package = "grandpa-light-client-primitives", path = "../../algorithms/grandpa/primitives", default-features = false }
 beefy-client-primitives = { package = "beefy-light-client-primitives", path = "../../algorithms/beefy/primitives", default-features = false }
 light-client-common = { path = "../../light-clients/common", default-features = false }
