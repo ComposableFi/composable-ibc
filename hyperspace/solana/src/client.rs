@@ -82,6 +82,11 @@ pub enum DeliverIxType {
 	Normal,
 }
 
+enum ChainType {
+	Solana,
+	Mantis,
+}
+
 /// Implements the [`crate::Chain`] trait for solana
 #[derive(Clone)]
 pub struct SolanaClient {
@@ -91,6 +96,11 @@ pub struct SolanaClient {
 	pub rpc_url: String,
 	/// websocket url for solana
 	pub ws_url: String,
+	/// rpc url for solana
+	pub rpc_l2_url: String,
+	/// websocket url for solana
+	pub ws_l2_url: String,
+	pub mantis_token_mint_pubkey: Pubkey,
 	/// Solana chain Id
 	pub chain_id: String,
 	/// Light client id on counterparty chain
@@ -118,6 +128,7 @@ pub struct SolanaClient {
 	pub channel_whitelist: Arc<Mutex<HashSet<(ChannelId, PortId)>>>,
 	// Trie db path
 	pub trie_db_path: String,
+	pub chain_type: ChainType,
 	// Sets whether to use JITO or RPC for submitting transactions
 	pub transaction_sender: TransactionSender,
 }
@@ -162,6 +173,7 @@ pub struct SolanaClientConfig {
 	pub signature_verifier_program_id: String,
 	pub trie_db_path: String,
 	pub transaction_sender: String,
+	pub mantis_token_mint_pubkey: Pubkey,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
