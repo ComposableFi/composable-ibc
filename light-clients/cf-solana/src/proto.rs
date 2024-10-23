@@ -66,12 +66,12 @@ pub enum DecodeError {
 	BadType,
 }
 
-impl From<cf_solana_upstream::DecodeError> for DecodeError {
-	fn from(err: cf_solana_upstream::DecodeError) -> Self {
+impl From<cf_solana_upstream::proto::DecodeError> for DecodeError {
+	fn from(err: cf_solana_upstream::proto::DecodeError) -> Self {
 		match err {
-			cf_solana_upstream::DecodeError::BadProto(err) => Self::BadProto(err.to_string()),
-			cf_solana_upstream::DecodeError::BadMessage => Self::BadMessage,
-			cf_solana_upstream::DecodeError::BadType => Self::BadType,
+			cf_solana_upstream::proto::DecodeError::BadProto(err) => Self::BadProto(err.to_string()),
+			cf_solana_upstream::proto::DecodeError::BadMessage => Self::BadMessage,
+			cf_solana_upstream::proto::DecodeError::BadType => Self::BadType,
 		}
 	}
 }
@@ -84,8 +84,8 @@ impl From<cf_solana_upstream::DecodeError> for DecodeError {
 #[derive(Copy, Clone, Debug, PartialEq, Eq)]
 pub struct BadMessage;
 
-impl From<cf_solana_upstream::BadMessage> for BadMessage {
-	fn from(_: cf_solana_upstream::BadMessage) -> Self {
+impl From<cf_solana_upstream::proto::BadMessage> for BadMessage {
+	fn from(_: cf_solana_upstream::proto::BadMessage) -> Self {
 		Self
 	}
 }

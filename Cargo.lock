@@ -307,7 +307,7 @@ dependencies = [
  "arrayref",
  "base64 0.21.7",
  "bincode",
- "borsh 0.10.3",
+ "borsh 0.10.4",
  "bytemuck",
  "getrandom 0.2.15",
  "solana-program",
@@ -1271,9 +1271,9 @@ dependencies = [
 
 [[package]]
 name = "borsh"
-version = "0.10.3"
+version = "0.10.4"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "4114279215a005bc675e386011e594e1d9b800918cea18fcadadcce864a2046b"
+checksum = "115e54d64eb62cdebad391c19efc9dce4981c690c85a33a12199d99bb9546fee"
 dependencies = [
  "borsh-derive 0.10.3",
  "hashbrown 0.13.2",
@@ -1568,37 +1568,59 @@ dependencies = [
 name = "cf-guest"
 version = "0.0.0"
 dependencies = [
- "borsh 0.10.3",
+ "borsh 0.10.4",
  "bytemuck",
  "derive_more",
- "guestchain",
+ "guestchain 0.0.0",
  "ibc-client-tendermint-types",
  "ibc-core-client-context",
  "ibc-core-commitment-types",
- "ibc-core-connection-types",
  "ibc-core-host",
  "ibc-primitives 0.50.0",
  "ibc-proto 0.41.0",
- "lib",
+ "lib 0.0.0",
  "prost 0.12.3",
  "prost-build 0.12.3",
- "proto-utils",
- "sealable-trie",
- "solana-program",
- "stdx",
- "trie-ids",
+ "proto-utils 0.0.0",
+ "sealable-trie 0.0.0",
+ "stdx 0.0.0",
+ "trie-ids 0.0.0",
+]
+
+[[package]]
+name = "cf-guest"
+version = "0.0.0"
+source = "git+https://github.com/ComposableFi/emulated-light-client/#ba1046ead4232ee07a1db9b120f3035c983e0052"
+dependencies = [
+ "borsh 0.10.4",
+ "bytemuck",
+ "derive_more",
+ "guestchain 0.0.0 (git+https://github.com/ComposableFi/emulated-light-client/)",
+ "ibc-client-tendermint-types",
+ "ibc-core-client-context",
+ "ibc-core-commitment-types",
+ "ibc-core-host",
+ "ibc-primitives 0.50.0",
+ "ibc-proto 0.41.0",
+ "lib 0.0.0 (git+https://github.com/ComposableFi/emulated-light-client/)",
+ "prost 0.12.3",
+ "prost-build 0.12.3",
+ "proto-utils 0.0.0 (git+https://github.com/ComposableFi/emulated-light-client/)",
+ "sealable-trie 0.0.0 (git+https://github.com/ComposableFi/emulated-light-client/)",
+ "stdx 0.0.0 (git+https://github.com/ComposableFi/emulated-light-client/)",
+ "trie-ids 0.0.0 (git+https://github.com/ComposableFi/emulated-light-client/)",
 ]
 
 [[package]]
 name = "cf-guest"
 version = "0.0.1"
 dependencies = [
- "borsh 0.10.3",
+ "borsh 0.10.4",
  "bytemuck",
  "cf-guest 0.0.0",
  "derive_more",
  "ed25519-consensus",
- "guestchain",
+ "guestchain 0.0.0",
  "ibc 0.15.0",
  "ibc-core-client-context",
  "ibc-core-client-types",
@@ -1608,24 +1630,24 @@ dependencies = [
  "ibc-primitives 0.50.0",
  "ibc-proto 0.18.0",
  "insta",
- "lib",
- "memory",
+ "lib 0.0.0",
+ "memory 0.0.0",
  "prost 0.11.9",
  "prost 0.12.3",
  "prost-build 0.11.9",
  "rand 0.8.5",
- "sealable-trie",
+ "sealable-trie 0.0.0",
  "serde",
- "stdx",
+ "stdx 0.0.0",
  "tendermint-proto 0.34.1",
- "trie-ids",
+ "trie-ids 0.0.0",
 ]
 
 [[package]]
 name = "cf-guest-cw"
 version = "0.1.0"
 dependencies = [
- "borsh 0.10.3",
+ "borsh 0.10.4",
  "byteorder",
  "cf-guest 0.0.1",
  "cosmwasm-schema",
@@ -1634,7 +1656,7 @@ dependencies = [
  "derive_more",
  "digest 0.10.7",
  "ed25519-dalek 2.1.1",
- "guestchain",
+ "guestchain 0.0.0",
  "hex",
  "hyperspace-primitives",
  "ibc 0.15.0",
@@ -1651,7 +1673,7 @@ dependencies = [
  "sha2 0.10.8",
  "sha3 0.10.8",
  "thiserror",
- "trie-ids",
+ "trie-ids 0.0.0",
 ]
 
 [[package]]
@@ -1671,26 +1693,52 @@ dependencies = [
  "ibc-core-host",
  "ibc-primitives 0.50.0",
  "ibc-proto 0.41.0",
- "lib",
+ "lib 0.0.0",
  "prost 0.12.3",
  "prost-build 0.12.3",
- "proto-utils",
+ "proto-utils 0.0.0",
  "serde",
  "solana-program",
- "stdx",
- "trie-ids",
+ "stdx 0.0.0",
+ "trie-ids 0.0.0",
+]
+
+[[package]]
+name = "cf-solana"
+version = "0.0.0"
+source = "git+https://github.com/ComposableFi/emulated-light-client/#ba1046ead4232ee07a1db9b120f3035c983e0052"
+dependencies = [
+ "arrayvec 0.7.4",
+ "base64 0.21.7",
+ "blake3",
+ "bs58 0.5.1",
+ "bytemuck",
+ "cf-guest 0.0.0 (git+https://github.com/ComposableFi/emulated-light-client/)",
+ "derive_more",
+ "ibc-client-tendermint-types",
+ "ibc-core-client-context",
+ "ibc-core-commitment-types",
+ "ibc-core-host",
+ "ibc-primitives 0.50.0",
+ "ibc-proto 0.41.0",
+ "lib 0.0.0 (git+https://github.com/ComposableFi/emulated-light-client/)",
+ "prost 0.12.3",
+ "prost-build 0.12.3",
+ "proto-utils 0.0.0 (git+https://github.com/ComposableFi/emulated-light-client/)",
+ "stdx 0.0.0 (git+https://github.com/ComposableFi/emulated-light-client/)",
+ "trie-ids 0.0.0 (git+https://github.com/ComposableFi/emulated-light-client/)",
 ]
 
 [[package]]
 name = "cf-solana"
 version = "0.1.0"
 dependencies = [
- "borsh 0.10.3",
+ "borsh 0.10.4",
  "bytemuck",
- "cf-solana 0.0.0",
+ "cf-solana 0.0.0 (git+https://github.com/ComposableFi/emulated-light-client/)",
  "derive_more",
  "ed25519-consensus",
- "guestchain",
+ "guestchain 0.0.0 (git+https://github.com/ComposableFi/emulated-light-client/)",
  "ibc 0.15.0",
  "ibc-core-client-context",
  "ibc-core-client-types",
@@ -1700,17 +1748,17 @@ dependencies = [
  "ibc-primitives 0.50.0",
  "ibc-proto 0.18.0",
  "insta",
- "lib",
- "memory",
+ "lib 0.0.0 (git+https://github.com/ComposableFi/emulated-light-client/)",
+ "memory 0.0.0 (git+https://github.com/ComposableFi/emulated-light-client/)",
  "prost 0.11.9",
  "prost 0.12.3",
  "prost-build 0.11.9",
  "rand 0.8.5",
- "sealable-trie",
+ "sealable-trie 0.0.0 (git+https://github.com/ComposableFi/emulated-light-client/)",
  "serde",
- "stdx",
+ "stdx 0.0.0 (git+https://github.com/ComposableFi/emulated-light-client/)",
  "tendermint-proto 0.34.1",
- "trie-ids",
+ "trie-ids 0.0.0 (git+https://github.com/ComposableFi/emulated-light-client/)",
 ]
 
 [[package]]
@@ -4903,7 +4951,7 @@ dependencies = [
 name = "guestchain"
 version = "0.0.0"
 dependencies = [
- "borsh 0.10.3",
+ "borsh 0.10.4",
  "bytemuck",
  "derive_more",
  "ibc-core-client-context",
@@ -4911,13 +4959,35 @@ dependencies = [
  "ibc-core-host",
  "ibc-primitives 0.50.0",
  "ibc-proto 0.41.0",
- "lib",
+ "lib 0.0.0",
  "prost 0.12.3",
- "proto-utils",
- "sealable-trie",
- "stdx",
+ "proto-utils 0.0.0",
+ "sealable-trie 0.0.0",
+ "stdx 0.0.0",
  "strum 0.25.0",
- "trie-ids",
+ "trie-ids 0.0.0",
+]
+
+[[package]]
+name = "guestchain"
+version = "0.0.0"
+source = "git+https://github.com/ComposableFi/emulated-light-client/#ba1046ead4232ee07a1db9b120f3035c983e0052"
+dependencies = [
+ "borsh 0.10.4",
+ "bytemuck",
+ "derive_more",
+ "ibc-core-client-context",
+ "ibc-core-commitment-types",
+ "ibc-core-host",
+ "ibc-primitives 0.50.0",
+ "ibc-proto 0.41.0",
+ "lib 0.0.0 (git+https://github.com/ComposableFi/emulated-light-client/)",
+ "prost 0.12.3",
+ "proto-utils 0.0.0 (git+https://github.com/ComposableFi/emulated-light-client/)",
+ "sealable-trie 0.0.0 (git+https://github.com/ComposableFi/emulated-light-client/)",
+ "stdx 0.0.0 (git+https://github.com/ComposableFi/emulated-light-client/)",
+ "strum 0.25.0",
+ "trie-ids 0.0.0 (git+https://github.com/ComposableFi/emulated-light-client/)",
 ]
 
 [[package]]
@@ -5374,7 +5444,7 @@ version = "0.1.0"
 dependencies = [
  "anyhow",
  "async-trait",
- "borsh 0.10.3",
+ "borsh 0.10.4",
  "clap 3.2.25",
  "codegen",
  "derive_more",
@@ -5382,7 +5452,7 @@ dependencies = [
  "frame-support",
  "frame-system",
  "futures",
- "guestchain",
+ "guestchain 0.0.0",
  "hex",
  "hyperspace-cosmos",
  "hyperspace-metrics",
@@ -5407,7 +5477,7 @@ dependencies = [
  "ics10-grandpa",
  "ics11-beefy",
  "itertools 0.10.5",
- "lib",
+ "lib 0.0.0",
  "light-client-common",
  "log",
  "once_cell",
@@ -5418,7 +5488,7 @@ dependencies = [
  "prost 0.11.9",
  "rand 0.8.5",
  "scale-encode 0.1.2",
- "sealable-trie",
+ "sealable-trie 0.0.0",
  "serde",
  "serde_json",
  "sp-consensus-beefy",
@@ -5434,7 +5504,7 @@ dependencies = [
  "thiserror",
  "tokio",
  "toml 0.7.8",
- "trie-ids",
+ "trie-ids 0.0.0",
 ]
 
 [[package]]
@@ -5601,7 +5671,7 @@ dependencies = [
  "bech32",
  "bincode",
  "bip32",
- "borsh 0.10.3",
+ "borsh 0.10.4",
  "bs58 0.5.1",
  "bytemuck",
  "cf-guest 0.0.0",
@@ -5613,7 +5683,7 @@ dependencies = [
  "ed25519-zebra",
  "futures",
  "futures-util",
- "guestchain",
+ "guestchain 0.0.0",
  "hex",
  "hyperspace-primitives",
  "ibc 0.15.0",
@@ -5638,9 +5708,9 @@ dependencies = [
  "jito-protos",
  "jito-searcher-client",
  "k256 0.11.6",
- "lib",
+ "lib 0.0.0",
  "log",
- "memory",
+ "memory 0.0.0",
  "pallet-ibc",
  "parity-scale-codec",
  "prost 0.11.9",
@@ -5651,7 +5721,7 @@ dependencies = [
  "ripemd",
  "rs_merkle",
  "rusqlite",
- "sealable-trie",
+ "sealable-trie 0.0.0",
  "serde",
  "serde_json",
  "sha2 0.10.8",
@@ -5661,7 +5731,7 @@ dependencies = [
  "solana-transaction-status",
  "solana-trie",
  "solana-write-account",
- "stdx",
+ "stdx 0.0.0",
  "tendermint 0.33.2",
  "tendermint 0.34.1",
  "tendermint-light-client",
@@ -5675,7 +5745,7 @@ dependencies = [
  "tokio-stream",
  "tonic 0.8.3",
  "tracing",
- "trie-ids",
+ "trie-ids 0.0.0",
 ]
 
 [[package]]
@@ -5691,7 +5761,7 @@ dependencies = [
  "bech32",
  "bincode",
  "bip32",
- "borsh 0.10.3",
+ "borsh 0.10.4",
  "bs58 0.5.1",
  "bytemuck",
  "cf-guest 0.0.0",
@@ -5703,7 +5773,7 @@ dependencies = [
  "ed25519-zebra",
  "futures",
  "futures-util",
- "guestchain",
+ "guestchain 0.0.0",
  "hex",
  "hyperspace-primitives",
  "ibc 0.15.0",
@@ -5728,9 +5798,9 @@ dependencies = [
  "jito-protos",
  "jito-searcher-client",
  "k256 0.11.6",
- "lib",
+ "lib 0.0.0",
  "log",
- "memory",
+ "memory 0.0.0",
  "pallet-ibc",
  "parity-scale-codec",
  "prost 0.11.9",
@@ -5741,7 +5811,7 @@ dependencies = [
  "ripemd",
  "rs_merkle",
  "rusqlite",
- "sealable-trie",
+ "sealable-trie 0.0.0",
  "serde",
  "serde_json",
  "sha2 0.10.8",
@@ -5751,7 +5821,7 @@ dependencies = [
  "solana-transaction-status",
  "solana-trie",
  "solana-write-account",
- "stdx",
+ "stdx 0.0.0",
  "tendermint 0.33.2",
  "tendermint 0.34.1",
  "tendermint-light-client",
@@ -5765,7 +5835,7 @@ dependencies = [
  "tokio-stream",
  "tonic 0.8.3",
  "tracing",
- "trie-ids",
+ "trie-ids 0.0.0",
 ]
 
 [[package]]
@@ -5900,7 +5970,7 @@ name = "ibc-app-transfer-types"
 version = "0.50.0"
 source = "git+https://github.com/mina86/ibc-rs?rev=e1be8c9292c82c1e7c158067f0014fb292ee652d#e1be8c9292c82c1e7c158067f0014fb292ee652d"
 dependencies = [
- "borsh 0.10.3",
+ "borsh 0.10.4",
  "derive_more",
  "displaydoc",
  "ibc-core",
@@ -5940,7 +6010,7 @@ name = "ibc-client-tendermint-types"
 version = "0.50.0"
 source = "git+https://github.com/mina86/ibc-rs?rev=e1be8c9292c82c1e7c158067f0014fb292ee652d#e1be8c9292c82c1e7c158067f0014fb292ee652d"
 dependencies = [
- "borsh 0.10.3",
+ "borsh 0.10.4",
  "displaydoc",
  "ibc-core-client-types",
  "ibc-core-commitment-types",
@@ -6013,7 +6083,7 @@ name = "ibc-core-channel-types"
 version = "0.50.0"
 source = "git+https://github.com/mina86/ibc-rs?rev=e1be8c9292c82c1e7c158067f0014fb292ee652d#e1be8c9292c82c1e7c158067f0014fb292ee652d"
 dependencies = [
- "borsh 0.10.3",
+ "borsh 0.10.4",
  "derive_more",
  "displaydoc",
  "ibc-core-client-types",
@@ -6064,7 +6134,7 @@ name = "ibc-core-client-types"
 version = "0.50.0"
 source = "git+https://github.com/mina86/ibc-rs?rev=e1be8c9292c82c1e7c158067f0014fb292ee652d#e1be8c9292c82c1e7c158067f0014fb292ee652d"
 dependencies = [
- "borsh 0.10.3",
+ "borsh 0.10.4",
  "derive_more",
  "displaydoc",
  "ibc-core-commitment-types",
@@ -6081,7 +6151,7 @@ name = "ibc-core-commitment-types"
 version = "0.50.0"
 source = "git+https://github.com/mina86/ibc-rs?rev=e1be8c9292c82c1e7c158067f0014fb292ee652d#e1be8c9292c82c1e7c158067f0014fb292ee652d"
 dependencies = [
- "borsh 0.10.3",
+ "borsh 0.10.4",
  "derive_more",
  "displaydoc",
  "ibc-primitives 0.50.0",
@@ -6108,7 +6178,7 @@ name = "ibc-core-connection-types"
 version = "0.50.0"
 source = "git+https://github.com/mina86/ibc-rs?rev=e1be8c9292c82c1e7c158067f0014fb292ee652d#e1be8c9292c82c1e7c158067f0014fb292ee652d"
 dependencies = [
- "borsh 0.10.3",
+ "borsh 0.10.4",
  "derive_more",
  "displaydoc",
  "ibc-core-client-types",
@@ -6142,7 +6212,7 @@ name = "ibc-core-handler-types"
 version = "0.50.0"
 source = "git+https://github.com/mina86/ibc-rs?rev=e1be8c9292c82c1e7c158067f0014fb292ee652d#e1be8c9292c82c1e7c158067f0014fb292ee652d"
 dependencies = [
- "borsh 0.10.3",
+ "borsh 0.10.4",
  "derive_more",
  "displaydoc",
  "ibc-core-channel-types",
@@ -6181,7 +6251,7 @@ name = "ibc-core-host-cosmos"
 version = "0.50.0"
 source = "git+https://github.com/mina86/ibc-rs?rev=e1be8c9292c82c1e7c158067f0014fb292ee652d#e1be8c9292c82c1e7c158067f0014fb292ee652d"
 dependencies = [
- "borsh 0.10.3",
+ "borsh 0.10.4",
  "derive_more",
  "displaydoc",
  "ibc-app-transfer-types",
@@ -6205,7 +6275,7 @@ name = "ibc-core-host-types"
 version = "0.50.0"
 source = "git+https://github.com/mina86/ibc-rs?rev=e1be8c9292c82c1e7c158067f0014fb292ee652d#e1be8c9292c82c1e7c158067f0014fb292ee652d"
 dependencies = [
- "borsh 0.10.3",
+ "borsh 0.10.4",
  "derive_more",
  "displaydoc",
  "ibc-primitives 0.50.0",
@@ -6231,7 +6301,7 @@ name = "ibc-core-router-types"
 version = "0.50.0"
 source = "git+https://github.com/mina86/ibc-rs?rev=e1be8c9292c82c1e7c158067f0014fb292ee652d#e1be8c9292c82c1e7c158067f0014fb292ee652d"
 dependencies = [
- "borsh 0.10.3",
+ "borsh 0.10.4",
  "derive_more",
  "displaydoc",
  "ibc-core-host-types",
@@ -6291,7 +6361,7 @@ name = "ibc-primitives"
 version = "0.50.0"
 source = "git+https://github.com/mina86/ibc-rs?rev=e1be8c9292c82c1e7c158067f0014fb292ee652d#e1be8c9292c82c1e7c158067f0014fb292ee652d"
 dependencies = [
- "borsh 0.10.3",
+ "borsh 0.10.4",
  "derive_more",
  "displaydoc",
  "ibc-proto 0.41.0",
@@ -6321,7 +6391,7 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "dd4ee32b22d3b06f31529b956f4928e5c9a068d71e46cf6abfa19c31ca550553"
 dependencies = [
  "base64 0.21.7",
- "borsh 0.10.3",
+ "borsh 0.10.4",
  "bytes",
  "flex-error",
  "ics23 0.11.1",
@@ -6581,7 +6651,7 @@ dependencies = [
 name = "ics13-near"
 version = "0.1.0"
 dependencies = [
- "borsh 0.10.3",
+ "borsh 0.10.4",
  "bytes",
  "derive_more",
  "env_logger 0.9.3",
@@ -7339,14 +7409,28 @@ name = "lib"
 version = "0.0.0"
 dependencies = [
  "base64 0.21.7",
- "borsh 0.10.3",
+ "borsh 0.10.4",
  "bs58 0.5.1",
  "bytemuck",
  "derive_more",
  "serde",
  "sha2 0.10.8",
  "solana-program",
- "stdx",
+ "stdx 0.0.0",
+]
+
+[[package]]
+name = "lib"
+version = "0.0.0"
+source = "git+https://github.com/ComposableFi/emulated-light-client/#ba1046ead4232ee07a1db9b120f3035c983e0052"
+dependencies = [
+ "base64 0.21.7",
+ "borsh 0.10.4",
+ "bs58 0.5.1",
+ "bytemuck",
+ "derive_more",
+ "sha2 0.10.8",
+ "stdx 0.0.0 (git+https://github.com/ComposableFi/emulated-light-client/)",
 ]
 
 [[package]]
@@ -8213,7 +8297,16 @@ name = "memory"
 version = "0.0.0"
 dependencies = [
  "derive_more",
- "stdx",
+ "stdx 0.0.0",
+]
+
+[[package]]
+name = "memory"
+version = "0.0.0"
+source = "git+https://github.com/ComposableFi/emulated-light-client/#ba1046ead4232ee07a1db9b120f3035c983e0052"
+dependencies = [
+ "derive_more",
+ "stdx 0.0.0 (git+https://github.com/ComposableFi/emulated-light-client/)",
 ]
 
 [[package]]
@@ -8391,7 +8484,7 @@ version = "3.2.3"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "ba8ee05284d79b367ae8966d558e1a305a781fc80c9df51f37775169117ba64f"
 dependencies = [
- "borsh 0.10.3",
+ "borsh 0.9.3",
  "num-derive 0.3.3",
  "num-traits",
  "solana-program",
@@ -9477,7 +9570,7 @@ name = "pallet-ibc"
 version = "0.0.1"
 dependencies = [
  "beefy-light-client-primitives",
- "borsh 0.10.3",
+ "borsh 0.10.4",
  "cf-guest 0.0.1",
  "cf-solana 0.1.0",
  "chrono",
@@ -9490,7 +9583,7 @@ dependencies = [
  "frame-support",
  "frame-system",
  "grandpa-light-client-primitives",
- "guestchain",
+ "guestchain 0.0.0",
  "hex",
  "hex-literal 0.3.4",
  "ibc 0.15.0",
@@ -12309,6 +12402,18 @@ dependencies = [
 ]
 
 [[package]]
+name = "proto-utils"
+version = "0.0.0"
+source = "git+https://github.com/ComposableFi/emulated-light-client/#ba1046ead4232ee07a1db9b120f3035c983e0052"
+dependencies = [
+ "const_format",
+ "derive_more",
+ "ibc-core-client-context",
+ "ibc-proto 0.41.0",
+ "prost 0.12.3",
+]
+
+[[package]]
 name = "psm"
 version = "0.1.21"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -14715,13 +14820,30 @@ version = "0.0.0"
 dependencies = [
  "ascii 1.1.0",
  "base64 0.21.7",
- "borsh 0.10.3",
+ "borsh 0.10.4",
  "bytemuck",
  "derive_more",
- "lib",
- "memory",
+ "lib 0.0.0",
+ "memory 0.0.0",
  "sha2 0.10.8",
- "stdx",
+ "stdx 0.0.0",
+ "strum 0.25.0",
+]
+
+[[package]]
+name = "sealable-trie"
+version = "0.0.0"
+source = "git+https://github.com/ComposableFi/emulated-light-client/#ba1046ead4232ee07a1db9b120f3035c983e0052"
+dependencies = [
+ "ascii 1.1.0",
+ "base64 0.21.7",
+ "borsh 0.10.4",
+ "bytemuck",
+ "derive_more",
+ "lib 0.0.0 (git+https://github.com/ComposableFi/emulated-light-client/)",
+ "memory 0.0.0 (git+https://github.com/ComposableFi/emulated-light-client/)",
+ "sha2 0.10.8",
+ "stdx 0.0.0 (git+https://github.com/ComposableFi/emulated-light-client/)",
  "strum 0.25.0",
 ]
 
@@ -15429,15 +15551,15 @@ dependencies = [
  "cf-guest 0.0.0",
  "cf-solana 0.0.0",
  "derive_more",
- "guestchain",
+ "guestchain 0.0.0",
  "hex-literal 0.4.1",
  "ibc 0.50.0",
  "ibc-client-tendermint-types",
  "ibc-proto 0.41.0",
  "itertools 0.10.5",
- "lib",
+ "lib 0.0.0",
  "linear-map",
- "memory",
+ "memory 0.0.0",
  "primitive-types",
  "prost 0.12.3",
  "serde",
@@ -15447,11 +15569,11 @@ dependencies = [
  "solana-trie",
  "spl-associated-token-account",
  "spl-token",
- "stdx",
+ "stdx 0.0.0",
  "strum 0.25.0",
  "tendermint 0.34.1",
  "tendermint-light-client-verifier 0.34.1",
- "trie-ids",
+ "trie-ids 0.0.0",
  "uint",
  "wasm",
 ]
@@ -15557,7 +15679,7 @@ dependencies = [
  "bincode",
  "bitflags 2.5.0",
  "blake3",
- "borsh 0.10.3",
+ "borsh 0.10.4",
  "borsh 0.9.3",
  "bs58 0.4.0",
  "bv",
@@ -15777,7 +15899,7 @@ dependencies = [
  "base64 0.21.7",
  "bincode",
  "bitflags 2.5.0",
- "borsh 0.10.3",
+ "borsh 0.10.4",
  "bs58 0.4.0",
  "bytemuck",
  "byteorder",
@@ -15845,13 +15967,13 @@ name = "solana-signature-verifier"
 version = "0.0.3"
 dependencies = [
  "base64 0.21.7",
- "borsh 0.10.3",
+ "borsh 0.10.4",
  "bytemuck",
  "derive_more",
- "guestchain",
- "lib",
+ "guestchain 0.0.0",
+ "lib 0.0.0",
  "solana-program",
- "stdx",
+ "stdx 0.0.0",
 ]
 
 [[package]]
@@ -15935,7 +16057,7 @@ dependencies = [
  "Inflector",
  "base64 0.21.7",
  "bincode",
- "borsh 0.10.3",
+ "borsh 0.10.4",
  "bs58 0.4.0",
  "lazy_static",
  "log",
@@ -15956,11 +16078,11 @@ name = "solana-trie"
 version = "0.0.3"
 dependencies = [
  "bytemuck",
- "lib",
- "memory",
- "sealable-trie",
+ "lib 0.0.0",
+ "memory 0.0.0",
+ "sealable-trie 0.0.0",
  "solana-program",
- "stdx",
+ "stdx 0.0.0",
 ]
 
 [[package]]
@@ -16021,7 +16143,7 @@ name = "solana-write-account"
 version = "0.0.3"
 dependencies = [
  "solana-program",
- "stdx",
+ "stdx 0.0.0",
 ]
 
 [[package]]
@@ -17211,7 +17333,7 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "992d9c64c2564cc8f63a4b508bf3ebcdf2254b0429b13cd1d31adb6162432a5f"
 dependencies = [
  "assert_matches",
- "borsh 0.10.3",
+ "borsh 0.10.4",
  "num-derive 0.4.2",
  "num-traits",
  "solana-program",
@@ -17270,7 +17392,7 @@ version = "0.1.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "85a5db7e4efb1107b0b8e52a13f035437cdcb36ef99c58f6d467f089d9b2915a"
 dependencies = [
- "borsh 0.10.3",
+ "borsh 0.10.4",
  "bytemuck",
  "solana-program",
  "solana-zk-token-sdk",
@@ -17410,7 +17532,7 @@ version = "0.2.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "4c16ce3ba6979645fb7627aa1e435576172dd63088dc7848cb09aa331fa1fe4f"
 dependencies = [
- "borsh 0.10.3",
+ "borsh 0.10.4",
  "solana-program",
  "spl-discriminator",
  "spl-pod",
@@ -17521,6 +17643,11 @@ dependencies = [
 [[package]]
 name = "stdx"
 version = "0.0.0"
+
+[[package]]
+name = "stdx"
+version = "0.0.0"
+source = "git+https://github.com/ComposableFi/emulated-light-client/#ba1046ead4232ee07a1db9b120f3035c983e0052"
 
 [[package]]
 name = "strsim"
@@ -18808,7 +18935,23 @@ version = "0.0.0"
 dependencies = [
  "ascii 1.1.0",
  "base64 0.21.7",
- "borsh 0.10.3",
+ "borsh 0.10.4",
+ "bytemuck",
+ "derive_more",
+ "ibc-core-channel-types",
+ "ibc-core-client-types",
+ "ibc-core-connection-types",
+ "ibc-core-host-types",
+ "strum 0.25.0",
+]
+
+[[package]]
+name = "trie-ids"
+version = "0.0.0"
+source = "git+https://github.com/ComposableFi/emulated-light-client/#ba1046ead4232ee07a1db9b120f3035c983e0052"
+dependencies = [
+ "ascii 1.1.0",
+ "base64 0.21.7",
  "bytemuck",
  "derive_more",
  "ibc-core-channel-types",
@@ -19244,9 +19387,9 @@ dependencies = [
  "ibc-core-commitment-types",
  "ibc-primitives 0.50.0",
  "ibc-proto 0.41.0",
- "lib",
+ "lib 0.0.0",
  "prost 0.12.3",
- "proto-utils",
+ "proto-utils 0.0.0",
 ]
 
 [[package]]

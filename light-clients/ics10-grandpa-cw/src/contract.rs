@@ -220,7 +220,7 @@ fn process_message(
 			// load the substitute client state from the combined storage using the appropriate
 			// prefix
 			let substitute_client_state = ctx
-				.client_state_prefixed(SUBSTITUTE_PREFIX.as_bytes())
+				.client_state_prefixed(SUBSTITUTE_PREFIX)
 				.map_err(|e| ContractError::Grandpa(e.to_string()))?;
 
 			// No items for the grandpa client state are required to be the same
@@ -228,15 +228,15 @@ fn process_message(
 			let height = substitute_client_state.latest_height();
 			// consensus state should be replaced as well
 			let substitute_consensus_state =
-				ctx.consensus_state_prefixed(height, SUBSTITUTE_PREFIX.as_bytes())?;
+				ctx.consensus_state_prefixed(height, SUBSTITUTE_PREFIX)?;
 			ctx.store_consensus_state_prefixed(
 				height,
 				substitute_consensus_state,
-				SUBJECT_PREFIX.as_bytes(),
+				SUBJECT_PREFIX,
 			);
 			ctx.store_client_state_prefixed(
 				substitute_client_state,
-				SUBJECT_PREFIX.as_bytes(),
+				SUBJECT_PREFIX,
 				client_id,
 			)
 			.map_err(|e| ContractError::Grandpa(e.to_string()))?;
