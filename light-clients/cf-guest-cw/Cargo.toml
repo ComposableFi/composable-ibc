@@ -44,8 +44,8 @@ ed25519-dalek = { version = "2.1.1", default-features = false, features = ["pkcs
 byteorder = { version = "1.3.2", default-features = false }
 digest = { version = "0.10.3", default-features = false }
 hex = "0.4.3"
-guestchain = { path = "../../../emulated-light-client/common/guestchain", default-features = false }
-trie-ids = { path = "../../../emulated-light-client/common/trie-ids", default-features = false }
+guestchain = { git = "https://github.com/ComposableFi/emulated-light-client/", default-features = false }
+trie-ids = { git = "https://github.com/ComposableFi/emulated-light-client/", default-features = false }
 borsh = { version = "0.10.3", default-features = false }
 
 
