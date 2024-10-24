@@ -441,7 +441,7 @@ deserialize consensus state"
 		log::info!("this is consensus state {:?}", consensus_state);
 		log::info!("This is inner any consensus state {:?}", inner_any);
 		let chain_account = self.get_chain_storage().await;
-		let block_header = if (!self.common_state.handshake_completed && at_height) {
+		let block_header = if !self.common_state.handshake_completed && at_height {
 			log::info!("Fetching previous block header");
 			events::get_header_from_height(
 				self.rpc_client(),
@@ -521,7 +521,7 @@ deserialize client state"
 		// log::info!("This is inner any client state {:?}", inner_any);
 		let any_client_state = convert_new_client_state_to_old(client_state);
 		let chain_account = self.get_chain_storage().await;
-		let block_header = if (!self.common_state.handshake_completed && at_height) {
+		let block_header = if !self.common_state.handshake_completed && at_height {
 			log::info!("Fetching previous block header");
 			events::get_header_from_height(
 				self.rpc_client(),
@@ -652,7 +652,7 @@ deserialize client state"
 			chain_account.head().unwrap().block_height
 		);
 		log::info!("at height {:?}", at_height);
-		let block_header = if (!self.common_state.handshake_completed && at_height) {
+		let block_header = if !self.common_state.handshake_completed && at_height {
 			log::info!("Fetching previous block header");
 			events::get_header_from_height(
 				self.rpc_client(),
@@ -750,7 +750,7 @@ deserialize client state"
 				.collect(),
 			version: inner_channel_end.version.to_string(),
 		};
-		let block_header = if (!self.common_state.handshake_completed && at_height) {
+		let block_header = if !self.common_state.handshake_completed && at_height {
 			log::info!("Fetching previous block header");
 			events::get_header_from_height(
 				self.rpc_client(),
