@@ -16,10 +16,12 @@ use anchor_lang::prelude::*;
 use core::time::Duration;
 use futures::StreamExt;
 use hyperspace_core::{
-	chain::{AnyAssetId, AnyChain, AnyConfig}, logging, relay, substrate::DefaultConfig
+	chain::{AnyAssetId, AnyChain, AnyConfig},
+	logging, relay,
+	substrate::DefaultConfig,
 };
-use hyperspace_rollup::client::{RollupClient, RollupClientConfig};
 use hyperspace_primitives::{utils::create_clients, CommonClientConfig, IbcProvider, KeyProvider};
+use hyperspace_rollup::client::{RollupClient, RollupClientConfig};
 use hyperspace_solana::{client::SolanaClient, SolanaClientConfig};
 use hyperspace_testsuite::{
 	ibc_channel_close, ibc_messaging_packet_height_timeout_with_connection_delay,
@@ -50,25 +52,30 @@ pub struct Args {
 impl Default for Args {
 	fn default() -> Self {
 		let solana = std::env::var("SOLANA_HOST").unwrap_or_else(|_| "127.0.0.1".to_string());
-		let rollup = std::env::var("ROLLUP_HOST").unwrap_or_else(|_| "34.140.169.227".to_string());
+		let rollup = std::env::var("ROLLUP_HOST").unwrap_or_else(|_| "127.0.0.1".to_string());
+		// let rollup = std::env::var("ROLLUP_HOST").unwrap_or_else(|_|
+		// "34.140.169.227".to_string());
 
 		Args {
 			// chain_a: format!("https://devnet.helius-rpc.com/?api-key=bc5c0cfc-46df-4781-978f-af6ca7a202c2"),
 			// chain_a: format!("http://{solana}:9000"),
-			chain_a: format!("https://devnet.helius-rpc.com/?api-key=5ae782d8-6bf6-489c-b6df-ef7e6289e193"),
-			// chain_b: format!("http://{rollup}:8899"),
-			chain_b: format!("https://mantis-rollup.composable-shared-artifacts.composablenodes.tech/rpc"),
+			chain_a: format!(
+				"https://devnet.helius-rpc.com/?api-key=5ae782d8-6bf6-489c-b6df-ef7e6289e193"
+			),
+			solana_ws: format!(
+				"wss://devnet.helius-rpc.com/?api-key=5ae782d8-6bf6-489c-b6df-ef7e6289e193"
+			),
+			chain_b: format!("http://{rollup}:8899"),
+			rollup_ws: format!("ws://{rollup}:8900"),
+			// chain_b: format!("https://mantis-rollup.composable-shared-artifacts.composablenodes.tech/rpc"),
 			connection_prefix_a: "ibc".to_string(),
 			connection_prefix_b: "ibc".to_string(),
 			// solana_ws: format!("ws://{solana}:9001"),
-			solana_ws: format!("wss://devnet.helius-rpc.com/?api-key=5ae782d8-6bf6-489c-b6df-ef7e6289e193"),
 			// solana_ws:
 			// format!("wss://devnet.helius-rpc.com/?api-key=bc5c0cfc-46df-4781-978f-af6ca7a202c2"),
-			// rollup_ws: format!("ws://{rollup}:8900"),
-			rollup_ws: format!("wss://mantis-rollup.composable-shared-artifacts.composablenodes.tech/ws"),
-			// rollup_ws: format!("ws://{solana}:8900"),
-			// rollup_trie_db_rpc: format!("http://{rollup}:42069")
-			rollup_trie_db_rpc: format!("http://{rollup}:42069")
+			// rollup_ws:
+			// format!("wss://mantis-rollup.composable-shared-artifacts.composablenodes.tech/ws"), rollup_trie_db_rpc: format!("http://{rollup}:42069")
+			rollup_trie_db_rpc: format!("http://{rollup}:42069"),
 		}
 	}
 }
@@ -148,7 +155,7 @@ async fn setup_clients() -> (AnyChain, AnyChain) {
 		signature_verifier_program_id: "C6r1VEbn3mSpecgrZ7NdBvWUtYVJWrDPv4uU9Xs956gc".to_string(),
 		trie_db_path: "../../../solana-ibc-indexer/indexer.db3".to_string(),
 		transaction_sender: "RPC".to_string(),
-    trie_rpc_url: args.rollup_trie_db_rpc.clone().parse().unwrap(),
+		trie_rpc_url: args.rollup_trie_db_rpc.clone().parse().unwrap(),
 	};
 
 	// println!("This is config b {:?}", config_b);
