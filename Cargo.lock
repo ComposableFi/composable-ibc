@@ -324,7 +324,7 @@ dependencies = [
  "mpl-token-metadata",
  "solana-program",
  "spl-associated-token-account",
- "spl-token",
+ "spl-token 4.0.0",
  "spl-token-2022 0.9.0",
 ]
 
@@ -851,7 +851,7 @@ dependencies = [
  "bitflags 1.3.2",
  "bytes",
  "futures-util",
- "http",
+ "http 0.2.12",
  "http-body",
  "hyper",
  "itoa",
@@ -877,7 +877,7 @@ dependencies = [
  "async-trait",
  "bytes",
  "futures-util",
- "http",
+ "http 0.2.12",
  "http-body",
  "mime",
  "rustversion",
@@ -973,7 +973,7 @@ dependencies = [
  "derive_more",
  "frame-support",
  "futures",
- "hex",
+ "hex 0.4.3 (registry+https://github.com/rust-lang/crates.io-index)",
  "hex-literal 0.3.4",
  "hyperspace-core",
  "light-client-common",
@@ -1021,7 +1021,7 @@ dependencies = [
  "codegen",
  "derive_more",
  "frame-support",
- "hex",
+ "hex 0.4.3 (registry+https://github.com/rust-lang/crates.io-index)",
  "hex-literal 0.3.4",
  "jsonrpsee-core",
  "light-client-common",
@@ -1276,7 +1276,7 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "115e54d64eb62cdebad391c19efc9dce4981c690c85a33a12199d99bb9546fee"
 dependencies = [
  "borsh-derive 0.10.3",
- "hashbrown 0.13.2",
+ "hashbrown 0.12.3",
 ]
 
 [[package]]
@@ -1567,7 +1567,7 @@ dependencies = [
 [[package]]
 name = "cf-guest"
 version = "0.0.0"
-source = "git+https://github.com/ComposableFi/emulated-light-client/#ba1046ead4232ee07a1db9b120f3035c983e0052"
+source = "git+https://github.com/ComposableFi/emulated-light-client/?branch=vmarkushin/genesis-mint-tokens#79df21f9c86fe79616bef438d7643013e01954a6"
 dependencies = [
  "borsh 0.10.4",
  "bytemuck",
@@ -1634,7 +1634,7 @@ dependencies = [
  "digest 0.10.7",
  "ed25519-dalek 2.1.1",
  "guestchain",
- "hex",
+ "hex 0.4.3 (registry+https://github.com/rust-lang/crates.io-index)",
  "hyperspace-primitives",
  "ibc 0.15.0",
  "ibc-derive 0.1.0",
@@ -1656,7 +1656,7 @@ dependencies = [
 [[package]]
 name = "cf-solana"
 version = "0.0.0"
-source = "git+https://github.com/ComposableFi/emulated-light-client/#ba1046ead4232ee07a1db9b120f3035c983e0052"
+source = "git+https://github.com/ComposableFi/emulated-light-client/?branch=vmarkushin/genesis-mint-tokens#79df21f9c86fe79616bef438d7643013e01954a6"
 dependencies = [
  "arrayvec 0.7.4",
  "base64 0.21.7",
@@ -1962,8 +1962,8 @@ dependencies = [
  "anyhow",
  "clap 3.2.25",
  "frame-metadata 15.1.0",
- "hex",
- "http",
+ "hex 0.4.3 (registry+https://github.com/rust-lang/crates.io-index)",
+ "http 0.2.12",
  "jsonrpsee",
  "parity-scale-codec",
  "serde_json",
@@ -2217,7 +2217,7 @@ dependencies = [
  "cosmwasm-derive",
  "derivative",
  "forward_ref",
- "hex",
+ "hex 0.4.3 (registry+https://github.com/rust-lang/crates.io-index)",
  "schemars",
  "serde",
  "serde-json-wasm 0.5.2",
@@ -3633,7 +3633,7 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "3c8465edc8ee7436ffea81d21a019b16676ee3db267aa8d5a8d729581ecf998b"
 dependencies = [
  "curve25519-dalek-ng",
- "hex",
+ "hex 0.4.3 (registry+https://github.com/rust-lang/crates.io-index)",
  "rand_core 0.6.4",
  "sha2 0.9.9",
  "thiserror",
@@ -3689,7 +3689,7 @@ checksum = "7c24f403d068ad0b359e577a77f92392118be3f3c927538f2bb544a5ecd828c6"
 dependencies = [
  "curve25519-dalek 3.2.1",
  "hashbrown 0.12.3",
- "hex",
+ "hex 0.4.3 (registry+https://github.com/rust-lang/crates.io-index)",
  "rand_core 0.6.4",
  "serde",
  "sha2 0.9.9",
@@ -4828,7 +4828,7 @@ dependencies = [
  "grandpa-light-client-primitives",
  "grandpa-prover",
  "hash-db",
- "hex",
+ "hex 0.4.3 (registry+https://github.com/rust-lang/crates.io-index)",
  "hex-literal 0.3.4",
  "hyperspace-core",
  "jsonrpsee-core",
@@ -4860,7 +4860,7 @@ dependencies = [
  "downcast-rs",
  "finality-grandpa",
  "grandpa-light-client-primitives",
- "hex",
+ "hex 0.4.3 (registry+https://github.com/rust-lang/crates.io-index)",
  "jsonrpsee",
  "jsonrpsee-ws-client",
  "light-client-common",
@@ -4902,7 +4902,7 @@ dependencies = [
 [[package]]
 name = "guestchain"
 version = "0.0.0"
-source = "git+https://github.com/ComposableFi/emulated-light-client/#ba1046ead4232ee07a1db9b120f3035c983e0052"
+source = "git+https://github.com/ComposableFi/emulated-light-client/?branch=vmarkushin/genesis-mint-tokens#79df21f9c86fe79616bef438d7643013e01954a6"
 dependencies = [
  "borsh 0.10.4",
  "bytemuck",
@@ -4952,7 +4952,7 @@ dependencies = [
  "futures-core",
  "futures-sink",
  "futures-util",
- "http",
+ "http 0.2.12",
  "indexmap 2.2.6",
  "slab",
  "tokio",
@@ -5059,7 +5059,7 @@ dependencies = [
  "base64 0.21.7",
  "bytes",
  "headers-core",
- "http",
+ "http 0.2.12",
  "httpdate",
  "mime",
  "sha1",
@@ -5071,7 +5071,7 @@ version = "0.2.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "e7f66481bfee273957b1f20485a4ff3362987f85b2c236580d81b4eb7a326429"
 dependencies = [
- "http",
+ "http 0.2.12",
 ]
 
 [[package]]
@@ -5115,6 +5115,11 @@ name = "hex"
 version = "0.4.3"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "7f24254aa9a54b5c858eaee2f5bccdb46aaf0e486a595ed5fd8f86ba55232a70"
+
+[[package]]
+name = "hex"
+version = "0.4.3"
+source = "git+https://github.com/mina86/rust-hex.git?branch=main#d6c4c7a207dfcc3888b696ce9d9101e9fc4343d9"
 
 [[package]]
 name = "hex-literal"
@@ -5206,13 +5211,24 @@ dependencies = [
 ]
 
 [[package]]
+name = "http"
+version = "1.1.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "21b9ddb458710bc376481b842f5da65cdf31522de232c1ca8146abce2a358258"
+dependencies = [
+ "bytes",
+ "fnv",
+ "itoa",
+]
+
+[[package]]
 name = "http-body"
 version = "0.4.6"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "7ceab25649e9960c0311ea418d17bee82c0dcec1bd053b5f9a66e265a693bed2"
 dependencies = [
  "bytes",
- "http",
+ "http 0.2.12",
  "pin-project-lite 0.2.14",
 ]
 
@@ -5251,7 +5267,7 @@ dependencies = [
  "futures-core",
  "futures-util",
  "h2",
- "http",
+ "http 0.2.12",
  "http-body",
  "httparse",
  "httpdate",
@@ -5273,7 +5289,7 @@ dependencies = [
  "bytes",
  "futures",
  "headers",
- "http",
+ "http 0.2.12",
  "hyper",
  "hyper-rustls 0.22.1",
  "rustls-native-certs 0.5.0",
@@ -5307,7 +5323,7 @@ version = "0.23.2"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "1788965e61b367cd03a62950836d5cd41560c3577d90e40e0819373194d1661c"
 dependencies = [
- "http",
+ "http 0.2.12",
  "hyper",
  "log",
  "rustls 0.20.9",
@@ -5323,7 +5339,7 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "ec3efd23720e2049821a693cbc7e65ea87c72f1c58ff2f9522ff332b1491e590"
 dependencies = [
  "futures-util",
- "http",
+ "http 0.2.12",
  "hyper",
  "log",
  "rustls 0.21.12",
@@ -5384,7 +5400,7 @@ dependencies = [
  "frame-system",
  "futures",
  "guestchain",
- "hex",
+ "hex 0.4.3 (registry+https://github.com/rust-lang/crates.io-index)",
  "hyperspace-cosmos",
  "hyperspace-metrics",
  "hyperspace-parachain",
@@ -5450,7 +5466,7 @@ dependencies = [
  "digest 0.10.7",
  "ed25519-zebra",
  "futures",
- "hex",
+ "hex 0.4.3 (registry+https://github.com/rust-lang/crates.io-index)",
  "hyperspace-primitives",
  "ibc 0.15.0",
  "ibc-primitives 0.1.0",
@@ -5517,7 +5533,7 @@ dependencies = [
  "futures",
  "grandpa-light-client-primitives",
  "grandpa-prover",
- "hex",
+ "hex 0.4.3 (registry+https://github.com/rust-lang/crates.io-index)",
  "hex-literal 0.3.4",
  "hyperspace-primitives",
  "ibc 0.15.0",
@@ -5574,7 +5590,7 @@ dependencies = [
  "anyhow",
  "async-trait",
  "futures",
- "hex",
+ "hex 0.4.3 (registry+https://github.com/rust-lang/crates.io-index)",
  "ibc 0.15.0",
  "ibc-proto 0.18.0",
  "ibc-rpc",
@@ -5615,7 +5631,7 @@ dependencies = [
  "futures",
  "futures-util",
  "guestchain",
- "hex",
+ "hex 0.4.3 (registry+https://github.com/rust-lang/crates.io-index)",
  "hyperspace-primitives",
  "ibc 0.15.0",
  "ibc-app-transfer-types",
@@ -5705,7 +5721,7 @@ dependencies = [
  "futures",
  "futures-util",
  "guestchain",
- "hex",
+ "hex 0.4.3 (registry+https://github.com/rust-lang/crates.io-index)",
  "hyperspace-primitives",
  "ibc 0.15.0",
  "ibc-app-transfer-types",
@@ -5751,6 +5767,7 @@ dependencies = [
  "solana-signature-verifier",
  "solana-transaction-status",
  "solana-trie",
+ "solana-witnessed-trie",
  "solana-write-account",
  "stdx",
  "tendermint 0.33.2",
@@ -5780,7 +5797,7 @@ dependencies = [
  "futures",
  "grandpa-light-client-primitives",
  "grandpa-light-client-verifier",
- "hex",
+ "hex 0.4.3 (registry+https://github.com/rust-lang/crates.io-index)",
  "hyperspace-core",
  "hyperspace-cosmos",
  "hyperspace-parachain",
@@ -5842,7 +5859,7 @@ dependencies = [
  "derive_more",
  "env_logger 0.9.3",
  "flex-error",
- "hex",
+ "hex 0.4.3 (registry+https://github.com/rust-lang/crates.io-index)",
  "ibc-core-host-types",
  "ibc-derive 0.1.0",
  "ibc-proto 0.18.0",
@@ -5887,6 +5904,36 @@ dependencies = [
 ]
 
 [[package]]
+name = "ibc-app-nft-transfer"
+version = "0.50.0"
+source = "git+https://github.com/mina86/ibc-rs?rev=e1be8c9292c82c1e7c158067f0014fb292ee652d#e1be8c9292c82c1e7c158067f0014fb292ee652d"
+dependencies = [
+ "ibc-app-nft-transfer-types",
+ "ibc-core",
+ "serde-json-wasm 1.0.1",
+]
+
+[[package]]
+name = "ibc-app-nft-transfer-types"
+version = "0.50.0"
+source = "git+https://github.com/mina86/ibc-rs?rev=e1be8c9292c82c1e7c158067f0014fb292ee652d#e1be8c9292c82c1e7c158067f0014fb292ee652d"
+dependencies = [
+ "base64 0.21.7",
+ "borsh 0.10.4",
+ "derive_more",
+ "displaydoc",
+ "http 1.1.0",
+ "ibc-core",
+ "ibc-proto 0.41.0",
+ "mime",
+ "parity-scale-codec",
+ "scale-info",
+ "schemars",
+ "serde",
+ "serde-json-wasm 1.0.1",
+]
+
+[[package]]
 name = "ibc-app-transfer"
 version = "0.50.0"
 source = "git+https://github.com/mina86/ibc-rs?rev=e1be8c9292c82c1e7c158067f0014fb292ee652d#e1be8c9292c82c1e7c158067f0014fb292ee652d"
@@ -5916,6 +5963,7 @@ name = "ibc-apps"
 version = "0.50.0"
 source = "git+https://github.com/mina86/ibc-rs?rev=e1be8c9292c82c1e7c158067f0014fb292ee652d#e1be8c9292c82c1e7c158067f0014fb292ee652d"
 dependencies = [
+ "ibc-app-nft-transfer",
  "ibc-app-transfer",
 ]
 
@@ -6023,6 +6071,9 @@ dependencies = [
  "ibc-core-host-types",
  "ibc-primitives 0.50.0",
  "ibc-proto 0.41.0",
+ "parity-scale-codec",
+ "scale-info",
+ "schemars",
  "serde",
  "sha2 0.10.8",
  "subtle-encoding",
@@ -6072,6 +6123,9 @@ dependencies = [
  "ibc-core-host-types",
  "ibc-primitives 0.50.0",
  "ibc-proto 0.41.0",
+ "parity-scale-codec",
+ "scale-info",
+ "schemars",
  "serde",
  "subtle-encoding",
  "tendermint 0.34.1",
@@ -6088,6 +6142,9 @@ dependencies = [
  "ibc-primitives 0.50.0",
  "ibc-proto 0.41.0",
  "ics23 0.11.1",
+ "parity-scale-codec",
+ "scale-info",
+ "schemars",
  "serde",
  "subtle-encoding",
 ]
@@ -6117,6 +6174,9 @@ dependencies = [
  "ibc-core-host-types",
  "ibc-primitives 0.50.0",
  "ibc-proto 0.41.0",
+ "parity-scale-codec",
+ "scale-info",
+ "schemars",
  "serde",
  "subtle-encoding",
  "tendermint 0.34.1",
@@ -6154,6 +6214,9 @@ dependencies = [
  "ibc-core-router-types",
  "ibc-primitives 0.50.0",
  "ibc-proto 0.41.0",
+ "parity-scale-codec",
+ "scale-info",
+ "schemars",
  "serde",
  "subtle-encoding",
  "tendermint 0.34.1",
@@ -6210,6 +6273,9 @@ dependencies = [
  "derive_more",
  "displaydoc",
  "ibc-primitives 0.50.0",
+ "parity-scale-codec",
+ "scale-info",
+ "schemars",
  "serde",
 ]
 
@@ -6238,6 +6304,9 @@ dependencies = [
  "ibc-core-host-types",
  "ibc-primitives 0.50.0",
  "ibc-proto 0.41.0",
+ "parity-scale-codec",
+ "scale-info",
+ "schemars",
  "serde",
  "subtle-encoding",
  "tendermint 0.34.1",
@@ -6271,7 +6340,7 @@ dependencies = [
  "base58",
  "blake2",
  "frame-support",
- "hex",
+ "hex 0.4.3 (registry+https://github.com/rust-lang/crates.io-index)",
  "ibc 0.15.0",
  "parity-scale-codec",
  "ripemd",
@@ -6296,7 +6365,10 @@ dependencies = [
  "derive_more",
  "displaydoc",
  "ibc-proto 0.41.0",
+ "parity-scale-codec",
  "prost 0.12.3",
+ "scale-info",
+ "schemars",
  "serde",
  "tendermint 0.34.1",
  "time",
@@ -6327,7 +6399,10 @@ dependencies = [
  "flex-error",
  "ics23 0.11.1",
  "informalsystems-pbjson",
+ "parity-scale-codec",
  "prost 0.12.3",
+ "scale-info",
+ "schemars",
  "serde",
  "subtle-encoding",
  "tendermint-proto 0.34.1",
@@ -6382,13 +6457,31 @@ dependencies = [
 ]
 
 [[package]]
+name = "ibc-testkit"
+version = "0.50.0"
+source = "git+https://github.com/mina86/ibc-rs?rev=e1be8c9292c82c1e7c158067f0014fb292ee652d#e1be8c9292c82c1e7c158067f0014fb292ee652d"
+dependencies = [
+ "derive_more",
+ "displaydoc",
+ "ibc 0.50.0",
+ "ibc-client-tendermint-types",
+ "ibc-proto 0.41.0",
+ "parking_lot 0.12.2",
+ "subtle-encoding",
+ "tendermint 0.34.1",
+ "tendermint-testgen 0.34.1",
+ "tracing",
+ "typed-builder",
+]
+
+[[package]]
 name = "ics07-tendermint"
 version = "0.1.0"
 dependencies = [
  "bytes",
  "env_logger 0.9.3",
  "flex-error",
- "hex",
+ "hex 0.4.3 (registry+https://github.com/rust-lang/crates.io-index)",
  "ibc 0.15.0",
  "ibc-derive 0.1.0",
  "ibc-proto 0.18.0",
@@ -6404,7 +6497,7 @@ dependencies = [
  "tendermint-light-client-verifier 0.33.2",
  "tendermint-proto 0.33.2",
  "tendermint-rpc",
- "tendermint-testgen",
+ "tendermint-testgen 0.33.2",
  "test-log",
  "time",
  "tracing",
@@ -6424,7 +6517,7 @@ dependencies = [
  "ed25519 1.5.3",
  "ed25519-consensus",
  "ed25519-zebra",
- "hex",
+ "hex 0.4.3 (registry+https://github.com/rust-lang/crates.io-index)",
  "hyperspace-primitives",
  "ibc 0.15.0",
  "ibc-derive 0.1.0",
@@ -6451,7 +6544,7 @@ name = "ics08-wasm"
 version = "0.1.0"
 dependencies = [
  "cosmwasm-schema",
- "hex",
+ "hex 0.4.3 (registry+https://github.com/rust-lang/crates.io-index)",
  "ibc 0.15.0",
  "ibc-proto 0.18.0",
  "prost 0.11.9",
@@ -6473,7 +6566,7 @@ dependencies = [
  "grandpa-light-client-primitives",
  "grandpa-light-client-verifier",
  "grandpa-prover",
- "hex",
+ "hex 0.4.3 (registry+https://github.com/rust-lang/crates.io-index)",
  "hyperspace-core",
  "ibc 0.15.0",
  "ibc-derive 0.1.0",
@@ -6514,7 +6607,7 @@ dependencies = [
  "ed25519-zebra",
  "finality-grandpa",
  "grandpa-light-client-primitives",
- "hex",
+ "hex 0.4.3 (registry+https://github.com/rust-lang/crates.io-index)",
  "hyperspace-primitives",
  "ibc 0.15.0",
  "ibc-derive 0.1.0",
@@ -6607,7 +6700,7 @@ dependencies = [
  "tendermint 0.33.2",
  "tendermint-proto 0.33.2",
  "tendermint-rpc",
- "tendermint-testgen",
+ "tendermint-testgen 0.33.2",
  "test-log",
  "time",
  "tokio",
@@ -6623,7 +6716,7 @@ source = "git+https://github.com/cosmos/ics23?rev=74ce807b7be39a7e0afb4e2efb8e28
 dependencies = [
  "anyhow",
  "bytes",
- "hex",
+ "hex 0.4.3 (registry+https://github.com/rust-lang/crates.io-index)",
  "prost 0.11.9",
  "ripemd",
  "sha2 0.10.8",
@@ -6640,7 +6733,7 @@ dependencies = [
  "blake2",
  "blake3",
  "bytes",
- "hex",
+ "hex 0.4.3 (registry+https://github.com/rust-lang/crates.io-index)",
  "informalsystems-pbjson",
  "prost 0.12.3",
  "ripemd",
@@ -7019,7 +7112,7 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "c8b3815d9f5d5de348e5f162b316dc9cdf4548305ebb15b4eb9328e66cf27d7a"
 dependencies = [
  "futures-util",
- "http",
+ "http 0.2.12",
  "jsonrpsee-core",
  "jsonrpsee-types",
  "pin-project",
@@ -7101,7 +7194,7 @@ checksum = "cf4d945a6008c9b03db3354fb3c83ee02d2faa9f2e755ec1dfb69c3551b8f4ba"
 dependencies = [
  "futures-channel",
  "futures-util",
- "http",
+ "http 0.2.12",
  "hyper",
  "jsonrpsee-core",
  "jsonrpsee-types",
@@ -7135,7 +7228,7 @@ version = "0.16.3"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "4e1b3975ed5d73f456478681a417128597acd6a2487855fdb7b4a3d4d195bf5e"
 dependencies = [
- "http",
+ "http 0.2.12",
  "jsonrpsee-client-transport",
  "jsonrpsee-core",
  "jsonrpsee-types",
@@ -7338,7 +7431,7 @@ checksum = "830d08ce1d1d941e6b30645f1a0eb5643013d835ce3779a5fc208261dbe10f55"
 [[package]]
 name = "lib"
 version = "0.0.0"
-source = "git+https://github.com/ComposableFi/emulated-light-client/#ba1046ead4232ee07a1db9b120f3035c983e0052"
+source = "git+https://github.com/ComposableFi/emulated-light-client/?branch=vmarkushin/genesis-mint-tokens#79df21f9c86fe79616bef438d7643013e01954a6"
 dependencies = [
  "base64 0.21.7",
  "borsh 0.10.4",
@@ -8213,7 +8306,7 @@ dependencies = [
 [[package]]
 name = "memory"
 version = "0.0.0"
-source = "git+https://github.com/ComposableFi/emulated-light-client/#ba1046ead4232ee07a1db9b120f3035c983e0052"
+source = "git+https://github.com/ComposableFi/emulated-light-client/?branch=vmarkushin/genesis-mint-tokens#79df21f9c86fe79616bef438d7643013e01954a6"
 dependencies = [
  "derive_more",
  "stdx",
@@ -8372,7 +8465,7 @@ dependencies = [
  "clap 3.2.25",
  "clap_complete",
  "directories",
- "hex",
+ "hex 0.4.3 (registry+https://github.com/rust-lang/crates.io-index)",
  "lazy_static",
  "nom",
  "once_cell",
@@ -8850,6 +8943,15 @@ dependencies = [
 
 [[package]]
 name = "num_enum"
+version = "0.5.11"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "1f646caf906c20226733ed5b1374287eb97e3c2a5c227ce668c1f2ce20ae57c9"
+dependencies = [
+ "num_enum_derive 0.5.11",
+]
+
+[[package]]
+name = "num_enum"
 version = "0.6.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "7a015b430d3c108a207fd776d2e2196aaf8b1cf8cf93253e3a097ff3085076a1"
@@ -8864,6 +8966,18 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "02339744ee7253741199f897151b38e72257d13802d4ee837285cc2990a90845"
 dependencies = [
  "num_enum_derive 0.7.2",
+]
+
+[[package]]
+name = "num_enum_derive"
+version = "0.5.11"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "dcbff9bc912032c62bf65ef1d5aea88983b420f4f839db1e9b0c281a25c9c799"
+dependencies = [
+ "proc-macro-crate 1.3.1",
+ "proc-macro2",
+ "quote",
+ "syn 1.0.109",
 ]
 
 [[package]]
@@ -9494,7 +9608,7 @@ dependencies = [
  "frame-system",
  "grandpa-light-client-primitives",
  "guestchain",
- "hex",
+ "hex 0.4.3 (registry+https://github.com/rust-lang/crates.io-index)",
  "hex-literal 0.3.4",
  "ibc 0.15.0",
  "ibc-derive 0.1.0",
@@ -10362,7 +10476,7 @@ dependencies = [
  "blake2",
  "crc32fast",
  "fs2",
- "hex",
+ "hex 0.4.3 (registry+https://github.com/rust-lang/crates.io-index)",
  "libc",
  "log",
  "lz4",
@@ -11314,7 +11428,7 @@ dependencies = [
  "derive_more",
  "fatality",
  "futures",
- "hex",
+ "hex 0.4.3 (registry+https://github.com/rust-lang/crates.io-index)",
  "parity-scale-codec",
  "polkadot-node-jaeger",
  "polkadot-node-primitives",
@@ -12303,7 +12417,7 @@ dependencies = [
 [[package]]
 name = "proto-utils"
 version = "0.0.0"
-source = "git+https://github.com/ComposableFi/emulated-light-client/#ba1046ead4232ee07a1db9b120f3035c983e0052"
+source = "git+https://github.com/ComposableFi/emulated-light-client/?branch=vmarkushin/genesis-mint-tokens#79df21f9c86fe79616bef438d7643013e01954a6"
 dependencies = [
  "const_format",
  "derive_more",
@@ -12794,7 +12908,7 @@ dependencies = [
  "futures-core",
  "futures-util",
  "h2",
- "http",
+ "http 0.2.12",
  "http-body",
  "hyper",
  "hyper-rustls 0.24.2",
@@ -14158,7 +14272,7 @@ name = "sc-rpc-server"
 version = "4.0.0-dev"
 source = "git+https://github.com/paritytech//substrate.git?branch=polkadot-v0.9.43#5e49f6e44820affccaf517fd22af564f4b495d40"
 dependencies = [
- "http",
+ "http 0.2.12",
  "jsonrpsee",
  "log",
  "serde_json",
@@ -14176,7 +14290,7 @@ dependencies = [
  "array-bytes 4.2.0",
  "futures",
  "futures-util",
- "hex",
+ "hex 0.4.3 (registry+https://github.com/rust-lang/crates.io-index)",
  "jsonrpsee",
  "log",
  "parity-scale-codec",
@@ -14716,7 +14830,7 @@ dependencies = [
 [[package]]
 name = "sealable-trie"
 version = "0.0.0"
-source = "git+https://github.com/ComposableFi/emulated-light-client/#ba1046ead4232ee07a1db9b120f3035c983e0052"
+source = "git+https://github.com/ComposableFi/emulated-light-client/?branch=vmarkushin/genesis-mint-tokens#79df21f9c86fe79616bef438d7643013e01954a6"
 dependencies = [
  "ascii 1.1.0",
  "base64 0.21.7",
@@ -15133,6 +15247,12 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "cc47a29ce97772ca5c927f75bac34866b16d64e07f330c3248e2d7226623901b"
 
 [[package]]
+name = "simple-error"
+version = "0.3.1"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "7e2accd2c41a0e920d2abd91b2badcfa1da784662f54fbc47e0e3a51f1e2e1cf"
+
+[[package]]
 name = "simple-iavl"
 version = "0.1.0"
 dependencies = [
@@ -15255,7 +15375,7 @@ dependencies = [
  "bytes",
  "flate2",
  "futures",
- "http",
+ "http 0.2.12",
  "httparse",
  "log",
  "rand 0.8.5",
@@ -15279,7 +15399,7 @@ dependencies = [
  "serde_json",
  "solana-config-program",
  "solana-sdk",
- "spl-token",
+ "spl-token 4.0.0",
  "spl-token-2022 1.0.0",
  "spl-token-group-interface",
  "spl-token-metadata-interface",
@@ -15290,7 +15410,7 @@ dependencies = [
 [[package]]
 name = "solana-allocator"
 version = "0.0.3"
-source = "git+https://github.com/ComposableFi/emulated-light-client/#ba1046ead4232ee07a1db9b120f3035c983e0052"
+source = "git+https://github.com/ComposableFi/emulated-light-client/?branch=vmarkushin/genesis-mint-tokens#79df21f9c86fe79616bef438d7643013e01954a6"
 dependencies = [
  "bytemuck",
  "solana-program",
@@ -15427,7 +15547,7 @@ dependencies = [
 [[package]]
 name = "solana-ibc"
 version = "0.0.3"
-source = "git+https://github.com/ComposableFi/emulated-light-client/#ba1046ead4232ee07a1db9b120f3035c983e0052"
+source = "git+https://github.com/ComposableFi/emulated-light-client/?branch=vmarkushin/genesis-mint-tokens#79df21f9c86fe79616bef438d7643013e01954a6"
 dependencies = [
  "anchor-lang",
  "anchor-spl",
@@ -15441,6 +15561,7 @@ dependencies = [
  "ibc 0.50.0",
  "ibc-client-tendermint-types",
  "ibc-proto 0.41.0",
+ "ibc-testkit",
  "itertools 0.10.5",
  "lib",
  "linear-map",
@@ -15453,7 +15574,7 @@ dependencies = [
  "solana-signature-verifier",
  "solana-trie",
  "spl-associated-token-account",
- "spl-token",
+ "spl-token 3.5.0",
  "stdx",
  "strum 0.25.0",
  "tendermint 0.34.1",
@@ -15850,7 +15971,7 @@ checksum = "468aa43b7edb1f9b7b7b686d5c3aeb6630dc1708e86e31343499dd5c4d775183"
 [[package]]
 name = "solana-signature-verifier"
 version = "0.0.3"
-source = "git+https://github.com/ComposableFi/emulated-light-client/#ba1046ead4232ee07a1db9b120f3035c983e0052"
+source = "git+https://github.com/ComposableFi/emulated-light-client/?branch=vmarkushin/genesis-mint-tokens#79df21f9c86fe79616bef438d7643013e01954a6"
 dependencies = [
  "base64 0.21.7",
  "borsh 0.10.4",
@@ -15954,7 +16075,7 @@ dependencies = [
  "solana-sdk",
  "spl-associated-token-account",
  "spl-memo",
- "spl-token",
+ "spl-token 4.0.0",
  "spl-token-2022 1.0.0",
  "thiserror",
 ]
@@ -15962,7 +16083,7 @@ dependencies = [
 [[package]]
 name = "solana-trie"
 version = "0.0.3"
-source = "git+https://github.com/ComposableFi/emulated-light-client/#ba1046ead4232ee07a1db9b120f3035c983e0052"
+source = "git+https://github.com/ComposableFi/emulated-light-client/?branch=vmarkushin/genesis-mint-tokens#79df21f9c86fe79616bef438d7643013e01954a6"
 dependencies = [
  "bytemuck",
  "lib",
@@ -16026,9 +16147,28 @@ dependencies = [
 ]
 
 [[package]]
+name = "solana-witnessed-trie"
+version = "0.0.3"
+source = "git+https://github.com/ComposableFi/emulated-light-client/?branch=vmarkushin/genesis-mint-tokens#79df21f9c86fe79616bef438d7643013e01954a6"
+dependencies = [
+ "arrayvec 0.7.4",
+ "bytemuck",
+ "cf-solana 0.0.0",
+ "derive_more",
+ "hex 0.4.3 (git+https://github.com/mina86/rust-hex.git?branch=main)",
+ "lib",
+ "memory",
+ "sealable-trie",
+ "solana-program",
+ "solana-trie",
+ "stdx",
+ "strum 0.25.0",
+]
+
+[[package]]
 name = "solana-write-account"
 version = "0.0.3"
-source = "git+https://github.com/ComposableFi/emulated-light-client/#ba1046ead4232ee07a1db9b120f3035c983e0052"
+source = "git+https://github.com/ComposableFi/emulated-light-client/?branch=vmarkushin/genesis-mint-tokens#79df21f9c86fe79616bef438d7643013e01954a6"
 dependencies = [
  "solana-program",
  "stdx",
@@ -17225,7 +17365,7 @@ dependencies = [
  "num-derive 0.4.2",
  "num-traits",
  "solana-program",
- "spl-token",
+ "spl-token 4.0.0",
  "spl-token-2022 1.0.0",
  "thiserror",
 ]
@@ -17342,6 +17482,20 @@ dependencies = [
 
 [[package]]
 name = "spl-token"
+version = "3.5.0"
+source = "git+https://github.com/ComposableFi/solana-program-library.git?branch=mantis#294feb78bf6e8aea9598c692485a41b529012b84"
+dependencies = [
+ "arrayref",
+ "bytemuck",
+ "num-derive 0.3.3",
+ "num-traits",
+ "num_enum 0.5.11",
+ "solana-program",
+ "thiserror",
+]
+
+[[package]]
+name = "spl-token"
 version = "4.0.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "08459ba1b8f7c1020b4582c4edf0f5c7511a5e099a7a97570c9698d4f2337060"
@@ -17370,7 +17524,7 @@ dependencies = [
  "solana-zk-token-sdk",
  "spl-memo",
  "spl-pod",
- "spl-token",
+ "spl-token 4.0.0",
  "spl-token-metadata-interface",
  "spl-transfer-hook-interface 0.3.0",
  "spl-type-length-value",
@@ -17393,7 +17547,7 @@ dependencies = [
  "solana-zk-token-sdk",
  "spl-memo",
  "spl-pod",
- "spl-token",
+ "spl-token 4.0.0",
  "spl-token-group-interface",
  "spl-token-metadata-interface",
  "spl-transfer-hook-interface 0.4.1",
@@ -17531,7 +17685,7 @@ dependencies = [
 [[package]]
 name = "stdx"
 version = "0.0.0"
-source = "git+https://github.com/ComposableFi/emulated-light-client/#ba1046ead4232ee07a1db9b120f3035c983e0052"
+source = "git+https://github.com/ComposableFi/emulated-light-client/?branch=vmarkushin/genesis-mint-tokens#79df21f9c86fe79616bef438d7643013e01954a6"
 
 [[package]]
 name = "strsim"
@@ -17678,7 +17832,7 @@ source = "git+https://github.com/chevdor/subwasm?rev=1c8446be5cff9e04cbb7b41acc1
 dependencies = [
  "blake2",
  "frame-metadata 16.0.0 (git+https://github.com/paritytech/frame-metadata?branch=main)",
- "hex",
+ "hex 0.4.3 (registry+https://github.com/rust-lang/crates.io-index)",
  "parity-scale-codec",
  "sp-core 7.0.0",
  "sp-io 7.0.0",
@@ -17756,7 +17910,7 @@ dependencies = [
  "frame-metadata 15.1.0",
  "futures",
  "getrandom 0.2.15",
- "hex",
+ "hex 0.4.3 (registry+https://github.com/rust-lang/crates.io-index)",
  "impl-serde 0.4.0",
  "jsonrpsee",
  "parity-scale-codec",
@@ -17784,7 +17938,7 @@ source = "git+https://github.com/paritytech/subxt?tag=v0.29.0#e40a8629e279e80a7f
 dependencies = [
  "frame-metadata 15.1.0",
  "heck 0.4.1",
- "hex",
+ "hex 0.4.3 (registry+https://github.com/rust-lang/crates.io-index)",
  "jsonrpsee",
  "parity-scale-codec",
  "proc-macro2",
@@ -18084,7 +18238,7 @@ dependencies = [
  "flex-error",
  "futures",
  "getrandom 0.2.15",
- "http",
+ "http 0.2.12",
  "hyper",
  "hyper-proxy",
  "hyper-rustls 0.22.1",
@@ -18117,9 +18271,24 @@ dependencies = [
  "gumdrop",
  "serde",
  "serde_json",
- "simple-error",
+ "simple-error 0.2.3",
  "tempfile",
  "tendermint 0.33.2",
+ "time",
+]
+
+[[package]]
+name = "tendermint-testgen"
+version = "0.34.1"
+source = "git+https://github.com/mina86/tendermint-rs?rev=45fbd500d731effb95a98257630feb46f6c41d06#45fbd500d731effb95a98257630feb46f6c41d06"
+dependencies = [
+ "ed25519-consensus",
+ "gumdrop",
+ "serde",
+ "serde_json",
+ "simple-error 0.3.1",
+ "tempfile",
+ "tendermint 0.34.1",
  "time",
 ]
 
@@ -18529,7 +18698,7 @@ dependencies = [
  "futures-core",
  "futures-util",
  "h2",
- "http",
+ "http 0.2.12",
  "http-body",
  "hyper",
  "hyper-timeout",
@@ -18562,7 +18731,7 @@ dependencies = [
  "base64 0.21.7",
  "bytes",
  "h2",
- "http",
+ "http 0.2.12",
  "http-body",
  "hyper",
  "hyper-timeout",
@@ -18638,7 +18807,7 @@ dependencies = [
  "bytes",
  "futures-core",
  "futures-util",
- "http",
+ "http 0.2.12",
  "http-body",
  "http-range-header",
  "pin-project-lite 0.2.14",
@@ -18816,7 +18985,7 @@ dependencies = [
 [[package]]
 name = "trie-ids"
 version = "0.0.0"
-source = "git+https://github.com/ComposableFi/emulated-light-client/#ba1046ead4232ee07a1db9b120f3035c983e0052"
+source = "git+https://github.com/ComposableFi/emulated-light-client/?branch=vmarkushin/genesis-mint-tokens#79df21f9c86fe79616bef438d7643013e01954a6"
 dependencies = [
  "ascii 1.1.0",
  "base64 0.21.7",
@@ -18899,7 +19068,7 @@ dependencies = [
  "async-trait",
  "clap 4.5.4",
  "frame-remote-externalities",
- "hex",
+ "hex 0.4.3 (registry+https://github.com/rust-lang/crates.io-index)",
  "log",
  "parity-scale-codec",
  "sc-cli",
@@ -18942,7 +19111,7 @@ dependencies = [
  "base64 0.13.1",
  "byteorder",
  "bytes",
- "http",
+ "http 0.2.12",
  "httparse",
  "log",
  "rand 0.8.5",
@@ -18963,7 +19132,7 @@ dependencies = [
  "byteorder",
  "bytes",
  "data-encoding",
- "http",
+ "http 0.2.12",
  "httparse",
  "log",
  "rand 0.8.5",
@@ -18989,6 +19158,26 @@ dependencies = [
 ]
 
 [[package]]
+name = "typed-builder"
+version = "0.18.2"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "77739c880e00693faef3d65ea3aad725f196da38b22fdc7ea6ded6e1ce4d3add"
+dependencies = [
+ "typed-builder-macro",
+]
+
+[[package]]
+name = "typed-builder-macro"
+version = "0.18.2"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "1f718dfaf347dcb5b983bfc87608144b0bad87970aebcbea5ce44d2a30c08e63"
+dependencies = [
+ "proc-macro2",
+ "quote",
+ "syn 2.0.61",
+]
+
+[[package]]
 name = "typenum"
 version = "1.17.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -19008,7 +19197,7 @@ checksum = "76f64bba2c53b04fcab63c01a7d7427eadc821e3bc48c34dc9ba29c501164b52"
 dependencies = [
  "byteorder",
  "crunchy",
- "hex",
+ "hex 0.4.3 (registry+https://github.com/rust-lang/crates.io-index)",
  "static_assertions",
 ]
 
@@ -19249,7 +19438,7 @@ dependencies = [
 [[package]]
 name = "wasm"
 version = "0.0.0"
-source = "git+https://github.com/ComposableFi/emulated-light-client/#ba1046ead4232ee07a1db9b120f3035c983e0052"
+source = "git+https://github.com/ComposableFi/emulated-light-client/?branch=vmarkushin/genesis-mint-tokens#79df21f9c86fe79616bef438d7643013e01954a6"
 dependencies = [
  "const_format",
  "derive_more",
@@ -19402,7 +19591,7 @@ version = "0.20.0"
 source = "git+https://github.com/chevdor/subwasm?rev=1c8446be5cff9e04cbb7b41acc136f22eddd5eac#1c8446be5cff9e04cbb7b41acc136f22eddd5eac"
 dependencies = [
  "frame-metadata 16.0.0 (registry+https://github.com/rust-lang/crates.io-index)",
- "hex",
+ "hex 0.4.3 (registry+https://github.com/rust-lang/crates.io-index)",
  "log",
  "parity-scale-codec",
  "sc-executor",
@@ -20369,16 +20558,6 @@ dependencies = [
 ]
 
 [[patch.unused]]
-name = "ibc-testkit"
-version = "0.50.0"
-source = "git+https://github.com/mina86/ibc-rs?rev=e1be8c9292c82c1e7c158067f0014fb292ee652d#e1be8c9292c82c1e7c158067f0014fb292ee652d"
-
-[[patch.unused]]
 name = "tendermint-light-client"
-version = "0.34.1"
-source = "git+https://github.com/mina86/tendermint-rs?rev=45fbd500d731effb95a98257630feb46f6c41d06#45fbd500d731effb95a98257630feb46f6c41d06"
-
-[[patch.unused]]
-name = "tendermint-testgen"
 version = "0.34.1"
 source = "git+https://github.com/mina86/tendermint-rs?rev=45fbd500d731effb95a98257630feb46f6c41d06#45fbd500d731effb95a98257630feb46f6c41d06"

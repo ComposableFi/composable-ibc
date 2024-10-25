@@ -171,9 +171,8 @@ impl IbcProvider for RollupClient {
 		log::info!("Came into rollup lts events");
 		let (finality_blockhash, finality_height) = match finality_event {
 			FinalityEvent::Guest { blockhash, block_height } => (blockhash, block_height),
-			FinalityEvent::Rollup { slot, previous_blockhash, blockhash } => {
-				(CryptoHash::default(), slot)
-			},
+			FinalityEvent::Rollup { slot, previous_blockhash, blockhash } =>
+				(CryptoHash::default(), slot),
 		};
 		log::info!("This is rollup height {:?}", finality_height);
 		let client_id = self.client_id();
@@ -1035,10 +1034,9 @@ deserialize client state"
 									ibc_core_handler_types::events::IbcEvent::SendPacket(
 										packet,
 									) => {
-										if packet.chan_id_on_a().as_str() == &channel_id.to_string()
-											&& packet.port_id_on_a().as_str() == port_id.as_str()
-											&& seqs
-												.iter()
+										if packet.chan_id_on_a().as_str() == &channel_id.to_string() &&
+											packet.port_id_on_a().as_str() == port_id.as_str() &&
+											seqs.iter()
 												.find(|&&seq| packet.seq_on_a().value() == seq)
 												.is_some()
 										{
@@ -1183,7 +1181,7 @@ deserialize client state"
 			let packets: Vec<_> = recv_packet_events
 				.iter()
 				.map(|(recv_packet, height)| match recv_packet {
-					ibc_core_handler_types::events::IbcEvent::WriteAcknowledgement(packet) => {
+					ibc_core_handler_types::events::IbcEvent::WriteAcknowledgement(packet) =>
 						ibc_rpc::PacketInfo {
 							height: Some(*height),
 							sequence: packet.seq_on_a().value(),
@@ -1204,8 +1202,7 @@ deserialize client state"
 							.into(),
 							timeout_timestamp: packet.timeout_timestamp_on_b().nanoseconds(),
 							ack: Some(packet.acknowledgement().as_bytes().to_vec()),
-						}
-					},
+						},
 					_ => panic!("Infallible"),
 				})
 				.collect();
@@ -1512,12 +1509,10 @@ deserialize client state"
 			.unwrap();
 		let logs = match tx.transaction.meta.unwrap().log_messages {
 			solana_transaction_status::option_serializer::OptionSerializer::Some(logs) => logs,
-			solana_transaction_status::option_serializer::OptionSerializer::None => {
-				return Err(Error::Custom(String::from("No logs found")))
-			},
-			solana_transaction_status::option_serializer::OptionSerializer::Skip => {
-				return Err(Error::Custom(String::from("Logs were skipped, so not available")))
-			},
+			solana_transaction_status::option_serializer::OptionSerializer::None =>
+				return Err(Error::Custom(String::from("No logs found"))),
+			solana_transaction_status::option_serializer::OptionSerializer::Skip =>
+				return Err(Error::Custom(String::from("Logs were skipped, so not available"))),
 		};
 		let (events, _proof_height) = events::get_ibc_events_from_logs(logs);
 		log::info!("These are events {:?}", events);
@@ -1552,12 +1547,10 @@ deserialize client state"
 			.unwrap();
 		let logs = match tx.transaction.meta.unwrap().log_messages {
 			solana_transaction_status::option_serializer::OptionSerializer::Some(logs) => logs,
-			solana_transaction_status::option_serializer::OptionSerializer::None => {
-				return Err(Error::Custom(String::from("No logs found")))
-			},
-			solana_transaction_status::option_serializer::OptionSerializer::Skip => {
-				return Err(Error::Custom(String::from("Logs were skipped, so not available")))
-			},
+			solana_transaction_status::option_serializer::OptionSerializer::None =>
+				return Err(Error::Custom(String::from("No logs found"))),
+			solana_transaction_status::option_serializer::OptionSerializer::Skip =>
+				return Err(Error::Custom(String::from("Logs were skipped, so not available"))),
 		};
 		let (events, _proof_height) = events::get_ibc_events_from_logs(logs);
 		log::info!("These are events {:?}", events);
@@ -1594,12 +1587,10 @@ deserialize client state"
 			.unwrap();
 		let logs = match tx.transaction.meta.unwrap().log_messages {
 			solana_transaction_status::option_serializer::OptionSerializer::Some(logs) => logs,
-			solana_transaction_status::option_serializer::OptionSerializer::None => {
-				return Err(Error::Custom(String::from("No logs found")))
-			},
-			solana_transaction_status::option_serializer::OptionSerializer::Skip => {
-				return Err(Error::Custom(String::from("Logs were skipped, so not available")))
-			},
+			solana_transaction_status::option_serializer::OptionSerializer::None =>
+				return Err(Error::Custom(String::from("No logs found"))),
+			solana_transaction_status::option_serializer::OptionSerializer::Skip =>
+				return Err(Error::Custom(String::from("Logs were skipped, so not available"))),
 		};
 		let (events, _proof_height) = events::get_ibc_events_from_logs(logs);
 		let result: Vec<&ibc_core_channel_types::events::OpenInit> = events
@@ -1710,8 +1701,8 @@ impl LightClientSync for RollupClient {
 						let validator_idx = all_validators
 							.iter()
 							.position(|v| {
-								v.pubkey
-									== PubKey::from_bytes(&validator.to_bytes().as_slice()).unwrap()
+								v.pubkey ==
+									PubKey::from_bytes(&validator.to_bytes().as_slice()).unwrap()
 							})
 							.unwrap();
 						(validator_idx as u16, signature.clone())
@@ -2294,8 +2285,8 @@ impl Chain for RollupClient {
 			error.to_string()
 		};
 		log::info!(target: "hyperspace_solana", "Handling error: {err_str}");
-		if err_str.contains("dispatch task is gone")
-			|| err_str.contains("failed to send message to internal channel")
+		if err_str.contains("dispatch task is gone") ||
+			err_str.contains("failed to send message to internal channel")
 		{
 			// self.reconnect().await?;
 			self.common_state.rpc_call_delay *= 2;
@@ -2358,10 +2349,10 @@ impl Chain for RollupClient {
 // 		Err(e) => println!("Failed to convert bytes to string: {}", e),
 // 	}
 // 	// let (tx, rx) = unbounded_channel();
-// 	// let ws_url = "wss://mantis-testnet-rollup.composable-shared-artifacts.composablenodes.tech/ws";
-// 	let ws_url = "wss://devnet.helius-rpc.com/?api-key=5ae782d8-6bf6-489c-b6df-ef7e6289e193";
-// 	let program_id = "2HLLVco5HvwWriNbUhmVwA2pCetRkpgrqwnjcsZdyTKT";
-// 	// tokio::task::spawn_blocking(move || {
+// 	// let ws_url =
+// "wss://mantis-testnet-rollup.composable-shared-artifacts.composablenodes.tech/ws"; 	let ws_url =
+// "wss://devnet.helius-rpc.com/?api-key=5ae782d8-6bf6-489c-b6df-ef7e6289e193"; 	let program_id =
+// "2HLLVco5HvwWriNbUhmVwA2pCetRkpgrqwnjcsZdyTKT"; 	// tokio::task::spawn_blocking(move || {
 // 	let (_block_subscription, receiver) = PubsubClient::logs_subscribe(
 // 		&ws_url,
 // 		// RpcBlockSubscribeFilter::MentionsAccountOrProgram(program_id.to_string()),
