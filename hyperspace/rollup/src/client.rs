@@ -303,10 +303,11 @@ impl RollupClient {
 		(trie, false)
 	}
 
-	pub async fn get_ibc_storage(&self) -> PrivateStorage {
+	pub async fn get_ibc_storage(&self) -> PrivateStorageWithWitness {
 		let program = self.program();
 		let ibc_storage_key = self.get_ibc_storage_key();
-		let storage: PrivateStorage = program.account(ibc_storage_key).await.unwrap();
+		let mut account_data = self.rpc_client().get_account_data(&ibc_storage_key).await.unwrap();
+		let storage: PrivateStorageWithWitness = PrivateStorageWithWitness::deserialize(&mut &account_data[8..]).unwrap();
 		// let storage = tokio::task::spawn_blocking(move || {
 		// 	program.account(ibc_storage_key).unwrap()
 		// }).await.unwrap();
@@ -1253,3 +1254,35 @@ pub async fn get_accounts(
 // 	let tx = sol_rpc_client.get_transaction(&signature, UiTransactionEncoding::Json).unwrap();
 // 	println!("This is tx {:?}", tx);
 // }
+
+#[derive(Debug, borsh::BorshSerialize, borsh::BorshDeserialize)]
+/// The private IBC storage, i.e. data which doesn’t require proofs.
+pub struct PrivateStorageWithWitness {
+    /// Per-client information.
+    ///
+    /// Entry at index `N` corresponds to the client with IBC identifier
+    /// `client-<N>`.
+    pub clients: Vec<solana_ibc::storage::ClientStore>,
+
+    /// Information about the counterparty on given connection.
+    ///
+    /// Entry at index `N` corresponds to the connection with IBC identifier
+    /// `connection-<N>`.
+    pub connections: Vec<solana_ibc::storage::Serialised<ibc_core_connection_types::ConnectionEnd>>,
+
+    /// Information about a each `(port, channel)` endpoint.
+    pub port_channel: solana_ibc::storage::map::Map<trie_ids::PortChannelPK, solana_ibc::storage::PortChannelStore>,
+
+    pub channel_counter: u32,
+
+    pub fee_collector: Pubkey,
+
+    pub new_fee_collector_proposal: Option<Pubkey>,
+
+    pub assets: solana_ibc::storage::map::Map<CryptoHash, solana_ibc::storage::Asset>,
+
+    // Fee to be charged for each transfer
+    pub fee_in_lamports: u64,
+
+    pub local_consensus_state: std::collections::VecDeque<(u64, u64, CryptoHash)>,
+}
