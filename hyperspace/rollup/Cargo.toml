@@ -95,7 +95,7 @@ cf-solana-og = { git = "https://github.com/ComposableFi/emulated-light-client/",
 cf-solana = { path = "../../light-clients/cf-solana", default-features = false }
 
 #Contract
-solana-ibc = { git = "https://github.com/ComposableFi/emulated-light-client/", branch = "vmarkushin/genesis-mint-tokens", features = ["no-entrypoint", "witness"] }
+solana-ibc = { git = "https://github.com/ComposableFi/emulated-light-client/", branch = "vmarkushin/genesis-mint-tokens", features = ["no-entrypoint"] }
 solana-write-account = { git = "https://github.com/ComposableFi/emulated-light-client/", branch = "vmarkushin/genesis-mint-tokens", features = ["library"] }
 solana-signature-verifier = { git = "https://github.com/ComposableFi/emulated-light-client/", branch = "vmarkushin/genesis-mint-tokens" }
 
