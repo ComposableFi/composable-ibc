@@ -1276,7 +1276,7 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "115e54d64eb62cdebad391c19efc9dce4981c690c85a33a12199d99bb9546fee"
 dependencies = [
  "borsh-derive 0.10.3",
- "hashbrown 0.13.2",
+ "hashbrown 0.12.3",
 ]
 
 [[package]]
@@ -5751,6 +5751,7 @@ dependencies = [
  "solana-signature-verifier",
  "solana-transaction-status",
  "solana-trie",
+ "solana-witnessed-trie",
  "solana-write-account",
  "stdx",
  "tendermint 0.33.2",
@@ -16023,6 +16024,22 @@ dependencies = [
  "solana-program-runtime",
  "solana-sdk",
  "thiserror",
+]
+
+[[package]]
+name = "solana-witnessed-trie"
+version = "0.0.3"
+source = "git+https://github.com/ComposableFi/emulated-light-client/#ba1046ead4232ee07a1db9b120f3035c983e0052"
+dependencies = [
+ "arrayvec 0.7.4",
+ "bytemuck",
+ "cf-solana 0.0.0",
+ "derive_more",
+ "lib",
+ "solana-program",
+ "solana-trie",
+ "stdx",
+ "strum 0.25.0",
 ]
 
 [[package]]

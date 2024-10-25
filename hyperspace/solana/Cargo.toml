@@ -96,7 +96,8 @@ cf-solana-og = { git = "https://github.com/ComposableFi/emulated-light-client/",
 
 #Contract
 solana-ibc = { git = "https://github.com/ComposableFi/emulated-light-client/" ,features = ["no-entrypoint"]}
-solana-write-account = { git = "https://github.com/ComposableFi/emulated-light-client/" ,features = ["library"] }
+solana-write-account = { git = "https://github.com/ComposableFi/emulated-light-client/", features = ["library"] }
+solana-witnessed-trie = { git = "https://github.com/ComposableFi/emulated-light-client/", default-features = false, features = ["api"] }
 solana-signature-verifier = { git = "https://github.com/ComposableFi/emulated-light-client/" }
 
 tracing = "0.1.36"
