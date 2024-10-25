@@ -212,6 +212,13 @@ impl SolanaClient {
 		trie
 	}
 
+	pub fn get_witness_key(&self, trie_key: &Pubkey) -> Pubkey {
+		solana_witnessed_trie::api::find_program_address(
+			&self.solana_ibc_program_id,
+			trie_key,
+		).unwrap().0
+	}
+
 	pub fn get_ibc_storage_key(&self) -> Pubkey {
 		let storage_seeds = &[SOLANA_IBC_STORAGE_SEED];
 		let ibc_storage =
@@ -385,6 +392,7 @@ impl SolanaClient {
 		let mut signature = String::new();
 		let solana_ibc_storage_key = self.get_ibc_storage_key();
 		let trie_key = self.get_trie_key();
+		let witness_key = self.get_witness_key(&trie_key);
 		let chain_key = self.get_chain_key();
 		// while tries < max_tries {
 		// 	println!("Try For Tx: {}", tries);
@@ -612,6 +620,7 @@ deserialize consensus state"
 						receiver: Some(self.solana_ibc_program_id),
 						storage: solana_ibc_storage_key,
 						trie: trie_key,
+						witness: witness_key,
 						chain: chain_key,
 						system_program: system_program::ID,
 						mint_authority: Some(self.solana_ibc_program_id),
@@ -717,6 +726,7 @@ deserialize consensus state"
 							receiver: receiver_account,
 							storage: solana_ibc_storage_key,
 							trie: trie_key,
+							witness: witness_key,
 							chain: chain_key,
 							system_program: system_program::ID,
 							mint_authority: Some(mint_authority),
@@ -789,6 +799,7 @@ deserialize consensus state"
 							receiver: sender_account,
 							storage: solana_ibc_storage_key,
 							trie: trie_key,
+							witness: witness_key,
 							chain: chain_key,
 							system_program: system_program::ID,
 							mint_authority: Some(mint_authority),
@@ -829,6 +840,7 @@ deserialize consensus state"
 							receiver: Some(sender),
 							storage: solana_ibc_storage_key,
 							trie: trie_key,
+							witness: witness_key,
 							chain: chain_key,
 							system_program: system_program::ID,
 							mint_authority: Some(self.solana_ibc_program_id),
@@ -888,6 +900,7 @@ deserialize consensus state"
 							receiver: Some(self.solana_ibc_program_id),
 							storage: solana_ibc_storage_key,
 							trie: trie_key,
+							witness: witness_key,
 							chain: chain_key,
 							system_program: system_program::ID,
 							mint_authority: Some(self.solana_ibc_program_id),
@@ -958,6 +971,7 @@ deserialize consensus state"
 		// Build, sign, and send program instruction
 		let solana_ibc_storage_key = self.get_ibc_storage_key();
 		let trie_key = self.get_trie_key();
+		let witness_key = self.get_witness_key(&trie_key);
 		let chain_key = self.get_chain_key();
 
 		let mint_authority = self.get_mint_auth_key();
@@ -1038,6 +1052,7 @@ deserialize consensus state"
 				receiver: Some(authority.pubkey()),
 				storage: solana_ibc_storage_key,
 				trie: trie_key,
+				witness: witness_key,
 				chain: chain_key,
 				system_program: system_program::ID,
 				mint_authority: Some(mint_authority),
