@@ -213,7 +213,7 @@ impl SolanaClient {
 	}
 
 	pub fn get_witness_key(&self, trie_key: &Pubkey) -> Pubkey {
-		solana_witnessed_trie::api::find_program_address(
+		wittrie::api::find_witness_account(
 			&self.solana_ibc_program_id,
 			trie_key,
 		).unwrap().0
