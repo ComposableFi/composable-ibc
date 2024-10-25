@@ -241,9 +241,8 @@ pub fn convert_new_event_to_old(
 					destination_channel: ChannelId::from_str(e.chan_id_on_b().as_str()).unwrap(),
 					data: e.packet_data().to_vec(),
 					timeout_height: match e.timeout_height_on_b() {
-						ibc_core_channel_types::timeout::TimeoutHeight::Never => {
-							Height { revision_height: 0, revision_number: 0 }
-						},
+						ibc_core_channel_types::timeout::TimeoutHeight::Never =>
+							Height { revision_height: 0, revision_number: 0 },
 						ibc_core_channel_types::timeout::TimeoutHeight::At(h) => Height {
 							revision_height: h.revision_height(),
 							revision_number: h.revision_number(),
@@ -268,9 +267,8 @@ pub fn convert_new_event_to_old(
 					destination_channel: ChannelId::from_str(e.chan_id_on_b().as_str()).unwrap(),
 					data: e.packet_data().to_vec(),
 					timeout_height: match e.timeout_height_on_b() {
-						ibc_core_channel_types::timeout::TimeoutHeight::Never => {
-							Height { revision_height: 0, revision_number: 0 }
-						},
+						ibc_core_channel_types::timeout::TimeoutHeight::Never =>
+							Height { revision_height: 0, revision_number: 0 },
 						ibc_core_channel_types::timeout::TimeoutHeight::At(h) => Height {
 							revision_height: h.revision_height(),
 							revision_number: h.revision_number(),
@@ -295,9 +293,8 @@ pub fn convert_new_event_to_old(
 					destination_channel: ChannelId::from_str(e.chan_id_on_b().as_str()).unwrap(),
 					data: e.packet_data().to_vec(),
 					timeout_height: match e.timeout_height_on_b() {
-						ibc_core_channel_types::timeout::TimeoutHeight::Never => {
-							Height { revision_height: 0, revision_number: 0 }
-						},
+						ibc_core_channel_types::timeout::TimeoutHeight::Never =>
+							Height { revision_height: 0, revision_number: 0 },
 						ibc_core_channel_types::timeout::TimeoutHeight::At(h) => Height {
 							revision_height: h.revision_height(),
 							revision_number: h.revision_number(),
@@ -323,9 +320,8 @@ pub fn convert_new_event_to_old(
 					destination_channel: ChannelId::from_str(e.chan_id_on_b().as_str()).unwrap(),
 					data: Vec::new(),
 					timeout_height: match e.timeout_height_on_b() {
-						ibc_core_channel_types::timeout::TimeoutHeight::Never => {
-							Height { revision_height: 0, revision_number: 0 }
-						},
+						ibc_core_channel_types::timeout::TimeoutHeight::Never =>
+							Height { revision_height: 0, revision_number: 0 },
 						ibc_core_channel_types::timeout::TimeoutHeight::At(h) => Height {
 							revision_height: h.revision_height(),
 							revision_number: h.revision_number(),
@@ -350,9 +346,8 @@ pub fn convert_new_event_to_old(
 					destination_channel: ChannelId::from_str(e.chan_id_on_b().as_str()).unwrap(),
 					data: Vec::new(), // Not sure about this
 					timeout_height: match e.timeout_height_on_b() {
-						ibc_core_channel_types::timeout::TimeoutHeight::Never => {
-							Height { revision_height: 0, revision_number: 0 }
-						},
+						ibc_core_channel_types::timeout::TimeoutHeight::Never =>
+							Height { revision_height: 0, revision_number: 0 },
 						ibc_core_channel_types::timeout::TimeoutHeight::At(h) => Height {
 							revision_height: h.revision_height(),
 							revision_number: h.revision_number(),
@@ -403,6 +398,7 @@ pub fn get_ibc_events_from_logs(
 
 pub async fn get_client_state_at_height(
 	rpc: RpcClient,
+	client_id: ClientId,
 	program_id: Pubkey,
 	upto_height: u64,
 ) -> Option<solana_ibc::client_state::AnyClientState> {
@@ -427,7 +423,13 @@ pub async fn get_client_state_at_height(
 			let client_state_events: Vec<solana_ibc::events::ClientStateUpdate> = events
 				.iter()
 				.filter_map(|event| match event {
-					solana_ibc::events::Event::ClientStateUpdate(e) => Some(e.clone()),
+					solana_ibc::events::Event::ClientStateUpdate(e) => {
+						if e.client_id.as_str() == client_id.as_str() {
+							Some(e.clone())
+						} else {
+							None
+						}
+					},
 					_ => None,
 				})
 				.collect();
@@ -924,17 +926,16 @@ pub fn testing_events() {
 		.iter()
 		.filter_map(|tx| match tx {
 			solana_ibc::events::Event::IbcEvent(e) => match e {
-				ibc_core_handler_types::events::IbcEvent::WriteAcknowledgement(packet) => {
-					if packet.chan_id_on_a().as_str() == &channel_id.to_string()
-						&& packet.port_id_on_a().as_str() == port_id.as_str()
-						&& seqs.iter().find(|&&seq| packet.seq_on_a().value() == seq).is_some()
+				ibc_core_handler_types::events::IbcEvent::WriteAcknowledgement(packet) =>
+					if packet.chan_id_on_a().as_str() == &channel_id.to_string() &&
+						packet.port_id_on_a().as_str() == port_id.as_str() &&
+						seqs.iter().find(|&&seq| packet.seq_on_a().value() == seq).is_some()
 					{
 						println!("We found packet");
 						Some(packet)
 					} else {
 						None
-					}
-				},
+					},
 				_ => None,
 			},
 			_ => None,

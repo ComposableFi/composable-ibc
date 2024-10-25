@@ -516,7 +516,7 @@ deserialize consensus state"
 			.map_err(|_| Error::Custom("value is sealed and cannot be fetched".to_owned()))?;
 		let client_state = events::get_client_state_at_height(
 			self.rpc_client(),
-			client_id,
+			client_id.clone(),
 			self.solana_ibc_program_id,
 			at.revision_height,
 		)
@@ -2440,7 +2440,7 @@ impl Chain for SolanaClient {
 							let ix = anchor_lang::solana_program::system_instruction::transfer(
 								&authority.pubkey(),
 								&jito_address,
-								40000,
+								100000,
 							);
 							let rpc_client = self.rpc_client();
 							let blockhash = rpc.get_latest_blockhash().await.unwrap();
