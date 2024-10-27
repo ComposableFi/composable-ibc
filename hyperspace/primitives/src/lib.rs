@@ -171,7 +171,7 @@ impl Default for CommonClientState {
 			rpc_call_delay,
 			initial_rpc_call_delay: rpc_call_delay,
 			misbehaviour_client_msg_queue: Arc::new(Default::default()),
-			max_packets_to_process: 100,
+			max_packets_to_process: 10,
 			ignored_timeouted_sequences: Arc::new(Default::default()),
 			client_update_interval: Default::default(),
 			last_client_update_time: SystemTime::now(),

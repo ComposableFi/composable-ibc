@@ -47,7 +47,7 @@ use primitives::{
 pub mod connection_delay;
 pub mod utils;
 
-pub const PROCESS_PACKETS_BATCH_SIZE: usize = 1;
+pub const PROCESS_PACKETS_BATCH_SIZE: usize = 10;
 
 /// Returns a tuple of messages, with the first item being packets that are ready to be sent to the
 /// sink chain. And the second item being packet timeouts that should be sent to the source.
@@ -218,7 +218,7 @@ pub async fn query_ready_and_timed_out_packets(
 				);
 				let timeout_packets_count = timeout_packets_count.clone();
 				let recv_packets_count = send_packets_count.clone();
-				// recv_packets_join_set.spawn(async move {
+				recv_packets_join_set.spawn(async move {
 					sleep(duration).await;
 					let source = &source;
 					let sink = &sink;
@@ -360,8 +360,7 @@ pub async fn query_ready_and_timed_out_packets(
 
 					let msg = construct_recv_message(&**source, &**sink, packet, proof_height).await?;
 					Ok(Some(Right(msg)))
-					// return Ok(None)
-				// });
+				});
 			}
 		}
 
