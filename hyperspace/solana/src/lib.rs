@@ -1261,7 +1261,7 @@ deserialize client state"
 			total_packets.extend(packets);
 		}
 		log::info!("Found sent packets {:?}", total_packets);
-		Ok(vec![total_packets[0].clone()])
+		Ok(total_packets)
 	}
 
 	async fn query_received_packets(
@@ -1369,7 +1369,7 @@ deserialize client state"
 			total_packets.extend(packets);
 		}
 		println!("Length of receive packets {}", total_packets.len());
-		Ok(vec![total_packets[0].clone()])
+		Ok(total_packets)
 	}
 
 	fn expected_block_time(&self) -> Duration {
