@@ -164,7 +164,7 @@ pub struct CommonClientState {
 
 impl Default for CommonClientState {
 	fn default() -> Self {
-		let rpc_call_delay = Duration::from_millis(100);
+		let rpc_call_delay = Duration::from_millis(1000);
 		Self {
 			skip_optional_client_updates: true,
 			maybe_has_undelivered_packets: Default::default(),
