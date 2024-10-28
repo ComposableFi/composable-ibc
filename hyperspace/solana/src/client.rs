@@ -69,6 +69,7 @@ pub enum DeliverIxType {
 		port_id: ibc_core_host_types::identifiers::PortId,
 		channel_id: ibc_core_host_types::identifiers::ChannelId,
 		receiver: String,
+		memo: String,
 	},
 	Timeout {
 		token: Coin<PrefixedDenom>,
@@ -370,7 +371,6 @@ impl SolanaClient {
 	pub async fn send_deliver(
 		&self,
 		instruction_type: DeliverIxType,
-
 		chunk_account: Pubkey,
 		max_tries: u8,
 	) -> Result<(Vec<Transaction>, Vec<Transaction>), Error> {
@@ -675,13 +675,14 @@ deserialize consensus state"
 				// signature
 				Ok((signature_chunking_txs, vec![transactions, tx]))
 			},
-			DeliverIxType::Recv { ref token, ref port_id, ref channel_id, ref receiver } => {
+			DeliverIxType::Recv { ref token, ref port_id, ref channel_id, ref receiver, memo } => {
 				log::info!(
 					"PortId: {:?} and channel {:?} and token {:?}",
 					port_id,
 					channel_id,
 					token
 				);
+				let maybe_additional_accounts = parse_intent_memo_accounts(&memo);
 				let (escrow_account, token_mint, receiver_account, receiver_address) =
 					get_accounts(
 						token.denom.clone(),
@@ -704,29 +705,34 @@ deserialize consensus state"
 					);
 				log::info!("This is token mint while sending transfer {:?}", token_mint);
 				let mint_authority = self.get_mint_auth_key();
+				let accounts = ix_data_account::Accounts::new(
+					solana_ibc::accounts::Deliver {
+						sender: authority.pubkey(),
+						receiver: receiver_account,
+						storage: solana_ibc_storage_key,
+						trie: trie_key,
+						chain: chain_key,
+						system_program: system_program::ID,
+						mint_authority: Some(mint_authority),
+						token_mint,
+						escrow_account,
+						fee_collector: Some(self.get_fee_collector_key()),
+						receiver_token_account: receiver_address,
+						associated_token_program: Some(anchor_spl::associated_token::ID),
+						token_program: Some(anchor_spl::token::ID),
+					},
+					chunk_account,
+				);
+				let mut account_metas = accounts.to_account_metas(None);
+				if let Some(additional_accounts) = maybe_additional_accounts {
+					account_metas.extend(additional_accounts);
+				}
 				let ix = program
 					.request()
 					.instruction(ComputeBudgetInstruction::set_compute_unit_limit(2_000_000u32))
 					.instruction(ComputeBudgetInstruction::request_heap_frame(256 * 1024))
 					// .instruction(ComputeBudgetInstruction::set_compute_unit_price(500000))
-					.accounts(solana_ibc::ix_data_account::Accounts::new(
-						solana_ibc::accounts::Deliver {
-							sender: authority.pubkey(),
-							receiver: receiver_account,
-							storage: solana_ibc_storage_key,
-							trie: trie_key,
-							chain: chain_key,
-							system_program: system_program::ID,
-							mint_authority: Some(mint_authority),
-							token_mint,
-							escrow_account,
-							fee_collector: Some(self.get_fee_collector_key()),
-							receiver_token_account: receiver_address,
-							associated_token_program: Some(anchor_spl::associated_token::ID),
-							token_program: Some(anchor_spl::token::ID),
-						},
-						chunk_account,
-					))
+					.accounts(account_metas)
 					.args(ix_data_account::Instruction)
 					.signer(&*authority)
 					.instructions()
@@ -1101,6 +1107,72 @@ pub async fn get_accounts(
 		}
 		Ok((Some(program_id), Some(token_mint), Some(receiver_account), Some(receiver_address)))
 	}
+}
+
+/// Parses additional accounts from the memo of a transaction directed at the bridge escrow.
+///
+/// Memo is comma separated list of the form
+/// `N,account-0,account-1,...,account-N-1,intent-id,embedded-memo`.  Embedded
+/// memo can contain commas.
+/// Returns a list of `account-i` for i=0..N or `None`
+/// if the memo does not conform to this format.  Note that no validation on
+/// accounts is performed.
+fn parse_intent_memo_accounts(memo: &str) -> Option<Vec<AccountMeta>> {
+	let (count, mut rest) = memo.split_once(',')?;
+	let count = count.parse::<usize>().ok()?;
+	let mut strings = rest.splitn(count + 2, ',').collect::<Vec<_>>();
+	// only accept a memo where all the components are presented
+	if strings.len() < count + 2 {
+		return None;
+	}
+	// take first `count` entries
+	let accounts = strings
+		.drain(..count)
+		.map(Pubkey::from_str)
+		.map(Result::ok)
+		.collect::<Option<Vec<Pubkey>>>()?;
+	let account_metas = accounts
+		.into_iter()
+		.map(|pubkey| AccountMeta { pubkey, is_signer: false, is_writable: true })
+		.collect::<Vec<AccountMeta>>();
+	Some(account_metas)
+}
+
+#[test]
+fn test_parse_intent_memo_accounts() {
+	let memo = "2,Bt6A81KE6ZoWqG4SJa1gVCmcusSpmduJnPPpauRuNvAC,Hg3EhgX2USt8AzRNeX7Lh2uwTy3ij72qLeSofuCZK8Tc,137,{\"sender\":\"me\",\"receiver\":\"you\"}";
+	let accounts = parse_intent_memo_accounts(memo).unwrap();
+	assert_eq!(accounts.len(), 2);
+	assert!(accounts.iter().all(|account| account.is_writable));
+	assert_eq!(
+		accounts[0].pubkey,
+		Pubkey::from_str("Bt6A81KE6ZoWqG4SJa1gVCmcusSpmduJnPPpauRuNvAC").unwrap()
+	);
+	assert_eq!(
+		accounts[1].pubkey,
+		Pubkey::from_str("Hg3EhgX2USt8AzRNeX7Lh2uwTy3ij72qLeSofuCZK8Tc").unwrap()
+	);
+	let memo = "3,Bt6A81KE6ZoWqG4SJa1gVCmcusSpmduJnPPpauRuNvAC,Hg3EhgX2USt8AzRNeX7Lh2uwTy3ij72qLeSofuCZK8Tc,Bt6A81KE6ZoWqG4SJa1gVCmcusSpmduJnAPpauRuNvAC,137,{\"sender\":\"me\",\"receiver\":\"you\"}";
+	let accounts = parse_intent_memo_accounts(memo).unwrap();
+	assert_eq!(accounts.len(), 3);
+	assert!(accounts.iter().all(|account| account.is_writable));
+	assert_eq!(
+		accounts[0].pubkey,
+		Pubkey::from_str("Bt6A81KE6ZoWqG4SJa1gVCmcusSpmduJnPPpauRuNvAC").unwrap()
+	);
+	assert_eq!(
+		accounts[1].pubkey,
+		Pubkey::from_str("Hg3EhgX2USt8AzRNeX7Lh2uwTy3ij72qLeSofuCZK8Tc").unwrap()
+	);
+	assert_eq!(
+		accounts[2].pubkey,
+		Pubkey::from_str("Bt6A81KE6ZoWqG4SJa1gVCmcusSpmduJnAPpauRuNvAC").unwrap()
+	);
+
+	let memo = "2,Bt6A81KE6ZoWqG4SJa1gVCmcusSpmduJnPPpauRuNvAC,INVALID,137,{\"sender\":\"me\",\"receiver\":\"you\"}";
+	assert!(parse_intent_memo_accounts(memo).is_none());
+	let memo = "1,Bt6A81KE6ZoWqG4SJa1gVCmcusSpmduJnPPpauRuNvAC;no-intent-id,{\"sender\":\"me\",\"receiver\":\"you\"}";
+	assert!(parse_intent_memo_accounts(memo).is_none());
 }
 
 // #[test]
