@@ -33,6 +33,7 @@ use ibc_core_handler_types::msgs::MsgEnvelope;
 use ibc_core_host_types::identifiers::ClientId as ClientIdNew;
 use itertools::izip;
 use lib::hash::CryptoHash;
+use log::warn;
 use primitives::{CommonClientConfig, CommonClientState, IbcProvider};
 use serde::{Deserialize, Serialize};
 use sigverify::ed25519_program::{new_instruction, Entry};
@@ -121,6 +122,7 @@ pub struct SolanaClient {
 	pub trie_db_path: String,
 	// Sets whether to use JITO or RPC for submitting transactions
 	pub transaction_sender: TransactionSender,
+	pub hook_token_address: Option<String>,
 }
 
 #[derive(std::fmt::Debug, Serialize, Deserialize, Clone)]
@@ -163,6 +165,7 @@ pub struct SolanaClientConfig {
 	pub signature_verifier_program_id: String,
 	pub trie_db_path: String,
 	pub transaction_sender: String,
+	pub hook_token_address: Option<String>,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -365,6 +368,7 @@ impl SolanaClient {
 			channel_whitelist: Arc::new(Mutex::new(config.channel_whitelist.into_iter().collect())),
 			trie_db_path: config.trie_db_path,
 			transaction_sender,
+			hook_token_address: config.hook_token_address,
 		})
 	}
 
@@ -682,7 +686,6 @@ deserialize consensus state"
 					channel_id,
 					token
 				);
-				let maybe_additional_accounts = parse_intent_memo_accounts(&memo);
 				let (escrow_account, token_mint, receiver_account, receiver_address) =
 					get_accounts(
 						token.denom.clone(),
@@ -724,8 +727,14 @@ deserialize consensus state"
 					chunk_account,
 				);
 				let mut account_metas = accounts.to_account_metas(None);
-				if let Some(additional_accounts) = maybe_additional_accounts {
-					account_metas.extend(additional_accounts);
+				if let Some(token_addr) = &self.hook_token_address {
+					if token.denom.base_denom.as_str() == token_addr {
+						if let Some(additional_accounts) = parse_intent_memo_accounts(&memo) {
+							account_metas.extend(additional_accounts);
+						} else {
+							warn!("Invalid memo for hook token: {}", memo);
+						}
+					}
 				}
 				let ix = program
 					.request()
