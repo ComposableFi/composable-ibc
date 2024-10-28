@@ -1135,16 +1135,17 @@ fn parse_intent_memo_accounts(memo: &str) -> Option<Vec<AccountMeta>> {
 		return None;
 	}
 	// take first `count` entries
-	let accounts = strings
-		.drain(..count)
-		.map(Pubkey::from_str)
-		.map(Result::ok)
-		.collect::<Option<Vec<Pubkey>>>()?;
-	let account_metas = accounts
-		.into_iter()
-		.map(|pubkey| AccountMeta { pubkey, is_signer: false, is_writable: true })
-		.collect::<Vec<AccountMeta>>();
-	Some(account_metas)
+	strings
+		.iter()
+		.take(count)
+		.map(|key| {
+			Pubkey::from_str(key).ok().map(|pubkey| AccountMeta {
+				pubkey,
+				is_signer: false,
+				is_writable: true,
+			})
+		})
+		.collect()
 }
 
 #[test]
@@ -1153,6 +1154,7 @@ fn test_parse_intent_memo_accounts() {
 	let accounts = parse_intent_memo_accounts(memo).unwrap();
 	assert_eq!(accounts.len(), 2);
 	assert!(accounts.iter().all(|account| account.is_writable));
+	assert!(accounts.iter().all(|account| !account.is_signer));
 	assert_eq!(
 		accounts[0].pubkey,
 		Pubkey::from_str("Bt6A81KE6ZoWqG4SJa1gVCmcusSpmduJnPPpauRuNvAC").unwrap()
@@ -1165,6 +1167,7 @@ fn test_parse_intent_memo_accounts() {
 	let accounts = parse_intent_memo_accounts(memo).unwrap();
 	assert_eq!(accounts.len(), 3);
 	assert!(accounts.iter().all(|account| account.is_writable));
+	assert!(accounts.iter().all(|account| !account.is_signer));
 	assert_eq!(
 		accounts[0].pubkey,
 		Pubkey::from_str("Bt6A81KE6ZoWqG4SJa1gVCmcusSpmduJnPPpauRuNvAC").unwrap()

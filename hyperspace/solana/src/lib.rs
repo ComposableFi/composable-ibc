@@ -247,10 +247,7 @@ impl IbcProvider for SolanaClient {
 				.map(|(index, (validator, signature))| {
 					let validator_idx = all_validators
 						.iter()
-						.position(|v| {
-							v.pubkey ==
-								PubKey::from_bytes(&validator.to_bytes().as_slice()).unwrap()
-						})
+						.position(|v| *v.pubkey.as_bytes() == validator.to_bytes())
 						.unwrap();
 					(validator_idx as u16, signature.clone())
 				})
@@ -1874,10 +1871,7 @@ impl LightClientSync for SolanaClient {
 					.map(|(index, (validator, signature))| {
 						let validator_idx = all_validators
 							.iter()
-							.position(|v| {
-								v.pubkey ==
-									PubKey::from_bytes(&validator.to_bytes().as_slice()).unwrap()
-							})
+							.position(|v| *v.pubkey.as_bytes() == validator.to_bytes())
 							.unwrap();
 						(validator_idx as u16, signature.clone())
 					})
