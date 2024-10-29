@@ -576,7 +576,7 @@ deserialize consensus state"
 					let ix = program
 						.request()
 						.instruction(ComputeBudgetInstruction::set_compute_unit_limit(300_000))
-						// .instruction(ComputeBudgetInstruction::set_compute_unit_price(50_000))
+						.instruction(ComputeBudgetInstruction::set_compute_unit_price(50_000))
 						.instruction(new_instruction(entries.as_slice()).unwrap())
 						.instruction(instruction)
 						.instructions()
@@ -604,7 +604,7 @@ deserialize consensus state"
 					.request()
 					.instruction(ComputeBudgetInstruction::set_compute_unit_limit(2_000_000u32))
 					.instruction(ComputeBudgetInstruction::request_heap_frame(256 * 1024))
-					// .instruction(ComputeBudgetInstruction::set_compute_unit_price(50_000))
+					.instruction(ComputeBudgetInstruction::set_compute_unit_price(50_000))
 					.accounts(solana_ibc::accounts::Deliver {
 						sender: authority.pubkey(),
 						receiver: Some(self.solana_ibc_program_id),
@@ -660,7 +660,7 @@ deserialize consensus state"
 				let tx = program
 					.request()
 					.instruction(ComputeBudgetInstruction::set_compute_unit_limit(100_000))
-					// .instruction(ComputeBudgetInstruction::set_compute_unit_price(50_000))
+					.instruction(ComputeBudgetInstruction::set_compute_unit_price(50_000))
 					.instruction(instruction)
 					.payer(authority)
 					.transaction()
@@ -708,7 +708,7 @@ deserialize consensus state"
 					.request()
 					.instruction(ComputeBudgetInstruction::set_compute_unit_limit(2_000_000u32))
 					.instruction(ComputeBudgetInstruction::request_heap_frame(256 * 1024))
-					// .instruction(ComputeBudgetInstruction::set_compute_unit_price(500000))
+					.instruction(ComputeBudgetInstruction::set_compute_unit_price(50_000))
 					.accounts(solana_ibc::ix_data_account::Accounts::new(
 						solana_ibc::accounts::Deliver {
 							sender: authority.pubkey(),
@@ -780,7 +780,7 @@ deserialize consensus state"
 					.request()
 					.instruction(ComputeBudgetInstruction::set_compute_unit_limit(2_000_000u32))
 					.instruction(ComputeBudgetInstruction::request_heap_frame(256 * 1024))
-					// .instruction(ComputeBudgetInstruction::set_compute_unit_price(50_000))
+					.instruction(ComputeBudgetInstruction::set_compute_unit_price(50_000))
 					.accounts(solana_ibc::ix_data_account::Accounts::new(
 						solana_ibc::accounts::Deliver {
 							sender: authority.pubkey(),
@@ -820,7 +820,7 @@ deserialize consensus state"
 					.request()
 					.instruction(ComputeBudgetInstruction::set_compute_unit_limit(2_000_000u32))
 					.instruction(ComputeBudgetInstruction::request_heap_frame(256 * 1024))
-					// .instruction(ComputeBudgetInstruction::set_compute_unit_price(50_000))
+					.instruction(ComputeBudgetInstruction::set_compute_unit_price(50_000))
 					.accounts(solana_ibc::ix_data_account::Accounts::new(
 						solana_ibc::accounts::Deliver {
 							sender: authority.pubkey(),
@@ -879,7 +879,7 @@ deserialize consensus state"
 					// ))
 					.instruction(ComputeBudgetInstruction::set_compute_unit_limit(2_000_000u32))
 					.instruction(ComputeBudgetInstruction::request_heap_frame(128 * 1024))
-					// .instruction(ComputeBudgetInstruction::set_compute_unit_price(50_000))
+					.instruction(ComputeBudgetInstruction::set_compute_unit_price(50_000))
 					.accounts(solana_ibc::ix_data_account::Accounts::new(
 						solana_ibc::accounts::Deliver {
 							sender: authority.pubkey(),
