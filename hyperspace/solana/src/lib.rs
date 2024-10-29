@@ -2323,7 +2323,7 @@ impl Chain for SolanaClient {
 							let ix = anchor_lang::solana_program::system_instruction::transfer(
 								&authority.pubkey(),
 								&jito_address,
-								40000,
+								100000,
 							);
 							let rpc_client = self.rpc_client();
 							let blockhash = rpc.get_latest_blockhash().await.unwrap();
