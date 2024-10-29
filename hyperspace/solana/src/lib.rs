@@ -2051,8 +2051,7 @@ impl Chain for SolanaClient {
 			chunks.chunk_size = core::num::NonZeroU16::new(800).unwrap();
 
 			let compute_budget_ix = ComputeBudgetInstruction::set_compute_unit_limit(30_000);
-			let compute_unit_price_ix =
-				ComputeBudgetInstruction::set_compute_unit_price(50_000);
+			let compute_unit_price_ix = ComputeBudgetInstruction::set_compute_unit_price(50_000);
 
 			let chunking_transactions: Vec<Transaction> = chunks
 				.map(|ix| {

@@ -345,85 +345,85 @@ async fn process_updates<A: Chain, B: Chain>(
 
 	let mut timeout_heights = Vec::new();
 	let mut updates_to_be_added = Vec::new();
-	if timeout_msgs.len() > 0 && source.name() == "solana" {
-		log::info!("Inside sending updates in fetching height");
-		for msg in timeout_msgs.iter() {
-			let my_message = ibc::core::ics26_routing::msgs::Ics26Envelope::<
-				primitives::mock::LocalClientTypes,
-			>::try_from(msg.clone())
-			.unwrap();
-			let height = match my_message {
-				ibc::core::ics26_routing::msgs::Ics26Envelope::Ics4PacketMsg(packet_msg) => {
-					match packet_msg {
-						ibc::core::ics04_channel::msgs::PacketMsg::ToPacket(msg) => {
-							msg.proofs.height()
-						},
-						ibc::core::ics04_channel::msgs::PacketMsg::AckPacket(msg) => {
-							msg.proofs.height()
-						},
-						ibc::core::ics04_channel::msgs::PacketMsg::RecvPacket(msg) => {
-							msg.proofs.height()
-						},
-						ibc::core::ics04_channel::msgs::PacketMsg::ToClosePacket(msg) => {
-							msg.proofs.height()
-						},
-						_ => continue,
-					}
-				},
-				_ => continue,
-			};
-			timeout_heights.push(height);
-		}
-		let latest_update_height =
-			updates.last().map_or(0, |(_, height, _, _)| height.revision_height);
-		let height_is_greater = timeout_heights
-			.iter()
-			.any(|height| height.revision_height > latest_update_height);
+	// if timeout_msgs.len() > 0 && source.name() == "solana" {
+	// 	log::info!("Inside sending updates in fetching height");
+	// 	for msg in timeout_msgs.iter() {
+	// 		let my_message = ibc::core::ics26_routing::msgs::Ics26Envelope::<
+	// 			primitives::mock::LocalClientTypes,
+	// 		>::try_from(msg.clone())
+	// 		.unwrap();
+	// 		let height = match my_message {
+	// 			ibc::core::ics26_routing::msgs::Ics26Envelope::Ics4PacketMsg(packet_msg) => {
+	// 				match packet_msg {
+	// 					ibc::core::ics04_channel::msgs::PacketMsg::ToPacket(msg) => {
+	// 						msg.proofs.height()
+	// 					},
+	// 					ibc::core::ics04_channel::msgs::PacketMsg::AckPacket(msg) => {
+	// 						msg.proofs.height()
+	// 					},
+	// 					ibc::core::ics04_channel::msgs::PacketMsg::RecvPacket(msg) => {
+	// 						msg.proofs.height()
+	// 					},
+	// 					ibc::core::ics04_channel::msgs::PacketMsg::ToClosePacket(msg) => {
+	// 						msg.proofs.height()
+	// 					},
+	// 					_ => continue,
+	// 				}
+	// 			},
+	// 			_ => continue,
+	// 		};
+	// 		timeout_heights.push(height);
+	// 	}
+	// 	let latest_update_height =
+	// 		updates.last().map_or(0, |(_, height, _, _)| height.revision_height);
+	// 	let height_is_greater = timeout_heights
+	// 		.iter()
+	// 		.any(|height| height.revision_height > latest_update_height);
 
-		if height_is_greater {
-			loop {
-				let largest_height = timeout_heights.iter().max().unwrap();
-				let latest_height_on_solana = source.latest_height_and_timestamp().await.unwrap().0;
-				log::info!(
-					"This is the largest height {:?} {:?}",
-					largest_height,
-					latest_height_on_solana
-				);
-				if latest_height_on_solana.revision_height > largest_height.revision_height {
-					log::info!("Latest height is finalized and sleeping for 5 seconds");
-					std::thread::sleep(core::time::Duration::from_secs(5));
-					break;
-				}
-				log::info!("Waiting for next block {:?} to be finalized", latest_height_on_solana);
-				std::thread::sleep(core::time::Duration::from_secs(1));
-			}
-			let (mandatory_updates, heights) = source.fetch_mandatory_updates(sink).await.unwrap();
-			// log::info!("Height is greater than timeout height {:?}", );
-			log::info!("These are heights {:?}", heights);
-			let updates_to_be_sent: Vec<Any> = heights
-				.iter()
-				.enumerate()
-				.filter_map(|(index, event)| {
-					let height = match event.clone() {
-						ibc::events::IbcEvent::NewBlock(
-							ibc::core::ics02_client::events::NewBlock { height },
-						) => height,
-						_ => panic!("Only expected new block event"),
-					};
-					let temp_height = Height::new(1, height.revision_height);
-					if timeout_heights.contains(&temp_height)
-						&& height.revision_height > latest_update_height
-					{
-						return Some(mandatory_updates[index].clone());
-					}
-					None
-				})
-				.collect();
-			log::info!("Updates to be sent {:?}", updates_to_be_sent);
-			updates_to_be_added = updates_to_be_sent;
-			updates_to_be_added.reverse();
-		}
-	}
+	// 	if height_is_greater {
+	// 		loop {
+	// 			let largest_height = timeout_heights.iter().max().unwrap();
+	// 			let latest_height_on_solana = source.latest_height_and_timestamp().await.unwrap().0;
+	// 			log::info!(
+	// 				"This is the largest height {:?} {:?}",
+	// 				largest_height,
+	// 				latest_height_on_solana
+	// 			);
+	// 			if latest_height_on_solana.revision_height > largest_height.revision_height {
+	// 				log::info!("Latest height is finalized and sleeping for 5 seconds");
+	// 				std::thread::sleep(core::time::Duration::from_secs(5));
+	// 				break;
+	// 			}
+	// 			log::info!("Waiting for next block {:?} to be finalized", latest_height_on_solana);
+	// 			std::thread::sleep(core::time::Duration::from_secs(1));
+	// 		}
+	// 		let (mandatory_updates, heights) = source.fetch_mandatory_updates(sink).await.unwrap();
+	// 		// log::info!("Height is greater than timeout height {:?}", );
+	// 		log::info!("These are heights {:?}", heights);
+	// 		let updates_to_be_sent: Vec<Any> = heights
+	// 			.iter()
+	// 			.enumerate()
+	// 			.filter_map(|(index, event)| {
+	// 				let height = match event.clone() {
+	// 					ibc::events::IbcEvent::NewBlock(
+	// 						ibc::core::ics02_client::events::NewBlock { height },
+	// 					) => height,
+	// 					_ => panic!("Only expected new block event"),
+	// 				};
+	// 				let temp_height = Height::new(1, height.revision_height);
+	// 				if timeout_heights.contains(&temp_height)
+	// 					&& height.revision_height > latest_update_height
+	// 				{
+	// 					return Some(mandatory_updates[index].clone());
+	// 				}
+	// 				None
+	// 			})
+	// 			.collect();
+	// 		log::info!("Updates to be sent {:?}", updates_to_be_sent);
+	// 		updates_to_be_added = updates_to_be_sent;
+	// 		updates_to_be_added.reverse();
+	// 	}
+	// }
 	log::info!(
 		"Update heights {:?} and timeout heights {:?}",
 		updates.iter().map(|(_, height, ..)| height).collect::<Vec<_>>(),
