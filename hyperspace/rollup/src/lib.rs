@@ -212,12 +212,7 @@ impl IbcProvider for RollupClient {
 		.await;
 
 		log::info!("This is all events {:?}", new_block_events);
-		let block_events: Vec<IbcEvent> = new_block_events
-			.iter()
-			.filter_map(|event| {
-				convert_new_event_to_old(event.clone(), Height::new(1, u64::from(finality_height)))
-			})
-			.collect();
+		
 
 		let body = events::PayloadWithoutParams {
 			jsonrpc: "2.0".to_string(),
@@ -248,6 +243,12 @@ impl IbcProvider for RollupClient {
 			delta_hash_proof: slot_data.delta_hash_proof,
 			witness_proof: slot_data.witness_proof,
 		};
+		let block_events: Vec<IbcEvent> = new_block_events
+			.iter()
+			.filter_map(|event| {
+				convert_new_event_to_old(event.clone(), Height::new(1, u64::from(NonZeroU64::new(response.result.0).unwrap())))
+			})
+			.collect();
 		let msg = MsgUpdateAnyClient::<LocalClientTypes> {
 			client_id: self.client_id(),
 			client_message: AnyClientMessage::Rollup(cf_solana::ClientMessage(
