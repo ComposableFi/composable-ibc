@@ -213,10 +213,9 @@ impl SolanaClient {
 	}
 
 	pub fn get_witness_key(&self, trie_key: &Pubkey) -> Pubkey {
-		wittrie::api::find_witness_account(
-			&self.solana_ibc_program_id,
-			trie_key,
-		).unwrap().0
+		wittrie::api::find_witness_account(&self.solana_ibc_program_id, trie_key)
+			.unwrap()
+			.0
 	}
 
 	pub fn get_ibc_storage_key(&self) -> Pubkey {
@@ -372,7 +371,7 @@ impl SolanaClient {
 			channel_whitelist: Arc::new(Mutex::new(config.channel_whitelist.into_iter().collect())),
 			trie_db_path: config.trie_db_path,
 			transaction_sender,
-			is_transaction_processing: Arc::new(Mutex::new(false))
+			is_transaction_processing: Arc::new(Mutex::new(false)),
 		})
 	}
 

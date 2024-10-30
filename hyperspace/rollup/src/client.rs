@@ -40,11 +40,8 @@ use sigverify::ed25519_program::{new_instruction, Entry};
 use solana_transaction_status::UiTransactionEncoding;
 use std::{
 	collections::HashSet,
-	ops::Deref,
-	rc::Rc,
 	result::Result,
 	sync::{Arc, Mutex},
-	thread::sleep,
 };
 use tendermint_light_client_verifier_new::types::{TrustedBlockState, UntrustedBlockState};
 use tendermint_rpc::Url;
@@ -93,11 +90,13 @@ pub enum DeliverIxType {
 pub struct RollupClient {
 	/// Chain name
 	pub name: String,
-	/// rpc url for solana
+	/// rpc url for rollup
 	pub rpc_url: String,
+	/// rpc url for solana
+	pub rpc_l1_url: String,
 	/// rpc url for trie proofs
 	pub trie_rpc_url: String,
-	/// websocket url for solana
+	/// websocket url for rollup
 	pub ws_url: String,
 	/// Solana chain Id
 	pub chain_id: String,
@@ -114,12 +113,15 @@ pub struct RollupClient {
 	pub max_tx_size: usize,
 	pub commitment_level: CommitmentLevel,
 	pub solana_ibc_program_id: Pubkey,
+	pub solana_token_program_id: Pubkey,
+	pub solana_token_mint_pubkey: Pubkey,
 	pub write_program_id: Pubkey,
 	pub signature_verifier_program_id: Pubkey,
 	pub common_state: CommonClientState,
 	pub client_type: ClientType,
 	pub last_searched_sig_for_send_packets: Arc<tokio::sync::Mutex<String>>,
 	pub last_searched_sig_for_recv_packets: Arc<tokio::sync::Mutex<String>>,
+	pub last_supply_update_time: Arc<tokio::sync::Mutex<std::time::Instant>>,
 	/// Reference to commitment
 	pub commitment_prefix: CommitmentPrefix,
 	/// Channels cleared for packet relay
@@ -134,11 +136,13 @@ pub struct RollupClient {
 pub struct RollupClientConfig {
 	/// Chain name
 	pub name: String,
-	/// rpc url for solana
+	/// rpc url for rollup
 	pub rpc_url: Url,
+	/// rpc url for solana
+	pub rpc_l1_url: Url,
 	/// rpc url for trie proofs
 	pub trie_rpc_url: Url,
-	/// websocket url for solana
+	/// websocket url for rollup
 	pub ws_url: Url,
 	/// Solana chain Id
 	pub chain_id: String,
@@ -168,6 +172,8 @@ pub struct RollupClientConfig {
 	pub commitment_level: String,
 	pub private_key: Vec<u8>,
 	pub solana_ibc_program_id: String,
+	pub solana_token_program_id: String,
+	pub solana_token_mint_pubkey: String,
 	pub write_program_id: String,
 	pub signature_verifier_program_id: String,
 	pub trie_db_path: String,
@@ -307,7 +313,8 @@ impl RollupClient {
 		let program = self.program();
 		let ibc_storage_key = self.get_ibc_storage_key();
 		let mut account_data = self.rpc_client().get_account_data(&ibc_storage_key).await.unwrap();
-		let storage: PrivateStorageWithWitness = PrivateStorageWithWitness::deserialize(&mut &account_data[8..]).unwrap();
+		let storage: PrivateStorageWithWitness =
+			PrivateStorageWithWitness::deserialize(&mut &account_data[8..]).unwrap();
 		// let storage = tokio::task::spawn_blocking(move || {
 		// 	program.account(ibc_storage_key).unwrap()
 		// }).await.unwrap();
@@ -326,8 +333,22 @@ impl RollupClient {
 		program.async_rpc()
 	}
 
+	pub fn rpc_l1_client(&self) -> AsyncRpcClient {
+		let program = self.program_l1();
+		program.async_rpc()
+	}
+
 	pub fn client(&self) -> AnchorClient<Arc<Keypair>> {
 		let cluster = Cluster::from_str(&self.rpc_url).unwrap();
+		let signer = self.keybase.keypair();
+		let authority = Arc::new(signer);
+		let client =
+			AnchorClient::new_with_options(cluster, authority, CommitmentConfig::processed());
+		client
+	}
+
+	pub fn client_l1(&self) -> AnchorClient<Arc<Keypair>> {
+		let cluster = Cluster::from_str(&self.rpc_l1_url).unwrap();
 		let signer = self.keybase.keypair();
 		let authority = Arc::new(signer);
 		let client =
@@ -342,6 +363,11 @@ impl RollupClient {
 
 	pub fn program(&self) -> Program<Arc<Keypair>> {
 		let anchor_client = self.client();
+		anchor_client.program(self.solana_ibc_program_id).unwrap()
+	}
+
+	pub fn program_l1(&self) -> Program<Arc<Keypair>> {
+		let anchor_client = self.client_l1();
 		anchor_client.program(self.solana_ibc_program_id).unwrap()
 	}
 
@@ -363,6 +389,7 @@ impl RollupClient {
 		Ok(Self {
 			name: config.name,
 			rpc_url: config.rpc_url.to_string(),
+			rpc_l1_url: config.rpc_l1_url.to_string(),
 			trie_rpc_url: config.trie_rpc_url.to_string(),
 			ws_url: config.ws_url.to_string(),
 			chain_id: config.chain_id,
@@ -374,6 +401,8 @@ impl RollupClient {
 			max_tx_size: config.max_tx_size,
 			commitment_level: CommitmentLevel::from_str(&config.commitment_level).unwrap(),
 			solana_ibc_program_id: Pubkey::from_str(&config.solana_ibc_program_id).unwrap(),
+			solana_token_program_id: Pubkey::from_str(&config.solana_token_mint_pubkey).unwrap(),
+			solana_token_mint_pubkey: Pubkey::from_str(&config.solana_token_mint_pubkey).unwrap(),
 			write_program_id: Pubkey::from_str(&config.write_program_id).unwrap(),
 			signature_verifier_program_id: Pubkey::from_str(&config.signature_verifier_program_id)
 				.unwrap(),
@@ -388,6 +417,7 @@ impl RollupClient {
 			last_searched_sig_for_recv_packets: Arc::new(
 				tokio::sync::Mutex::new(String::default()),
 			),
+			last_supply_update_time: Arc::new(tokio::sync::Mutex::new(std::time::Instant::now())),
 			commitment_prefix: CommitmentPrefix::try_from(config.commitment_prefix).unwrap(),
 			channel_whitelist: Arc::new(Mutex::new(config.channel_whitelist.into_iter().collect())),
 			trie_db_path: config.trie_db_path,
@@ -1258,31 +1288,35 @@ pub async fn get_accounts(
 #[derive(Debug, borsh::BorshSerialize, borsh::BorshDeserialize)]
 /// The private IBC storage, i.e. data which doesn’t require proofs.
 pub struct PrivateStorageWithWitness {
-    /// Per-client information.
-    ///
-    /// Entry at index `N` corresponds to the client with IBC identifier
-    /// `client-<N>`.
-    pub clients: Vec<solana_ibc::storage::ClientStore>,
+	/// Per-client information.
+	///
+	/// Entry at index `N` corresponds to the client with IBC identifier
+	/// `client-<N>`.
+	pub clients: Vec<solana_ibc::storage::ClientStore>,
 
-    /// Information about the counterparty on given connection.
-    ///
-    /// Entry at index `N` corresponds to the connection with IBC identifier
-    /// `connection-<N>`.
-    pub connections: Vec<solana_ibc::storage::Serialised<ibc_core_connection_types::ConnectionEnd>>,
+	/// Information about the counterparty on given connection.
+	///
+	/// Entry at index `N` corresponds to the connection with IBC identifier
+	/// `connection-<N>`.
+	pub connections: Vec<solana_ibc::storage::Serialised<ibc_core_connection_types::ConnectionEnd>>,
 
-    /// Information about a each `(port, channel)` endpoint.
-    pub port_channel: solana_ibc::storage::map::Map<trie_ids::PortChannelPK, solana_ibc::storage::PortChannelStore>,
+	/// Information about a each `(port, channel)` endpoint.
+	pub port_channel: solana_ibc::storage::map::Map<
+		trie_ids::PortChannelPK,
+		solana_ibc::storage::PortChannelStore,
+	>,
 
-    pub channel_counter: u32,
+	pub channel_counter: u32,
 
-    pub fee_collector: Pubkey,
+	pub fee_collector: Pubkey,
 
-    pub new_fee_collector_proposal: Option<Pubkey>,
+	pub new_fee_collector_proposal: Option<Pubkey>,
 
-    pub assets: solana_ibc::storage::map::Map<CryptoHash, solana_ibc::storage::Asset>,
+	pub assets: solana_ibc::storage::map::Map<CryptoHash, solana_ibc::storage::Asset>,
 
-    // Fee to be charged for each transfer
-    pub fee_in_lamports: u64,
+	// Fee to be charged for each transfer
+	pub fee_in_lamports: u64,
 
-    pub local_consensus_state: std::collections::VecDeque<(u64, u64, CryptoHash)>,
+	pub local_consensus_state: std::collections::VecDeque<(u64, u64, CryptoHash)>,
 }
+
