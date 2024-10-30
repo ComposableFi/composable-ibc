@@ -2050,7 +2050,7 @@ impl Chain for RollupClient {
 
 			let now = Instant::now();
 
-			if (now - *last).as_secs() > 24 * 60 * 60 {
+			if (now - *last).as_secs() > self.supply_update_time_in_sec {
 				*last = now;
 
 				let compute_budget_ix = ComputeBudgetInstruction::set_compute_unit_limit(300_000);

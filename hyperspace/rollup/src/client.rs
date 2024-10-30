@@ -122,6 +122,7 @@ pub struct RollupClient {
 	pub last_searched_sig_for_send_packets: Arc<tokio::sync::Mutex<String>>,
 	pub last_searched_sig_for_recv_packets: Arc<tokio::sync::Mutex<String>>,
 	pub last_supply_update_time: Arc<tokio::sync::Mutex<std::time::Instant>>,
+	pub supply_update_time_in_sec: u64,
 	/// Reference to commitment
 	pub commitment_prefix: CommitmentPrefix,
 	/// Channels cleared for packet relay
@@ -178,6 +179,7 @@ pub struct RollupClientConfig {
 	pub signature_verifier_program_id: String,
 	pub trie_db_path: String,
 	pub transaction_sender: String,
+	pub supply_update_time_in_sec: u64,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -386,6 +388,13 @@ impl RollupClient {
 			"RPC" => TransactionSender::RPC,
 			_ => panic!("Invalid param transaction sender: Expected JITO/RPC"),
 		};
+
+		let supply_update_time_in_sec = if config.supply_update_time_in_sec > 0 {
+			config.supply_update_time_in_sec
+		} else {
+			24 * 60 * 60
+		};
+
 		Ok(Self {
 			name: config.name,
 			rpc_url: config.rpc_url.to_string(),
@@ -418,6 +427,7 @@ impl RollupClient {
 				tokio::sync::Mutex::new(String::default()),
 			),
 			last_supply_update_time: Arc::new(tokio::sync::Mutex::new(std::time::Instant::now())),
+			supply_update_time_in_sec,
 			commitment_prefix: CommitmentPrefix::try_from(config.commitment_prefix).unwrap(),
 			channel_whitelist: Arc::new(Mutex::new(config.channel_whitelist.into_iter().collect())),
 			trie_db_path: config.trie_db_path,
@@ -1319,4 +1329,3 @@ pub struct PrivateStorageWithWitness {
 
 	pub local_consensus_state: std::collections::VecDeque<(u64, u64, CryptoHash)>,
 }
-
