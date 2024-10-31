@@ -1816,8 +1816,8 @@ impl Chain for RollupClient {
 			let client = PubsubClient::new(&ws_url).await.unwrap();
 			let (mut stream, _receiver) = client
 				.block_subscribe(
-					// RpcBlockSubscribeFilter::All,
-					RpcBlockSubscribeFilter::MentionsAccountOrProgram(program_id.to_string()),
+					RpcBlockSubscribeFilter::All,
+					// RpcBlockSubscribeFilter::MentionsAccountOrProgram(program_id.to_string()),
 					Some(RpcBlockSubscribeConfig {
 						commitment: Some(CommitmentConfig::finalized()),
 						..Default::default()
