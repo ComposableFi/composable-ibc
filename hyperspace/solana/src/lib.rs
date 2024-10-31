@@ -500,7 +500,7 @@ deserialize consensus state"
 			.map_err(|_| Error::Custom("value is sealed and cannot be fetched".to_owned()))?;
 		let client_state = events::get_client_state_at_height(
 			self.rpc_client(),
-			client_id,
+			client_id.clone(),
 			self.solana_ibc_program_id,
 			at.revision_height,
 		)
