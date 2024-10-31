@@ -178,7 +178,7 @@ checksum = "4436e0292ab1bb631b42973c61205e704475fe8126af845c8d923c0996328127"
 [[package]]
 name = "anchor-attribute-access-control"
 version = "0.29.0"
-source = "git+https://github.com/dhruvja/anchor#90a3008fcbbc5bcbc704cd6cccf61ef130c5f9eb"
+source = "git+https://github.com/mina86/anchor?branch=send-sync#db3660c5627a9c4449e9f331c3c3e523992a1178"
 dependencies = [
  "anchor-syn",
  "proc-macro2",
@@ -189,7 +189,7 @@ dependencies = [
 [[package]]
 name = "anchor-attribute-account"
 version = "0.29.0"
-source = "git+https://github.com/dhruvja/anchor#90a3008fcbbc5bcbc704cd6cccf61ef130c5f9eb"
+source = "git+https://github.com/mina86/anchor?branch=send-sync#db3660c5627a9c4449e9f331c3c3e523992a1178"
 dependencies = [
  "anchor-syn",
  "bs58 0.5.1",
@@ -201,7 +201,7 @@ dependencies = [
 [[package]]
 name = "anchor-attribute-constant"
 version = "0.29.0"
-source = "git+https://github.com/dhruvja/anchor#90a3008fcbbc5bcbc704cd6cccf61ef130c5f9eb"
+source = "git+https://github.com/mina86/anchor?branch=send-sync#db3660c5627a9c4449e9f331c3c3e523992a1178"
 dependencies = [
  "anchor-syn",
  "quote",
@@ -211,7 +211,7 @@ dependencies = [
 [[package]]
 name = "anchor-attribute-error"
 version = "0.29.0"
-source = "git+https://github.com/dhruvja/anchor#90a3008fcbbc5bcbc704cd6cccf61ef130c5f9eb"
+source = "git+https://github.com/mina86/anchor?branch=send-sync#db3660c5627a9c4449e9f331c3c3e523992a1178"
 dependencies = [
  "anchor-syn",
  "quote",
@@ -221,7 +221,7 @@ dependencies = [
 [[package]]
 name = "anchor-attribute-event"
 version = "0.29.0"
-source = "git+https://github.com/dhruvja/anchor#90a3008fcbbc5bcbc704cd6cccf61ef130c5f9eb"
+source = "git+https://github.com/mina86/anchor?branch=send-sync#db3660c5627a9c4449e9f331c3c3e523992a1178"
 dependencies = [
  "anchor-syn",
  "proc-macro2",
@@ -232,7 +232,7 @@ dependencies = [
 [[package]]
 name = "anchor-attribute-program"
 version = "0.29.0"
-source = "git+https://github.com/dhruvja/anchor#90a3008fcbbc5bcbc704cd6cccf61ef130c5f9eb"
+source = "git+https://github.com/mina86/anchor?branch=send-sync#db3660c5627a9c4449e9f331c3c3e523992a1178"
 dependencies = [
  "anchor-syn",
  "quote",
@@ -242,7 +242,7 @@ dependencies = [
 [[package]]
 name = "anchor-client"
 version = "0.29.0"
-source = "git+https://github.com/dhruvja/anchor#90a3008fcbbc5bcbc704cd6cccf61ef130c5f9eb"
+source = "git+https://github.com/mina86/anchor?branch=send-sync#db3660c5627a9c4449e9f331c3c3e523992a1178"
 dependencies = [
  "anchor-lang",
  "anyhow",
@@ -261,7 +261,7 @@ dependencies = [
 [[package]]
 name = "anchor-derive-accounts"
 version = "0.29.0"
-source = "git+https://github.com/dhruvja/anchor#90a3008fcbbc5bcbc704cd6cccf61ef130c5f9eb"
+source = "git+https://github.com/mina86/anchor?branch=send-sync#db3660c5627a9c4449e9f331c3c3e523992a1178"
 dependencies = [
  "anchor-syn",
  "quote",
@@ -271,7 +271,7 @@ dependencies = [
 [[package]]
 name = "anchor-derive-serde"
 version = "0.29.0"
-source = "git+https://github.com/dhruvja/anchor#90a3008fcbbc5bcbc704cd6cccf61ef130c5f9eb"
+source = "git+https://github.com/mina86/anchor?branch=send-sync#db3660c5627a9c4449e9f331c3c3e523992a1178"
 dependencies = [
  "anchor-syn",
  "borsh-derive-internal 0.10.3",
@@ -283,7 +283,7 @@ dependencies = [
 [[package]]
 name = "anchor-derive-space"
 version = "0.29.0"
-source = "git+https://github.com/dhruvja/anchor#90a3008fcbbc5bcbc704cd6cccf61ef130c5f9eb"
+source = "git+https://github.com/mina86/anchor?branch=send-sync#db3660c5627a9c4449e9f331c3c3e523992a1178"
 dependencies = [
  "proc-macro2",
  "quote",
@@ -293,7 +293,7 @@ dependencies = [
 [[package]]
 name = "anchor-lang"
 version = "0.29.0"
-source = "git+https://github.com/dhruvja/anchor#90a3008fcbbc5bcbc704cd6cccf61ef130c5f9eb"
+source = "git+https://github.com/mina86/anchor?branch=send-sync#db3660c5627a9c4449e9f331c3c3e523992a1178"
 dependencies = [
  "anchor-attribute-access-control",
  "anchor-attribute-account",
@@ -305,9 +305,9 @@ dependencies = [
  "anchor-derive-serde",
  "anchor-derive-space",
  "arrayref",
- "base64 0.21.7",
+ "base64 0.13.1",
  "bincode",
- "borsh 0.10.3",
+ "borsh 0.10.4",
  "bytemuck",
  "getrandom 0.2.15",
  "solana-program",
@@ -324,14 +324,14 @@ dependencies = [
  "mpl-token-metadata",
  "solana-program",
  "spl-associated-token-account",
- "spl-token",
+ "spl-token 4.0.0",
  "spl-token-2022 0.9.0",
 ]
 
 [[package]]
 name = "anchor-syn"
 version = "0.29.0"
-source = "git+https://github.com/dhruvja/anchor#90a3008fcbbc5bcbc704cd6cccf61ef130c5f9eb"
+source = "git+https://github.com/mina86/anchor?branch=send-sync#db3660c5627a9c4449e9f331c3c3e523992a1178"
 dependencies = [
  "anyhow",
  "bs58 0.5.1",
@@ -1271,12 +1271,12 @@ dependencies = [
 
 [[package]]
 name = "borsh"
-version = "0.10.3"
+version = "0.10.4"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "4114279215a005bc675e386011e594e1d9b800918cea18fcadadcce864a2046b"
+checksum = "115e54d64eb62cdebad391c19efc9dce4981c690c85a33a12199d99bb9546fee"
 dependencies = [
  "borsh-derive 0.10.3",
- "hashbrown 0.13.2",
+ "hashbrown 0.12.3",
 ]
 
 [[package]]
@@ -1567,8 +1567,9 @@ dependencies = [
 [[package]]
 name = "cf-guest"
 version = "0.0.0"
+source = "git+https://github.com/ComposableFi/emulated-light-client/#ba1046ead4232ee07a1db9b120f3035c983e0052"
 dependencies = [
- "borsh 0.10.3",
+ "borsh 0.10.4",
  "bytemuck",
  "derive_more",
  "guestchain",
@@ -1591,7 +1592,7 @@ dependencies = [
 name = "cf-guest"
 version = "0.0.1"
 dependencies = [
- "borsh 0.10.3",
+ "borsh 0.10.4",
  "bytemuck",
  "cf-guest 0.0.0",
  "derive_more",
@@ -1623,7 +1624,7 @@ dependencies = [
 name = "cf-guest-cw"
 version = "0.1.0"
 dependencies = [
- "borsh 0.10.3",
+ "borsh 0.10.4",
  "byteorder",
  "cf-guest 0.0.1",
  "cosmwasm-schema",
@@ -1649,6 +1650,66 @@ dependencies = [
  "sha2 0.10.8",
  "sha3 0.10.8",
  "thiserror",
+ "trie-ids",
+]
+
+[[package]]
+name = "cf-solana"
+version = "0.0.0"
+source = "git+https://github.com/ComposableFi/emulated-light-client/#ba1046ead4232ee07a1db9b120f3035c983e0052"
+dependencies = [
+ "arrayvec 0.7.4",
+ "base64 0.21.7",
+ "blake3",
+ "bs58 0.5.1",
+ "bytemuck",
+ "cf-guest 0.0.0",
+ "derive_more",
+ "ibc-client-tendermint-types",
+ "ibc-core-client-context",
+ "ibc-core-commitment-types",
+ "ibc-core-host",
+ "ibc-primitives 0.50.0",
+ "ibc-proto 0.41.0",
+ "lib",
+ "prost 0.12.3",
+ "prost-build 0.12.3",
+ "proto-utils",
+ "serde",
+ "solana-program",
+ "stdx",
+ "trie-ids",
+]
+
+[[package]]
+name = "cf-solana"
+version = "0.1.0"
+dependencies = [
+ "borsh 0.10.4",
+ "bytemuck",
+ "cf-solana 0.0.0",
+ "derive_more",
+ "ed25519-consensus",
+ "guestchain",
+ "ibc 0.15.0",
+ "ibc-core-client-context",
+ "ibc-core-client-types",
+ "ibc-core-handler-types",
+ "ibc-core-host-types",
+ "ibc-derive 0.1.0",
+ "ibc-primitives 0.50.0",
+ "ibc-proto 0.18.0",
+ "insta",
+ "lib",
+ "memory",
+ "prost 0.11.9",
+ "prost 0.12.3",
+ "prost-build 0.11.9",
+ "rand 0.8.5",
+ "sealable-trie",
+ "serde",
+ "stdx",
+ "tendermint-proto 0.34.1",
  "trie-ids",
 ]
 
@@ -4841,8 +4902,9 @@ dependencies = [
 [[package]]
 name = "guestchain"
 version = "0.0.0"
+source = "git+https://github.com/ComposableFi/emulated-light-client/#ba1046ead4232ee07a1db9b120f3035c983e0052"
 dependencies = [
- "borsh 0.10.3",
+ "borsh 0.10.4",
  "bytemuck",
  "derive_more",
  "ibc-core-client-context",
@@ -5195,7 +5257,7 @@ dependencies = [
  "httpdate",
  "itoa",
  "pin-project-lite 0.2.14",
- "socket2 0.5.7",
+ "socket2 0.4.10",
  "tokio",
  "tower-service",
  "tracing",
@@ -5313,7 +5375,7 @@ version = "0.1.0"
 dependencies = [
  "anyhow",
  "async-trait",
- "borsh 0.10.3",
+ "borsh 0.10.4",
  "clap 3.2.25",
  "codegen",
  "derive_more",
@@ -5327,6 +5389,7 @@ dependencies = [
  "hyperspace-metrics",
  "hyperspace-parachain",
  "hyperspace-primitives",
+ "hyperspace-rollup",
  "hyperspace-solana",
  "ibc 0.15.0",
  "ibc-app-transfer-types",
@@ -5527,7 +5590,7 @@ dependencies = [
 ]
 
 [[package]]
-name = "hyperspace-solana"
+name = "hyperspace-rollup"
 version = "0.1.0"
 dependencies = [
  "anchor-client",
@@ -5539,11 +5602,13 @@ dependencies = [
  "bech32",
  "bincode",
  "bip32",
- "borsh 0.10.3",
+ "borsh 0.10.4",
  "bs58 0.5.1",
  "bytemuck",
  "cf-guest 0.0.0",
  "cf-guest 0.0.1",
+ "cf-solana 0.0.0",
+ "cf-solana 0.1.0",
  "derive_more",
  "digest 0.10.7",
  "ed25519-zebra",
@@ -5597,6 +5662,98 @@ dependencies = [
  "solana-transaction-status",
  "solana-trie",
  "solana-write-account",
+ "spl-token 3.5.0",
+ "stdx",
+ "tendermint 0.33.2",
+ "tendermint 0.34.1",
+ "tendermint-light-client",
+ "tendermint-light-client-verifier 0.33.2",
+ "tendermint-light-client-verifier 0.34.1",
+ "tendermint-proto 0.33.2",
+ "tendermint-rpc",
+ "thiserror",
+ "tiny-bip39 1.0.0",
+ "tokio",
+ "tokio-stream",
+ "tonic 0.8.3",
+ "tracing",
+ "trie-ids",
+]
+
+[[package]]
+name = "hyperspace-solana"
+version = "0.1.0"
+dependencies = [
+ "anchor-client",
+ "anchor-lang",
+ "anchor-spl",
+ "anyhow",
+ "async-trait",
+ "base64 0.21.7",
+ "bech32",
+ "bincode",
+ "bip32",
+ "borsh 0.10.4",
+ "bs58 0.5.1",
+ "bytemuck",
+ "cf-guest 0.0.0",
+ "cf-guest 0.0.1",
+ "cf-solana 0.0.0",
+ "cf-solana 0.1.0",
+ "derive_more",
+ "digest 0.10.7",
+ "ed25519-zebra",
+ "futures",
+ "futures-util",
+ "guestchain",
+ "hex",
+ "hyperspace-primitives",
+ "ibc 0.15.0",
+ "ibc-app-transfer-types",
+ "ibc-client-tendermint-types",
+ "ibc-client-wasm-types",
+ "ibc-core-channel-types",
+ "ibc-core-client-types",
+ "ibc-core-commitment-types",
+ "ibc-core-connection-types",
+ "ibc-core-handler-types",
+ "ibc-core-host-types",
+ "ibc-primitives 0.1.0",
+ "ibc-primitives 0.50.0",
+ "ibc-proto 0.18.0",
+ "ibc-proto 0.41.0",
+ "ibc-rpc",
+ "ics07-tendermint",
+ "ics08-wasm",
+ "ics23 0.11.1",
+ "itertools 0.10.5",
+ "jito-protos",
+ "jito-searcher-client",
+ "k256 0.11.6",
+ "lib",
+ "log",
+ "memory",
+ "pallet-ibc",
+ "parity-scale-codec",
+ "prost 0.11.9",
+ "prost-types 0.12.3",
+ "quick_cache",
+ "rand 0.8.5",
+ "reqwest",
+ "ripemd",
+ "rs_merkle",
+ "rusqlite",
+ "sealable-trie",
+ "serde",
+ "serde_json",
+ "sha2 0.10.8",
+ "solana-ibc",
+ "solana-metrics",
+ "solana-signature-verifier",
+ "solana-transaction-status",
+ "solana-trie",
+ "solana-witnessed-trie",
+ "solana-write-account",
  "stdx",
  "tendermint 0.33.2",
  "tendermint 0.34.1",
@@ -5630,6 +5787,7 @@ dependencies = [
  "hyperspace-cosmos",
  "hyperspace-parachain",
  "hyperspace-primitives",
+ "hyperspace-rollup",
  "hyperspace-solana",
  "ibc 0.15.0",
  "ibc-proto 0.18.0",
@@ -5720,7 +5878,7 @@ dependencies = [
 [[package]]
 name = "ibc"
 version = "0.50.0"
-source = "git+https://github.com/mina86/ibc-rs?rev=f07276383091f75b7ee8bff6fd434f8214ac5054#f07276383091f75b7ee8bff6fd434f8214ac5054"
+source = "git+https://github.com/mina86/ibc-rs?rev=e1be8c9292c82c1e7c158067f0014fb292ee652d#e1be8c9292c82c1e7c158067f0014fb292ee652d"
 dependencies = [
  "ibc-apps",
  "ibc-clients",
@@ -5733,7 +5891,7 @@ dependencies = [
 [[package]]
 name = "ibc-app-transfer"
 version = "0.50.0"
-source = "git+https://github.com/mina86/ibc-rs?rev=f07276383091f75b7ee8bff6fd434f8214ac5054#f07276383091f75b7ee8bff6fd434f8214ac5054"
+source = "git+https://github.com/mina86/ibc-rs?rev=e1be8c9292c82c1e7c158067f0014fb292ee652d#e1be8c9292c82c1e7c158067f0014fb292ee652d"
 dependencies = [
  "ibc-app-transfer-types",
  "ibc-core",
@@ -5743,9 +5901,9 @@ dependencies = [
 [[package]]
 name = "ibc-app-transfer-types"
 version = "0.50.0"
-source = "git+https://github.com/mina86/ibc-rs?rev=f07276383091f75b7ee8bff6fd434f8214ac5054#f07276383091f75b7ee8bff6fd434f8214ac5054"
+source = "git+https://github.com/mina86/ibc-rs?rev=e1be8c9292c82c1e7c158067f0014fb292ee652d#e1be8c9292c82c1e7c158067f0014fb292ee652d"
 dependencies = [
- "borsh 0.10.3",
+ "borsh 0.10.4",
  "derive_more",
  "displaydoc",
  "ibc-core",
@@ -5758,7 +5916,7 @@ dependencies = [
 [[package]]
 name = "ibc-apps"
 version = "0.50.0"
-source = "git+https://github.com/mina86/ibc-rs?rev=f07276383091f75b7ee8bff6fd434f8214ac5054#f07276383091f75b7ee8bff6fd434f8214ac5054"
+source = "git+https://github.com/mina86/ibc-rs?rev=e1be8c9292c82c1e7c158067f0014fb292ee652d#e1be8c9292c82c1e7c158067f0014fb292ee652d"
 dependencies = [
  "ibc-app-transfer",
 ]
@@ -5766,7 +5924,7 @@ dependencies = [
 [[package]]
 name = "ibc-client-tendermint"
 version = "0.50.0"
-source = "git+https://github.com/mina86/ibc-rs?rev=f07276383091f75b7ee8bff6fd434f8214ac5054#f07276383091f75b7ee8bff6fd434f8214ac5054"
+source = "git+https://github.com/mina86/ibc-rs?rev=e1be8c9292c82c1e7c158067f0014fb292ee652d#e1be8c9292c82c1e7c158067f0014fb292ee652d"
 dependencies = [
  "derive_more",
  "ibc-client-tendermint-types",
@@ -5783,9 +5941,9 @@ dependencies = [
 [[package]]
 name = "ibc-client-tendermint-types"
 version = "0.50.0"
-source = "git+https://github.com/mina86/ibc-rs?rev=f07276383091f75b7ee8bff6fd434f8214ac5054#f07276383091f75b7ee8bff6fd434f8214ac5054"
+source = "git+https://github.com/mina86/ibc-rs?rev=e1be8c9292c82c1e7c158067f0014fb292ee652d#e1be8c9292c82c1e7c158067f0014fb292ee652d"
 dependencies = [
- "borsh 0.10.3",
+ "borsh 0.10.4",
  "displaydoc",
  "ibc-core-client-types",
  "ibc-core-commitment-types",
@@ -5802,7 +5960,7 @@ dependencies = [
 [[package]]
 name = "ibc-client-wasm-types"
 version = "0.50.0"
-source = "git+https://github.com/mina86/ibc-rs?rev=f07276383091f75b7ee8bff6fd434f8214ac5054#f07276383091f75b7ee8bff6fd434f8214ac5054"
+source = "git+https://github.com/mina86/ibc-rs?rev=e1be8c9292c82c1e7c158067f0014fb292ee652d#e1be8c9292c82c1e7c158067f0014fb292ee652d"
 dependencies = [
  "base64 0.21.7",
  "displaydoc",
@@ -5816,7 +5974,7 @@ dependencies = [
 [[package]]
 name = "ibc-clients"
 version = "0.50.0"
-source = "git+https://github.com/mina86/ibc-rs?rev=f07276383091f75b7ee8bff6fd434f8214ac5054#f07276383091f75b7ee8bff6fd434f8214ac5054"
+source = "git+https://github.com/mina86/ibc-rs?rev=e1be8c9292c82c1e7c158067f0014fb292ee652d#e1be8c9292c82c1e7c158067f0014fb292ee652d"
 dependencies = [
  "ibc-client-tendermint",
  "ibc-client-wasm-types",
@@ -5825,7 +5983,7 @@ dependencies = [
 [[package]]
 name = "ibc-core"
 version = "0.50.0"
-source = "git+https://github.com/mina86/ibc-rs?rev=f07276383091f75b7ee8bff6fd434f8214ac5054#f07276383091f75b7ee8bff6fd434f8214ac5054"
+source = "git+https://github.com/mina86/ibc-rs?rev=e1be8c9292c82c1e7c158067f0014fb292ee652d#e1be8c9292c82c1e7c158067f0014fb292ee652d"
 dependencies = [
  "ibc-core-channel",
  "ibc-core-client",
@@ -5841,7 +5999,7 @@ dependencies = [
 [[package]]
 name = "ibc-core-channel"
 version = "0.50.0"
-source = "git+https://github.com/mina86/ibc-rs?rev=f07276383091f75b7ee8bff6fd434f8214ac5054#f07276383091f75b7ee8bff6fd434f8214ac5054"
+source = "git+https://github.com/mina86/ibc-rs?rev=e1be8c9292c82c1e7c158067f0014fb292ee652d#e1be8c9292c82c1e7c158067f0014fb292ee652d"
 dependencies = [
  "ibc-core-channel-types",
  "ibc-core-client",
@@ -5856,9 +6014,9 @@ dependencies = [
 [[package]]
 name = "ibc-core-channel-types"
 version = "0.50.0"
-source = "git+https://github.com/mina86/ibc-rs?rev=f07276383091f75b7ee8bff6fd434f8214ac5054#f07276383091f75b7ee8bff6fd434f8214ac5054"
+source = "git+https://github.com/mina86/ibc-rs?rev=e1be8c9292c82c1e7c158067f0014fb292ee652d#e1be8c9292c82c1e7c158067f0014fb292ee652d"
 dependencies = [
- "borsh 0.10.3",
+ "borsh 0.10.4",
  "derive_more",
  "displaydoc",
  "ibc-core-client-types",
@@ -5876,7 +6034,7 @@ dependencies = [
 [[package]]
 name = "ibc-core-client"
 version = "0.50.0"
-source = "git+https://github.com/mina86/ibc-rs?rev=f07276383091f75b7ee8bff6fd434f8214ac5054#f07276383091f75b7ee8bff6fd434f8214ac5054"
+source = "git+https://github.com/mina86/ibc-rs?rev=e1be8c9292c82c1e7c158067f0014fb292ee652d#e1be8c9292c82c1e7c158067f0014fb292ee652d"
 dependencies = [
  "ibc-client-tendermint-types",
  "ibc-core-client-context",
@@ -5890,7 +6048,7 @@ dependencies = [
 [[package]]
 name = "ibc-core-client-context"
 version = "0.50.0"
-source = "git+https://github.com/mina86/ibc-rs?rev=f07276383091f75b7ee8bff6fd434f8214ac5054#f07276383091f75b7ee8bff6fd434f8214ac5054"
+source = "git+https://github.com/mina86/ibc-rs?rev=e1be8c9292c82c1e7c158067f0014fb292ee652d#e1be8c9292c82c1e7c158067f0014fb292ee652d"
 dependencies = [
  "derive_more",
  "displaydoc",
@@ -5907,9 +6065,9 @@ dependencies = [
 [[package]]
 name = "ibc-core-client-types"
 version = "0.50.0"
-source = "git+https://github.com/mina86/ibc-rs?rev=f07276383091f75b7ee8bff6fd434f8214ac5054#f07276383091f75b7ee8bff6fd434f8214ac5054"
+source = "git+https://github.com/mina86/ibc-rs?rev=e1be8c9292c82c1e7c158067f0014fb292ee652d#e1be8c9292c82c1e7c158067f0014fb292ee652d"
 dependencies = [
- "borsh 0.10.3",
+ "borsh 0.10.4",
  "derive_more",
  "displaydoc",
  "ibc-core-commitment-types",
@@ -5924,9 +6082,9 @@ dependencies = [
 [[package]]
 name = "ibc-core-commitment-types"
 version = "0.50.0"
-source = "git+https://github.com/mina86/ibc-rs?rev=f07276383091f75b7ee8bff6fd434f8214ac5054#f07276383091f75b7ee8bff6fd434f8214ac5054"
+source = "git+https://github.com/mina86/ibc-rs?rev=e1be8c9292c82c1e7c158067f0014fb292ee652d#e1be8c9292c82c1e7c158067f0014fb292ee652d"
 dependencies = [
- "borsh 0.10.3",
+ "borsh 0.10.4",
  "derive_more",
  "displaydoc",
  "ibc-primitives 0.50.0",
@@ -5939,7 +6097,7 @@ dependencies = [
 [[package]]
 name = "ibc-core-connection"
 version = "0.50.0"
-source = "git+https://github.com/mina86/ibc-rs?rev=f07276383091f75b7ee8bff6fd434f8214ac5054#f07276383091f75b7ee8bff6fd434f8214ac5054"
+source = "git+https://github.com/mina86/ibc-rs?rev=e1be8c9292c82c1e7c158067f0014fb292ee652d#e1be8c9292c82c1e7c158067f0014fb292ee652d"
 dependencies = [
  "ibc-core-client",
  "ibc-core-connection-types",
@@ -5951,9 +6109,9 @@ dependencies = [
 [[package]]
 name = "ibc-core-connection-types"
 version = "0.50.0"
-source = "git+https://github.com/mina86/ibc-rs?rev=f07276383091f75b7ee8bff6fd434f8214ac5054#f07276383091f75b7ee8bff6fd434f8214ac5054"
+source = "git+https://github.com/mina86/ibc-rs?rev=e1be8c9292c82c1e7c158067f0014fb292ee652d#e1be8c9292c82c1e7c158067f0014fb292ee652d"
 dependencies = [
- "borsh 0.10.3",
+ "borsh 0.10.4",
  "derive_more",
  "displaydoc",
  "ibc-core-client-types",
@@ -5969,7 +6127,7 @@ dependencies = [
 [[package]]
 name = "ibc-core-handler"
 version = "0.50.0"
-source = "git+https://github.com/mina86/ibc-rs?rev=f07276383091f75b7ee8bff6fd434f8214ac5054#f07276383091f75b7ee8bff6fd434f8214ac5054"
+source = "git+https://github.com/mina86/ibc-rs?rev=e1be8c9292c82c1e7c158067f0014fb292ee652d#e1be8c9292c82c1e7c158067f0014fb292ee652d"
 dependencies = [
  "ibc-client-tendermint-types",
  "ibc-core-channel",
@@ -5985,9 +6143,9 @@ dependencies = [
 [[package]]
 name = "ibc-core-handler-types"
 version = "0.50.0"
-source = "git+https://github.com/mina86/ibc-rs?rev=f07276383091f75b7ee8bff6fd434f8214ac5054#f07276383091f75b7ee8bff6fd434f8214ac5054"
+source = "git+https://github.com/mina86/ibc-rs?rev=e1be8c9292c82c1e7c158067f0014fb292ee652d#e1be8c9292c82c1e7c158067f0014fb292ee652d"
 dependencies = [
- "borsh 0.10.3",
+ "borsh 0.10.4",
  "derive_more",
  "displaydoc",
  "ibc-core-channel-types",
@@ -6006,7 +6164,7 @@ dependencies = [
 [[package]]
 name = "ibc-core-host"
 version = "0.50.0"
-source = "git+https://github.com/mina86/ibc-rs?rev=f07276383091f75b7ee8bff6fd434f8214ac5054#f07276383091f75b7ee8bff6fd434f8214ac5054"
+source = "git+https://github.com/mina86/ibc-rs?rev=e1be8c9292c82c1e7c158067f0014fb292ee652d#e1be8c9292c82c1e7c158067f0014fb292ee652d"
 dependencies = [
  "derive_more",
  "displaydoc",
@@ -6024,9 +6182,9 @@ dependencies = [
 [[package]]
 name = "ibc-core-host-cosmos"
 version = "0.50.0"
-source = "git+https://github.com/mina86/ibc-rs?rev=f07276383091f75b7ee8bff6fd434f8214ac5054#f07276383091f75b7ee8bff6fd434f8214ac5054"
+source = "git+https://github.com/mina86/ibc-rs?rev=e1be8c9292c82c1e7c158067f0014fb292ee652d#e1be8c9292c82c1e7c158067f0014fb292ee652d"
 dependencies = [
- "borsh 0.10.3",
+ "borsh 0.10.4",
  "derive_more",
  "displaydoc",
  "ibc-app-transfer-types",
@@ -6048,9 +6206,9 @@ dependencies = [
 [[package]]
 name = "ibc-core-host-types"
 version = "0.50.0"
-source = "git+https://github.com/mina86/ibc-rs?rev=f07276383091f75b7ee8bff6fd434f8214ac5054#f07276383091f75b7ee8bff6fd434f8214ac5054"
+source = "git+https://github.com/mina86/ibc-rs?rev=e1be8c9292c82c1e7c158067f0014fb292ee652d#e1be8c9292c82c1e7c158067f0014fb292ee652d"
 dependencies = [
- "borsh 0.10.3",
+ "borsh 0.10.4",
  "derive_more",
  "displaydoc",
  "ibc-primitives 0.50.0",
@@ -6060,7 +6218,7 @@ dependencies = [
 [[package]]
 name = "ibc-core-router"
 version = "0.50.0"
-source = "git+https://github.com/mina86/ibc-rs?rev=f07276383091f75b7ee8bff6fd434f8214ac5054#f07276383091f75b7ee8bff6fd434f8214ac5054"
+source = "git+https://github.com/mina86/ibc-rs?rev=e1be8c9292c82c1e7c158067f0014fb292ee652d#e1be8c9292c82c1e7c158067f0014fb292ee652d"
 dependencies = [
  "derive_more",
  "displaydoc",
@@ -6074,9 +6232,9 @@ dependencies = [
 [[package]]
 name = "ibc-core-router-types"
 version = "0.50.0"
-source = "git+https://github.com/mina86/ibc-rs?rev=f07276383091f75b7ee8bff6fd434f8214ac5054#f07276383091f75b7ee8bff6fd434f8214ac5054"
+source = "git+https://github.com/mina86/ibc-rs?rev=e1be8c9292c82c1e7c158067f0014fb292ee652d#e1be8c9292c82c1e7c158067f0014fb292ee652d"
 dependencies = [
- "borsh 0.10.3",
+ "borsh 0.10.4",
  "derive_more",
  "displaydoc",
  "ibc-core-host-types",
@@ -6101,7 +6259,7 @@ dependencies = [
 [[package]]
 name = "ibc-derive"
 version = "0.6.0"
-source = "git+https://github.com/mina86/ibc-rs?rev=f07276383091f75b7ee8bff6fd434f8214ac5054#f07276383091f75b7ee8bff6fd434f8214ac5054"
+source = "git+https://github.com/mina86/ibc-rs?rev=e1be8c9292c82c1e7c158067f0014fb292ee652d#e1be8c9292c82c1e7c158067f0014fb292ee652d"
 dependencies = [
  "proc-macro2",
  "quote",
@@ -6134,9 +6292,9 @@ dependencies = [
 [[package]]
 name = "ibc-primitives"
 version = "0.50.0"
-source = "git+https://github.com/mina86/ibc-rs?rev=f07276383091f75b7ee8bff6fd434f8214ac5054#f07276383091f75b7ee8bff6fd434f8214ac5054"
+source = "git+https://github.com/mina86/ibc-rs?rev=e1be8c9292c82c1e7c158067f0014fb292ee652d#e1be8c9292c82c1e7c158067f0014fb292ee652d"
 dependencies = [
- "borsh 0.10.3",
+ "borsh 0.10.4",
  "derive_more",
  "displaydoc",
  "ibc-proto 0.41.0",
@@ -6166,7 +6324,7 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "dd4ee32b22d3b06f31529b956f4928e5c9a068d71e46cf6abfa19c31ca550553"
 dependencies = [
  "base64 0.21.7",
- "borsh 0.10.3",
+ "borsh 0.10.4",
  "bytes",
  "flex-error",
  "ics23 0.11.1",
@@ -6426,7 +6584,7 @@ dependencies = [
 name = "ics13-near"
 version = "0.1.0"
 dependencies = [
- "borsh 0.10.3",
+ "borsh 0.10.4",
  "bytes",
  "derive_more",
  "env_logger 0.9.3",
@@ -7182,12 +7340,14 @@ checksum = "830d08ce1d1d941e6b30645f1a0eb5643013d835ce3779a5fc208261dbe10f55"
 [[package]]
 name = "lib"
 version = "0.0.0"
+source = "git+https://github.com/ComposableFi/emulated-light-client/#ba1046ead4232ee07a1db9b120f3035c983e0052"
 dependencies = [
  "base64 0.21.7",
- "borsh 0.10.3",
+ "borsh 0.10.4",
  "bs58 0.5.1",
  "bytemuck",
  "derive_more",
+ "serde",
  "sha2 0.10.8",
  "solana-program",
  "stdx",
@@ -8055,6 +8215,7 @@ dependencies = [
 [[package]]
 name = "memory"
 version = "0.0.0"
+source = "git+https://github.com/ComposableFi/emulated-light-client/#ba1046ead4232ee07a1db9b120f3035c983e0052"
 dependencies = [
  "derive_more",
  "stdx",
@@ -8235,7 +8396,7 @@ version = "3.2.3"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "ba8ee05284d79b367ae8966d558e1a305a781fc80c9df51f37775169117ba64f"
 dependencies = [
- "borsh 0.10.3",
+ "borsh 0.10.4",
  "num-derive 0.3.3",
  "num-traits",
  "solana-program",
@@ -8691,6 +8852,15 @@ dependencies = [
 
 [[package]]
 name = "num_enum"
+version = "0.5.11"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "1f646caf906c20226733ed5b1374287eb97e3c2a5c227ce668c1f2ce20ae57c9"
+dependencies = [
+ "num_enum_derive 0.5.11",
+]
+
+[[package]]
+name = "num_enum"
 version = "0.6.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "7a015b430d3c108a207fd776d2e2196aaf8b1cf8cf93253e3a097ff3085076a1"
@@ -8705,6 +8875,18 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "02339744ee7253741199f897151b38e72257d13802d4ee837285cc2990a90845"
 dependencies = [
  "num_enum_derive 0.7.2",
+]
+
+[[package]]
+name = "num_enum_derive"
+version = "0.5.11"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "dcbff9bc912032c62bf65ef1d5aea88983b420f4f839db1e9b0c281a25c9c799"
+dependencies = [
+ "proc-macro-crate 1.3.1",
+ "proc-macro2",
+ "quote",
+ "syn 1.0.109",
 ]
 
 [[package]]
@@ -9321,8 +9503,9 @@ name = "pallet-ibc"
 version = "0.0.1"
 dependencies = [
  "beefy-light-client-primitives",
- "borsh 0.10.3",
+ "borsh 0.10.4",
  "cf-guest 0.0.1",
+ "cf-solana 0.1.0",
  "chrono",
  "cumulus-primitives-core",
  "derive_more",
@@ -12143,6 +12326,7 @@ dependencies = [
 [[package]]
 name = "proto-utils"
 version = "0.0.0"
+source = "git+https://github.com/ComposableFi/emulated-light-client/#ba1046ead4232ee07a1db9b120f3035c983e0052"
 dependencies = [
  "const_format",
  "derive_more",
@@ -14555,10 +14739,11 @@ dependencies = [
 [[package]]
 name = "sealable-trie"
 version = "0.0.0"
+source = "git+https://github.com/ComposableFi/emulated-light-client/#ba1046ead4232ee07a1db9b120f3035c983e0052"
 dependencies = [
  "ascii 1.1.0",
  "base64 0.21.7",
- "borsh 0.10.3",
+ "borsh 0.10.4",
  "bytemuck",
  "derive_more",
  "lib",
@@ -14977,7 +15162,7 @@ dependencies = [
  "bytes",
  "ics23 0.10.0",
  "proptest",
- "rand 0.8.5",
+ "rand 0.4.6",
  "sha2 0.10.8",
  "tendermint 0.33.2",
 ]
@@ -15117,7 +15302,7 @@ dependencies = [
  "serde_json",
  "solana-config-program",
  "solana-sdk",
- "spl-token",
+ "spl-token 4.0.0",
  "spl-token-2022 1.0.0",
  "spl-token-group-interface",
  "spl-token-metadata-interface",
@@ -15128,6 +15313,7 @@ dependencies = [
 [[package]]
 name = "solana-allocator"
 version = "0.0.3"
+source = "git+https://github.com/ComposableFi/emulated-light-client/#ba1046ead4232ee07a1db9b120f3035c983e0052"
 dependencies = [
  "bytemuck",
  "solana-program",
@@ -15264,12 +15450,14 @@ dependencies = [
 [[package]]
 name = "solana-ibc"
 version = "0.0.3"
+source = "git+https://github.com/ComposableFi/emulated-light-client/#ba1046ead4232ee07a1db9b120f3035c983e0052"
 dependencies = [
  "anchor-lang",
  "anchor-spl",
  "base64 0.21.7",
  "bytemuck",
  "cf-guest 0.0.0",
+ "cf-solana 0.0.0",
  "derive_more",
  "guestchain",
  "hex-literal 0.4.1",
@@ -15288,7 +15476,7 @@ dependencies = [
  "solana-signature-verifier",
  "solana-trie",
  "spl-associated-token-account",
- "spl-token",
+ "spl-token 4.0.0",
  "stdx",
  "strum 0.25.0",
  "tendermint 0.34.1",
@@ -15399,7 +15587,7 @@ dependencies = [
  "bincode",
  "bitflags 2.5.0",
  "blake3",
- "borsh 0.10.3",
+ "borsh 0.10.4",
  "borsh 0.9.3",
  "bs58 0.4.0",
  "bv",
@@ -15619,7 +15807,7 @@ dependencies = [
  "base64 0.21.7",
  "bincode",
  "bitflags 2.5.0",
- "borsh 0.10.3",
+ "borsh 0.10.4",
  "bs58 0.4.0",
  "bytemuck",
  "byteorder",
@@ -15685,9 +15873,10 @@ checksum = "468aa43b7edb1f9b7b7b686d5c3aeb6630dc1708e86e31343499dd5c4d775183"
 [[package]]
 name = "solana-signature-verifier"
 version = "0.0.3"
+source = "git+https://github.com/ComposableFi/emulated-light-client/#ba1046ead4232ee07a1db9b120f3035c983e0052"
 dependencies = [
  "base64 0.21.7",
- "borsh 0.10.3",
+ "borsh 0.10.4",
  "bytemuck",
  "derive_more",
  "guestchain",
@@ -15777,7 +15966,7 @@ dependencies = [
  "Inflector",
  "base64 0.21.7",
  "bincode",
- "borsh 0.10.3",
+ "borsh 0.10.4",
  "bs58 0.4.0",
  "lazy_static",
  "log",
@@ -15788,7 +15977,7 @@ dependencies = [
  "solana-sdk",
  "spl-associated-token-account",
  "spl-memo",
- "spl-token",
+ "spl-token 4.0.0",
  "spl-token-2022 1.0.0",
  "thiserror",
 ]
@@ -15796,6 +15985,7 @@ dependencies = [
 [[package]]
 name = "solana-trie"
 version = "0.0.3"
+source = "git+https://github.com/ComposableFi/emulated-light-client/#ba1046ead4232ee07a1db9b120f3035c983e0052"
 dependencies = [
  "bytemuck",
  "lib",
@@ -15859,8 +16049,25 @@ dependencies = [
 ]
 
 [[package]]
+name = "solana-witnessed-trie"
+version = "0.0.3"
+source = "git+https://github.com/ComposableFi/emulated-light-client/#ba1046ead4232ee07a1db9b120f3035c983e0052"
+dependencies = [
+ "arrayvec 0.7.4",
+ "bytemuck",
+ "cf-solana 0.0.0",
+ "derive_more",
+ "lib",
+ "solana-program",
+ "solana-trie",
+ "stdx",
+ "strum 0.25.0",
+]
+
+[[package]]
 name = "solana-write-account"
 version = "0.0.3"
+source = "git+https://github.com/ComposableFi/emulated-light-client/#ba1046ead4232ee07a1db9b120f3035c983e0052"
 dependencies = [
  "solana-program",
  "stdx",
@@ -17053,11 +17260,11 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "992d9c64c2564cc8f63a4b508bf3ebcdf2254b0429b13cd1d31adb6162432a5f"
 dependencies = [
  "assert_matches",
- "borsh 0.10.3",
+ "borsh 0.10.4",
  "num-derive 0.4.2",
  "num-traits",
  "solana-program",
- "spl-token",
+ "spl-token 4.0.0",
  "spl-token-2022 1.0.0",
  "thiserror",
 ]
@@ -17112,7 +17319,7 @@ version = "0.1.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "85a5db7e4efb1107b0b8e52a13f035437cdcb36ef99c58f6d467f089d9b2915a"
 dependencies = [
- "borsh 0.10.3",
+ "borsh 0.10.4",
  "bytemuck",
  "solana-program",
  "solana-zk-token-sdk",
@@ -17174,6 +17381,20 @@ dependencies = [
 
 [[package]]
 name = "spl-token"
+version = "3.5.0"
+source = "git+https://github.com/ComposableFi/solana-program-library.git?branch=mantis#294feb78bf6e8aea9598c692485a41b529012b84"
+dependencies = [
+ "arrayref",
+ "bytemuck",
+ "num-derive 0.3.3",
+ "num-traits",
+ "num_enum 0.5.11",
+ "solana-program",
+ "thiserror",
+]
+
+[[package]]
+name = "spl-token"
 version = "4.0.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "08459ba1b8f7c1020b4582c4edf0f5c7511a5e099a7a97570c9698d4f2337060"
@@ -17202,7 +17423,7 @@ dependencies = [
  "solana-zk-token-sdk",
  "spl-memo",
  "spl-pod",
- "spl-token",
+ "spl-token 4.0.0",
  "spl-token-metadata-interface",
  "spl-transfer-hook-interface 0.3.0",
  "spl-type-length-value",
@@ -17225,7 +17446,7 @@ dependencies = [
  "solana-zk-token-sdk",
  "spl-memo",
  "spl-pod",
- "spl-token",
+ "spl-token 4.0.0",
  "spl-token-group-interface",
  "spl-token-metadata-interface",
  "spl-transfer-hook-interface 0.4.1",
@@ -17252,7 +17473,7 @@ version = "0.2.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "4c16ce3ba6979645fb7627aa1e435576172dd63088dc7848cb09aa331fa1fe4f"
 dependencies = [
- "borsh 0.10.3",
+ "borsh 0.10.4",
  "solana-program",
  "spl-discriminator",
  "spl-pod",
@@ -17363,6 +17584,7 @@ dependencies = [
 [[package]]
 name = "stdx"
 version = "0.0.0"
+source = "git+https://github.com/ComposableFi/emulated-light-client/#ba1046ead4232ee07a1db9b120f3035c983e0052"
 
 [[package]]
 name = "strsim"
@@ -18647,10 +18869,11 @@ dependencies = [
 [[package]]
 name = "trie-ids"
 version = "0.0.0"
+source = "git+https://github.com/ComposableFi/emulated-light-client/#ba1046ead4232ee07a1db9b120f3035c983e0052"
 dependencies = [
  "ascii 1.1.0",
  "base64 0.21.7",
- "borsh 0.10.3",
+ "borsh 0.10.4",
  "bytemuck",
  "derive_more",
  "ibc-core-channel-types",
@@ -18812,9 +19035,9 @@ version = "1.6.3"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "97fee6b57c6a41524a810daee9286c02d7752c4253064d0b05472833a438f675"
 dependencies = [
- "cfg-if 1.0.0",
+ "cfg-if 0.1.10",
  "digest 0.10.7",
- "rand 0.8.5",
+ "rand 0.4.6",
  "static_assertions",
 ]
 
@@ -19079,6 +19302,7 @@ dependencies = [
 [[package]]
 name = "wasm"
 version = "0.0.0"
+source = "git+https://github.com/ComposableFi/emulated-light-client/#ba1046ead4232ee07a1db9b120f3035c983e0052"
 dependencies = [
  "const_format",
  "derive_more",
@@ -20200,7 +20424,7 @@ dependencies = [
 [[patch.unused]]
 name = "ibc-testkit"
 version = "0.50.0"
-source = "git+https://github.com/mina86/ibc-rs?rev=f07276383091f75b7ee8bff6fd434f8214ac5054#f07276383091f75b7ee8bff6fd434f8214ac5054"
+source = "git+https://github.com/mina86/ibc-rs?rev=e1be8c9292c82c1e7c158067f0014fb292ee652d#e1be8c9292c82c1e7c158067f0014fb292ee652d"
 
 [[patch.unused]]
 name = "tendermint-light-client"

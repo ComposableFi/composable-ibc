@@ -22,7 +22,8 @@ normal = ["scale-encode"]
 primitives = { path = "../primitives", package = "hyperspace-primitives" }
 parachain = { path = "../parachain", package = "hyperspace-parachain" }
 cosmos = { path = "../cosmos", package = "hyperspace-cosmos", optional = true }
-solana = { path = "../solana", package = "hyperspace-solana", optional = true }
+solana = { path = "../solana", package = "hyperspace-solana"}
+rollup = { path = "../rollup", package = "hyperspace-rollup"}
 #near = { path = "near", package = "hyperspace-near", optional = true }
 metrics = { path = "../metrics", package = "hyperspace-metrics" }
 
@@ -71,9 +72,9 @@ frame-system = { git = "https://github.com/paritytech/substrate", branch = "polk
 frame-support = { git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.43", default-features = false }
 prost = { version = "0.11", default-features = false }
 serde_json = "1.0.74"
-guestchain = { path = "../../../emulated-light-client/common/guestchain" ,default-features = false }
-sealable-trie = { path = "../../../emulated-light-client/common/sealable-trie" ,default-features = false }
-lib = { path = "../../../emulated-light-client/common/lib" ,default-features = false }
+guestchain = { git = "https://github.com/ComposableFi/emulated-light-client/" ,default-features = false }
+sealable-trie = { git = "https://github.com/ComposableFi/emulated-light-client/" ,default-features = false }
+lib = { git = "https://github.com/ComposableFi/emulated-light-client/" ,default-features = false }
 
 [dev-dependencies]
 derive_more = "0.99.17"
@@ -85,18 +86,19 @@ cosmos = { path = "../cosmos", package = "hyperspace-cosmos", features = [
     "testing",
 ] }
 solana = { path = "../solana", package = "hyperspace-solana" }
-trie-ids = { path = "../../../emulated-light-client/common/trie-ids" ,features = ["borsh"] }
+rollup = { path = "../rollup", package = "hyperspace-rollup" }
+trie-ids = { git = "https://github.com/ComposableFi/emulated-light-client/" ,features = ["borsh"] }
 
-ibc-new-primitives = { git = "https://github.com/mina86/ibc-rs", rev = "f07276383091f75b7ee8bff6fd434f8214ac5054", default-features = false, features = ["borsh", "serde"] , package="ibc-primitives" }
-ibc-core-host-types = { git = "https://github.com/mina86/ibc-rs", rev = "f07276383091f75b7ee8bff6fd434f8214ac5054", default-features = false, features = ["borsh", "serde"]}
-ibc-core-handler-types = { git = "https://github.com/mina86/ibc-rs", rev = "f07276383091f75b7ee8bff6fd434f8214ac5054", default-features = false }
-ibc-core-client-types = { git = "https://github.com/mina86/ibc-rs", rev = "f07276383091f75b7ee8bff6fd434f8214ac5054", default-features = false }
-ibc-core-connection-types = { git = "https://github.com/mina86/ibc-rs", rev = "f07276383091f75b7ee8bff6fd434f8214ac5054", default-features = false }
-ibc-core-channel-types = { git = "https://github.com/mina86/ibc-rs", rev = "f07276383091f75b7ee8bff6fd434f8214ac5054", default-features = false }
-ibc-app-transfer-types = { git = "https://github.com/mina86/ibc-rs", rev = "f07276383091f75b7ee8bff6fd434f8214ac5054", default-features = false }
-ibc-core-commitment-types = { git = "https://github.com/mina86/ibc-rs", rev = "f07276383091f75b7ee8bff6fd434f8214ac5054", default-features = false }
-ibc-client-tendermint-types = { git = "https://github.com/mina86/ibc-rs", rev = "f07276383091f75b7ee8bff6fd434f8214ac5054", default-features = false }
-# ibc-testkit = { git = "https://github.com/mina86/ibc-rs", rev = "f07276383091f75b7ee8bff6fd434f8214ac5054", default-features = false }
+ibc-new-primitives = { git = "https://github.com/mina86/ibc-rs", rev = "e1be8c9292c82c1e7c158067f0014fb292ee652d", default-features = false, features = ["borsh", "serde"] , package="ibc-primitives" }
+ibc-core-host-types = { git = "https://github.com/mina86/ibc-rs", rev = "e1be8c9292c82c1e7c158067f0014fb292ee652d", default-features = false, features = ["borsh", "serde"]}
+ibc-core-handler-types = { git = "https://github.com/mina86/ibc-rs", rev = "e1be8c9292c82c1e7c158067f0014fb292ee652d", default-features = false }
+ibc-core-client-types = { git = "https://github.com/mina86/ibc-rs", rev = "e1be8c9292c82c1e7c158067f0014fb292ee652d", default-features = false }
+ibc-core-connection-types = { git = "https://github.com/mina86/ibc-rs", rev = "e1be8c9292c82c1e7c158067f0014fb292ee652d", default-features = false }
+ibc-core-channel-types = { git = "https://github.com/mina86/ibc-rs", rev = "e1be8c9292c82c1e7c158067f0014fb292ee652d", default-features = false }
+ibc-app-transfer-types = { git = "https://github.com/mina86/ibc-rs", rev = "e1be8c9292c82c1e7c158067f0014fb292ee652d", default-features = false }
+ibc-core-commitment-types = { git = "https://github.com/mina86/ibc-rs", rev = "e1be8c9292c82c1e7c158067f0014fb292ee652d", default-features = false }
+ibc-client-tendermint-types = { git = "https://github.com/mina86/ibc-rs", rev = "e1be8c9292c82c1e7c158067f0014fb292ee652d", default-features = false }
+# ibc-testkit = { git = "https://github.com/mina86/ibc-rs", rev = "e1be8c9292c82c1e7c158067f0014fb292ee652d", default-features = false }
 ibc-proto-new = { version = "0.41.0", default-features = false, package="ibc-proto" }
 
 
@@ -113,7 +115,8 @@ sp-keyring = { git = "https://github.com/paritytech/substrate", branch = "polkad
 build-metadata-from-ws = []
 #near = ["dep:near"]
 cosmos = ["dep:cosmos"]
-solana = ["dep:solana"]
-testing = ["primitives/testing", "parachain/testing", "cosmos/testing", "solana/testing"]
-default = ["cosmos", "solana"]
+# solana = ["dep:solana"]
+# rollup = ["dep:rollup"]
+testing = ["primitives/testing", "parachain/testing", "cosmos/testing", "solana/testing", "rollup/testing"]
+default = ["cosmos"]
 composable-beefy = []

@@ -263,7 +263,7 @@ async fn send_packet_and_assert_height_timeout<A, B>(
 		chain_b,
 		asset_a,
 		channel_id,
-		Some(Timeout::Offset { timestamp: Some(120 * 60), height: Some(10) }),
+		Some(Timeout::Offset { timestamp: Some(10), height: Some(2) }),
 	)
 	.await;
 
@@ -374,9 +374,9 @@ async fn send_packet_with_connection_delay<A, B>(
 	log::info!(target: "hyperspace", "Sending transfer from {}", chain_b.name());
 	let (previous_balance, ..) =
 		send_transfer(chain_b, chain_a, asset_b.clone(), channel_id_b, None).await;
-	println!("send packet on cosmos done");
-	assert_send_transfer(chain_b, asset_b, previous_balance, 220).await;
-	println!("assert send packet on cosmos done");
+	println!("send packet on mantis done");
+	assert_send_transfer(chain_b, asset_b, previous_balance, 1520).await;
+	println!("assert send packet on mantis done");
 	// now send from chain b.
 	log::info!(target: "hyperspace", "🚀🚀 Token Transfer successful with connection delay");
 }

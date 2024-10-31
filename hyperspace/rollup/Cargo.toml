@@ -1,5 +1,5 @@
 [package]
-name = "hyperspace-solana"
+name = "hyperspace-rollup"
 version = "0.1.0"
 edition = "2021"
 
@@ -104,23 +104,20 @@ cf-guest = { path = "../../light-clients/cf-guest", default-features = false }
 cf-guest-og = { git = "https://github.com/ComposableFi/emulated-light-client/", package = "cf-guest" }
 guestchain = { git = "https://github.com/ComposableFi/emulated-light-client/", default-features = false }
 
-cf-solana = { path = "../../light-clients/cf-solana", default-features = false }
 cf-solana-og = { git = "https://github.com/ComposableFi/emulated-light-client/", package = "cf-solana", features = [
     "serde",
 ] }
+cf-solana = { path = "../../light-clients/cf-solana", default-features = false }
 
 #Contract
 solana-ibc = { git = "https://github.com/ComposableFi/emulated-light-client/", features = [
     "no-entrypoint",
-    "witness",
 ] }
 solana-write-account = { git = "https://github.com/ComposableFi/emulated-light-client/", features = [
     "library",
 ] }
-solana-witnessed-trie = { git = "https://github.com/ComposableFi/emulated-light-client/", default-features = false, features = [
-    "api",
-] }
 solana-signature-verifier = { git = "https://github.com/ComposableFi/emulated-light-client/" }
+spl-token = { git = "https://github.com/ComposableFi/solana-program-library.git", branch = "mantis" }
 
 tracing = "0.1.36"
 

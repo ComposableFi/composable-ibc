@@ -2,10 +2,12 @@
 extern crate alloc;
 
 use anchor_client::{
-	solana_client::{rpc_client::RpcClient, rpc_config::RpcSendTransactionConfig},
+	solana_client::{
+		nonblocking::pubsub_client::PubsubClient, rpc_client::RpcClient,
+		rpc_config::RpcSendTransactionConfig,
+	},
 	solana_sdk::{
 		compute_budget::ComputeBudgetInstruction,
-		feature_set::spl_token_v3_4_0,
 		instruction::Instruction,
 		system_instruction::transfer,
 		transaction::{Transaction, VersionedTransaction},
@@ -16,10 +18,11 @@ use client::FinalityEvent;
 use client_state::convert_new_client_state_to_old;
 use consensus_state::convert_new_consensus_state_to_old;
 use core::{pin::Pin, str::FromStr, time::Duration};
-use futures::future::join_all;
+use futures::{future::join_all, StreamExt};
 use guestchain::{BlockHeader, Epoch, PubKey, Validator};
 use ibc_core_channel_types::msgs::PacketMsg;
 use ibc_core_client_types::msgs::ClientMsg;
+use ibc_core_commitment_types::commitment::CommitmentRoot;
 use ibc_core_handler_types::msgs::MsgEnvelope;
 use ics07_tendermint::{
 	client_message::ClientMessage, client_state::ClientState as TmClientState,
@@ -28,17 +31,23 @@ use ics07_tendermint::{
 use msgs::convert_old_msgs_to_new;
 use serde::{Deserialize, Serialize};
 use solana_transaction_status::UiTransactionEncoding;
-use std::{num::NonZeroU128, ops::Deref, thread::sleep, time::Instant};
+use std::{
+	num::{NonZeroU128, NonZeroU64},
+	ops::Deref,
+	thread::sleep,
+	time::Instant,
+};
 use tendermint::{Hash, Time};
 use tendermint_proto::Protobuf;
 use tokio::{
 	sync::mpsc::unbounded_channel,
+	sync::Mutex,
 	task::{spawn_blocking, JoinSet},
 };
 
 use anchor_client::{
 	solana_client::{
-		pubsub_client::PubsubClient,
+		// pubsub_client::PubsubClient,
 		rpc_client::GetConfirmedSignaturesForAddress2Config,
 		rpc_config::{
 			RpcBlockSubscribeConfig, RpcBlockSubscribeFilter, RpcTransactionLogsConfig,
@@ -108,10 +117,10 @@ use trie_ids::{ClientIdx, ConnectionIdx, PortChannelPK, Tag, TrieKey};
 
 use crate::{
 	client::TransactionSender,
-	events::{get_events_from_logs, SearchIn},
+	events::{get_events_from_logs, SearchIn, TrieResponse},
 };
 pub use crate::{
-	client::{DeliverIxType, SolanaClient, SolanaClientConfig},
+	client::{DeliverIxType, RollupClient, RollupClientConfig},
 	events::convert_new_event_to_old,
 };
 
@@ -126,7 +135,7 @@ mod msgs;
 mod test_provider;
 mod utils;
 
-const SOLANA_IBC_STORAGE_SEED: &[u8] = b"private";
+const solana_ibc_STORAGE_SEED: &[u8] = b"private";
 const TRIE_SEED: &[u8] = b"trie";
 const CHAIN_SEED: &[u8] = b"chain";
 pub const NUMBER_OF_BLOCKS_TO_PROCESS_PER_ITER: u64 = 250;
@@ -143,7 +152,7 @@ pub struct InnerAny {
 }
 
 #[async_trait::async_trait]
-impl IbcProvider for SolanaClient {
+impl IbcProvider for RollupClient {
 	type FinalityEvent = FinalityEvent;
 
 	type TransactionId = String;
@@ -160,13 +169,14 @@ impl IbcProvider for SolanaClient {
 	where
 		T: Chain,
 	{
-		log::info!("Came into solana lts events");
-		// let (finality_blockhash, finality_height) = match finality_event {
-		// 	FinalityEvent::Guest { blockhash, block_height } => (blockhash, block_height),
-		// };
-		let chain_account = self.get_chain_storage().await;
-		let finality_height = chain_account.head().unwrap().block_height.into();
-		log::info!("This is solaan height {:?}", finality_height);
+		log::info!("Came into rollup lts events");
+		let (finality_blockhash, finality_height) = match finality_event {
+			FinalityEvent::Guest { blockhash, block_height } => (blockhash, block_height),
+			FinalityEvent::Rollup { slot, previous_blockhash, blockhash } => {
+				(CryptoHash::default(), slot)
+			},
+		};
+		log::info!("This is rollup height {:?}", finality_height);
 		let client_id = self.client_id();
 		let latest_cp_height = counterparty.latest_height_and_timestamp().await?.0;
 		log::info!("this is the latest cp height {:?}", latest_cp_height);
@@ -175,16 +185,16 @@ impl IbcProvider for SolanaClient {
 		let client_state_response = latest_cp_client_state
 			.client_state
 			.ok_or_else(|| Error::Custom("counterparty returned empty client state".to_string()))?;
-		log::info!("This is the type url in solana {:?}", client_state_response.type_url);
-		let AnyClientState::Guest(client_state) =
+		log::info!("This is the type url in rollup {:?}", client_state_response.type_url);
+		let AnyClientState::Rollup(client_state) =
 			AnyClientState::decode_recursive(client_state_response.clone(), |c| {
-				matches!(c, AnyClientState::Guest(_))
+				matches!(c, AnyClientState::Rollup(_))
 			})
 			.or_else(|| {
 				log::info!("This is wasm {:?}", client_state_response);
 				let wasm_client_state =
 					AnyClientState::decode_recursive(client_state_response, |c| {
-						matches!(c, AnyClientState::Wasm(_))
+						matches!(c, AnyClientState::Rollup(_))
 					})
 					.unwrap();
 				Some(wasm_client_state.unpack_recursive().clone())
@@ -194,16 +204,14 @@ impl IbcProvider for SolanaClient {
 			unreachable!()
 		};
 		log::info!("This is client state {:?}", client_state);
-		let latest_cp_client_height = u64::from(client_state.0.latest_height);
+		let latest_cp_client_height = u64::from(client_state.0.latest_slot);
 		println!("This is counterparty client height {:?}", latest_cp_client_height);
-		let (all_signatures, new_block_events) = events::get_signatures_upto_height(
+		let new_block_events = events::get_events_upto_height(
 			self.rpc_client(),
 			self.solana_ibc_program_id,
 			latest_cp_client_height + 1,
 		)
 		.await;
-
-		let earliest_block_header = all_signatures.last();
 
 		log::info!("This is all events {:?}", new_block_events);
 		let block_events: Vec<IbcEvent> = new_block_events
@@ -213,153 +221,80 @@ impl IbcProvider for SolanaClient {
 			})
 			.collect();
 
-		let mut updates = Vec::new();
-		let mut rev_all_signatures = all_signatures.clone();
-		// Reversing so that updates are sent in ascending order of their height.
-		rev_all_signatures.reverse();
-		for (signatures, block_header, epoch) in rev_all_signatures {
-			if (block_header.next_epoch_commitment.is_none()
-				&& u64::from(block_header.block_height) != finality_height)
-				|| epoch.is_none()
-			{
-				log::info!(
-					"Skipping for height {} and finality height {}",
-					block_header.block_height,
-					finality_height
-				);
-				continue;
+		let body = events::PayloadWithoutParams {
+			jsonrpc: "2.0".to_string(),
+			id: 10,
+			method: "getLatestSlotData".to_string(),
+		};
+		let url = self.trie_rpc_url.clone();
+		let response = tokio::task::spawn_blocking(move || {
+			for _ in 0..5 {
+				let response =
+					reqwest::blocking::Client::new().post(url.clone()).json(&body).send();
+				let response = skip_fail!(response);
+				let response: std::result::Result<events::TrieResponse, reqwest::Error> =
+					response.json();
+				let transactions = skip_fail!(response);
+				return transactions;
 			}
+			log::error!("Couldnt get transactions after 5 retries");
+			panic!("WTF");
+		})
+		.await
+		.unwrap();
+		let slot_data = response.result.1;
+		let bank_hash = slot_data.delta_hash_proof.calculate_bank_hash();
+		let header = cf_solana_og::Header {
+			slot: NonZeroU64::new(response.result.0).unwrap(),
+			bank_hash,
+			delta_hash_proof: slot_data.delta_hash_proof,
+			witness_proof: slot_data.witness_proof,
+		};
+		let msg = MsgUpdateAnyClient::<LocalClientTypes> {
+			client_id: self.client_id(),
+			client_message: AnyClientMessage::Rollup(cf_solana::ClientMessage(
+				cf_solana_og::ClientMessage::from(header),
+			)),
+			signer: counterparty.account_id(),
+		};
 
-			let block_hash = block_header.calc_hash();
-			let block_height: u64 = block_header.block_height.into();
-			let validators = epoch.unwrap().validators().to_vec();
-			let all_validators: Vec<Validator<pallet_ibc::light_clients::PubKey>> = validators
-				.iter()
-				.map(|validator| {
-					let new_validator: Validator<pallet_ibc::light_clients::PubKey> =
-						Validator::new(
-							PubKey::from_bytes(&validator.pubkey.to_vec()).unwrap(),
-							validator.stake,
-						);
-					new_validator
-				})
-				.collect();
-			let final_signatures: Vec<_> = signatures
-				.iter()
-				.enumerate()
-				.map(|(index, (validator, signature))| {
-					let validator_idx = all_validators
-						.iter()
-						.position(|v| {
-							v.pubkey
-								== PubKey::from_bytes(&validator.to_bytes().as_slice()).unwrap()
-						})
-						.unwrap();
-					(validator_idx as u16, signature.clone())
-				})
-				.collect();
-			let current_epoch = Epoch::new_with(all_validators, |total| {
-				let quorum = NonZeroU128::new(total.get() / 2 + 1).unwrap();
-				// min_quorum_stake may be greater than total_stake so we’re not
-				// using .clamp to make sure we never return value higher than
-				// total_stake.
-				println!("THis is total {:?} and quorum {:?}", total, quorum);
-				quorum.max(NonZeroU128::new(1000).unwrap()).min(total)
-			})
-			.unwrap();
-			let guest_header = cf_guest_og::Header {
-				genesis_hash: chain_account.genesis().unwrap().clone(),
-				block_hash,
-				block_header: block_header.clone(),
-				epoch_commitment: current_epoch.calc_commitment(),
-				epoch: current_epoch,
-				signatures: final_signatures,
-			};
-			log::info!(
-				"Height: {:?} signature {:?} and finality height {:?}",
-				block_height,
-				signatures,
-				finality_height
-			);
-			let msg = MsgUpdateAnyClient::<LocalClientTypes> {
-				client_id: self.client_id(),
-				client_message: AnyClientMessage::Guest(cf_guest::ClientMessage::from(
-					guest_header,
-				)),
-				signer: counterparty.account_id(),
-			};
-			let value = msg.clone().encode_vec();
-			log::info!("This is wihle update {:?}", value);
+		let has_init_event = block_events
+			.iter()
+			.find(|eve| matches!(eve, IbcEvent::OpenConfirmConnection(_)));
 
-			let update = if u64::from(block_header.block_height) == finality_height {
-				let time_since_last_update =
-					if let Some(earliest_block_header) = earliest_block_header {
-						u64::from(block_header.timestamp_ns)
-							- u64::from(earliest_block_header.1.timestamp_ns)
-					} else {
-						0
-					};
-				log::info!(
-					"TIme since last update on solana {}",
-					time_since_last_update / 1_000_000_000
-				);
-				if time_since_last_update > MIN_TIME_UNTIL_UPDATE * 1_000_000_000 {
-					log::info!("--------------------------PURPOSE UPDATE------------------------");
-				} else {
-					log::info!("-----------------------NO UPDATE---------------------------");
-				}
-				(
-					Any { type_url: msg.type_url(), value },
-					Height::new(1, finality_height),
-					block_events.clone(),
-					if !block_events.is_empty()
-						|| time_since_last_update > MIN_TIME_UNTIL_UPDATE * 1_000_000_000
-					{
-						log::info!(
-							"--------------------------Updating at {}---------------------------",
-							finality_height
-						);
-						UpdateType::Mandatory
-					} else {
-						UpdateType::Optional
-					},
-				)
-			} else {
-				log::info!("Mandatory update due to change in epoch");
-				(
-					Any { type_url: msg.type_url(), value },
-					Height::new(1, block_height),
-					Vec::new(),
-					UpdateType::Mandatory,
-				)
-			};
-			updates.push(update);
-		}
-		Ok(updates)
+		let update_type =
+			if (block_events.len() > 0) { UpdateType::Mandatory } else { UpdateType::Optional };
+
+		let update = (msg.to_any(), Height::new(1, response.result.0), block_events, update_type);
+
+		Ok(vec![update])
 	}
 
 	async fn ibc_events(&self) -> Pin<Box<dyn Stream<Item = IbcEvent> + Send + 'static>> {
 		let (tx, rx) = unbounded_channel();
 		let ws_url = self.ws_url.clone();
 		let program_id = self.solana_ibc_program_id;
-		tokio::task::spawn_blocking(move || {
-			let (_logs_subscription, receiver) = PubsubClient::logs_subscribe(
-				&ws_url,
-				RpcTransactionLogsFilter::Mentions(vec![program_id.to_string()]),
-				RpcTransactionLogsConfig { commitment: Some(CommitmentConfig::finalized()) },
-			)
-			.unwrap();
+		tokio::spawn(async move {
+			let client = PubsubClient::new(&ws_url).await.unwrap();
+			let (mut stream, receiver) = client
+				.logs_subscribe(
+					// &ws_url,
+					RpcTransactionLogsFilter::Mentions(vec![program_id.to_string()]),
+					RpcTransactionLogsConfig { commitment: Some(CommitmentConfig::finalized()) },
+				)
+				.await
+				.unwrap();
 
 			loop {
-				match receiver.recv() {
-					Ok(logs) => {
+				match stream.next().await {
+					Some(logs) => {
 						let (events, proof_height) =
 							events::get_ibc_events_from_logs(logs.value.logs);
 						// log::info!("These are events {:?} ", events);
 						// log::info!("Total {:?} events", events.len());
 						let mut broke = false;
 						events.iter().for_each(|event| {
-							log::info!("Came into ibc events");
+							log::info!("Came into ibc events rollup");
 							let height = Height::new(1, proof_height);
 							let converted_event =
 								events::convert_new_event_to_old(event.clone(), height);
@@ -375,8 +310,8 @@ impl IbcProvider for SolanaClient {
 							break;
 						}
 					},
-					Err(err) => {
-						panic!("{}", format!("Disconnected: {err}"));
+					None => {
+						panic!("{}", format!("Disconnected: "));
 					},
 				}
 			}
@@ -392,7 +327,7 @@ impl IbcProvider for SolanaClient {
 		consensus_height: Height,
 	) -> Result<QueryConsensusStateResponse, Self::Error> {
 		use ibc_proto_new::Protobuf;
-		let (trie, at_height) = self.get_trie(at.revision_height, true).await;
+		let (trie, at_height) = self.get_trie(at.revision_height, false).await;
 		let storage = self.get_ibc_storage().await;
 		let revision_height = consensus_height.revision_height;
 		let revision_number = consensus_height.revision_number;
@@ -441,38 +376,9 @@ deserialize consensus state"
 		let inner_any = consensus_state.clone().encode_vec();
 		log::info!("this is consensus state {:?}", consensus_state);
 		log::info!("This is inner any consensus state {:?}", inner_any);
-		let chain_account = self.get_chain_storage().await;
-		let block_header = if !self.common_state.handshake_completed && at_height {
-			log::info!("Fetching previous block header");
-			events::get_header_from_height(
-				self.rpc_client(),
-				self.solana_ibc_program_id,
-				at.revision_height,
-			)
-			.await
-			.expect(&format!("No block header found for height {:?}", at.revision_height))
-		} else {
-			log::info!("Fetching latest header");
-			chain_account.head().unwrap().clone()
-		};
-		// let block_header = chain_account.head().unwrap().clone();
-		log::info!(
-			"proof {:?} state root {:?}, trie key {:?} and value {:?} and trie root {:?}",
-			consensus_state_proof,
-			block_header.state_root,
-			consensus_state_trie_key,
-			val,
-			trie.hash()
-		);
-		let result = consensus_state_proof.verify(
-			&block_header.state_root,
-			&consensus_state_trie_key,
-			val.as_ref(),
-		);
-		log::info!("Result {}", result);
 		Ok(QueryConsensusStateResponse {
 			consensus_state: Some(cs_state.into()),
-			proof: borsh::to_vec(&(block_header, &consensus_state_proof)).unwrap(),
+			proof: borsh::to_vec(&consensus_state_proof).unwrap(),
 			proof_height: Some(at.into()),
 		})
 	}
@@ -483,7 +389,7 @@ deserialize consensus state"
 		client_id: ClientId,
 	) -> Result<QueryClientStateResponse, Self::Error> {
 		log::info!("Quering solana client state at height {:?} {:?}", at, client_id);
-		let (trie, at_height) = self.get_trie(at.revision_height, true).await;
+		let (trie, at_height) = self.get_trie(at.revision_height, false).await;
 		let storage = self.get_ibc_storage().await;
 		let new_client_id =
 			ibc_core_host_types::identifiers::ClientId::from_str(client_id.as_str()).unwrap();
@@ -495,7 +401,7 @@ deserialize consensus state"
 		let client_state = events::get_client_state_at_height(
 			self.rpc_client(),
 			self.solana_ibc_program_id,
-			at.revision_height,
+			at.revision_height + 1,
 		)
 		.await
 		.unwrap_or_else(|| {
@@ -522,44 +428,9 @@ deserialize client state"
 		// log::info!("This is inner any client state {:?}", inner_any);
 		let any_client_state = convert_new_client_state_to_old(client_state);
 		let chain_account = self.get_chain_storage().await;
-		let block_header = if !self.common_state.handshake_completed && at_height {
-			log::info!("Fetching previous block header");
-			events::get_header_from_height(
-				self.rpc_client(),
-				self.solana_ibc_program_id,
-				at.revision_height,
-			)
-			.await
-			.expect(&format!("No block header found for height {:?}", at.revision_height))
-		} else {
-			log::info!("Fetching latest header");
-			chain_account.head().unwrap().clone()
-		};
-		// let block_header = chain_account.head().unwrap().clone();
-		log::info!(
-			"proof {:?} state root {:?}, trie key {:?} and value {:?}",
-			client_state_proof,
-			block_header.state_root,
-			client_state_trie_key,
-			val
-		);
-		let state_any = any_client_state.clone().encode_vec();
-		log::info!(
-			"This is any client state {:?} and any client state {:?}",
-			state_any,
-			Into::<Any>::into(any_client_state.clone())
-		);
-		let hash = cf_guest::digest_with_client_id(&client_id, state_any.as_slice());
-		log::info!("hash proof {:?} and derived hash {}", val, hash);
-		let result = client_state_proof.verify(
-			&block_header.state_root,
-			&client_state_trie_key,
-			val.as_ref(),
-		);
-		log::info!("Result {}", result);
 		Ok(QueryClientStateResponse {
 			client_state: Some(any_client_state.into()),
-			proof: borsh::to_vec(&(block_header, &client_state_proof)).unwrap(),
+			proof: borsh::to_vec(&client_state_proof).unwrap(),
 			proof_height: Some(at.into()),
 		})
 	}
@@ -570,16 +441,7 @@ deserialize client state"
 		connection_id: ConnectionId,
 	) -> Result<QueryConnectionResponse, Self::Error> {
 		use ibc_proto_new::Protobuf;
-		let chain_account = self.get_chain_storage().await;
-		let proof_height =
-			if u64::from(chain_account.head().unwrap().block_height) == at.revision_height {
-				log::info!("Using existing proof height {}", at.revision_height);
-				at.revision_height
-			} else {
-				log::info!("Using incremented proof height {}", at.revision_height + 1);
-				at.revision_height
-			};
-		let (trie, at_height) = self.get_trie(proof_height, true).await;
+		let (trie, at_height) = self.get_trie(at.revision_height, false).await;
 		let storage = self.get_ibc_storage().await;
 		let connection_idx = ConnectionIdx::try_from(
 			ibc_core_host_types::identifiers::ConnectionId::from_str(connection_id.as_str())
@@ -615,10 +477,6 @@ deserialize client state"
 		log::info!("This is new connection end {:?}", inner_connection_end);
 		log::info!("Borsh serialized connection end {:?}", borsh::to_vec(&inner_connection_end));
 		log::info!("This is in any {:?}", inner_connection_end.clone().encode_vec());
-		log::info!(
-			"What i get hashed value {:?}",
-			CryptoHash::digest(inner_connection_end.clone().encode_vec().as_slice())
-		);
 		log::info!("This is the hashed value {:?}", val);
 		let inner_any = inner_connection_end.clone().encode_vec();
 		let inner_counterparty = inner_connection_end.counterparty();
@@ -647,50 +505,9 @@ deserialize client state"
 			}),
 			delay_period: inner_connection_end.delay_period().as_nanos() as u64,
 		};
-		log::info!("This is after connection end {:?}", connection_end);
-		log::info!(
-			"Proof height {:?}, Latest Height {:?}",
-			proof_height,
-			chain_account.head().unwrap().block_height
-		);
-		log::info!("at height {:?}", at_height);
-		let block_header = if !self.common_state.handshake_completed && at_height {
-			log::info!("Fetching previous block header");
-			events::get_header_from_height(
-				self.rpc_client(),
-				self.solana_ibc_program_id,
-				proof_height,
-			)
-			.await
-			.expect(&format!("No block header found for height {:?}", at.revision_height))
-		} else {
-			log::info!("Fetching latest header");
-			chain_account.head().unwrap().clone()
-		};
-		// let block_header = chain_account.head().unwrap().clone();
-		log::info!(
-			"proof {:?} state root {:?}, trie key {:?} and value {:?}",
-			connection_end_proof,
-			block_header.state_root,
-			connection_end_trie_key,
-			val
-		);
-		log::info!("Block header {:?}", block_header);
-		let result = connection_end_proof.verify(
-			&block_header.state_root,
-			&connection_end_trie_key,
-			val.as_ref(),
-		);
-		log::info!("Result {}", result);
-		log::info!("connection end {:?}", connection_end);
-		let mut proof = borsh::to_vec(&(block_header.clone(), &connection_end_proof)).unwrap();
-		log::info!("This is proof {:?}", proof);
-		let (header, proof): (BlockHeader, sealable_trie::proof::Proof) =
-			borsh::BorshDeserialize::deserialize_reader(&mut &proof[..]).unwrap();
-		log::info!("This is deserialized proof {:?}", proof);
 		Ok(QueryConnectionResponse {
 			connection: Some(connection_end),
-			proof: borsh::to_vec(&(block_header, &connection_end_proof)).unwrap(),
+			proof: borsh::to_vec(&connection_end_proof).unwrap(),
 			proof_height: Some(at.into()),
 		})
 	}
@@ -701,7 +518,7 @@ deserialize client state"
 		channel_id: ibc::core::ics24_host::identifier::ChannelId,
 		port_id: ibc::core::ics24_host::identifier::PortId,
 	) -> Result<QueryChannelResponse, Self::Error> {
-		let (trie, at_height) = self.get_trie(at.revision_height, true).await;
+		let (trie, at_height) = self.get_trie(at.revision_height, false).await;
 		let storage = self.get_ibc_storage().await;
 		let new_port_id =
 			ibc_core_host_types::identifiers::PortId::from_str(port_id.as_str()).unwrap();
@@ -713,6 +530,7 @@ deserialize client state"
 		let (_, channel_end_proof) = trie
 			.prove(&channel_end_trie_key)
 			.map_err(|_| Error::Custom("value is sealed and cannot be fetched".to_owned()))?;
+		log::info!("This is channel end path {:?}", channel_end_path);
 		let inner_channel_end = storage
 			.port_channel
 			.deref()
@@ -752,23 +570,9 @@ deserialize client state"
 				.collect(),
 			version: inner_channel_end.version.to_string(),
 		};
-		let block_header = if !self.common_state.handshake_completed && at_height {
-			log::info!("Fetching previous block header");
-			events::get_header_from_height(
-				self.rpc_client(),
-				self.solana_ibc_program_id,
-				at.revision_height,
-			)
-			.await
-			.expect(&format!("No block header found for height {:?}", at.revision_height))
-		} else {
-			log::info!("Fetching latest block header");
-			let chain_account = self.get_chain_storage().await;
-			chain_account.head().unwrap().clone()
-		};
 		Ok(QueryChannelResponse {
 			channel: Some(channel_end),
-			proof: borsh::to_vec(&(block_header, &channel_end_proof)).unwrap(),
+			proof: borsh::to_vec(&channel_end_proof).unwrap(),
 			proof_height: Some(at.into()),
 		})
 	}
@@ -864,30 +668,7 @@ deserialize client state"
 		let (val, proof) = trie
 			.prove(&trie_key)
 			.map_err(|_| Error::Custom("value is sealed and cannot be fetched".to_owned()))?;
-		log::info!("This is proof {:?}", proof);
-		let chain_account = self.get_chain_storage().await;
-		let block_header_at_height = if at_height {
-			log::info!("Fetching block header at height");
-			events::get_header_from_height(
-				self.rpc_client(),
-				self.solana_ibc_program_id,
-				at.revision_height,
-			)
-			.await
-			.expect(&format!("No block header found for height {:?}", at.revision_height))
-		} else {
-			log::info!("Block header not found at height, so fetching latest height");
-			chain_account.head().unwrap().clone()
-		};
-		let result = proof.verify(&block_header_at_height.state_root, &trie_key, val.as_ref());
-		log::info!("latest Block header height {}", block_header_at_height.block_height);
-		log::info!("state root {:?}", &block_header_at_height.state_root);
-		log::info!("trie root {:?}", &trie.hash());
-		log::info!("trie key {:?}", trie_key);
-		log::info!("Value {:?}", val.as_ref());
-		log::info!("This is value in proof verify {:?}", val);
-		log::info!("This is result of time out packet proof verify lts {:?}", result);
-		Ok(borsh::to_vec(&(block_header_at_height.clone(), &proof)).unwrap())
+		Ok(borsh::to_vec(&proof).unwrap())
 	}
 
 	async fn query_packet_commitment(
@@ -897,7 +678,7 @@ deserialize client state"
 		channel_id: &ibc::core::ics24_host::identifier::ChannelId,
 		seq: u64,
 	) -> Result<QueryPacketCommitmentResponse, Self::Error> {
-		let (trie, at_height) = self.get_trie(at.revision_height, true).await;
+		let (trie, at_height) = self.get_trie(at.revision_height, false).await;
 		let new_port_id =
 			ibc_core_host_types::identifiers::PortId::from_str(port_id.as_str()).unwrap();
 		let new_channel_id =
@@ -914,17 +695,10 @@ deserialize client state"
 			.map_err(|_| Error::Custom("value is sealed and cannot be fetched".to_owned()))?;
 		let commitment =
 			packet_commitment.ok_or(Error::Custom("No value at given key".to_owned()))?;
-		let block_header = events::get_header_from_height(
-			self.rpc_client(),
-			self.solana_ibc_program_id,
-			at.revision_height,
-		)
-		.await
-		.expect(&format!("No block header found for height {:?}", at.revision_height));
 		log::info!("This is packet commitment {:?}", commitment.0.to_vec());
 		Ok(QueryPacketCommitmentResponse {
 			commitment: commitment.0.to_vec(),
-			proof: borsh::to_vec(&(block_header, &packet_commitment_proof)).unwrap(),
+			proof: borsh::to_vec(&packet_commitment_proof).unwrap(),
 			proof_height: Some(at.into()),
 		})
 	}
@@ -936,7 +710,7 @@ deserialize client state"
 		channel_id: &ibc::core::ics24_host::identifier::ChannelId,
 		seq: u64,
 	) -> Result<QueryPacketAcknowledgementResponse, Self::Error> {
-		let (trie, at_height) = self.get_trie(at.revision_height, true).await;
+		let (trie, at_height) = self.get_trie(at.revision_height, false).await;
 		let new_port_id =
 			ibc_core_host_types::identifiers::PortId::from_str(port_id.as_str()).unwrap();
 		let new_channel_id =
@@ -956,17 +730,10 @@ deserialize client state"
 			.prove(&packet_ack_trie_key)
 			.map_err(|_| Error::Custom("value is sealed and cannot be fetched".to_owned()))?;
 		let ack = packet_ack.ok_or(Error::Custom("No value at given key".to_owned()))?;
-		let block_header = events::get_header_from_height(
-			self.rpc_client(),
-			self.solana_ibc_program_id,
-			at.revision_height,
-		)
-		.await
-		.expect(&format!("No block header found for height {:?}", at.revision_height));
 		log::info!("This is packet ack {:?}", ack.0.to_vec());
 		Ok(QueryPacketAcknowledgementResponse {
 			acknowledgement: ack.0.to_vec(),
-			proof: borsh::to_vec(&(block_header, packet_ack_proof)).unwrap(),
+			proof: borsh::to_vec(&packet_ack_proof).unwrap(),
 			proof_height: Some(at.into()),
 		})
 	}
@@ -977,7 +744,7 @@ deserialize client state"
 		port_id: &ibc::core::ics24_host::identifier::PortId,
 		channel_id: &ibc::core::ics24_host::identifier::ChannelId,
 	) -> Result<QueryNextSequenceReceiveResponse, Self::Error> {
-		let (trie, at_height) = self.get_trie(at.revision_height, true).await;
+		let (trie, at_height) = self.get_trie(at.revision_height, false).await;
 		let storage = self.get_ibc_storage().await;
 		let new_port_id =
 			ibc_core_host_types::identifiers::PortId::from_str(port_id.as_str()).unwrap();
@@ -1011,7 +778,7 @@ deserialize client state"
 		channel_id: &ibc::core::ics24_host::identifier::ChannelId,
 		seq: u64,
 	) -> Result<QueryPacketReceiptResponse, Self::Error> {
-		let (trie, at_height) = self.get_trie(at.revision_height, true).await;
+		let (trie, at_height) = self.get_trie(at.revision_height, false).await;
 		let new_port_id =
 			ibc_core_host_types::identifiers::PortId::from_str(port_id.as_str()).unwrap();
 		let new_channel_id =
@@ -1036,12 +803,10 @@ deserialize client state"
 	async fn latest_height_and_timestamp(
 		&self,
 	) -> Result<(Height, ibc::timestamp::Timestamp), Self::Error> {
-		let chain = self.get_chain_storage().await;
-		let block_header = chain.head().unwrap();
-		let height = block_header.block_height.into();
-		let timestamp_ns: u64 = block_header.timestamp_ns.into();
-		log::info!("THis is the timestamp and height of solana {:?} {:?}", timestamp_ns, height);
-		Ok((Height::new(1, height), Timestamp::from_nanoseconds(timestamp_ns).unwrap()))
+		let rpc = self.rpc_client();
+		let slot = rpc.get_slot().await.unwrap();
+		let timestamp = rpc.get_block_time(slot).await.unwrap() as u64;
+		Ok((Height::new(1, slot), Timestamp::from_nanoseconds(timestamp * 10u64.pow(9)).unwrap()))
 	}
 
 	async fn query_packet_commitments(
@@ -1207,7 +972,7 @@ deserialize client state"
 					ordering,
 					counterparty: Some(ChanCounterparty {
 						port_id: channel.counterparty().port_id.to_string(),
-						channel_id: "".to_string(),
+						channel_id: channel.counterparty().channel_id.clone().unwrap().to_string(),
 					}),
 					connection_hops: channel
 						.connection_hops
@@ -1295,7 +1060,7 @@ deserialize client state"
 									}).expect("No height found while fetching send packet event");
 											log::info!("This is height_str {:?}", height_str);
 											let height = height_str.parse::<u64>().unwrap();
-											return Some((packet.clone(), height + 1));
+											return Some((packet.clone(), tx.result.slot));
 										}
 										if *maximum_sequence_number > packet.seq_on_a().value() {
 											is_sequence_greater = true;
@@ -1398,7 +1163,7 @@ deserialize client state"
 									is_maximum_seq_found = true;
 								}
 								log::info!("Found receive packet");
-								Some((e.clone(), proof_height + 1))
+								Some((e.clone(), tx.result.slot))
 							} else {
 								if *maximum_sequence_number > packet.seq_on_a().value() {
 									is_sequence_greater = true;
@@ -1453,7 +1218,7 @@ deserialize client state"
 
 	fn expected_block_time(&self) -> Duration {
 		// solana block time is roughly 400 milliseconds
-		Duration::ZERO
+		Duration::from_millis(400)
 	}
 
 	async fn query_client_update_time_and_height(
@@ -1501,7 +1266,7 @@ deserialize client state"
 		client_state: &pallet_ibc::light_clients::AnyClientState,
 	) -> Result<Option<Vec<u8>>, Self::Error> {
 		let height = client_state.latest_height();
-		let (trie, at_height) = self.get_trie(height.revision_height, true).await;
+		let (trie, at_height) = self.get_trie(height.revision_height, false).await;
 		let client_id = self.client_id();
 		let new_client_id =
 			ibc_core_host_types::identifiers::ClientId::from_str(client_id.as_str()).unwrap();
@@ -1709,45 +1474,29 @@ deserialize client state"
 		(pallet_ibc::light_clients::AnyClientState, pallet_ibc::light_clients::AnyConsensusState),
 		Self::Error,
 	> {
-		let latest_height_timestamp = self.latest_height_and_timestamp().await?;
-		println!("This is height on solana {:?}", latest_height_timestamp);
-		let chain_account = self.get_chain_storage().await;
-		let header = chain_account.head().unwrap().clone();
-		let blockhash = header.calc_hash();
-		let validators = chain_account.validators().unwrap();
-		let all_validators = validators
-			.iter()
-			.map(|validator| {
-				let new_validator: Validator<pallet_ibc::light_clients::PubKey> = Validator::new(
-					PubKey::from_bytes(&validator.pubkey.to_vec()).unwrap(),
-					validator.stake,
-				);
-				new_validator
-			})
-			.collect();
-		let epoch = Epoch::new_with(all_validators, |total| {
-			let quorum = NonZeroU128::new(total.get() / 2 + 1).unwrap();
-			// min_quorum_stake may be greater than total_stake so we’re not
-			// using .clamp to make sure we never return value higher than
-			// total_stake.
-			println!("This is total {:?} and quorum {:?}", total, quorum);
-			quorum.max(NonZeroU128::new(1000).unwrap()).min(total)
-		})
-		.unwrap();
-		let client_state = cf_guest::ClientState::new(
-			chain_account.genesis().unwrap(),
-			header.block_height,
-			640000 * 10_u64.pow(9),
-			epoch.calc_commitment(),
-			None,
-			false,
-		);
-		log::info!("This is epoch id {:?}", header.epoch_id);
-		let consensus_state = cf_guest_og::ConsensusState {
-			block_hash: blockhash.to_vec().into(),
-			timestamp_ns: header.timestamp_ns,
+		let (height, timestamp) = self.latest_height_and_timestamp().await?;
+		println!("This is height on solana {:?} and timestamp {:?}", height, timestamp);
+		let (trie_data, _at_height) = self.get_trie(0, false).await;
+		let witness_key = self.get_witness_key();
+		let storage = self.get_ibc_storage().await;
+		let (slot, slot_timestamp, trie_root) =
+			storage.local_consensus_state.iter().last().unwrap();
+		let slot_time = self.rpc_client().get_block_time(slot.clone()).await.unwrap();
+		log::info!("Slot time and timestamp\n{}\n{}", slot_time, slot_timestamp);
+		let client_state = cf_solana_og::ClientState {
+			latest_slot: NonZeroU64::new(slot.clone()).unwrap(),
+			witness_account: witness_key.into(),
+			trusting_period_ns: 86400 * 7 * 10u64.pow(9), // 1 week
+			is_frozen: false,
 		};
-		Ok((AnyClientState::Guest(client_state), AnyConsensusState::Guest(consensus_state.into())))
+		let consensus_state = cf_solana_og::ConsensusState {
+			trie_root: CommitmentRoot::from_bytes(trie_root.as_slice()),
+			timestamp_sec: NonZeroU64::new(slot_time as u64).unwrap(),
+		};
+		Ok((
+			AnyClientState::Rollup(cf_solana::ClientState(client_state)),
+			AnyConsensusState::Rollup(cf_solana::ConsensusState(consensus_state.into())),
+		))
 	}
 
 	async fn query_client_id_from_tx_hash(
@@ -1880,7 +1629,7 @@ deserialize client state"
 	}
 }
 
-impl KeyProvider for SolanaClient {
+impl KeyProvider for RollupClient {
 	fn account_id(&self) -> ibc::signer::Signer {
 		let key_entry = &self.keybase;
 		let public_key = key_entry.public_key;
@@ -1889,7 +1638,7 @@ impl KeyProvider for SolanaClient {
 }
 
 #[async_trait::async_trait]
-impl MisbehaviourHandler for SolanaClient {
+impl MisbehaviourHandler for RollupClient {
 	async fn check_for_misbehaviour<C: Chain>(
 		&self,
 		_counterparty: &C,
@@ -1900,7 +1649,7 @@ impl MisbehaviourHandler for SolanaClient {
 }
 
 #[async_trait::async_trait]
-impl LightClientSync for SolanaClient {
+impl LightClientSync for RollupClient {
 	async fn is_synced<C: Chain>(&self, _counterparty: &C) -> Result<bool, anyhow::Error> {
 		Ok(true)
 	}
@@ -2004,7 +1753,7 @@ impl LightClientSync for SolanaClient {
 }
 
 #[async_trait::async_trait]
-impl Chain for SolanaClient {
+impl Chain for RollupClient {
 	fn name(&self) -> &str {
 		&self.name
 	}
@@ -2025,67 +1774,91 @@ impl Chain for SolanaClient {
 	> {
 		let (tx, rx) = unbounded_channel();
 		let ws_url = self.ws_url.clone();
+		// let client = PubsubClient::new(&ws_url).await.unwrap();
 		let program_id = self.solana_ibc_program_id;
-		tokio::task::spawn_blocking(move || {
-			let (_logs_subscription, receiver) = PubsubClient::logs_subscribe(
-				&ws_url,
-				RpcTransactionLogsFilter::Mentions(vec![program_id.to_string()]),
-				RpcTransactionLogsConfig { commitment: Some(CommitmentConfig::finalized()) },
-			)
-			.unwrap();
+		// tokio::task::spawn_blocking(move || {
+		// let (mut stream, receiver) = client
+		// 	.block_subscribe(
+		// 		// &ws_url,
+		// 		// RpcBlockSubscribeFilter::MentionsAccountOrProgram(program_id.to_string()),
+		// 		RpcBlockSubscribeFilter::All,
+		// 		Some(RpcBlockSubscribeConfig {
+		// 			commitment: Some(CommitmentConfig::finalized()),
+		// 			..Default::default()
+		// 		}),
+		// 	)
+		// 	.await
+		// 	.unwrap();
 
-			loop {
-				match receiver.recv() {
-					Ok(logs) => {
-						let (events, _proof_height) =
-							events::get_events_from_logs(logs.clone().value.logs);
-						let finality_events: Vec<&solana_ibc::events::BlockFinalised> = events
-							.iter()
-							.filter_map(|event| match event {
-								Event::BlockFinalised(e) => Some(e),
-								_ => None,
-							})
-							.collect();
-						// Only one finality event is emitted in a transaction
-						if !finality_events.is_empty() {
-							log::info!("Found finality event");
-							let mut broke = false;
-							assert_eq!(finality_events.len(), 1);
-							let finality_event = finality_events[0].clone();
-							let finality_event = FinalityEvent::Guest {
-								blockhash: finality_event.block_hash,
-								block_height: u64::from(finality_event.block_height),
-							};
-							let _ = tx.send(finality_event).map_err(|_| broke = true);
-							if broke {
-								break;
-							}
-						}
-					},
-					Err(err) => {
-						panic!("{}", format!("Disconnected: {err}"));
-					},
+		// loop {
+		// 	match stream.next().await {
+		// 		Some(block) => {
+		// 			// sleep(Duration::from_secs(10));
+		// 			// log::info!("Found rollup event");
+		// 			let block = block.value;
+		// 			let confirmed_block = block.block.unwrap();
+		// 			// log::info!("Found finality event");
+		// 			let mut broke = false;
+		// 			let finality_event = FinalityEvent::Rollup {
+		// 				slot: block.slot,
+		// 				previous_blockhash: confirmed_block.previous_blockhash,
+		// 				blockhash: confirmed_block.blockhash,
+		// 			};
+		// 			let _ = tx.send(finality_event).map_err(|_| broke = true);
+		// 			if broke {
+		// 				break;
+		// 			}
+		// 		},
+		// 		None => {
+		// 			log::error!("Disconnected: ");
+		// 			// continue;
+		// 		},
+		// 	}
+		// }
+		// });
+		// Spawn a new task to handle the stream
+		// Spawn a new task to handle the stream
+		tokio::spawn(async move {
+			let client = PubsubClient::new(&ws_url).await.unwrap();
+			let (mut stream, _receiver) = client
+				.block_subscribe(
+					// RpcBlockSubscribeFilter::All,
+					RpcBlockSubscribeFilter::MentionsAccountOrProgram(program_id.to_string()),
+					Some(RpcBlockSubscribeConfig {
+						commitment: Some(CommitmentConfig::finalized()),
+						..Default::default()
+					}),
+				)
+				.await
+				.unwrap();
+
+			while let Some(block) = stream.next().await {
+				let block = block.value;
+				if let Some(confirmed_block) = block.block {
+					let finality_event = FinalityEvent::Rollup {
+						slot: block.slot,
+						previous_blockhash: confirmed_block.previous_blockhash,
+						blockhash: confirmed_block.blockhash,
+					};
+					if tx.send(finality_event).is_err() {
+						// The receiver has been dropped, exit the loop
+						break;
+					}
 				}
 			}
+			log::info!("Finality notifications stream ended");
 		});
 
 		let streams = tokio_stream::wrappers::UnboundedReceiverStream::new(rx);
+		log::info!("THis is stream {:?}", streams);
 		Ok(Box::pin(streams))
 	}
 
 	async fn submit(&self, messages: Vec<Any>) -> Result<Self::TransactionId, Error> {
 		let keypair = self.keybase.keypair();
-		log::info!("submitting tx now, {} with messages {}", keypair.pubkey(), messages.len());
-		log::info!("Messages {:?}", messages);
+		log::info!("submitting tx now, {}", keypair.pubkey());
 		let authority = Arc::new(keypair);
 		let program = self.program();
-
-		if *self.is_transaction_processing.lock().unwrap() {
-			log::info!("Waiting for other thread to complete");
-			sleep(Duration::from_millis(500))
-		}
-
-		*self.is_transaction_processing.lock().unwrap() = true;
 
 		// Build, sign, and send program instruction
 		let mut signature = String::new();
@@ -2093,8 +1866,6 @@ impl Chain for SolanaClient {
 
 		let mut all_transactions = Vec::new();
 		let mut index = -1;
-
-		let mut messages_indeed = vec![];
 
 		for message in messages {
 			let storage = self.get_ibc_storage().await;
@@ -2107,8 +1878,6 @@ impl Chain for SolanaClient {
 				});
 			let instruction_len = instruction_data.len() as u32;
 			instruction_data.splice(..0, instruction_len.to_le_bytes());
-
-			messages_indeed.push(message.clone());
 
 			let balance = program.async_rpc().get_balance(&authority.pubkey()).await.unwrap();
 			log::info!("This is balance {}", balance);
@@ -2154,19 +1923,18 @@ impl Chain for SolanaClient {
 			// }
 
 			let (signature_chunking_transactions, further_transactions) =
-				// if let MsgEnvelope::Client(ClientMsg::UpdateClient(e)) = message {
-				// 	self.send_deliver(
-				// 		DeliverIxType::UpdateClient {
-				// 			client_message: e.client_message,
-				// 			client_id: e.client_id,
-				// 		},
-				// 		chunk_account,
-				// 		max_tries,
-				// 	)
-				// 	.await?
-				// // msg!("Packet Update Signature {:?}", signature);
-				// } else
-				 if let MsgEnvelope::Packet(PacketMsg::Recv(e)) = message {
+				if let MsgEnvelope::Client(ClientMsg::UpdateClient(e)) = message {
+					self.send_deliver(
+						DeliverIxType::UpdateClient {
+							client_message: e.client_message,
+							client_id: e.client_id,
+						},
+						chunk_account,
+						max_tries,
+					)
+					.await?
+				// msg!("Packet Update Signature {:?}", signature);
+				} else if let MsgEnvelope::Packet(PacketMsg::Recv(e)) = message {
 					let packet_data: ibc_app_transfer_types::packet::PacketData =
 						serde_json::from_slice(&e.packet.data).unwrap();
 					self.send_deliver(
@@ -2277,6 +2045,42 @@ impl Chain for SolanaClient {
 			// }
 		}
 
+		{
+			let mut last = self.last_supply_update_time.lock().await;
+
+			let now = Instant::now();
+
+			if (now - *last).as_secs() > self.supply_update_period_in_sec {
+				*last = now;
+
+				let compute_budget_ix = ComputeBudgetInstruction::set_compute_unit_limit(300_000);
+
+				let mantis_token_supply_on_l1 = self
+					.rpc_l1_client()
+					.get_token_supply(&self.solana_token_mint_pubkey)
+					.await
+					.unwrap()
+					.amount
+					.parse::<u64>()
+					.unwrap();
+
+				let ix = spl_token::instruction::update_l1_token_supply(
+					&self.solana_token_program_id,
+					&self.solana_token_mint_pubkey,
+					&[&authority.pubkey()],
+					mantis_token_supply_on_l1,
+				)
+				.unwrap();
+
+				let update_mantis_supply_ix = vec![Transaction::new_with_payer(
+					&[compute_budget_ix.clone(), ix],
+					Some(&authority.pubkey()),
+				)];
+
+				all_transactions.push(update_mantis_supply_ix);
+			}
+		}
+
 		let total_transactions_length = all_transactions.iter().fold(0, |acc, tx| acc + tx.len());
 		let mut failure = false;
 
@@ -2286,26 +2090,20 @@ impl Chain for SolanaClient {
 				log::info!("Total transactions {:?}", length);
 				let start_time = Instant::now();
 				for transactions_iter in all_transactions {
-					log::info!("Came inside all events");
 					let mut tries = 0;
 					let before_time = Instant::now();
 					for mut transaction in transactions_iter {
 						loop {
-							log::info!("Current Try in solana: {}", tries);
+							sleep(Duration::from_secs(1));
+							log::info!("Current Try in rollup: {}", tries);
 							let blockhash = rpc.get_latest_blockhash().await.unwrap();
-							// log::info!(
-							// 	"Blockhash in solana {:?} and {:?}",
-							// 	blockhash,
-							// 	messages_indeed.clone()
-							// );
+							log::info!("Blockhash {:?}", blockhash);
 							transaction.sign(&[&*authority], blockhash);
 							let tx = transaction.clone();
-							// log::info!("Signed now in solana {:?}", messages_indeed.clone());
+							log::info!("Signed now ");
 							let sync_rpc = self.program().rpc();
 							let rpc = self.rpc_client();
-							let messagessss = messages_indeed.clone();
 							let sig = spawn_blocking(move || {
-								// log::info!("Sending transaction {:?}", messagessss.clone());
 								sync_rpc
 									.send_transaction_with_config(
 										&tx,
@@ -2318,6 +2116,7 @@ impl Chain for SolanaClient {
 									.unwrap()
 							})
 							.await;
+
 							log::info!("This is sig {:?}", sig);
 
 							if let Ok(si) = sig {
@@ -2339,7 +2138,6 @@ impl Chain for SolanaClient {
 											);
 											success = true;
 											failure = true;
-											log::error!("Failure {}", failure);
 											break;
 										},
 										None => {
@@ -2357,7 +2155,6 @@ impl Chain for SolanaClient {
 												break;
 											} else if status_retry < usize::MAX {
 												// Retry twice a second
-												log::info!("Retyring since blockhash is not valid");
 												sleep(Duration::from_millis(500));
 												continue;
 											}
@@ -2367,13 +2164,11 @@ impl Chain for SolanaClient {
 								if !success {
 									tries += 1;
 									continue;
-									sleep(Duration::from_secs(1));
 								}
 								break;
 							} else {
 								log::error!("Error {:?}", sig);
 								tries += 1;
-								sleep(Duration::from_secs(1));
 								continue;
 							}
 						}
@@ -2382,7 +2177,6 @@ impl Chain for SolanaClient {
 						let success_rate = 100 / (tries + 1);
 						log::info!("Time taken {}", diff.as_millis());
 						log::info!("Success rate {}", success_rate);
-						log::info!("Failure {}", failure);
 					}
 				}
 				let end_time = Instant::now();
@@ -2513,8 +2307,6 @@ impl Chain for SolanaClient {
 			}
 		}
 
-		*self.is_transaction_processing.lock().unwrap() = false;
-		log::info!("Finished processing transaction");
 		Ok(signature)
 	}
 
@@ -2587,34 +2379,61 @@ impl Chain for SolanaClient {
 	}
 }
 
+// // #[tokio::test]
 // #[test]
-// pub fn test_seq() {
-// 	let program_id = Pubkey::from_str("2HLLVco5HvwWriNbUhmVwA2pCetRkpgrqwnjcsZdyTKT").unwrap();
-// 	let port_id = PortId::from_str("transfer").unwrap();
-// 	let channel_id = ChannelId::from_str("channel-0").unwrap();
-// 	let rpc_client = RpcClient::new("https://api.devnet.solana.com".to_string());
-// 	let trie_seeds = &[TRIE_SEED];
-// 	let trie_key = Pubkey::find_program_address(trie_seeds, &program_id).0;
-// 	let trie_account = rpc_client
-// 		.get_account_with_commitment(&trie_key, CommitmentConfig::processed())
-// 		// .await
-// 		.unwrap()
-// 		.value
-// 		.unwrap();
-// 	let trie = solana_trie::TrieAccount::new(trie_account.data).unwrap();
-// 	let new_port_id = ibc_core_host_types::identifiers::PortId::from_str(port_id.as_str()).unwrap();
-// 	let new_channel_id = ibc_core_host_types::identifiers::ChannelId::new(channel_id.sequence());
-// 	let trie_comp = PortChannelPK::try_from(new_port_id, new_channel_id).unwrap();
-// 	let key = TrieKey::new(Tag::Receipt, trie_comp);
-// 	let packet_receipt_sequences: Vec<u64> = trie
-// 		.get_subtrie(&key)
-// 		.unwrap()
-// 		.iter()
-// 		.map(|c| {
-// 			u64::from_be_bytes(
-// 				Vec::<u8>::try_from(c.sub_key.clone()).unwrap().as_slice().try_into().unwrap(),
-// 			)
-// 		})
-// 		.collect();
-// 	println!("{:?}", packet_receipt_sequences);
+// pub fn test_rollup_client() {
+// 	println!("Starting");
+// 	let bytes = vec![
+// 		85, 115, 101, 100, 32, 72, 84, 84, 80, 32, 77, 101, 116, 104, 111, 100, 32, 105, 115, 32,
+// 		110, 111, 116, 32, 97, 108, 108, 111, 119, 101, 100, 46, 32, 80, 79, 83, 84, 32, 111, 114,
+// 		32, 79, 80, 84, 73, 79, 78, 83, 32, 105, 115, 32, 114, 101, 113, 117, 105, 114, 101, 100,
+// 		10,
+// 	];
+
+// 	match String::from_utf8(bytes) {
+// 		Ok(s) => println!("Converted string: {}", s),
+// 		Err(e) => println!("Failed to convert bytes to string: {}", e),
+// 	}
+// 	// let (tx, rx) = unbounded_channel();
+// 	// let ws_url = "wss://mantis-testnet-rollup.composable-shared-artifacts.composablenodes.tech/ws";
+// 	let ws_url = "wss://devnet.helius-rpc.com/?api-key=5ae782d8-6bf6-489c-b6df-ef7e6289e193";
+// 	let program_id = "2HLLVco5HvwWriNbUhmVwA2pCetRkpgrqwnjcsZdyTKT";
+// 	// tokio::task::spawn_blocking(move || {
+// 	let (_block_subscription, receiver) = PubsubClient::logs_subscribe(
+// 		&ws_url,
+// 		// RpcBlockSubscribeFilter::MentionsAccountOrProgram(program_id.to_string()),
+// 		// RpcBlockSubscribeFilter::All,
+// 		RpcTransactionLogsFilter::All,
+// 		RpcTransactionLogsConfig { commitment: Some(CommitmentConfig::finalized()) },
+// 	)
+// 	.unwrap();
+
+// 	loop {
+// 		match receiver.recv() {
+// 			Ok(block) => {
+// 				// sleep(Duration::from_secs(10));
+// 				log::info!("Found rollup event");
+// 				// let block = block.value;
+// 				// let confirmed_block = block.block.unwrap();
+// 				// // log::info!("Found finality event");
+// 				// let mut broke = false;
+// 				// let finality_event = FinalityEvent::Rollup {
+// 				// 	slot: block.slot,
+// 				// 	previous_blockhash: confirmed_block.previous_blockhash,
+// 				// 	blockhash: confirmed_block.blockhash,
+// 				// };
+// 				// let _ = tx.send(finality_event).map_err(|_| broke = true);
+// 				// if broke {
+// 				// 	break;
+// 				// }
+// 			},
+// 			Err(err) => {
+// 				panic!("{}", format!("Disconnected: {err}"));
+// 			},
+// 		}
+// 	}
+// 	// });
+
+// 	// let streams = tokio_stream::wrappers::UnboundedReceiverStream::new(rx);
+// 	// println!("Streams: {:?}", streams);
 // }

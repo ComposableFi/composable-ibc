@@ -329,6 +329,7 @@ pub async fn parse_events(
 				}
 			},
 			IbcEvent::OpenInitChannel(open_init) => {
+				log::info!("Came inside open init channel {:?}", open_init);
 				if let Some(channel_id) = open_init.channel_id {
 					let channel_response = source
 						.query_channel_end(
@@ -390,6 +391,8 @@ pub async fn parse_events(
 						signer: sink.account_id(),
 					};
 
+					log::info!("This is channel open try {:?}", msg);
+
 					let value = msg.clone().encode_vec();
 					let msg = Any { value, type_url: msg.type_url() };
 					messages.push(msg)
@@ -397,9 +400,11 @@ pub async fn parse_events(
 			},
 			IbcEvent::OpenTryChannel(open_try) =>
 				if let Some(channel_id) = open_try.channel_id {
+					log::info!("This is open try channel open try {:?}", open_try);
 					let channel_response = source
 						.query_channel_end(open_try.height(), channel_id, open_try.port_id.clone())
 						.await?;
+					log::info!("After query channel end");
 					let channel_end =
 						ChannelEnd::try_from(channel_response.channel.ok_or_else(|| {
 							Error::Custom(format!(

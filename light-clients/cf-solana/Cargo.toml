@@ -1,7 +1,7 @@
 [package]
-name = "cf-guest"
-authors = ["Michal Nazarewicz <mina86@mina86.com>"]
-version = "0.0.1"
+name = "cf-solana"
+authors = ["Michal Nazarewicz <mina86@mina86.com>", "Dhruv D Jain <dhruv@iamsizzling.com>"]
+version = "0.1.0"
 edition = "2021"
 
 [dependencies]
@@ -32,7 +32,7 @@ lib               = { git = "https://github.com/ComposableFi/emulated-light-clie
 trie-ids          = { git = "https://github.com/ComposableFi/emulated-light-client/", default-features = false }
 sealable-trie     = { git = "https://github.com/ComposableFi/emulated-light-client/", features = ["borsh"], default-features = false }
 stdx              = { git = "https://github.com/ComposableFi/emulated-light-client/", default-features = false }
-cf-guest-upstream = { package = "cf-guest", git = "https://github.com/ComposableFi/emulated-light-client/", default-features = false }
+cf-solana-upstream = { package = "cf-solana", git = "https://github.com/ComposableFi/emulated-light-client/", default-features = false }
 
 [build-dependencies]
 prost-build = { version = "0.11", default-features = false }

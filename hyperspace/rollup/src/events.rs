@@ -628,6 +628,7 @@ pub async fn get_signatures_upto_height(
 			};
 			let (events, _proof_height) = get_events_from_logs(logs.clone());
 			let (ibc_events, _) = get_ibc_events_from_logs(logs);
+			all_ibc_events.extend(ibc_events);
 			for event in events {
 				match event {
 					solana_ibc::events::Event::NewBlock(e) => {
@@ -656,7 +657,6 @@ pub async fn get_signatures_upto_height(
 			if current_height < upto_height {
 				break;
 			}
-			all_ibc_events.extend(ibc_events);
 		}
 	}
 	(
@@ -687,6 +687,44 @@ pub async fn get_signatures_upto_height(
 	)
 }
 
+pub async fn get_events_upto_height(
+	rpc: RpcClient,
+	program_id: Pubkey,
+	upto_height: u64,
+) -> Vec<ibc_core_handler_types::events::IbcEvent> {
+	let mut current_height = rpc.get_slot().await.unwrap();
+	let mut before_hash = None;
+	let mut all_ibc_events = vec![];
+	while current_height >= upto_height {
+		let (transactions, last_searched_hash) =
+			get_previous_transactions(&rpc, program_id, before_hash, SearchIn::GuestChain).await;
+		if transactions.is_empty() {
+			break;
+		}
+		before_hash = Some(
+			anchor_client::solana_sdk::signature::Signature::from_str(&last_searched_hash).unwrap(),
+		);
+		for tx in transactions {
+			current_height = tx.result.slot;
+			if current_height < upto_height {
+				break;
+			}
+			let transaction_err = tx.result.transaction.meta.clone().unwrap().err;
+			if transaction_err.is_some() {
+				continue;
+			}
+			let logs = match tx.result.transaction.meta.clone().unwrap().log_messages {
+				solana_transaction_status::option_serializer::OptionSerializer::Some(e) => e,
+				_ => Vec::new(),
+			};
+			let (ibc_events, _) = get_ibc_events_from_logs(logs);
+			all_ibc_events.extend(ibc_events);
+			log::info!("Current height {} and upto height {}", current_height, upto_height);
+		}
+	}
+	all_ibc_events
+}
+
 pub async fn get_previous_transactions(
 	rpc: &RpcClient,
 	program_id: Pubkey,
@@ -704,7 +742,7 @@ pub async fn get_previous_transactions(
 		.get_signatures_for_address_with_config(
 			&search_address, // Since ibc storage is only used for ibc and not for guest chain
 			GetConfirmedSignaturesForAddress2Config {
-				limit: Some(100),
+				limit: Some(200),
 				before: before_hash,
 				commitment: Some(CommitmentConfig::confirmed()),
 				..Default::default()
@@ -721,7 +759,7 @@ pub async fn get_previous_transactions(
 	let mut body = vec![];
 	for sig in transaction_signatures {
 		let signature = sig.signature.clone();
-		let payload = Payload {
+		let payload = Payload::<Param> {
 			jsonrpc: "2.0".to_string(),
 			id: 1 as u64,
 			method: "getTransaction".to_string(),
@@ -749,11 +787,26 @@ pub async fn get_previous_transactions(
 }
 
 #[derive(Debug, Serialize, Deserialize)]
-pub struct Payload {
-	jsonrpc: String,
-	id: u64,
-	method: String,
-	params: (String, Param),
+pub struct Payload<T> {
+	pub jsonrpc: String,
+	pub id: u64,
+	pub method: String,
+	pub params: (String, T),
+}
+
+#[derive(Debug, Serialize, Deserialize)]
+pub struct PayloadWithoutParams {
+	pub jsonrpc: String,
+	pub id: u64,
+	pub method: String,
+}
+
+#[derive(Debug, Serialize, Deserialize)]
+pub struct PayloadWithSingleParam<T> {
+	pub jsonrpc: String,
+	pub id: u64,
+	pub method: String,
+	pub params: T,
 }
 
 #[derive(Debug, Serialize, Deserialize)]
@@ -772,6 +825,31 @@ pub struct Response {
 	pub jsonrpc: String,
 	pub id: u64,
 	pub result: EncodedConfirmedTransactionWithStatusMeta,
+}
+
+#[derive(Debug, Serialize, Deserialize)]
+pub struct TrieResponse {
+	pub jsonrpc: String,
+	pub result: (u64, SlotData),
+	pub id: u64,
+}
+
+#[derive(Debug, Serialize, Deserialize)]
+pub struct SingleTrieResponse {
+	pub jsonrpc: String,
+	pub result: SlotData,
+	pub id: u64,
+}
+
+/// Data provided by the Witnessed Trie Geyser plugin.
+#[derive(Clone, Debug, PartialEq, Eq, serde::Serialize, serde::Deserialize)]
+pub struct SlotData {
+	/// Proof of the accounts delta hash.
+	pub delta_hash_proof: cf_solana_og::proof::DeltaHashProof,
+	/// Trie root account.
+	pub root_account: cf_solana_og::proof::AccountHashData,
+	/// Proof of the witness trie.
+	pub witness_proof: cf_solana_og::proof::AccountProof,
 }
 
 #[test]
@@ -794,19 +872,16 @@ pub fn testing_signatures() {
 
 #[tokio::test]
 pub async fn testing_events_final() {
-	let rpc = RpcClient::new(
-		"https://mainnet.helius-rpc.com/?api-key=5ae782d8-6bf6-489c-b6df-ef7e6289e193".to_string(),
-	);
+	let rpc = RpcClient::new("http://127.0.0.1:8899".to_string());
 	let mut last_hash = None;
 	loop {
 		let (events, prev) = get_previous_transactions(
 			&rpc,
-			Pubkey::from_str("2HLLVco5HvwWriNbUhmVwA2pCetRkpgrqwnjcsZdyTKT").unwrap(),
+			Pubkey::from_str("9FeHRJLHJSEw4dYZrABHWTRKruFjxDmkLtPmhM5WFYL7").unwrap(),
 			last_hash,
-			SearchIn::GuestChain,
+			SearchIn::IBC,
 		)
 		.await;
-		println!("Events {:?} and prev {}", events, prev);
 		if events.is_empty() {
 			println!("No events found");
 			break;
@@ -814,6 +889,20 @@ pub async fn testing_events_final() {
 		println!("Received events {}", events.len());
 		last_hash = Some(anchor_client::solana_sdk::signature::Signature::from_str(&prev).unwrap());
 	}
+}
+
+#[test]
+pub fn test_slot_data() {
+	let url = "http://127.0.0.1:42069".to_string();
+	let body = crate::events::PayloadWithSingleParam::<Vec<u64>> {
+		jsonrpc: "2.0".to_string(),
+		id: 10,
+		method: "getSlotData".to_string(),
+		params: vec![663],
+	};
+	let response = reqwest::blocking::Client::new().post(url.clone()).json(&body).send().unwrap();
+	let response: SingleTrieResponse = response.json().unwrap();
+	println!("response {:?}", response.result);
 }
 
 #[test]

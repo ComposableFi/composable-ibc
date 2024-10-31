@@ -21,7 +21,7 @@ use crate::{
 	ContractError,
 };
 use cf_guest::{ClientState, ConsensusState};
-use cosmwasm_std::{Deps, DepsMut, Empty, Env, Storage};
+use cosmwasm_std::{Deps, DepsMut, Env, Storage};
 use ibc::{
 	core::{
 		ics02_client::{error::Error, events::Checksum},

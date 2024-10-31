@@ -34,11 +34,8 @@ use ibc_proto::{
 use prost::Message;
 use serde::{Deserialize, Serialize};
 use tendermint::{
-	block::{signed_header::SignedHeader, Commit, CommitSig},
-	crypto::signature::Verifier,
+	block::{signed_header::SignedHeader},
 	validator::Set as ValidatorSet,
-	vote::{SignedVote, ValidatorIndex},
-	PublicKey, Vote,
 };
 use tendermint_proto::Protobuf;
 

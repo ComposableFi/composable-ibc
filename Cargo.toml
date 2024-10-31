@@ -41,13 +41,14 @@ members = [
     "hyperspace/parachain",
     "hyperspace/cosmos",
     "hyperspace/solana",
+    "hyperspace/rollup",
     "hyperspace/testsuite",
     "hyperspace/metrics",
     # utilities
     "utils/subxt/codegen",
     "utils/subxt/generated",
     "utils/parachain-node",
-    "utils/parachain-node/runtime",
+    "utils/parachain-node/runtime", "light-clients/cf-solana",
     #     "utils/simnode"
 ]
 
@@ -58,21 +59,21 @@ jsonrpsee = { version = "0.16.3" }
 aes-gcm-siv = { git = "https://github.com/RustCrypto/AEADs", rev = "6105d7a5591aefa646a95d12b5e8d3f55a9214ef" }
 curve25519-dalek-new = { git = "https://github.com/dalek-cryptography/curve25519-dalek", rev = "0cd099a9fb8ff9f6fedc8723d44dbb1c743e9d35", package = "curve25519-dalek" }
 curve25519-dalek = { git = "https://github.com/solana-labs/curve25519-dalek.git", rev = "b500cdc2a920cd5bff9e2dd974d7b97349d61464" }
-anchor-client = { git = "https://github.com/dhruvja/anchor" }
-anchor-lang = { git = "https://github.com/dhruvja/anchor" }
+anchor-client = { git = "https://github.com/mina86/anchor", branch = "send-sync" }
+anchor-lang = { git = "https://github.com/mina86/anchor", branch = "send-sync" }
 
-ibc                         = { git = "https://github.com/mina86/ibc-rs", rev = "f07276383091f75b7ee8bff6fd434f8214ac5054", default-features = false, features = ["borsh", "serde"] }
-ibc-client-tendermint-types = { git = "https://github.com/mina86/ibc-rs", rev = "f07276383091f75b7ee8bff6fd434f8214ac5054", default-features = false }
-ibc-core-channel-types      = { git = "https://github.com/mina86/ibc-rs", rev = "f07276383091f75b7ee8bff6fd434f8214ac5054", default-features = false }
-ibc-core-client-context     = { git = "https://github.com/mina86/ibc-rs", rev = "f07276383091f75b7ee8bff6fd434f8214ac5054", default-features = false }
-ibc-core-client-types       = { git = "https://github.com/mina86/ibc-rs", rev = "f07276383091f75b7ee8bff6fd434f8214ac5054", default-features = false }
-ibc-core-commitment-types   = { git = "https://github.com/mina86/ibc-rs", rev = "f07276383091f75b7ee8bff6fd434f8214ac5054", default-features = false }
-ibc-core-connection-types   = { git = "https://github.com/mina86/ibc-rs", rev = "f07276383091f75b7ee8bff6fd434f8214ac5054", default-features = false }
-ibc-core-host               = { git = "https://github.com/mina86/ibc-rs", rev = "f07276383091f75b7ee8bff6fd434f8214ac5054", default-features = false }
-ibc-core-host-types         = { git = "https://github.com/mina86/ibc-rs", rev = "f07276383091f75b7ee8bff6fd434f8214ac5054", default-features = false }
-ibc-primitives              = { git = "https://github.com/mina86/ibc-rs", rev = "f07276383091f75b7ee8bff6fd434f8214ac5054", default-features = false }
-ibc-testkit                 = { git = "https://github.com/mina86/ibc-rs", rev = "f07276383091f75b7ee8bff6fd434f8214ac5054", default-features = false }
-# ibc-testkit               = { git = "https://github.com/mina86/ibc-rs", rev = "f07276383091f75b7ee8bff6fd434f8214ac5054" }
+ibc                         = { git = "https://github.com/mina86/ibc-rs", rev = "e1be8c9292c82c1e7c158067f0014fb292ee652d", default-features = false, features = ["borsh", "serde"] }
+ibc-client-tendermint-types = { git = "https://github.com/mina86/ibc-rs", rev = "e1be8c9292c82c1e7c158067f0014fb292ee652d", default-features = false }
+ibc-core-channel-types      = { git = "https://github.com/mina86/ibc-rs", rev = "e1be8c9292c82c1e7c158067f0014fb292ee652d", default-features = false }
+ibc-core-client-context     = { git = "https://github.com/mina86/ibc-rs", rev = "e1be8c9292c82c1e7c158067f0014fb292ee652d", default-features = false }
+ibc-core-client-types       = { git = "https://github.com/mina86/ibc-rs", rev = "e1be8c9292c82c1e7c158067f0014fb292ee652d", default-features = false }
+ibc-core-commitment-types   = { git = "https://github.com/mina86/ibc-rs", rev = "e1be8c9292c82c1e7c158067f0014fb292ee652d", default-features = false }
+ibc-core-connection-types   = { git = "https://github.com/mina86/ibc-rs", rev = "e1be8c9292c82c1e7c158067f0014fb292ee652d", default-features = false }
+ibc-core-host               = { git = "https://github.com/mina86/ibc-rs", rev = "e1be8c9292c82c1e7c158067f0014fb292ee652d", default-features = false }
+ibc-core-host-types         = { git = "https://github.com/mina86/ibc-rs", rev = "e1be8c9292c82c1e7c158067f0014fb292ee652d", default-features = false }
+ibc-primitives              = { git = "https://github.com/mina86/ibc-rs", rev = "e1be8c9292c82c1e7c158067f0014fb292ee652d", default-features = false }
+ibc-testkit                 = { git = "https://github.com/mina86/ibc-rs", rev = "e1be8c9292c82c1e7c158067f0014fb292ee652d", default-features = false }
+# ibc-testkit               = { git = "https://github.com/mina86/ibc-rs", rev = "e1be8c9292c82c1e7c158067f0014fb292ee652d" }
 #ibc = { path = "../ibc-rs-mina/ibc" }
 #ibc-app-nft-transfer = { path = "../ibc-rs-mina/ibc-apps/ics721-nft-transfer" }
 #ibc-app-nft-transfer-types = { path = "../ibc-rs-mina/ibc-apps/ics721-nft-transfer/types" }

@@ -1,10 +1,7 @@
 use core::str::FromStr;
 
-use guestchain::Signature;
-
 use crate::alloc::string::ToString;
 use alloc::vec::Vec;
-use guestchain::{PubKey, Verifier};
 use ibc::{
 	core::{
 		ics02_client::{
@@ -24,21 +21,14 @@ use crate::{error::Error, ClientMessage, ClientState, ConsensusState as ClientCo
 type Result<T = (), E = ibc::core::ics02_client::error::Error> = ::core::result::Result<T, E>;
 
 #[derive(Clone, Debug, PartialEq, Eq)]
-pub struct GuestClient<PK>(core::marker::PhantomData<PK>);
+#[derive(Default)]
+pub struct SolanaClient {}
 
-impl<PK: PubKey> Default for GuestClient<PK> {
-	fn default() -> Self {
-		Self(core::marker::PhantomData)
-	}
-}
 
-impl<PK> ClientDef for GuestClient<PK>
-where
-	PK: PubKey + Send + Sync,
-	PK::Signature: Send + Sync,
+impl ClientDef for SolanaClient
 {
-	type ClientMessage = ClientMessage<PK>;
-	type ClientState = ClientState<PK>;
+	type ClientMessage = ClientMessage;
+	type ClientState = ClientState;
 	type ConsensusState = ClientConsensusState;
 
 	fn verify_client_message<Ctx: ReaderContext>(
@@ -48,7 +38,8 @@ where
 		client_state: Self::ClientState,
 		client_msg: Self::ClientMessage,
 	) -> Result<(), Ics02ClientError> {
-		client_state.0.do_verify_client_message(self, client_msg.0).map_err(convert)
+		let ctx = CommonContext::new(_ctx);
+		client_state.0.do_verify_client_message(ctx, client_msg.0).map_err(convert)
 	}
 
 	fn update_state<Ctx: ReaderContext>(
@@ -62,7 +53,7 @@ where
 		Ics02ClientError,
 	> {
 		let header = match client_msg.0 {
-			cf_guest_upstream::ClientMessage::Header(header) => header,
+			cf_solana_upstream::ClientMessage::Header(header) => header,
 			_ => unreachable!("02-client will check for Header before calling update_state; qed"),
 		};
 		let header_consensus_state = ClientConsensusState::from(&header);
@@ -222,7 +213,7 @@ where
 		commitment: ibc::core::ics04_channel::commitment::PacketCommitment,
 	) -> Result<(), Ics02ClientError> {
 		client_state.verify_height(client_id, height)?;
-		verify_delay_passed::<Ctx, PK>(ctx, height, connection_end)?;
+		verify_delay_passed::<Ctx>(ctx, height, connection_end)?;
 
 		let path = ibc_core_host_types::path::CommitmentPath {
 			port_id: convert(port_id),
@@ -248,7 +239,7 @@ where
 	) -> Result<(), Ics02ClientError> {
 		// client state height = consensus state height
 		client_state.verify_height(client_id, height)?;
-		verify_delay_passed::<Ctx, PK>(ctx, height, connection_end)?;
+		verify_delay_passed::<Ctx>(ctx, height, connection_end)?;
 
 		let path = ibc_core_host_types::path::AckPath {
 			port_id: convert(port_id),
@@ -272,7 +263,7 @@ where
 		sequence: ibc::core::ics04_channel::packet::Sequence,
 	) -> Result<(), Ics02ClientError> {
 		client_state.verify_height(client_id, height)?;
-		verify_delay_passed::<Ctx, PK>(ctx, height, connection_end)?;
+		verify_delay_passed::<Ctx>(ctx, height, connection_end)?;
 
 		let path = ibc_core_host_types::path::SeqRecvPath(convert(port_id), convert(channel_id));
 		let mut seq_bytes = Vec::new();
@@ -294,7 +285,7 @@ where
 		sequence: ibc::core::ics04_channel::packet::Sequence,
 	) -> Result<(), Ics02ClientError> {
 		client_state.verify_height(client_id, height)?;
-		verify_delay_passed::<Ctx, PK>(ctx, height, connection_end)?;
+		verify_delay_passed::<Ctx>(ctx, height, connection_end)?;
 
 		let path = ibc_core_host_types::path::ReceiptPath {
 			port_id: convert(port_id),
@@ -305,7 +296,7 @@ where
 	}
 }
 
-fn verify_delay_passed<Ctx: ReaderContext, PK: PubKey>(
+fn verify_delay_passed<Ctx: ReaderContext>(
 	ctx: &Ctx,
 	height: ibc::Height,
 	connection_end: &ibc::core::ics03_connection::connection::ConnectionEnd,
@@ -325,7 +316,7 @@ fn verify_delay_passed<Ctx: ReaderContext, PK: PubKey>(
 	let delay_period_height = ctx.block_delay(delay_period_time);
 	let delay_period_time_u64 = u64::try_from(delay_period_time.as_nanos()).unwrap();
 
-	ClientState::<PK>::verify_delay_passed(
+	ClientState::verify_delay_passed(
 		current_timestamp,
 		current_height,
 		processed_time.nanoseconds(),
@@ -336,29 +327,28 @@ fn verify_delay_passed<Ctx: ReaderContext, PK: PubKey>(
 	.map_err(|e| e.into())
 }
 
-impl<PK: PubKey> Verifier<PK> for GuestClient<PK> {
-	fn verify(&self, message: &[u8], pubkey: &PK, signature: &PK::Signature) -> bool {
-		(|| {
-			let pubkey = pubkey.as_bytes();
-			let pubkey = ed25519_consensus::VerificationKey::try_from(&pubkey[..]).ok()?;
-			let signature = signature.as_bytes();
-			let sig = ed25519_consensus::Signature::try_from(&signature[..]).ok()?;
-			pubkey.verify(&sig, message).ok()?;
-			Some(())
-		})()
-		.is_some()
-	}
-}
+// impl Verifier for SolanaClient {
+// 	fn verify(&self, message: &[u8], pubkey: &PK, signature: &PK::Signature) -> bool {
+// 		(|| {
+// 			let pubkey = pubkey.as_bytes();
+// 			let pubkey = ed25519_consensus::VerificationKey::try_from(&pubkey[..]).ok()?;
+// 			let signature = signature.as_bytes();
+// 			let sig = ed25519_consensus::Signature::try_from(&signature[..]).ok()?;
+// 			pubkey.verify(&sig, message).ok()?;
+// 			Some(())
+// 		})()
+// 		.is_some()
+// 	}
+// }
 
 #[derive(bytemuck::TransparentWrapper)]
 #[repr(transparent)]
 #[transparent(Ctx)]
-struct CommonContext<Ctx, PK> {
+struct CommonContext<Ctx> {
 	ctx: Ctx,
-	_ph: core::marker::PhantomData<PK>,
 }
 
-impl<Ctx, PK> CommonContext<Ctx, PK> {
+impl<Ctx> CommonContext<Ctx> {
 	fn new(ctx: &Ctx) -> &Self {
 		bytemuck::TransparentWrapper::wrap_ref(ctx)
 	}
@@ -366,11 +356,11 @@ impl<Ctx, PK> CommonContext<Ctx, PK> {
 
 type NewResult<T = ()> = Result<T, ibc_core_client_types::error::ClientError>;
 
-impl<Ctx: ReaderContext, PK: PubKey> cf_guest_upstream::CommonContext<PK>
-	for CommonContext<Ctx, PK>
+impl<Ctx: ReaderContext> cf_solana_upstream::CommonContext
+	for CommonContext<Ctx>
 {
 	type ConversionError = core::convert::Infallible;
-	type AnyClientState = ClientState<PK>;
+	type AnyClientState = ClientState;
 	type AnyConsensusState = ClientConsensusState;
 
 	fn host_metadata(
@@ -382,7 +372,7 @@ impl<Ctx: ReaderContext, PK: PubKey> cf_guest_upstream::CommonContext<PK>
 	fn set_client_state(
 		&mut self,
 		_client_id: &ibc_core_host_types::identifiers::ClientId,
-		_state: ClientState<PK>,
+		_state: ClientState,
 	) -> NewResult<()> {
 		unimplemented!("set_client_state")
 	}
@@ -399,8 +389,8 @@ impl<Ctx: ReaderContext, PK: PubKey> cf_guest_upstream::CommonContext<PK>
 		&self,
 		client_id: &ibc_core_host_types::identifiers::ClientId,
 		height: ibc_core_client_types::Height,
-	) -> NewResult<cf_guest_upstream::Neighbourhood<Self::AnyConsensusState>> {
-		use cf_guest_upstream::Neighbourhood;
+	) -> NewResult<cf_solana_upstream::Neighbourhood<Self::AnyConsensusState>> {
+		use cf_solana_upstream::Neighbourhood;
 
 		let res: Result<_, Ics02ClientError> = (|| {
 			let client_id = convert(client_id);
@@ -458,7 +448,7 @@ fn verify(
 	path: ibc_core_host_types::path::Path,
 	value: Option<Vec<u8>>,
 ) -> Result<(), Ics02ClientError> {
-	cf_guest_upstream::proof::verify_for_block(
+	cf_solana_upstream::proof::verify_for_trie(
 		&[],
 		proof.as_bytes(),
 		root.bytes.as_slice(),
