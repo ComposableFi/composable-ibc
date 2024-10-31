@@ -41,6 +41,7 @@ use tendermint::{Hash, Time};
 use tendermint_proto::Protobuf;
 use tokio::{
 	sync::mpsc::unbounded_channel,
+	sync::Mutex,
 	task::{spawn_blocking, JoinSet},
 };
 
@@ -2042,6 +2043,42 @@ impl Chain for RollupClient {
 			// 	println!("  Signature {:?}", sig);
 			// 	signature = sig.unwrap().to_string();
 			// }
+		}
+
+		{
+			let mut last = self.last_supply_update_time.lock().await;
+
+			let now = Instant::now();
+
+			if (now - *last).as_secs() > self.supply_update_period_in_sec {
+				*last = now;
+
+				let compute_budget_ix = ComputeBudgetInstruction::set_compute_unit_limit(300_000);
+
+				let mantis_token_supply_on_l1 = self
+					.rpc_l1_client()
+					.get_token_supply(&self.solana_token_mint_pubkey)
+					.await
+					.unwrap()
+					.amount
+					.parse::<u64>()
+					.unwrap();
+
+				let ix = spl_token::instruction::update_l1_token_supply(
+					&self.solana_token_program_id,
+					&self.solana_token_mint_pubkey,
+					&[&authority.pubkey()],
+					mantis_token_supply_on_l1,
+				)
+				.unwrap();
+
+				let update_mantis_supply_ix = vec![Transaction::new_with_payer(
+					&[compute_budget_ix.clone(), ix],
+					Some(&authority.pubkey()),
+				)];
+
+				all_transactions.push(update_mantis_supply_ix);
+			}
 		}
 
 		let total_transactions_length = all_transactions.iter().fold(0, |acc, tx| acc + tx.len());

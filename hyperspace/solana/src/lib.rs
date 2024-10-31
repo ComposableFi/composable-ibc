@@ -5,6 +5,7 @@ use anchor_client::{
 	solana_client::{rpc_client::RpcClient, rpc_config::RpcSendTransactionConfig},
 	solana_sdk::{
 		compute_budget::ComputeBudgetInstruction,
+		feature_set::spl_token_v3_4_0,
 		instruction::Instruction,
 		system_instruction::transfer,
 		transaction::{Transaction, VersionedTransaction},
@@ -570,13 +571,14 @@ deserialize client state"
 	) -> Result<QueryConnectionResponse, Self::Error> {
 		use ibc_proto_new::Protobuf;
 		let chain_account = self.get_chain_storage().await;
-		let proof_height = if u64::from(chain_account.head().unwrap().block_height) == at.revision_height {
-			log::info!("Using existing proof height {}", at.revision_height);
-			at.revision_height
-		} else {
-			log::info!("Using incremented proof height {}", at.revision_height + 1);
-			at.revision_height
-		};
+		let proof_height =
+			if u64::from(chain_account.head().unwrap().block_height) == at.revision_height {
+				log::info!("Using existing proof height {}", at.revision_height);
+				at.revision_height
+			} else {
+				log::info!("Using incremented proof height {}", at.revision_height + 1);
+				at.revision_height
+			};
 		let (trie, at_height) = self.get_trie(proof_height, true).await;
 		let storage = self.get_ibc_storage().await;
 		let connection_idx = ConnectionIdx::try_from(
