@@ -475,11 +475,20 @@ pub fn get_events_from_logs(logs: Vec<String>) -> (Vec<solana_ibc::events::Event
 	let height = height_str.parse::<u64>().unwrap();
 	let events: Vec<solana_ibc::events::Event> = serialized_events
 		.iter()
-		.map(|event| {
-			let decoded_event = base64::prelude::BASE64_STANDARD.decode(event).unwrap();
-			let decoded_event: solana_ibc::events::Event =
-				borsh::BorshDeserialize::try_from_slice(&decoded_event).unwrap();
-			decoded_event
+		.filter_map(|event| {
+			let decoded_event = base64::prelude::BASE64_STANDARD.decode(event);
+			if let Ok(decoded_event) = decoded_event {
+				let decoded_event: Result<solana_ibc::events::Event, String> =
+					borsh::BorshDeserialize::try_from_slice(&decoded_event).map_err(|e| {
+						// log::error!("These are logs {:?}", logs);
+						// log::error!("This is decoded event {:?}", decoded_event);
+						e.to_string()
+					});
+				if let Ok(decoded_event) = decoded_event {
+					return Some(decoded_event);
+				}
+			}
+			None
 		})
 		.collect();
 	(events, height)
