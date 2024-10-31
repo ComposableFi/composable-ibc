@@ -399,6 +399,7 @@ pub fn get_ibc_events_from_logs(
 
 pub async fn get_client_state_at_height(
 	rpc: RpcClient,
+	client_id: ClientId,
 	program_id: Pubkey,
 	upto_height: u64,
 ) -> Option<solana_ibc::client_state::AnyClientState> {
@@ -423,7 +424,13 @@ pub async fn get_client_state_at_height(
 			let client_state_events: Vec<solana_ibc::events::ClientStateUpdate> = events
 				.iter()
 				.filter_map(|event| match event {
-					solana_ibc::events::Event::ClientStateUpdate(e) => Some(e.clone()),
+					solana_ibc::events::Event::ClientStateUpdate(e) => {
+						if e.client_id.as_str() == client_id.as_str() {
+							Some(e.clone())
+						} else {
+							None
+						}
+					},
 					_ => None,
 				})
 				.collect();
