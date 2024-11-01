@@ -207,10 +207,33 @@ impl IbcProvider for SolanaClient {
 		let earliest_block_header = all_signatures.last();
 
 		log::info!("This is all events {:?}", new_block_events);
+		let mut channel_and_port_ids = self.channel_whitelist();
+		channel_and_port_ids.extend(counterparty.channel_whitelist());
 		let block_events: Vec<IbcEvent> = new_block_events
 			.iter()
 			.filter_map(|event| {
-				convert_new_event_to_old(event.clone(), Height::new(1, u64::from(finality_height)))
+				let event = convert_new_event_to_old(
+					event.clone(),
+					Height::new(1, u64::from(finality_height)),
+				);
+				if let Some(event) = event {
+					let is_filtered = primitives::filter_events_by_ids(
+						&event,
+						&[self.client_id(), counterparty.client_id()],
+						&[self.connection_id(), counterparty.connection_id()]
+							.into_iter()
+							.flatten()
+							.collect::<Vec<_>>(),
+						&channel_and_port_ids,
+					);
+					if is_filtered {
+						Some(event)
+					} else {
+						None
+					}
+				} else {
+					None
+				}
 			})
 			.collect();
 
@@ -474,6 +497,7 @@ deserialize consensus state"
 			.map_err(|_| Error::Custom("value is sealed and cannot be fetched".to_owned()))?;
 		let client_state = events::get_client_state_at_height(
 			self.rpc_client(),
+			client_id.clone(),
 			self.solana_ibc_program_id,
 			at.revision_height,
 		)
@@ -2037,13 +2061,12 @@ impl Chain for SolanaClient {
 			chunks.chunk_size = core::num::NonZeroU16::new(800).unwrap();
 
 			let compute_budget_ix = ComputeBudgetInstruction::set_compute_unit_limit(30_000);
-			// let compute_unit_price_ix =
-			// 	ComputeBudgetInstruction::set_compute_unit_price(10_000_001);
+			let compute_unit_price_ix = ComputeBudgetInstruction::set_compute_unit_price(50_000);
 
 			let chunking_transactions: Vec<Transaction> = chunks
 				.map(|ix| {
 					Transaction::new_with_payer(
-						&[compute_budget_ix.clone(), ix],
+						&[compute_budget_ix.clone(), compute_unit_price_ix.clone(), ix],
 						Some(&authority.pubkey()),
 					)
 				})
@@ -2311,7 +2334,7 @@ impl Chain for SolanaClient {
 							let ix = anchor_lang::solana_program::system_instruction::transfer(
 								&authority.pubkey(),
 								&jito_address,
-								40000,
+								100000,
 							);
 							let rpc_client = self.rpc_client();
 							let blockhash = rpc.get_latest_blockhash().await.unwrap();
