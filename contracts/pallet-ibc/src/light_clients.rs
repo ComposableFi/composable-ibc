@@ -93,7 +93,7 @@ impl guestchain::PubKey for PubKey {
 	}
 
 	fn as_bytes(&self) -> Cow<'_, [u8]> {
-		todo!()
+		Cow::Borrowed(self.0.as_bytes())
 	}
 }
 
@@ -141,7 +141,7 @@ impl guestchain::Signature for Signature {
 	}
 
 	fn as_bytes(&self) -> Cow<'_, [u8]> {
-		todo!()
+		Cow::Owned(self.0.to_vec())
 	}
 }
 
