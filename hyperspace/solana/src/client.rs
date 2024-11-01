@@ -33,6 +33,7 @@ use ibc_core_handler_types::msgs::MsgEnvelope;
 use ibc_core_host_types::identifiers::ClientId as ClientIdNew;
 use itertools::izip;
 use lib::hash::CryptoHash;
+use log::warn;
 use primitives::{CommonClientConfig, CommonClientState, IbcProvider};
 use serde::{Deserialize, Serialize};
 use sigverify::ed25519_program::{new_instruction, Entry};
@@ -69,6 +70,7 @@ pub enum DeliverIxType {
 		port_id: ibc_core_host_types::identifiers::PortId,
 		channel_id: ibc_core_host_types::identifiers::ChannelId,
 		receiver: String,
+		memo: String,
 	},
 	Timeout {
 		token: Coin<PrefixedDenom>,
@@ -120,6 +122,7 @@ pub struct SolanaClient {
 	pub trie_db_path: String,
 	// Sets whether to use JITO or RPC for submitting transactions
 	pub transaction_sender: TransactionSender,
+	pub hook_token_address: Option<String>,
 }
 
 #[derive(std::fmt::Debug, Serialize, Deserialize, Clone)]
@@ -162,6 +165,7 @@ pub struct SolanaClientConfig {
 	pub signature_verifier_program_id: String,
 	pub trie_db_path: String,
 	pub transaction_sender: String,
+	pub hook_token_address: Option<String>,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -364,13 +368,13 @@ impl SolanaClient {
 			channel_whitelist: Arc::new(Mutex::new(config.channel_whitelist.into_iter().collect())),
 			trie_db_path: config.trie_db_path,
 			transaction_sender,
+			hook_token_address: config.hook_token_address,
 		})
 	}
 
 	pub async fn send_deliver(
 		&self,
 		instruction_type: DeliverIxType,
-
 		chunk_account: Pubkey,
 		max_tries: u8,
 	) -> Result<(Vec<Transaction>, Vec<Transaction>), Error> {
@@ -675,7 +679,7 @@ deserialize consensus state"
 				// signature
 				Ok((signature_chunking_txs, vec![transactions, tx]))
 			},
-			DeliverIxType::Recv { ref token, ref port_id, ref channel_id, ref receiver } => {
+			DeliverIxType::Recv { ref token, ref port_id, ref channel_id, ref receiver, memo } => {
 				log::info!(
 					"PortId: {:?} and channel {:?} and token {:?}",
 					port_id,
@@ -704,29 +708,40 @@ deserialize consensus state"
 					);
 				log::info!("This is token mint while sending transfer {:?}", token_mint);
 				let mint_authority = self.get_mint_auth_key();
+				let accounts = ix_data_account::Accounts::new(
+					solana_ibc::accounts::Deliver {
+						sender: authority.pubkey(),
+						receiver: receiver_account,
+						storage: solana_ibc_storage_key,
+						trie: trie_key,
+						chain: chain_key,
+						system_program: system_program::ID,
+						mint_authority: Some(mint_authority),
+						token_mint,
+						escrow_account,
+						fee_collector: Some(self.get_fee_collector_key()),
+						receiver_token_account: receiver_address,
+						associated_token_program: Some(anchor_spl::associated_token::ID),
+						token_program: Some(anchor_spl::token::ID),
+					},
+					chunk_account,
+				);
+				let mut account_metas = accounts.to_account_metas(None);
+				if let Some(token_addr) = &self.hook_token_address {
+					if token.denom.base_denom.as_str() == token_addr {
+						if let Some(additional_accounts) = parse_intent_memo_accounts(&memo) {
+							account_metas.extend(additional_accounts);
+						} else {
+							warn!("Invalid memo for hook token: {}", memo);
+						}
+					}
+				}
 				let ix = program
 					.request()
 					.instruction(ComputeBudgetInstruction::set_compute_unit_limit(2_000_000u32))
 					.instruction(ComputeBudgetInstruction::request_heap_frame(256 * 1024))
 					.instruction(ComputeBudgetInstruction::set_compute_unit_price(50_000))
-					.accounts(solana_ibc::ix_data_account::Accounts::new(
-						solana_ibc::accounts::Deliver {
-							sender: authority.pubkey(),
-							receiver: receiver_account,
-							storage: solana_ibc_storage_key,
-							trie: trie_key,
-							chain: chain_key,
-							system_program: system_program::ID,
-							mint_authority: Some(mint_authority),
-							token_mint,
-							escrow_account,
-							fee_collector: Some(self.get_fee_collector_key()),
-							receiver_token_account: receiver_address,
-							associated_token_program: Some(anchor_spl::associated_token::ID),
-							token_program: Some(anchor_spl::token::ID),
-						},
-						chunk_account,
-					))
+					.accounts(account_metas)
 					.args(ix_data_account::Instruction)
 					.signer(&*authority)
 					.instructions()
@@ -1101,6 +1116,75 @@ pub async fn get_accounts(
 		}
 		Ok((Some(program_id), Some(token_mint), Some(receiver_account), Some(receiver_address)))
 	}
+}
+
+/// Parses additional accounts from the memo of a transaction directed at the bridge escrow.
+///
+/// Memo is comma separated list of the form
+/// `N,account-0,account-1,...,account-N-1,intent-id,embedded-memo`.  Embedded
+/// memo can contain commas.
+/// Returns a list of `account-i` for i=0..N or `None`
+/// if the memo does not conform to this format.  Note that no validation on
+/// accounts is performed.
+fn parse_intent_memo_accounts(memo: &str) -> Option<Vec<AccountMeta>> {
+	let (count, mut rest) = memo.split_once(',')?;
+	let count = count.parse::<usize>().ok()?;
+	let mut strings = rest.splitn(count + 2, ',').collect::<Vec<_>>();
+	// only accept a memo where all the components are presented
+	if strings.len() < count + 2 {
+		return None;
+	}
+	// take first `count` entries
+	strings
+		.iter()
+		.take(count)
+		.map(|key| {
+			Pubkey::from_str(key).ok().map(|pubkey| AccountMeta {
+				pubkey,
+				is_signer: false,
+				is_writable: true,
+			})
+		})
+		.collect()
+}
+
+#[test]
+fn test_parse_intent_memo_accounts() {
+	let memo = "2,Bt6A81KE6ZoWqG4SJa1gVCmcusSpmduJnPPpauRuNvAC,Hg3EhgX2USt8AzRNeX7Lh2uwTy3ij72qLeSofuCZK8Tc,137,{\"sender\":\"me\",\"receiver\":\"you\"}";
+	let accounts = parse_intent_memo_accounts(memo).unwrap();
+	assert_eq!(accounts.len(), 2);
+	assert!(accounts.iter().all(|account| account.is_writable));
+	assert!(accounts.iter().all(|account| !account.is_signer));
+	assert_eq!(
+		accounts[0].pubkey,
+		Pubkey::from_str("Bt6A81KE6ZoWqG4SJa1gVCmcusSpmduJnPPpauRuNvAC").unwrap()
+	);
+	assert_eq!(
+		accounts[1].pubkey,
+		Pubkey::from_str("Hg3EhgX2USt8AzRNeX7Lh2uwTy3ij72qLeSofuCZK8Tc").unwrap()
+	);
+	let memo = "3,Bt6A81KE6ZoWqG4SJa1gVCmcusSpmduJnPPpauRuNvAC,Hg3EhgX2USt8AzRNeX7Lh2uwTy3ij72qLeSofuCZK8Tc,Bt6A81KE6ZoWqG4SJa1gVCmcusSpmduJnAPpauRuNvAC,137,{\"sender\":\"me\",\"receiver\":\"you\"}";
+	let accounts = parse_intent_memo_accounts(memo).unwrap();
+	assert_eq!(accounts.len(), 3);
+	assert!(accounts.iter().all(|account| account.is_writable));
+	assert!(accounts.iter().all(|account| !account.is_signer));
+	assert_eq!(
+		accounts[0].pubkey,
+		Pubkey::from_str("Bt6A81KE6ZoWqG4SJa1gVCmcusSpmduJnPPpauRuNvAC").unwrap()
+	);
+	assert_eq!(
+		accounts[1].pubkey,
+		Pubkey::from_str("Hg3EhgX2USt8AzRNeX7Lh2uwTy3ij72qLeSofuCZK8Tc").unwrap()
+	);
+	assert_eq!(
+		accounts[2].pubkey,
+		Pubkey::from_str("Bt6A81KE6ZoWqG4SJa1gVCmcusSpmduJnAPpauRuNvAC").unwrap()
+	);
+
+	let memo = "2,Bt6A81KE6ZoWqG4SJa1gVCmcusSpmduJnPPpauRuNvAC,INVALID,137,{\"sender\":\"me\",\"receiver\":\"you\"}";
+	assert!(parse_intent_memo_accounts(memo).is_none());
+	let memo = "1,Bt6A81KE6ZoWqG4SJa1gVCmcusSpmduJnPPpauRuNvAC;no-intent-id,{\"sender\":\"me\",\"receiver\":\"you\"}";
+	assert!(parse_intent_memo_accounts(memo).is_none());
 }
 
 // #[test]

@@ -84,8 +84,9 @@ impl Default for Args {
 			// format!("wss://rpc-testnet5.composable-cosmos.composablenodes.tech/websocket"),
 			// cosmos_ws: format!("ws://10.132.0.13:26657/websocket"),
 			// cosmos_ws: format!("ws://10.132.0.6:26657/websocket"), // mainnet
-		  solana_ws: format!("ws://{solana}:8900"),
-			// solana_ws: format!("wss://devnet.helius-rpc.com/?api-key=bc5c0cfc-46df-4781-978f-af6ca7a202c2"),
+			solana_ws: format!("ws://{solana}:8900"),
+			// solana_ws:
+			// format!("wss://devnet.helius-rpc.com/?api-key=bc5c0cfc-46df-4781-978f-af6ca7a202c2"),
 			wasm_path,
 		}
 	}
@@ -115,7 +116,7 @@ async fn setup_clients() -> (AnyChain, AnyChain) {
 			skip_optional_client_updates: true,
 			max_packets_to_process: 1,
 			client_update_interval_sec: 10,
-    	handshake_completed: false,
+			handshake_completed: false,
 		},
 		channel_whitelist: vec![],
 		commitment_level: "confirmed".to_string(),
@@ -127,10 +128,10 @@ async fn setup_clients() -> (AnyChain, AnyChain) {
 		],
 		solana_ibc_program_id: "2HLLVco5HvwWriNbUhmVwA2pCetRkpgrqwnjcsZdyTKT".to_string(),
 		write_program_id: "FufGpHqMQgGVjtMH9AV8YMrJYq8zaK6USRsJkZP4yDjo".to_string(),
-		signature_verifier_program_id: 
-			"C6r1VEbn3mSpecgrZ7NdBvWUtYVJWrDPv4uU9Xs956gc".to_string(),
-    trie_db_path: "../../../solana-ibc-indexer/indexer.db3".to_string(),
-    transaction_sender: "RPC".to_string(),
+		signature_verifier_program_id: "C6r1VEbn3mSpecgrZ7NdBvWUtYVJWrDPv4uU9Xs956gc".to_string(),
+		trie_db_path: "../../../solana-ibc-indexer/indexer.db3".to_string(),
+		transaction_sender: "RPC".to_string(),
+		hook_token_address: None,
 	};
 
 	let mut config_b = CosmosClientConfig {
@@ -188,7 +189,8 @@ async fn setup_clients() -> (AnyChain, AnyChain) {
 		},
 	};
 	let code_id_str = hex::encode(code_id);
-	// let code_id_str = String::from("66ce7420d21e2555b0e6ce952c0826590fb5f6508a9ac84a5c11178cec58a303");
+	// let code_id_str =
+	// String::from("66ce7420d21e2555b0e6ce952c0826590fb5f6508a9ac84a5c11178cec58a303");
 	log::info!("This is wasm checksum {:?}", code_id_str);
 	config_b.wasm_code_id = Some(code_id_str);
 

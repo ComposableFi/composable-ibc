@@ -243,9 +243,9 @@ impl IbcProvider for SolanaClient {
 		// Reversing so that updates are sent in ascending order of their height.
 		rev_all_signatures.reverse();
 		for (signatures, block_header, epoch) in rev_all_signatures {
-			if (block_header.next_epoch_commitment.is_none()
-				&& u64::from(block_header.block_height) != finality_height)
-				|| epoch.is_none()
+			if (block_header.next_epoch_commitment.is_none() &&
+				u64::from(block_header.block_height) != finality_height) ||
+				epoch.is_none()
 			{
 				continue;
 			}
@@ -270,10 +270,7 @@ impl IbcProvider for SolanaClient {
 				.map(|(index, (validator, signature))| {
 					let validator_idx = all_validators
 						.iter()
-						.position(|v| {
-							v.pubkey
-								== PubKey::from_bytes(&validator.to_bytes().as_slice()).unwrap()
-						})
+						.position(|v| *v.pubkey.as_bytes() == validator.to_bytes())
 						.unwrap();
 					(validator_idx as u16, signature.clone())
 				})
@@ -319,8 +316,8 @@ impl IbcProvider for SolanaClient {
 			let update = if u64::from(block_header.block_height) == finality_height {
 				let time_since_last_update =
 					if let Some(earliest_block_header) = earliest_block_header {
-						u64::from(block_header.timestamp_ns)
-							- u64::from(earliest_block_header.1.timestamp_ns)
+						u64::from(block_header.timestamp_ns) -
+							u64::from(earliest_block_header.1.timestamp_ns)
 					} else {
 						0
 					};
@@ -337,8 +334,8 @@ impl IbcProvider for SolanaClient {
 					Any { type_url: msg.type_url(), value },
 					Height::new(1, finality_height),
 					block_events.clone(),
-					if !block_events.is_empty()
-						|| time_since_last_update > MIN_TIME_UNTIL_UPDATE * 1_000_000_000
+					if !block_events.is_empty() ||
+						time_since_last_update > MIN_TIME_UNTIL_UPDATE * 1_000_000_000
 					{
 						UpdateType::Mandatory
 					} else {
@@ -1216,10 +1213,9 @@ deserialize client state"
 									ibc_core_handler_types::events::IbcEvent::SendPacket(
 										packet,
 									) => {
-										if packet.chan_id_on_a().as_str() == &channel_id.to_string()
-											&& packet.port_id_on_a().as_str() == port_id.as_str()
-											&& seqs
-												.iter()
+										if packet.chan_id_on_a().as_str() == &channel_id.to_string() &&
+											packet.port_id_on_a().as_str() == port_id.as_str() &&
+											seqs.iter()
 												.find(|&&seq| packet.seq_on_a().value() == seq)
 												.is_some()
 										{
@@ -1364,7 +1360,7 @@ deserialize client state"
 			let packets: Vec<_> = recv_packet_events
 				.iter()
 				.map(|(recv_packet, height)| match recv_packet {
-					ibc_core_handler_types::events::IbcEvent::WriteAcknowledgement(packet) => {
+					ibc_core_handler_types::events::IbcEvent::WriteAcknowledgement(packet) =>
 						ibc_rpc::PacketInfo {
 							height: Some(*height),
 							sequence: packet.seq_on_a().value(),
@@ -1385,8 +1381,7 @@ deserialize client state"
 							.into(),
 							timeout_timestamp: packet.timeout_timestamp_on_b().nanoseconds(),
 							ack: Some(packet.acknowledgement().as_bytes().to_vec()),
-						}
-					},
+						},
 					_ => panic!("Infallible"),
 				})
 				.collect();
@@ -1709,12 +1704,10 @@ deserialize client state"
 			.unwrap();
 		let logs = match tx.transaction.meta.unwrap().log_messages {
 			solana_transaction_status::option_serializer::OptionSerializer::Some(logs) => logs,
-			solana_transaction_status::option_serializer::OptionSerializer::None => {
-				return Err(Error::Custom(String::from("No logs found")))
-			},
-			solana_transaction_status::option_serializer::OptionSerializer::Skip => {
-				return Err(Error::Custom(String::from("Logs were skipped, so not available")))
-			},
+			solana_transaction_status::option_serializer::OptionSerializer::None =>
+				return Err(Error::Custom(String::from("No logs found"))),
+			solana_transaction_status::option_serializer::OptionSerializer::Skip =>
+				return Err(Error::Custom(String::from("Logs were skipped, so not available"))),
 		};
 		let (events, _proof_height) = events::get_ibc_events_from_logs(logs);
 		log::info!("These are events {:?}", events);
@@ -1749,12 +1742,10 @@ deserialize client state"
 			.unwrap();
 		let logs = match tx.transaction.meta.unwrap().log_messages {
 			solana_transaction_status::option_serializer::OptionSerializer::Some(logs) => logs,
-			solana_transaction_status::option_serializer::OptionSerializer::None => {
-				return Err(Error::Custom(String::from("No logs found")))
-			},
-			solana_transaction_status::option_serializer::OptionSerializer::Skip => {
-				return Err(Error::Custom(String::from("Logs were skipped, so not available")))
-			},
+			solana_transaction_status::option_serializer::OptionSerializer::None =>
+				return Err(Error::Custom(String::from("No logs found"))),
+			solana_transaction_status::option_serializer::OptionSerializer::Skip =>
+				return Err(Error::Custom(String::from("Logs were skipped, so not available"))),
 		};
 		let (events, _proof_height) = events::get_ibc_events_from_logs(logs);
 		log::info!("These are events {:?}", events);
@@ -1791,12 +1782,10 @@ deserialize client state"
 			.unwrap();
 		let logs = match tx.transaction.meta.unwrap().log_messages {
 			solana_transaction_status::option_serializer::OptionSerializer::Some(logs) => logs,
-			solana_transaction_status::option_serializer::OptionSerializer::None => {
-				return Err(Error::Custom(String::from("No logs found")))
-			},
-			solana_transaction_status::option_serializer::OptionSerializer::Skip => {
-				return Err(Error::Custom(String::from("Logs were skipped, so not available")))
-			},
+			solana_transaction_status::option_serializer::OptionSerializer::None =>
+				return Err(Error::Custom(String::from("No logs found"))),
+			solana_transaction_status::option_serializer::OptionSerializer::Skip =>
+				return Err(Error::Custom(String::from("Logs were skipped, so not available"))),
 		};
 		let (events, _proof_height) = events::get_ibc_events_from_logs(logs);
 		let result: Vec<&ibc_core_channel_types::events::OpenInit> = events
@@ -1906,10 +1895,7 @@ impl LightClientSync for SolanaClient {
 					.map(|(index, (validator, signature))| {
 						let validator_idx = all_validators
 							.iter()
-							.position(|v| {
-								v.pubkey
-									== PubKey::from_bytes(&validator.to_bytes().as_slice()).unwrap()
-							})
+							.position(|v| *v.pubkey.as_bytes() == validator.to_bytes())
 							.unwrap();
 						(validator_idx as u16, signature.clone())
 					})
@@ -2119,6 +2105,7 @@ impl Chain for SolanaClient {
 							port_id: e.packet.port_id_on_b,
 							channel_id: e.packet.chan_id_on_b,
 							receiver: packet_data.receiver.to_string(),
+							memo: packet_data.memo.to_string(),
 						},
 						chunk_account,
 						max_tries,
@@ -2455,8 +2442,8 @@ impl Chain for SolanaClient {
 			error.to_string()
 		};
 		log::info!(target: "hyperspace_solana", "Handling error: {err_str}");
-		if err_str.contains("dispatch task is gone")
-			|| err_str.contains("failed to send message to internal channel")
+		if err_str.contains("dispatch task is gone") ||
+			err_str.contains("failed to send message to internal channel")
 		{
 			// self.reconnect().await?;
 			self.common_state.rpc_call_delay *= 2;
