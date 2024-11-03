@@ -307,7 +307,8 @@ impl RollupClient {
 		let program = self.program();
 		let ibc_storage_key = self.get_ibc_storage_key();
 		let mut account_data = self.rpc_client().get_account_data(&ibc_storage_key).await.unwrap();
-		let storage: PrivateStorageWithWitness = PrivateStorageWithWitness::deserialize(&mut &account_data[8..]).unwrap();
+		let storage: PrivateStorageWithWitness =
+			PrivateStorageWithWitness::deserialize(&mut &account_data[8..]).unwrap();
 		// let storage = tokio::task::spawn_blocking(move || {
 		// 	program.account(ibc_storage_key).unwrap()
 		// }).await.unwrap();
@@ -1197,8 +1198,8 @@ pub async fn get_accounts(
 	rpc: &AsyncRpcClient,
 	refund: bool,
 ) -> Result<(Pubkey, Pubkey, Pubkey, Pubkey), ParsePubkeyError> {
-	if (!refund && is_receiver_chain_source(port_id.clone(), channel_id.clone(), denom)
-		|| (refund && is_sender_chain_source(port_id.clone(), channel_id.clone(), denom)))
+	if (!refund && is_receiver_chain_source(port_id.clone(), channel_id.clone(), denom) ||
+		(refund && is_sender_chain_source(port_id.clone(), channel_id.clone(), denom)))
 	{
 		log::info!("Receiver chain source");
 		let hashed_denom = CryptoHash::digest(denom.base_denom.as_str().as_bytes());
@@ -1221,7 +1222,8 @@ pub async fn get_accounts(
 		let receiver_address = get_associated_token_address(&receiver_account, &token_mint);
 		let token_mint_info = rpc.get_token_supply(&token_mint).await;
 		if token_mint_info.is_err() {
-			return Err(ParsePubkeyError::Invalid);
+			log::warn!("Token mint not found (could be rebased token)");
+			// return Err(ParsePubkeyError::Invalid);
 		}
 		Ok((program_id, token_mint, receiver_account, receiver_address))
 	}
@@ -1258,31 +1260,34 @@ pub async fn get_accounts(
 #[derive(Debug, borsh::BorshSerialize, borsh::BorshDeserialize)]
 /// The private IBC storage, i.e. data which doesn’t require proofs.
 pub struct PrivateStorageWithWitness {
-    /// Per-client information.
-    ///
-    /// Entry at index `N` corresponds to the client with IBC identifier
-    /// `client-<N>`.
-    pub clients: Vec<solana_ibc::storage::ClientStore>,
+	/// Per-client information.
+	///
+	/// Entry at index `N` corresponds to the client with IBC identifier
+	/// `client-<N>`.
+	pub clients: Vec<solana_ibc::storage::ClientStore>,
 
-    /// Information about the counterparty on given connection.
-    ///
-    /// Entry at index `N` corresponds to the connection with IBC identifier
-    /// `connection-<N>`.
-    pub connections: Vec<solana_ibc::storage::Serialised<ibc_core_connection_types::ConnectionEnd>>,
+	/// Information about the counterparty on given connection.
+	///
+	/// Entry at index `N` corresponds to the connection with IBC identifier
+	/// `connection-<N>`.
+	pub connections: Vec<solana_ibc::storage::Serialised<ibc_core_connection_types::ConnectionEnd>>,
 
-    /// Information about a each `(port, channel)` endpoint.
-    pub port_channel: solana_ibc::storage::map::Map<trie_ids::PortChannelPK, solana_ibc::storage::PortChannelStore>,
+	/// Information about a each `(port, channel)` endpoint.
+	pub port_channel: solana_ibc::storage::map::Map<
+		trie_ids::PortChannelPK,
+		solana_ibc::storage::PortChannelStore,
+	>,
 
-    pub channel_counter: u32,
+	pub channel_counter: u32,
 
-    pub fee_collector: Pubkey,
+	pub fee_collector: Pubkey,
 
-    pub new_fee_collector_proposal: Option<Pubkey>,
+	pub new_fee_collector_proposal: Option<Pubkey>,
 
-    pub assets: solana_ibc::storage::map::Map<CryptoHash, solana_ibc::storage::Asset>,
+	pub assets: solana_ibc::storage::map::Map<CryptoHash, solana_ibc::storage::Asset>,
 
-    // Fee to be charged for each transfer
-    pub fee_in_lamports: u64,
+	// Fee to be charged for each transfer
+	pub fee_in_lamports: u64,
 
-    pub local_consensus_state: std::collections::VecDeque<(u64, u64, CryptoHash)>,
+	pub local_consensus_state: std::collections::VecDeque<(u64, u64, CryptoHash)>,
 }
