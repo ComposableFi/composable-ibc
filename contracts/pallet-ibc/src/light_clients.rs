@@ -104,7 +104,7 @@ impl guestchain::PubKey for PubKey {
 	}
 
 	fn as_bytes(&self) -> Cow<'_, [u8]> {
-		todo!()
+		Cow::Borrowed(self.0.as_bytes())
 	}
 }
 
@@ -152,7 +152,7 @@ impl guestchain::Signature for Signature {
 	}
 
 	fn as_bytes(&self) -> Cow<'_, [u8]> {
-		todo!()
+		Cow::Owned(self.0.to_vec())
 	}
 }
 
@@ -399,16 +399,14 @@ impl AnyClientState {
 			let client_state = AnyClientState::try_from(any).ok()?;
 
 			match client_state {
-				AnyClientState::Wasm(wasm_client_state) => {
-					any = Any::decode(&*wasm_client_state.data).ok()?
-				},
-				c => {
+				AnyClientState::Wasm(wasm_client_state) =>
+					any = Any::decode(&*wasm_client_state.data).ok()?,
+				c =>
 					if f(&c) {
 						break Some(c);
 					} else {
 						return None;
-					}
-				},
+					},
 			};
 		}
 	}
@@ -524,18 +522,16 @@ impl TryFrom<Any> for AnyClientMessage {
 				ics10_grandpa::client_message::ClientMessage::decode_vec(&value.value)
 					.map_err(ics02_client::error::Error::decode_raw_header)?,
 			)),
-			GRANDPA_HEADER_TYPE_URL => {
+			GRANDPA_HEADER_TYPE_URL =>
 				Ok(Self::Grandpa(ics10_grandpa::client_message::ClientMessage::Header(
 					ics10_grandpa::client_message::Header::decode_vec(&value.value)
 						.map_err(ics02_client::error::Error::decode_raw_header)?,
-				)))
-			},
-			GRANDPA_MISBEHAVIOUR_TYPE_URL => {
+				))),
+			GRANDPA_MISBEHAVIOUR_TYPE_URL =>
 				Ok(Self::Grandpa(ics10_grandpa::client_message::ClientMessage::Misbehaviour(
 					ics10_grandpa::client_message::Misbehaviour::decode_vec(&value.value)
 						.map_err(ics02_client::error::Error::decode_raw_header)?,
-				)))
-			},
+				))),
 			// TODO: beefy header, misbehaviour impl From<Any>
 			BEEFY_CLIENT_MESSAGE_TYPE_URL => Ok(Self::Beefy(
 				ics11_beefy::client_message::ClientMessage::decode_vec(&value.value)
@@ -545,18 +541,16 @@ impl TryFrom<Any> for AnyClientMessage {
 				ics07_tendermint::client_message::ClientMessage::decode_vec(&value.value)
 					.map_err(ics02_client::error::Error::decode_raw_header)?,
 			)),
-			TENDERMINT_HEADER_TYPE_URL => {
+			TENDERMINT_HEADER_TYPE_URL =>
 				Ok(Self::Tendermint(ics07_tendermint::client_message::ClientMessage::Header(
 					ics07_tendermint::client_message::Header::decode_vec(&value.value)
 						.map_err(ics02_client::error::Error::decode_raw_header)?,
-				)))
-			},
-			TENDERMINT_MISBEHAVIOUR_TYPE_URL => {
+				))),
+			TENDERMINT_MISBEHAVIOUR_TYPE_URL =>
 				Ok(Self::Tendermint(ics07_tendermint::client_message::ClientMessage::Misbehaviour(
 					ics07_tendermint::client_message::Misbehaviour::decode_vec(&value.value)
 						.map_err(ics02_client::error::Error::decode_raw_header)?,
-				)))
-			},
+				))),
 			GUEST_CLIENT_MESSAGE_TYPE_URL => Ok(Self::Guest(
 				cf_guest::ClientMessage::decode_vec(&value.value)
 					.map_err(ics02_client::error::Error::decode_raw_header)?,
@@ -593,28 +587,24 @@ impl TryFrom<Any> for AnyClientMessage {
 impl From<AnyClientMessage> for Any {
 	fn from(client_msg: AnyClientMessage) -> Self {
 		match client_msg {
-			AnyClientMessage::Wasm(msg) => {
-				Any { type_url: WASM_CLIENT_MESSAGE_TYPE_URL.to_string(), value: msg.encode_vec() }
-			},
+			AnyClientMessage::Wasm(msg) =>
+				Any { type_url: WASM_CLIENT_MESSAGE_TYPE_URL.to_string(), value: msg.encode_vec() },
 			AnyClientMessage::Grandpa(msg) => match msg {
-				ics10_grandpa::client_message::ClientMessage::Header(h) => {
-					Any { type_url: GRANDPA_HEADER_TYPE_URL.to_string(), value: h.encode_vec() }
-				},
+				ics10_grandpa::client_message::ClientMessage::Header(h) =>
+					Any { type_url: GRANDPA_HEADER_TYPE_URL.to_string(), value: h.encode_vec() },
 				ics10_grandpa::client_message::ClientMessage::Misbehaviour(m) => Any {
 					type_url: GRANDPA_MISBEHAVIOUR_TYPE_URL.to_string(),
 					value: m.encode_vec(),
 				},
 			},
-			AnyClientMessage::Beefy(msg) => {
-				Any { type_url: BEEFY_CLIENT_MESSAGE_TYPE_URL.to_string(), value: msg.encode_vec() }
-			},
+			AnyClientMessage::Beefy(msg) =>
+				Any { type_url: BEEFY_CLIENT_MESSAGE_TYPE_URL.to_string(), value: msg.encode_vec() },
 			AnyClientMessage::Tendermint(msg) => Any {
 				type_url: TENDERMINT_CLIENT_MESSAGE_TYPE_URL.to_string(),
 				value: msg.encode_vec(),
 			},
-			AnyClientMessage::Guest(msg) => {
-				Any { type_url: GUEST_CLIENT_MESSAGE_TYPE_URL.to_string(), value: msg.encode_vec() }
-			},
+			AnyClientMessage::Guest(msg) =>
+				Any { type_url: GUEST_CLIENT_MESSAGE_TYPE_URL.to_string(), value: msg.encode_vec() },
 			AnyClientMessage::Rollup(msg) => Any {
 				type_url: ROLLUP_CLIENT_MESSAGE_TYPE_URL.to_string(),
 				value: msg.encode_vec(),
