@@ -728,6 +728,7 @@ deserialize consensus state"
 				);
 				let mut account_metas = accounts.to_account_metas(None);
 				if let Some(token_addr) = &self.hook_token_address {
+					log::info!("Adding additional accounts for hook token {:?}", token_addr);
 					if token.denom.base_denom.as_str() == token_addr {
 						if let Some(additional_accounts) = parse_intent_memo_accounts(&memo) {
 							account_metas.extend(additional_accounts);
