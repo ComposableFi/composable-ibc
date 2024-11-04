@@ -262,7 +262,7 @@ impl RollupClient {
 		&self,
 		at: u64,
 		require_proof: bool,
-	) -> (solana_trie::TrieAccount<Vec<u8>, ()>, bool) {
+	) -> Result<(solana_trie::TrieAccount<Vec<u8>, ()>, bool), Error> {
 		let connection = self.get_db();
 		if require_proof {
 			let body = events::PayloadWithSingleParam::<Vec<u64>> {
@@ -280,16 +280,16 @@ impl RollupClient {
 					let response: std::result::Result<events::SingleTrieResponse, reqwest::Error> =
 						response.json();
 					let transactions = crate::utils::skip_fail!(response);
-					return transactions;
+					return Ok(transactions);
 				}
 				log::error!("Couldnt get transactions after 5 retries");
-				panic!("WTF");
+				return Err(Error::Custom("Couldnt get transactions after 5 retries".to_owned()));
 			})
 			.await
-			.unwrap();
+			.unwrap()?;
 			let trie = solana_trie::TrieAccount::new(response.result.root_account.data().to_vec())
 				.unwrap();
-			return (trie, false);
+			return Ok((trie, false));
 		}
 		let trie_key = self.get_trie_key();
 		let rpc_client = self.rpc_client();
@@ -300,7 +300,7 @@ impl RollupClient {
 			.value
 			.unwrap();
 		let trie = solana_trie::TrieAccount::new(trie_account.data).unwrap();
-		(trie, false)
+		Ok((trie, false))
 	}
 
 	pub async fn get_ibc_storage(&self) -> PrivateStorageWithWitness {
