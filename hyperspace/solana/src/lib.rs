@@ -2319,6 +2319,7 @@ impl Chain for SolanaClient {
 					for transactions in transactions_iter.chunks(4) {
 						let mut tries = 0;
 
+						let before_time = Instant::now();
 						let mut current_transactions = Vec::new();
 						let jito_address =
 							Pubkey::from_str("96gYZGLnJYVFmbjzopPSU6QiEV5fGqZNyN9nmNhvrZU5")
@@ -2334,7 +2335,6 @@ impl Chain for SolanaClient {
 						current_transactions.push(tx);
 						current_transactions.extend(transactions.to_vec());
 						while tries < 5 {
-							let before_time = Instant::now();
 							println!("Try For Tx: {}", tries);
 							let mut client = jito_searcher_client::get_searcher_client(
 								&BLOCK_ENGINE_URL,
