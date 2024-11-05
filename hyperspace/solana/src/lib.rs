@@ -2387,7 +2387,7 @@ impl Chain for SolanaClient {
 							log::error!("Failed to send transaction with the tries, Sending it through RPC Now");
 							// Removing the first tx since its a tip
 							current_transactions.remove(0);
-							for transaction in current_transactions {
+							for mut transaction in current_transactions {
 								let mut rpc_tries = 0;
 								while rpc_tries < 10 {
 									sleep(Duration::from_secs(1));
