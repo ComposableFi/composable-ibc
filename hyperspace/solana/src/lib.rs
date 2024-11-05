@@ -2352,6 +2352,7 @@ impl Chain for SolanaClient {
 
 							let versioned_transactions: Vec<VersionedTransaction> =
 								current_transactions
+									.clone()
 									.into_iter()
 									.map(|mut tx| {
 										tx.sign(&[&*authority], blockhash);
