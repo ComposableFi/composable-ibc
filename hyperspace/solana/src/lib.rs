@@ -2319,9 +2319,22 @@ impl Chain for SolanaClient {
 					for transactions in transactions_iter.chunks(4) {
 						let mut tries = 0;
 
-						let before_time = Instant::now();
 						let mut current_transactions = Vec::new();
+						let jito_address =
+							Pubkey::from_str("96gYZGLnJYVFmbjzopPSU6QiEV5fGqZNyN9nmNhvrZU5")
+								.unwrap();
+						let ix = anchor_lang::solana_program::system_instruction::transfer(
+							&authority.pubkey(),
+							&jito_address,
+							100000,
+						);
+
+						let tx = Transaction::new_with_payer(&[ix], Some(&authority.pubkey()));
+
+						current_transactions.push(tx);
+						current_transactions.extend(transactions.to_vec());
 						while tries < 5 {
+							let before_time = Instant::now();
 							println!("Try For Tx: {}", tries);
 							let mut client = jito_searcher_client::get_searcher_client(
 								&BLOCK_ENGINE_URL,
@@ -2335,21 +2348,8 @@ impl Chain for SolanaClient {
 								.expect("subscribe to bundle results")
 								.into_inner();
 
-							let jito_address =
-								Pubkey::from_str("96gYZGLnJYVFmbjzopPSU6QiEV5fGqZNyN9nmNhvrZU5")
-									.unwrap();
-							let ix = anchor_lang::solana_program::system_instruction::transfer(
-								&authority.pubkey(),
-								&jito_address,
-								100000,
-							);
 							let rpc_client = self.rpc_client();
 							let blockhash = rpc.get_latest_blockhash().await.unwrap();
-							let tx = Transaction::new_with_payer(&[ix], Some(&authority.pubkey()));
-
-							current_transactions.push(tx);
-							current_transactions.extend(transactions.to_vec());
-
 							let versioned_transactions: Vec<VersionedTransaction> =
 								current_transactions
 									.clone()
