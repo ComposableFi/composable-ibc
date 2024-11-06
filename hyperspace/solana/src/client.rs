@@ -725,7 +725,7 @@ deserialize consensus state"
 						}
 					}
 				}
-				accounts.push(AccountMeta {
+				account_metas.push(AccountMeta {
 					pubkey: signatures_account_pda,
 					is_signer: false,
 					is_writable: true,
