@@ -708,8 +708,39 @@ deserialize consensus state"
 					);
 				log::info!("This is token mint while sending transfer {:?}", token_mint);
 				let mint_authority = self.get_mint_auth_key();
-				let accounts = ix_data_account::Accounts::new(
-					solana_ibc::accounts::Deliver {
+				let authority_bytes = authority.pubkey().to_bytes();
+				let signature_seeds = &[authority_bytes.as_ref()];
+				let (signatures_account_pda, bump) = Pubkey::find_program_address(
+					signature_seeds,
+					&self.signature_verifier_program_id,
+				);
+				let mut account_metas = vec![];
+				if let Some(token_addr) = &self.hook_token_address {
+					log::info!("Adding additional accounts for hook token {:?}", token_addr);
+					if token.denom.base_denom.as_str() == token_addr {
+						if let Some(additional_accounts) = parse_intent_memo_accounts(&memo) {
+							account_metas.extend(additional_accounts);
+						} else {
+							warn!("Invalid memo for hook token: {}", memo);
+						}
+					}
+				}
+				accounts.push(AccountMeta {
+					pubkey: signatures_account_pda,
+					is_signer: false,
+					is_writable: true,
+				});
+				account_metas.push(AccountMeta {
+					pubkey: chunk_account,
+					is_signer: false,
+					is_writable: false,
+				});
+				let ix = program
+					.request()
+					.instruction(ComputeBudgetInstruction::set_compute_unit_limit(2_000_000u32))
+					.instruction(ComputeBudgetInstruction::request_heap_frame(256 * 1024))
+					.instruction(ComputeBudgetInstruction::set_compute_unit_price(50_000))
+					.accounts(solana_ibc::accounts::Deliver {
 						sender: authority.pubkey(),
 						receiver: receiver_account,
 						storage: solana_ibc_storage_key,
@@ -723,25 +754,7 @@ deserialize consensus state"
 						receiver_token_account: receiver_address,
 						associated_token_program: Some(anchor_spl::associated_token::ID),
 						token_program: Some(anchor_spl::token::ID),
-					},
-					chunk_account,
-				);
-				let mut account_metas = accounts.to_account_metas(None);
-				if let Some(token_addr) = &self.hook_token_address {
-					log::info!("Adding additional accounts for hook token {:?}", token_addr);
-					if token.denom.base_denom.as_str() == token_addr {
-						if let Some(additional_accounts) = parse_intent_memo_accounts(&memo) {
-							account_metas.extend(additional_accounts);
-						} else {
-							warn!("Invalid memo for hook token: {}", memo);
-						}
-					}
-				}
-				let ix = program
-					.request()
-					.instruction(ComputeBudgetInstruction::set_compute_unit_limit(2_000_000u32))
-					.instruction(ComputeBudgetInstruction::request_heap_frame(256 * 1024))
-					.instruction(ComputeBudgetInstruction::set_compute_unit_price(50_000))
+					})
 					.accounts(account_metas)
 					.args(ix_data_account::Instruction)
 					.signer(&*authority)
