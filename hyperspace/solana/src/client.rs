@@ -1128,7 +1128,9 @@ pub async fn get_accounts(
 /// if the memo does not conform to this format.  Note that no validation on
 /// accounts is performed.
 fn parse_intent_memo_accounts(memo: &str) -> Option<Vec<AccountMeta>> {
-	let (count, mut rest) = memo.split_once(',')?;
+	let parsed = serde_json::from_str::<serde_json::Value>(memo).ok()?;
+	let memo_str = parsed.get("memo")?.as_str()?;
+	let (count, mut rest) = memo_str.split_once(',')?;
 	let count = count.parse::<usize>().ok()?;
 	let mut strings = rest.splitn(count + 2, ',').collect::<Vec<_>>();
 	// only accept a memo where all the components are presented
@@ -1151,7 +1153,7 @@ fn parse_intent_memo_accounts(memo: &str) -> Option<Vec<AccountMeta>> {
 
 #[test]
 fn test_parse_intent_memo_accounts() {
-	let memo = "2,Bt6A81KE6ZoWqG4SJa1gVCmcusSpmduJnPPpauRuNvAC,Hg3EhgX2USt8AzRNeX7Lh2uwTy3ij72qLeSofuCZK8Tc,137,{\"sender\":\"me\",\"receiver\":\"you\"}";
+	let memo = "{\"memo\": \"2,Bt6A81KE6ZoWqG4SJa1gVCmcusSpmduJnPPpauRuNvAC,Hg3EhgX2USt8AzRNeX7Lh2uwTy3ij72qLeSofuCZK8Tc,137,{\"sender\":\"me\",\"receiver\":\"you\"}\"}";
 	let accounts = parse_intent_memo_accounts(memo).unwrap();
 	assert_eq!(accounts.len(), 2);
 	assert!(accounts.iter().all(|account| account.is_writable));
