@@ -785,8 +785,6 @@ pub async fn find_suitable_proof_height_for_client(
 			continue
 		}
 
-		let consensus_state =
-			sink.query_client_consensus(at, client_id.clone(), temp_height).await.ok();
 		let consensus_state = sink
 			.query_client_consensus(at, client_id.clone(), temp_height, false)
 			.await
