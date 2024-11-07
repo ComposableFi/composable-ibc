@@ -56,8 +56,15 @@ use crate::{
 	utils::{new_ed25519_instruction_with_signature, non_absent_vote},
 };
 use guestchain::{PubKey, Signature as _};
+use log::LevelFilter;
 use solana_ibc::{
 	chain::ChainData, events::BlockFinalised, ix_data_account, storage::PrivateStorage,
+};
+use sqlx::{
+	database::HasArguments,
+	postgres::{PgConnectOptions, PgPoolOptions},
+	query::QueryAs,
+	Arguments, ConnectOptions, Execute, Postgres,
 };
 use tendermint_new::{
 	chain,
@@ -128,6 +135,7 @@ pub struct RollupClient {
 	pub trie_db_path: String,
 	// Sets whether to use JITO or RPC for submitting transactions
 	pub transaction_sender: TransactionSender,
+	pub pg_pool: sqlx::Pool<sqlx::Postgres>,
 }
 
 #[derive(std::fmt::Debug, Serialize, Deserialize, Clone)]
@@ -172,6 +180,7 @@ pub struct RollupClientConfig {
 	pub signature_verifier_program_id: String,
 	pub trie_db_path: String,
 	pub transaction_sender: String,
+	pub indexer_pg_url: String,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -341,6 +350,27 @@ impl RollupClient {
 		rusqlite::Connection::open(db_url).unwrap()
 	}
 
+	pub(crate) async fn query(
+		&self,
+		query: sqlx::query::Query<'_, sqlx::Postgres, sqlx::postgres::PgArguments>,
+	) -> Result<Vec<sqlx::postgres::PgRow>, Error> {
+		log::trace!(target: "hyperspace_rollup", "query: {}", query.sql());
+		let rows = query.fetch_all(&self.pg_pool).await.map_err(|e| Error::from(e))?;
+		Ok(rows)
+	}
+
+	pub async fn query_as<
+		'a,
+		T: Send + Unpin + for<'r> sqlx::FromRow<'r, sqlx::postgres::PgRow>,
+	>(
+		&self,
+		query: QueryAs<'a, Postgres, T, <Postgres as HasArguments<'a>>::Arguments>,
+	) -> Result<Vec<T>, Error> {
+		log::trace!(target: "hyperspace_rollup", "query: {}", query.sql());
+		let logs = query.fetch_all(&self.pg_pool).await?;
+		Ok(logs)
+	}
+
 	pub fn program(&self) -> Program<Arc<Keypair>> {
 		let anchor_client = self.client();
 		anchor_client.program(self.solana_ibc_program_id).unwrap()
@@ -361,6 +391,13 @@ impl RollupClient {
 			"RPC" => TransactionSender::RPC,
 			_ => panic!("Invalid param transaction sender: Expected JITO/RPC"),
 		};
+		let mut connect_options: PgConnectOptions = config.indexer_pg_url.parse().unwrap();
+		let pg_pool = PgPoolOptions::new()
+			.max_connections(5000)
+			.connect_with(connect_options.log_statements(LevelFilter::Debug))
+			.await
+			.expect("Unable to connect to the database");
+
 		Ok(Self {
 			name: config.name,
 			rpc_url: config.rpc_url.to_string(),
@@ -393,6 +430,7 @@ impl RollupClient {
 			channel_whitelist: Arc::new(Mutex::new(config.channel_whitelist.into_iter().collect())),
 			trie_db_path: config.trie_db_path,
 			transaction_sender,
+			pg_pool,
 		})
 	}
 

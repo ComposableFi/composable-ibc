@@ -58,6 +58,7 @@ use anchor_client::{
 	},
 };
 use anchor_lang::prelude::*;
+use chrono::{DateTime, Utc};
 use error::Error;
 use ibc::{
 	applications::transfer::{Amount, BaseDenom, PrefixedCoin, PrefixedDenom, TracePath},
@@ -111,7 +112,7 @@ use std::{result::Result, sync::Arc};
 use tokio_stream::Stream;
 
 use solana_ibc::storage::{SequenceKind, Serialised};
-
+use sqlx::Row;
 use trie_ids::{ClientIdx, ConnectionIdx, PortChannelPK, Tag, TrieKey};
 
 use crate::{
@@ -178,6 +179,10 @@ impl IbcProvider for RollupClient {
 		let client_id = self.client_id();
 		let latest_cp_height = counterparty.latest_height_and_timestamp().await?.0;
 		log::info!("this is the latest cp height {:?}", latest_cp_height);
+		if finality_height <= latest_cp_height.revision_height {
+			log::info!("No new blocks for rollup client");
+			return Ok(vec![]);
+		}
 		let latest_cp_client_state =
 			counterparty.query_client_state(latest_cp_height, client_id.clone()).await?;
 		let client_state_response = latest_cp_client_state
@@ -203,7 +208,7 @@ impl IbcProvider for RollupClient {
 		};
 		log::info!("This is client state {:?}", client_state);
 		let latest_cp_client_height = u64::from(client_state.0.latest_slot);
-		println!("This is counterparty client height {:?}", latest_cp_client_height);
+		log::info!("This is counterparty client height {:?}", latest_cp_client_height);
 		let new_block_events = events::get_events_upto_height(
 			self.rpc_client(),
 			self.solana_ibc_program_id,
@@ -238,8 +243,13 @@ impl IbcProvider for RollupClient {
 		.unwrap()?;
 		let slot_data = response.result.1;
 		let bank_hash = slot_data.delta_hash_proof.calculate_bank_hash();
+		let header_height = response.result.0;
+		if header_height <= latest_cp_client_height {
+			log::info!("No new blocks for rollup client");
+			return Ok(vec![]);
+		}
 		let header = cf_solana_og::Header {
-			slot: NonZeroU64::new(response.result.0).unwrap(),
+			slot: NonZeroU64::new(header_height).unwrap(),
 			bank_hash,
 			delta_hash_proof: slot_data.delta_hash_proof,
 			witness_proof: slot_data.witness_proof,
@@ -249,7 +259,7 @@ impl IbcProvider for RollupClient {
 			.filter_map(|event| {
 				convert_new_event_to_old(
 					event.clone(),
-					Height::new(1, u64::from(NonZeroU64::new(response.result.0).unwrap())),
+					Height::new(1, u64::from(NonZeroU64::new(header_height).unwrap())),
 				)
 			})
 			.collect();
@@ -268,7 +278,7 @@ impl IbcProvider for RollupClient {
 		let update_type =
 			if (block_events.len() > 0) { UpdateType::Mandatory } else { UpdateType::Optional };
 
-		let update = (msg.to_any(), Height::new(1, response.result.0), block_events, update_type);
+		let update = (msg.to_any(), Height::new(1, header_height), block_events, update_type);
 
 		Ok(vec![update])
 	}
@@ -328,60 +338,120 @@ impl IbcProvider for RollupClient {
 		at: Height,
 		client_id: ClientId,
 		consensus_height: Height,
+		include_proof: bool,
 	) -> Result<QueryConsensusStateResponse, Self::Error> {
-		use ibc_proto_new::Protobuf;
-		let (trie, at_height) = self.get_trie(at.revision_height, false).await?;
-		let storage = self.get_ibc_storage().await;
-		let revision_height = consensus_height.revision_height;
-		let revision_number = consensus_height.revision_number;
-		let new_client_id =
-			ibc_core_host_types::identifiers::ClientId::from_str(client_id.as_str()).unwrap();
-		log::info!("query_client_consensus before trie key");
-		let consensus_state_trie_key = TrieKey::for_consensus_state(
-			ClientIdx::try_from(new_client_id).unwrap(),
-			ibc_core_client_types::Height::new(
-				consensus_height.revision_number,
-				consensus_height.revision_height,
-			)
-			.unwrap(),
-		);
-		log::info!("query_client_consensus before prove trie");
-		let (val, consensus_state_proof) = trie
-			.prove(&consensus_state_trie_key)
-			.map_err(|_| Error::Custom("value is sealed and cannot be fetched".to_owned()))?;
-		log::info!("query_client_consensus before search clients");
-		let client_store = storage
-			.clients
-			.iter()
-			.find(|&client| client.client_id.as_str() == client_id.as_str())
-			.ok_or(
-				"Client not found with the given client id while querying client consensus"
-					.to_owned(),
-			)?;
-		log::info!("query_client_consensus before get cs states");
-		let serialized_consensus_state = client_store
-			.consensus_states
-			.get(&ibc_core_client_types::Height::new(revision_number, revision_height).unwrap())
-			.ok_or(Error::Custom("No value at given key".to_owned()))?;
-		log::info!("query_client_consensus before convert cs states");
-		let consensus_state = serialized_consensus_state
-			.state()
-			.map_err(|_| {
-				Error::Custom(
-					"Could not
-deserialize consensus state"
+		let consensus_state = if cfg!(feature = "no_indexer") {
+			use ibc_proto_new::Protobuf;
+
+			log::info!("query_client_consensus before search clients");
+			let storage = self.get_ibc_storage().await;
+			let revision_height = consensus_height.revision_height;
+			let revision_number = consensus_height.revision_number;
+			let client_store = storage
+				.clients
+				.iter()
+				.find(|&client| client.client_id.as_str() == client_id.as_str())
+				.ok_or(
+					"Client not found with the given client id while querying client consensus"
 						.to_owned(),
-				)
-			})
-			.unwrap();
-		log::info!("query_client_consensus before encode");
+				)?;
+			log::info!("query_client_consensus before get cs states");
+			let serialized_consensus_state = client_store
+				.consensus_states
+				.get(&ibc_core_client_types::Height::new(revision_number, revision_height).unwrap())
+				.ok_or(Error::Custom("No value at given key".to_owned()))?;
+			log::info!("query_client_consensus before convert cs states");
+			let consensus_state = serialized_consensus_state
+				.state()
+				.map_err(|_| {
+					Error::Custom(
+						"Could not
+	deserialize consensus state"
+							.to_owned(),
+					)
+				})
+				.unwrap();
+			consensus_state
+		// log::info!("query_client_consensus before encode");
+		} else {
+			use prost::Message;
+			let sql = r#"
+            SELECT consensus_state
+            FROM consensus_states
+            WHERE client_id = $1
+              AND revision_number = $2
+              AND revision_height = $3
+              AND (
+                  $4 > client_update_revision_number
+                  OR ($4 = client_update_revision_number AND $5 >= client_update_revision_height)
+              )
+            LIMIT 1
+        "#;
+
+			let query = sqlx::query(sql)
+				.bind(client_id.as_str())
+				.bind(consensus_height.revision_number as i64)
+				.bind(consensus_height.revision_height as i64)
+				.bind(at.revision_number as i64)
+				.bind(at.revision_height as i64);
+
+			let rows = self.query(query).await?;
+
+			if let Some(row) = rows.into_iter().next() {
+				let consensus_state_bytes: Option<Vec<u8>> = row.get("consensus_state");
+
+				if let Some(bytes) = consensus_state_bytes {
+					use prost_12::Message;
+					let any = ibc_proto_new::google::protobuf::Any::decode(bytes.as_slice())
+						.map_err(|e| Error::from(e))?;
+
+					let consensus_state =
+						solana_ibc::consensus_state::AnyConsensusState::try_from(any)
+							.map_err(|e| Error::Custom("Failed to decode Any".to_string()))?;
+
+					consensus_state
+				} else {
+					return Err(Self::Error::Custom("Consensus state is NULL".to_string()))
+				}
+			} else {
+				return Err(Self::Error::Custom("No consensus state found for the given client_id and consensus_height at the specified block".to_string()))
+			}
+		};
+
 		let cs_state = convert_new_consensus_state_to_old(consensus_state.clone());
-		let inner_any = consensus_state.clone().encode_vec();
-		log::info!("this is consensus state {:?}", consensus_state);
-		log::info!("This is inner any consensus state {:?}", inner_any);
+		// 		let inner_any = consensus_state.clone().encode_vec();
+		// 		log::info!("this is consensus state {:?}", consensus_state);
+		// 		log::info!("This is inner any consensus state {:?}", inner_any);
+
+		let proof = if include_proof {
+			log::info!("Querying client consensus with proof");
+			let (trie, at_height) = self.get_trie(at.revision_height, false).await?;
+			let new_client_id =
+				ibc_core_host_types::identifiers::ClientId::from_str(client_id.as_str()).unwrap();
+			log::info!("query_client_consensus before trie key");
+			let consensus_state_trie_key = TrieKey::for_consensus_state(
+				ClientIdx::try_from(new_client_id).unwrap(),
+				ibc_core_client_types::Height::new(
+					consensus_height.revision_number,
+					consensus_height.revision_height,
+				)
+				.unwrap(),
+			);
+
+			log::info!("query_client_consensus before prove trie");
+			let (val, consensus_state_proof) = trie
+				.prove(&consensus_state_trie_key)
+				.map_err(|_| Error::Custom("value is sealed and cannot be fetched".to_owned()))?;
+
+			borsh::to_vec(&consensus_state_proof).unwrap()
+		} else {
+			log::info!("Querying client consensus without proof");
+			vec![]
+		};
+
 		Ok(QueryConsensusStateResponse {
 			consensus_state: Some(cs_state.into()),
-			proof: borsh::to_vec(&consensus_state_proof).unwrap(),
+			proof,
 			proof_height: Some(at.into()),
 		})
 	}
@@ -808,8 +878,8 @@ deserialize client state"
 		&self,
 	) -> Result<(Height, ibc::timestamp::Timestamp), Self::Error> {
 		let rpc = self.rpc_client();
-		let slot = rpc.get_slot().await.unwrap();
-		let timestamp = rpc.get_block_time(slot).await.unwrap() as u64;
+		let slot = rpc.get_slot().await?;
+		let timestamp = rpc.get_block_time(slot).await? as u64;
 		Ok((Height::new(1, slot), Timestamp::from_nanoseconds(timestamp * 10u64.pow(9)).unwrap()))
 	}
 
@@ -1228,39 +1298,89 @@ deserialize client state"
 		client_id: ClientId,
 		client_height: Height,
 	) -> Result<(Height, ibc::timestamp::Timestamp), Self::Error> {
-		let storage = self.get_ibc_storage().await;
-		let client_store = storage
-			.clients
-			.iter()
-			.find(|&client| client.client_id.as_str() == client_id.as_str())
-			.ok_or("Client not found with the given client id while querying client update time and height".to_owned())?;
-		let inner_client_height = ibc_core_client_types::Height::new(
-			client_height.revision_number,
-			client_height.revision_height,
-		)
-		.unwrap();
-		let height = client_store
-			.consensus_states
-			.deref()
-			.get(&inner_client_height)
-			.ok_or("No host height found with the given height".to_owned())?
-			.processed_height()
-			.ok_or("No height found".to_owned())?;
-		let timestamp = client_store
-			.consensus_states
-			.deref()
-			.get(&inner_client_height)
-			.ok_or("No timestamp found with the given height".to_owned())?
-			.processed_time()
-			.ok_or("No timestamp found".to_owned())?;
-		Ok((
-			Height {
-				revision_height: u64::from(height),
-				// TODO: Use epoch
-				revision_number: 1_u64,
-			},
-			Timestamp::from_nanoseconds(u64::from(timestamp)).unwrap(),
-		))
+		if cfg!(feature = "no_indexer") {
+			let storage = self.get_ibc_storage().await;
+			let client_store = storage
+				.clients
+				.iter()
+				.find(|&client| client.client_id.as_str() == client_id.as_str())
+				.ok_or("Client not found with the given client id while querying client update time and
+			height".to_owned())?;
+			let inner_client_height = ibc_core_client_types::Height::new(
+				client_height.revision_number,
+				client_height.revision_height,
+			)
+			.unwrap();
+			let height = client_store
+				.consensus_states
+				.deref()
+				.get(&inner_client_height)
+				.ok_or("No host height found with the given height".to_owned())?
+				.processed_height()
+				.ok_or("No height found".to_owned())?;
+			let timestamp = client_store
+				.consensus_states
+				.deref()
+				.get(&inner_client_height)
+				.ok_or("No timestamp found with the given height".to_owned())?
+				.processed_time()
+				.ok_or("No timestamp found".to_owned())?;
+			Ok((
+				Height {
+					revision_height: u64::from(height),
+					// TODO: Use epoch
+					revision_number: 1_u64,
+				},
+				Timestamp::from_nanoseconds(u64::from(timestamp)).unwrap(),
+			))
+		} else {
+			// Construct the SQL query
+			let sql = r#"
+            SELECT client_update_revision_number, client_update_revision_height, client_update_time
+            FROM consensus_states
+            WHERE client_id = $1
+              AND revision_number = $2
+              AND revision_height = $3
+            ORDER BY client_update_revision_number DESC, client_update_revision_height DESC
+            LIMIT 1
+        "#;
+
+			// Prepare the query with parameter binding
+			let query = sqlx::query(sql)
+				.bind(client_id.as_str())
+				.bind(client_height.revision_number as i64)
+				.bind(client_height.revision_height as i64);
+
+			// Execute the query using `self.query(..)`
+			let rows = self.query(query).await?;
+
+			// Process the result
+			if let Some(row) = rows.into_iter().next() {
+				// Extract values from the row
+				let client_update_revision_number: i64 = row.get("client_update_revision_number");
+				let client_update_revision_height: i64 = row.get("client_update_revision_height");
+				let client_update_time: DateTime<Utc> = row.get("client_update_time");
+
+				// Construct the Height
+				let height = Height {
+					revision_number: client_update_revision_number as u64,
+					revision_height: client_update_revision_height as u64,
+				};
+
+				// Construct the Timestamp
+				let timestamp =
+					Timestamp::from_nanoseconds(client_update_time.timestamp_nanos() as u64)
+						.map_err(|e| Self::Error::from(e))?;
+
+				Ok((height, timestamp))
+			} else {
+				// Handle the case where no data is found
+				Err(Self::Error::Custom(
+					"No data found for the given client_id and client_height at the specified block"
+						.to_string(),
+				))
+			}
+		}
 	}
 
 	async fn query_host_consensus_state_proof(

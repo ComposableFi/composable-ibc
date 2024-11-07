@@ -126,6 +126,7 @@ pub async fn parse_events(
 							open_init.height(),
 							open_init.attributes().client_id.clone(),
 							client_state.latest_height(),
+							true,
 						)
 						.await?;
 					let host_consensus_state_proof =
@@ -231,6 +232,7 @@ pub async fn parse_events(
 							open_try.height(),
 							open_try.attributes().client_id.clone(),
 							client_state.latest_height(),
+							true,
 						)
 						.await?;
 					let host_consensus_state_proof =

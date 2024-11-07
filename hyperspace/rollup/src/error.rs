@@ -13,18 +13,33 @@ pub enum Error {
 	/// Decode error
 	#[error("Decode error: {0}")]
 	DecodeError(#[from] DecodeError),
+	/// Decode error
+	#[error("Decode error: {0}")]
+	DecodeError2(#[from] prost_12::DecodeError),
 	/// Encode error
 	#[error("Encode error: {0}")]
 	EncodeError(#[from] prost::EncodeError),
+	/// Encode error
+	#[error("Encode error: {0}")]
+	EncodeError2(#[from] prost_12::EncodeError),
 	/// Parse timestamp error
 	#[error("Parse timestamp error: {0}")]
 	ParseTimestampError(#[from] ParseTimestampError),
 	/// Transfer error
 	#[error("IBC transfer error: {0}")]
 	TransferError(#[from] ibc::applications::transfer::error::Error),
+	/// Client error
+	#[error("IBC client error: {0}")]
+	ClientError(#[from] ibc::core::ics02_client::error::Error),
 	/// Tendermint error
 	#[error("Tendermint error: {0}")]
 	TendermintError(#[from] tendermint::Error),
+	/// SQLx error
+	#[error("SQLx error: {0}")]
+	SQLxError(#[from] sqlx::Error),
+	/// Anchor Client Error
+	#[error("Anchor client error: {0}")]
+	AnchorClientError(#[from] anchor_client::solana_client::client_error::ClientError),
 }
 
 impl From<String> for Error {
