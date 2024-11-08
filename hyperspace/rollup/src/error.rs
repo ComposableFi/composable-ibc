@@ -37,9 +37,15 @@ pub enum Error {
 	/// SQLx error
 	#[error("SQLx error: {0}")]
 	SQLxError(#[from] sqlx::Error),
+	/// Solana Client Error
+	#[error("Solana client error: {0}")]
+	SolanaClientError(#[from] anchor_client::solana_client::client_error::ClientError),
 	/// Anchor Client Error
 	#[error("Anchor client error: {0}")]
-	AnchorClientError(#[from] anchor_client::solana_client::client_error::ClientError),
+	AnchorClientError(#[from] anchor_client::ClientError),
+	/// IO error
+	#[error("IO error: {0}")]
+	IOError(#[from] std::io::Error),
 }
 
 impl From<String> for Error {

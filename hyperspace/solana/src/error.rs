@@ -37,6 +37,9 @@ pub enum Error {
 	/// SQLx error
 	#[error("SQLx error: {0}")]
 	SQLxError(#[from] sqlx::Error),
+	/// Anchor error
+	#[error("Anchor client error: {0}")]
+	AnchorError(#[from] anchor_client::ClientError),
 }
 
 impl From<String> for Error {

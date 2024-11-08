@@ -344,7 +344,7 @@ impl IbcProvider for RollupClient {
 			use ibc_proto_new::Protobuf;
 
 			log::info!("query_client_consensus before search clients");
-			let storage = self.get_ibc_storage().await;
+			let storage = self.get_ibc_storage().await?;
 			let revision_height = consensus_height.revision_height;
 			let revision_number = consensus_height.revision_number;
 			let client_store = storage
@@ -463,7 +463,7 @@ impl IbcProvider for RollupClient {
 	) -> Result<QueryClientStateResponse, Self::Error> {
 		log::info!("Quering solana client state at height {:?} {:?}", at, client_id);
 		let (trie, at_height) = self.get_trie(at.revision_height, false).await?;
-		let storage = self.get_ibc_storage().await;
+		let storage = self.get_ibc_storage().await?;
 		let new_client_id =
 			ibc_core_host_types::identifiers::ClientId::from_str(client_id.as_str()).unwrap();
 		let client_state_trie_key =
@@ -501,7 +501,7 @@ deserialize client state"
 		log::info!("this is client state {:?}", client_state);
 		// log::info!("This is inner any client state {:?}", inner_any);
 		let any_client_state = convert_new_client_state_to_old(client_state);
-		let chain_account = self.get_chain_storage().await;
+		let chain_account = self.get_chain_storage().await?;
 		Ok(QueryClientStateResponse {
 			client_state: Some(any_client_state.into()),
 			proof: borsh::to_vec(&client_state_proof).unwrap(),
@@ -516,7 +516,7 @@ deserialize client state"
 	) -> Result<QueryConnectionResponse, Self::Error> {
 		use ibc_proto_new::Protobuf;
 		let (trie, at_height) = self.get_trie(at.revision_height, false).await?;
-		let storage = self.get_ibc_storage().await;
+		let storage = self.get_ibc_storage().await?;
 		let connection_idx = ConnectionIdx::try_from(
 			ibc_core_host_types::identifiers::ConnectionId::from_str(connection_id.as_str())
 				.unwrap(),
@@ -593,7 +593,7 @@ deserialize client state"
 		port_id: ibc::core::ics24_host::identifier::PortId,
 	) -> Result<QueryChannelResponse, Self::Error> {
 		let (trie, at_height) = self.get_trie(at.revision_height, false).await?;
-		let storage = self.get_ibc_storage().await;
+		let storage = self.get_ibc_storage().await?;
 		let new_port_id =
 			ibc_core_host_types::identifiers::PortId::from_str(port_id.as_str()).unwrap();
 		let new_channel_id =
@@ -819,7 +819,7 @@ deserialize client state"
 		channel_id: &ibc::core::ics24_host::identifier::ChannelId,
 	) -> Result<QueryNextSequenceReceiveResponse, Self::Error> {
 		let (trie, at_height) = self.get_trie(at.revision_height, false).await?;
-		let storage = self.get_ibc_storage().await;
+		let storage = self.get_ibc_storage().await?;
 		let new_port_id =
 			ibc_core_host_types::identifiers::PortId::from_str(port_id.as_str()).unwrap();
 		let new_channel_id =
@@ -1022,7 +1022,7 @@ deserialize client state"
 		at: Height,
 		_connection_id: &ConnectionId,
 	) -> Result<ibc_proto::ibc::core::channel::v1::QueryChannelsResponse, Self::Error> {
-		let storage = self.get_ibc_storage().await;
+		let storage = self.get_ibc_storage().await?;
 		let channels: Vec<IdentifiedChannel> = storage
 			.port_channel
 			.deref()
@@ -1299,7 +1299,7 @@ deserialize client state"
 		client_height: Height,
 	) -> Result<(Height, ibc::timestamp::Timestamp), Self::Error> {
 		if cfg!(feature = "no_indexer") {
-			let storage = self.get_ibc_storage().await;
+			let storage = self.get_ibc_storage().await?;
 			let client_store = storage
 				.clients
 				.iter()
@@ -1492,7 +1492,7 @@ deserialize client state"
 	}
 
 	async fn query_clients(&self) -> Result<Vec<ClientId>, Self::Error> {
-		let storage = self.get_ibc_storage().await;
+		let storage = self.get_ibc_storage().await?;
 		let client_ids: Vec<ClientId> = storage
 			.clients
 			.iter()
@@ -1510,7 +1510,7 @@ deserialize client state"
 		)>,
 		Self::Error,
 	> {
-		let storage = self.get_ibc_storage().await;
+		let storage = self.get_ibc_storage().await?;
 		let channels: Vec<(ChannelId, PortId)> = storage
 			.port_channel
 			.deref()
@@ -1530,7 +1530,7 @@ deserialize client state"
 		_height: u32,
 		client_id: String,
 	) -> Result<Vec<IdentifiedConnection>, Self::Error> {
-		let storage = self.get_ibc_storage().await;
+		let storage = self.get_ibc_storage().await?;
 		let client_id_key =
 			ibc_core_host_types::identifiers::ClientId::from_str(&client_id).unwrap();
 		let mut index = -1;
@@ -1600,7 +1600,7 @@ deserialize client state"
 		println!("This is height on solana {:?} and timestamp {:?}", height, timestamp);
 		let (trie_data, _at_height) = self.get_trie(0, false).await?;
 		let witness_key = self.get_witness_key();
-		let storage = self.get_ibc_storage().await;
+		let storage = self.get_ibc_storage().await?;
 		let (slot, slot_timestamp, trie_root) =
 			storage.local_consensus_state.iter().last().unwrap();
 		let slot_time = self.rpc_client().get_block_time(slot.clone()).await.unwrap();
@@ -1803,7 +1803,7 @@ impl LightClientSync for RollupClient {
 			height,
 		)
 		.await;
-		let chain_account = self.get_chain_storage().await;
+		let chain_account = self.get_chain_storage().await?;
 		let mut heights = Vec::new();
 		let updates: Vec<Any> = signatures
 			.iter()
@@ -1984,7 +1984,7 @@ impl Chain for RollupClient {
 		let mut index = -1;
 
 		for message in messages {
-			let storage = self.get_ibc_storage().await;
+			let storage = self.get_ibc_storage().await?;
 			let my_message = Ics26Envelope::<LocalClientTypes>::try_from(message.clone()).unwrap();
 			let new_messages = convert_old_msgs_to_new(vec![my_message]);
 			let message = new_messages[0].clone();

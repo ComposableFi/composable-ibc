@@ -312,23 +312,23 @@ impl RollupClient {
 		Ok((trie, false))
 	}
 
-	pub async fn get_ibc_storage(&self) -> PrivateStorageWithWitness {
+	pub async fn get_ibc_storage(&self) -> Result<PrivateStorageWithWitness, Error> {
 		let program = self.program();
 		let ibc_storage_key = self.get_ibc_storage_key();
-		let mut account_data = self.rpc_client().get_account_data(&ibc_storage_key).await.unwrap();
+		let mut account_data = self.rpc_client().get_account_data(&ibc_storage_key).await?;
 		let storage: PrivateStorageWithWitness =
-			PrivateStorageWithWitness::deserialize(&mut &account_data[8..]).unwrap();
+			PrivateStorageWithWitness::deserialize(&mut &account_data[8..])?;
 		// let storage = tokio::task::spawn_blocking(move || {
 		// 	program.account(ibc_storage_key).unwrap()
 		// }).await.unwrap();
-		storage
+		Ok(storage)
 	}
 
-	pub async fn get_chain_storage(&self) -> ChainData {
+	pub async fn get_chain_storage(&self) -> Result<ChainData, Error> {
 		let program = self.program();
 		let chain_storage_key = self.get_chain_key();
-		let storage = program.account(chain_storage_key).await.unwrap();
-		storage
+		let storage = program.account(chain_storage_key).await?;
+		Ok(storage)
 	}
 
 	pub fn rpc_client(&self) -> AsyncRpcClient {

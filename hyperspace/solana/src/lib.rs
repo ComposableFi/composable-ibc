@@ -166,7 +166,7 @@ impl IbcProvider for SolanaClient {
 		// let (finality_blockhash, finality_height) = match finality_event {
 		// 	FinalityEvent::Guest { blockhash, block_height } => (blockhash, block_height),
 		// };
-		let chain_account = self.get_chain_storage().await;
+		let chain_account = self.get_chain_storage().await?;
 		let finality_height = chain_account.head().unwrap().block_height.into();
 		log::info!("This is solaan height {:?}", finality_height);
 		let client_id = self.client_id();
@@ -420,7 +420,7 @@ impl IbcProvider for SolanaClient {
 	) -> Result<QueryConsensusStateResponse, Self::Error> {
 		let consensus_state = if cfg!(feature = "no_indexer") {
 			use ibc_proto_new::Protobuf;
-			let storage = self.get_ibc_storage().await;
+			let storage = self.get_ibc_storage().await?;
 			let revision_height = consensus_height.revision_height;
 			let revision_number = consensus_height.revision_number;
 			log::info!("query_client_consensus before search clients");
@@ -499,7 +499,7 @@ impl IbcProvider for SolanaClient {
 		log::info!("this is consensus state {:?}", consensus_state);
 		log::info!("This is inner any consensus state {:?}", inner_any);
 		let proof = if include_proof {
-			let chain_account = self.get_chain_storage().await;
+			let chain_account = self.get_chain_storage().await?;
 			let (trie, at_height) = self.get_trie(at.revision_height, true).await;
 			let block_header = if !self.common_state.handshake_completed && at_height {
 				log::info!("Fetching previous block header");
@@ -563,7 +563,7 @@ impl IbcProvider for SolanaClient {
 	) -> Result<QueryClientStateResponse, Self::Error> {
 		log::info!("Quering solana client state at height {:?} {:?}", at, client_id);
 		let (trie, at_height) = self.get_trie(at.revision_height, true).await;
-		let storage = self.get_ibc_storage().await;
+		let storage = self.get_ibc_storage().await?;
 		let new_client_id =
 			ibc_core_host_types::identifiers::ClientId::from_str(client_id.as_str()).unwrap();
 		let client_state_trie_key =
@@ -601,7 +601,7 @@ deserialize client state"
 		log::info!("this is client state {:?}", client_state);
 		// log::info!("This is inner any client state {:?}", inner_any);
 		let any_client_state = convert_new_client_state_to_old(client_state);
-		let chain_account = self.get_chain_storage().await;
+		let chain_account = self.get_chain_storage().await?;
 		let block_header = if !self.common_state.handshake_completed && at_height {
 			log::info!("Fetching previous block header");
 			events::get_header_from_height(
@@ -650,7 +650,7 @@ deserialize client state"
 		connection_id: ConnectionId,
 	) -> Result<QueryConnectionResponse, Self::Error> {
 		use ibc_proto_new::Protobuf;
-		let chain_account = self.get_chain_storage().await;
+		let chain_account = self.get_chain_storage().await?;
 		let proof_height =
 			if u64::from(chain_account.head().unwrap().block_height) == at.revision_height {
 				log::info!("Using existing proof height {}", at.revision_height);
@@ -660,7 +660,7 @@ deserialize client state"
 				at.revision_height
 			};
 		let (trie, at_height) = self.get_trie(proof_height, true).await;
-		let storage = self.get_ibc_storage().await;
+		let storage = self.get_ibc_storage().await?;
 		let connection_idx = ConnectionIdx::try_from(
 			ibc_core_host_types::identifiers::ConnectionId::from_str(connection_id.as_str())
 				.unwrap(),
@@ -782,7 +782,7 @@ deserialize client state"
 		port_id: ibc::core::ics24_host::identifier::PortId,
 	) -> Result<QueryChannelResponse, Self::Error> {
 		let (trie, at_height) = self.get_trie(at.revision_height, true).await;
-		let storage = self.get_ibc_storage().await;
+		let storage = self.get_ibc_storage().await?;
 		let new_port_id =
 			ibc_core_host_types::identifiers::PortId::from_str(port_id.as_str()).unwrap();
 		let new_channel_id =
@@ -843,7 +843,7 @@ deserialize client state"
 			.expect(&format!("No block header found for height {:?}", at.revision_height))
 		} else {
 			log::info!("Fetching latest block header");
-			let chain_account = self.get_chain_storage().await;
+			let chain_account = self.get_chain_storage().await?;
 			chain_account.head().unwrap().clone()
 		};
 		Ok(QueryChannelResponse {
@@ -945,7 +945,7 @@ deserialize client state"
 			.prove(&trie_key)
 			.map_err(|_| Error::Custom("value is sealed and cannot be fetched".to_owned()))?;
 		log::info!("This is proof {:?}", proof);
-		let chain_account = self.get_chain_storage().await;
+		let chain_account = self.get_chain_storage().await?;
 		let block_header_at_height = if at_height {
 			log::info!("Fetching block header at height");
 			events::get_header_from_height(
@@ -1058,7 +1058,7 @@ deserialize client state"
 		channel_id: &ibc::core::ics24_host::identifier::ChannelId,
 	) -> Result<QueryNextSequenceReceiveResponse, Self::Error> {
 		let (trie, at_height) = self.get_trie(at.revision_height, true).await;
-		let storage = self.get_ibc_storage().await;
+		let storage = self.get_ibc_storage().await?;
 		let new_port_id =
 			ibc_core_host_types::identifiers::PortId::from_str(port_id.as_str()).unwrap();
 		let new_channel_id =
@@ -1116,7 +1116,7 @@ deserialize client state"
 	async fn latest_height_and_timestamp(
 		&self,
 	) -> Result<(Height, ibc::timestamp::Timestamp), Self::Error> {
-		let chain = self.get_chain_storage().await;
+		let chain = self.get_chain_storage().await?;
 		let block_header = chain.head().unwrap();
 		let height = block_header.block_height.into();
 		let timestamp_ns: u64 = block_header.timestamp_ns.into();
@@ -1263,7 +1263,7 @@ deserialize client state"
 		at: Height,
 		_connection_id: &ConnectionId,
 	) -> Result<ibc_proto::ibc::core::channel::v1::QueryChannelsResponse, Self::Error> {
-		let storage = self.get_ibc_storage().await;
+		let storage = self.get_ibc_storage().await?;
 		let channels: Vec<IdentifiedChannel> = storage
 			.port_channel
 			.deref()
@@ -1579,7 +1579,7 @@ deserialize client state"
 				))
 			}
 		} else {
-			let storage = self.get_ibc_storage().await;
+			let storage = self.get_ibc_storage().await?;
 			let client_store = storage
 				.clients
 				.iter()
@@ -1725,7 +1725,7 @@ deserialize client state"
 	}
 
 	async fn query_clients(&self) -> Result<Vec<ClientId>, Self::Error> {
-		let storage = self.get_ibc_storage().await;
+		let storage = self.get_ibc_storage().await?;
 		let client_ids: Vec<ClientId> = storage
 			.clients
 			.iter()
@@ -1743,7 +1743,7 @@ deserialize client state"
 		)>,
 		Self::Error,
 	> {
-		let storage = self.get_ibc_storage().await;
+		let storage = self.get_ibc_storage().await?;
 		let channels: Vec<(ChannelId, PortId)> = storage
 			.port_channel
 			.deref()
@@ -1763,7 +1763,7 @@ deserialize client state"
 		_height: u32,
 		client_id: String,
 	) -> Result<Vec<IdentifiedConnection>, Self::Error> {
-		let storage = self.get_ibc_storage().await;
+		let storage = self.get_ibc_storage().await?;
 		let client_id_key =
 			ibc_core_host_types::identifiers::ClientId::from_str(&client_id).unwrap();
 		let mut index = -1;
@@ -1831,7 +1831,7 @@ deserialize client state"
 	> {
 		let latest_height_timestamp = self.latest_height_and_timestamp().await?;
 		println!("This is height on solana {:?}", latest_height_timestamp);
-		let chain_account = self.get_chain_storage().await;
+		let chain_account = self.get_chain_storage().await?;
 		let header = chain_account.head().unwrap().clone();
 		let blockhash = header.calc_hash();
 		let validators = chain_account.validators().unwrap();
@@ -2052,7 +2052,7 @@ impl LightClientSync for SolanaClient {
 			height,
 		)
 		.await;
-		let chain_account = self.get_chain_storage().await;
+		let chain_account = self.get_chain_storage().await?;
 		let mut heights = Vec::new();
 		let updates: Vec<Any> = signatures
 			.iter()
@@ -2180,15 +2180,17 @@ impl Chain for SolanaClient {
 					}
 				} else {
 					log::trace!("No new events found, returning latest");
-					let latest_height = this.get_chain_storage().await.head().unwrap().block_height;
-					let latest_finality_event = FinalityEvent::Guest {
-						blockhash: Default::default(),
-						block_height: latest_height.into(),
-					};
+					if let Ok(chain_storage) = this.get_chain_storage().await {
+						let latest_height = chain_storage.head().unwrap().block_height;
+						let latest_finality_event = FinalityEvent::Guest {
+							blockhash: Default::default(),
+							block_height: latest_height.into(),
+						};
 
-					let broke = tx.send(latest_finality_event).is_err();
-					if broke {
-						break;
+						let broke = tx.send(latest_finality_event).is_err();
+						if broke {
+							break;
+						}
 					}
 				}
 			}
@@ -2222,7 +2224,7 @@ impl Chain for SolanaClient {
 		let mut messages_indeed = vec![];
 
 		for message in messages {
-			let storage = self.get_ibc_storage().await;
+			let storage = self.get_ibc_storage().await?;
 			let my_message = Ics26Envelope::<LocalClientTypes>::try_from(message.clone()).unwrap();
 			let new_messages = convert_old_msgs_to_new(vec![my_message]);
 			let message = new_messages[0].clone();
