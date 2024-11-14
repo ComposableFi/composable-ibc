@@ -2053,6 +2053,13 @@ impl Chain for RollupClient {
 				} else if let MsgEnvelope::Packet(PacketMsg::Recv(e)) = message {
 					let packet_data: ibc_app_transfer_types::packet::PacketData =
 						serde_json::from_slice(&e.packet.data).unwrap();
+					if packet_data.token.amount == 0.into() {
+						log::info!(
+							"Skipping transfer packet with 0 amount, seq: {}",
+							e.packet.seq_on_a
+						);
+						continue;
+					}
 					self.send_deliver(
 						DeliverIxType::Recv {
 							token: packet_data.token,

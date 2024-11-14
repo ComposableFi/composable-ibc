@@ -1139,7 +1139,7 @@ pub async fn get_accounts(
 		let token_mint = Pubkey::find_program_address(&token_mint_seeds, &program_id).0;
 		let receiver_account = Pubkey::from_str(&receiver)?;
 		let receiver_address = get_associated_token_address(&receiver_account, &token_mint);
-		let token_mint_info = rpc.get_token_supply(&token_mint).await;
+		let token_mint_info = rpc.get_account_data(&token_mint).await;
 		if token_mint_info.is_err() {
 			return Err(ParsePubkeyError::Invalid);
 		}
