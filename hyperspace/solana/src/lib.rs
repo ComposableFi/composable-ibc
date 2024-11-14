@@ -2542,8 +2542,7 @@ impl Chain for SolanaClient {
 							.expect("connects to searcher client");
 							let mut bundle_results_subscription = client
 								.subscribe_bundle_results(SubscribeBundleResultsRequest {})
-								.await
-								.expect("subscribe to bundle results")
+								.await?
 								.into_inner();
 
 							let jito_address =
