@@ -46,6 +46,9 @@ pub enum Error {
 	/// IO error
 	#[error("IO error: {0}")]
 	IOError(#[from] std::io::Error),
+	/// Tonic Status error
+	#[error("Tonic status error: {0}")]
+	TonicStatusError(#[from] tonic_0_10::Status),
 }
 
 impl From<String> for Error {
