@@ -52,6 +52,7 @@ pub async fn get_timeout_proof_height(
 	latest_client_height_on_source: Height,
 	packet: &Packet,
 	packet_creation_height: u64,
+	source_delay_period: Duration,
 ) -> Option<Height> {
 	let timeout_variant = Packet::timeout_variant(packet, &sink_timestamp, sink_height).unwrap();
 	log::trace!(target: "hyperspace", "get_timeout_proof_height: {}->{}, timeout_variant={:?}, source_height={}, sink_height={}, sink_timestamp={}, latest_client_height_on_source={}, packet_creation_height={}, packet={:?}",
@@ -72,6 +73,7 @@ pub async fn get_timeout_proof_height(
 				Some(start_height),
 				None,
 				latest_client_height_on_source,
+				source_delay_period,
 			)
 			.await
 		},
@@ -127,6 +129,7 @@ pub async fn get_timeout_proof_height(
 				None,
 				Some(packet.timeout_timestamp),
 				latest_client_height_on_source,
+				source_delay_period,
 			)
 			.await
 		},
@@ -175,6 +178,7 @@ pub async fn get_timeout_proof_height(
 				Some(packet.timeout_height),
 				Some(packet.timeout_timestamp),
 				latest_client_height_on_source,
+				source_delay_period,
 			)
 			.await
 		},
