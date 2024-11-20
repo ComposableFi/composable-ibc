@@ -2116,8 +2116,10 @@ impl Chain for RollupClient {
 					self.send_deliver(
 						DeliverIxType::Recv {
 							token: packet_data.token,
-							port_id: e.packet.port_id_on_a,
-							channel_id: e.packet.chan_id_on_a,
+							port_id_a: e.packet.port_id_on_a,
+							channel_id_a: e.packet.chan_id_on_a,
+							port_id_b: e.packet.port_id_on_b,
+							channel_id_b: e.packet.chan_id_on_b,
 							receiver: packet_data.receiver.to_string(),
 						},
 						chunk_account,

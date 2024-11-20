@@ -79,8 +79,10 @@ pub enum DeliverIxType {
 	},
 	Recv {
 		token: Coin<PrefixedDenom>,
-		port_id: ibc_core_host_types::identifiers::PortId,
-		channel_id: ibc_core_host_types::identifiers::ChannelId,
+		port_id_a: ibc_core_host_types::identifiers::PortId,
+		channel_id_a: ibc_core_host_types::identifiers::ChannelId,
+		port_id_b: ibc_core_host_types::identifiers::PortId,
+		channel_id_b: ibc_core_host_types::identifiers::ChannelId,
 		receiver: String,
 	},
 	Timeout {
@@ -687,11 +689,18 @@ impl RollupClient {
 				// signature
 				Ok((signature_chunking_txs, vec![transactions, tx]))
 			},
-			DeliverIxType::Recv { ref token, ref port_id, ref channel_id, ref receiver } => {
+			DeliverIxType::Recv {
+				ref token,
+				port_id_a: ref port_id_a,
+				channel_id_a: ref channel_id_a,
+				port_id_b: ref port_id_b,
+				channel_id_b: ref channel_id_b,
+				ref receiver,
+			} => {
 				log::info!(
 					"PortId: {:?} and channel {:?} and token {:?}",
-					port_id,
-					channel_id,
+					port_id_a,
+					channel_id_a,
 					token
 				);
 				let (escrow_account, token_mint, receiver_account, receiver_address) =
@@ -699,8 +708,10 @@ impl RollupClient {
 						&token.denom,
 						self.solana_ibc_program_id,
 						receiver,
-						port_id,
-						channel_id,
+						port_id_a,
+						channel_id_a,
+						port_id_b,
+						channel_id_b,
 						&self.rpc_client(),
 						false,
 					)
@@ -802,6 +813,8 @@ impl RollupClient {
 					&token.denom,
 					self.solana_ibc_program_id,
 					&sender_account,
+					port_id,
+					channel_id,
 					port_id,
 					channel_id,
 					&self.rpc_client(),
@@ -1231,13 +1244,15 @@ pub async fn get_accounts(
 	denom: &PrefixedDenom,
 	program_id: Pubkey,
 	receiver: &String,
-	port_id: &ibc_core_host_types::identifiers::PortId,
-	channel_id: &ibc_core_host_types::identifiers::ChannelId,
+	port_id_a: &ibc_core_host_types::identifiers::PortId,
+	channel_id_a: &ibc_core_host_types::identifiers::ChannelId,
+	port_id_b: &ibc_core_host_types::identifiers::PortId,
+	channel_id_b: &ibc_core_host_types::identifiers::ChannelId,
 	rpc: &AsyncRpcClient,
 	refund: bool,
 ) -> Result<(Pubkey, Pubkey, Pubkey, Pubkey), ParsePubkeyError> {
-	if (!refund && is_receiver_chain_source(port_id.clone(), channel_id.clone(), denom) ||
-		(refund && is_sender_chain_source(port_id.clone(), channel_id.clone(), denom)))
+	if (!refund && is_receiver_chain_source(port_id_a.clone(), channel_id_a.clone(), denom) ||
+		(refund && is_sender_chain_source(port_id_a.clone(), channel_id_a.clone(), denom)))
 	{
 		log::info!("Receiver chain source");
 		let hashed_denom = CryptoHash::digest(denom.base_denom.as_str().as_bytes());
@@ -1251,7 +1266,7 @@ pub async fn get_accounts(
 		log::info!("Not receiver chain source");
 		let mut full_token = denom.clone();
 		if !refund {
-			full_token.add_trace_prefix(TracePrefix::new(port_id.clone(), channel_id.clone()));
+			full_token.add_trace_prefix(TracePrefix::new(port_id_b.clone(), channel_id_b.clone()));
 		}
 		let hashed_denom = CryptoHash::digest(full_token.to_string().as_bytes());
 		let token_mint_seeds = ["mint".as_bytes(), hashed_denom.as_ref()];
