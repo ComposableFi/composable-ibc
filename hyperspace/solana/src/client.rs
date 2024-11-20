@@ -1141,7 +1141,7 @@ pub async fn get_accounts(
 		let token_mint_info = rpc.get_account_data(&token_mint).await;
 		if token_mint_info.is_err() {
 			log::warn!("Token mint not found (could be rebased token)");
-			return Err(ParsePubkeyError::Invalid);
+			// return Err(ParsePubkeyError::Invalid);
 		}
 		Ok((Some(program_id), Some(token_mint), Some(receiver_account), Some(receiver_address)))
 	}
