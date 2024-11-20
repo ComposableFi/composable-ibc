@@ -12,6 +12,7 @@ use solana_transaction_status::EncodedConfirmedTransactionWithStatusMeta;
 use std::str::FromStr;
 use tokio::runtime::Runtime;
 
+use crate::{error::Error, utils::skip_fail};
 use base64::Engine;
 use ibc::{
 	core::{
@@ -43,8 +44,6 @@ use ibc::{
 	Height,
 };
 use pallet_ibc::light_clients::Signature;
-
-use crate::utils::skip_fail;
 
 pub fn convert_new_event_to_old(
 	event: ibc_core_handler_types::events::IbcEvent,
@@ -241,9 +240,8 @@ pub fn convert_new_event_to_old(
 					destination_channel: ChannelId::from_str(e.chan_id_on_b().as_str()).unwrap(),
 					data: e.packet_data().to_vec(),
 					timeout_height: match e.timeout_height_on_b() {
-						ibc_core_channel_types::timeout::TimeoutHeight::Never => {
-							Height { revision_height: 0, revision_number: 0 }
-						},
+						ibc_core_channel_types::timeout::TimeoutHeight::Never =>
+							Height { revision_height: 0, revision_number: 0 },
 						ibc_core_channel_types::timeout::TimeoutHeight::At(h) => Height {
 							revision_height: h.revision_height(),
 							revision_number: h.revision_number(),
@@ -268,9 +266,8 @@ pub fn convert_new_event_to_old(
 					destination_channel: ChannelId::from_str(e.chan_id_on_b().as_str()).unwrap(),
 					data: e.packet_data().to_vec(),
 					timeout_height: match e.timeout_height_on_b() {
-						ibc_core_channel_types::timeout::TimeoutHeight::Never => {
-							Height { revision_height: 0, revision_number: 0 }
-						},
+						ibc_core_channel_types::timeout::TimeoutHeight::Never =>
+							Height { revision_height: 0, revision_number: 0 },
 						ibc_core_channel_types::timeout::TimeoutHeight::At(h) => Height {
 							revision_height: h.revision_height(),
 							revision_number: h.revision_number(),
@@ -295,9 +292,8 @@ pub fn convert_new_event_to_old(
 					destination_channel: ChannelId::from_str(e.chan_id_on_b().as_str()).unwrap(),
 					data: e.packet_data().to_vec(),
 					timeout_height: match e.timeout_height_on_b() {
-						ibc_core_channel_types::timeout::TimeoutHeight::Never => {
-							Height { revision_height: 0, revision_number: 0 }
-						},
+						ibc_core_channel_types::timeout::TimeoutHeight::Never =>
+							Height { revision_height: 0, revision_number: 0 },
 						ibc_core_channel_types::timeout::TimeoutHeight::At(h) => Height {
 							revision_height: h.revision_height(),
 							revision_number: h.revision_number(),
@@ -323,9 +319,8 @@ pub fn convert_new_event_to_old(
 					destination_channel: ChannelId::from_str(e.chan_id_on_b().as_str()).unwrap(),
 					data: Vec::new(),
 					timeout_height: match e.timeout_height_on_b() {
-						ibc_core_channel_types::timeout::TimeoutHeight::Never => {
-							Height { revision_height: 0, revision_number: 0 }
-						},
+						ibc_core_channel_types::timeout::TimeoutHeight::Never =>
+							Height { revision_height: 0, revision_number: 0 },
 						ibc_core_channel_types::timeout::TimeoutHeight::At(h) => Height {
 							revision_height: h.revision_height(),
 							revision_number: h.revision_number(),
@@ -350,9 +345,8 @@ pub fn convert_new_event_to_old(
 					destination_channel: ChannelId::from_str(e.chan_id_on_b().as_str()).unwrap(),
 					data: Vec::new(), // Not sure about this
 					timeout_height: match e.timeout_height_on_b() {
-						ibc_core_channel_types::timeout::TimeoutHeight::Never => {
-							Height { revision_height: 0, revision_number: 0 }
-						},
+						ibc_core_channel_types::timeout::TimeoutHeight::Never =>
+							Height { revision_height: 0, revision_number: 0 },
 						ibc_core_channel_types::timeout::TimeoutHeight::At(h) => Height {
 							revision_height: h.revision_height(),
 							revision_number: h.revision_number(),
@@ -412,7 +406,9 @@ pub async fn get_client_state_at_height(
 	let mut current_height = upto_height;
 	while current_height >= upto_height {
 		let (transactions, last_searched_hash) =
-			get_previous_transactions(&rpc, program_id, before_hash, SearchIn::IBC).await;
+			get_previous_transactions(&rpc, program_id, before_hash, SearchIn::IBC)
+				.await
+				.ok()?;
 		if transactions.is_empty() {
 			break;
 		}
@@ -506,8 +502,9 @@ pub async fn _get_signatures_for_blockhash(
 	program_id: Pubkey,
 	blockhash: CryptoHash,
 ) -> Result<(Vec<(Pubkey, Signature)>, BlockHeader), String> {
-	let (transactions, _) =
-		get_previous_transactions(&rpc, program_id, None, SearchIn::GuestChain).await;
+	let (transactions, _) = get_previous_transactions(&rpc, program_id, None, SearchIn::GuestChain)
+		.await
+		.map_err(|e| e.to_string())?;
 
 	let mut signatures = Vec::new();
 	// let mut index = 0;
@@ -561,7 +558,9 @@ pub async fn get_header_from_height(
 	let mut block_header = None;
 	while block_header.is_none() {
 		let (transactions, last_searched_hash) =
-			get_previous_transactions(&rpc, program_id, before_hash, SearchIn::GuestChain).await;
+			get_previous_transactions(&rpc, program_id, before_hash, SearchIn::GuestChain)
+				.await
+				.ok()?;
 		if transactions.is_empty() {
 			break;
 		}
@@ -603,14 +602,17 @@ pub async fn get_signatures_upto_height(
 	rpc: RpcClient,
 	program_id: Pubkey,
 	upto_height: u64,
-) -> (
-	Vec<(
-		Vec<(Pubkey, Signature)>,
-		BlockHeader,
-		Option<guestchain::Epoch<sigverify::ed25519::PubKey>>,
-	)>,
-	Vec<ibc_core_handler_types::events::IbcEvent>,
-) {
+) -> Result<
+	(
+		Vec<(
+			Vec<(Pubkey, Signature)>,
+			BlockHeader,
+			Option<guestchain::Epoch<sigverify::ed25519::PubKey>>,
+		)>,
+		Vec<ibc_core_handler_types::events::IbcEvent>,
+	),
+	Error,
+> {
 	let mut current_height = upto_height;
 	let mut before_hash = None;
 	let mut all_signatures = Vec::new();
@@ -620,7 +622,7 @@ pub async fn get_signatures_upto_height(
 	log::info!("This is upto height {:?}", upto_height);
 	while current_height >= upto_height {
 		let (transactions, last_searched_hash) =
-			get_previous_transactions(&rpc, program_id, before_hash, SearchIn::GuestChain).await;
+			get_previous_transactions(&rpc, program_id, before_hash, SearchIn::GuestChain).await?;
 		if transactions.is_empty() {
 			break;
 		}
@@ -675,7 +677,7 @@ pub async fn get_signatures_upto_height(
 			all_ibc_events.extend(ibc_events);
 		}
 	}
-	(
+	Ok((
 		all_block_headers
 			.iter()
 			.filter_map(|(b, epoch)| {
@@ -700,7 +702,7 @@ pub async fn get_signatures_upto_height(
 			})
 			.collect(),
 		all_ibc_events,
-	)
+	))
 }
 
 pub async fn get_previous_transactions(
@@ -708,7 +710,7 @@ pub async fn get_previous_transactions(
 	program_id: Pubkey,
 	before_hash: Option<anchor_client::solana_sdk::signature::Signature>,
 	search_in: SearchIn,
-) -> (Vec<Response>, String) {
+) -> Result<(Vec<Response>, String), Error> {
 	let search_address = match search_in {
 		SearchIn::IBC => {
 			let storage_seeds = &[solana_ibc::SOLANA_IBC_STORAGE_SEED];
@@ -726,10 +728,9 @@ pub async fn get_previous_transactions(
 				..Default::default()
 			},
 		)
-		.await
-		.unwrap();
+		.await?;
 	if transaction_signatures.is_empty() {
-		return (vec![], before_hash.map_or("".to_string(), |sig| sig.to_string()));
+		return Ok((vec![], before_hash.map_or("".to_string(), |sig| sig.to_string())));
 	}
 	let last_searched_hash = transaction_signatures
 		.last()
@@ -749,7 +750,7 @@ pub async fn get_previous_transactions(
 		body.push(payload);
 	}
 	let url = rpc.url();
-	tokio::task::spawn_blocking(move || {
+	let ret = tokio::task::spawn_blocking(move || {
 		for _ in 0..5 {
 			let response = reqwest::blocking::Client::new().post(url.clone()).json(&body).send();
 			let response = skip_fail!(response);
@@ -761,7 +762,8 @@ pub async fn get_previous_transactions(
 		(vec![], "".to_string())
 	})
 	.await
-	.unwrap()
+	.map_err(|e| Error::Custom(e.to_string()))?;
+	Ok(ret)
 }
 
 #[derive(Debug, Serialize, Deserialize)]
@@ -851,17 +853,16 @@ pub fn testing_events() {
 		.iter()
 		.filter_map(|tx| match tx {
 			solana_ibc::events::Event::IbcEvent(e) => match e {
-				ibc_core_handler_types::events::IbcEvent::WriteAcknowledgement(packet) => {
-					if packet.chan_id_on_a().as_str() == &channel_id.to_string()
-						&& packet.port_id_on_a().as_str() == port_id.as_str()
-						&& seqs.iter().find(|&&seq| packet.seq_on_a().value() == seq).is_some()
+				ibc_core_handler_types::events::IbcEvent::WriteAcknowledgement(packet) =>
+					if packet.chan_id_on_a().as_str() == &channel_id.to_string() &&
+						packet.port_id_on_a().as_str() == port_id.as_str() &&
+						seqs.iter().find(|&&seq| packet.seq_on_a().value() == seq).is_some()
 					{
 						println!("We found packet");
 						Some(packet)
 					} else {
 						None
-					}
-				},
+					},
 				_ => None,
 			},
 			_ => None,

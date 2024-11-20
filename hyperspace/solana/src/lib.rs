@@ -203,7 +203,7 @@ impl IbcProvider for SolanaClient {
 			self.solana_ibc_program_id,
 			latest_cp_client_height + 1,
 		)
-		.await;
+		.await?;
 
 		let earliest_block_header = all_signatures.last();
 
@@ -1330,7 +1330,7 @@ deserialize client state"
 				before_hash,
 				SearchIn::IBC,
 			)
-			.await;
+			.await?;
 			before_hash = Some(
 				anchor_client::solana_sdk::signature::Signature::from_str(&last_searched_hash)
 					.unwrap(),
@@ -1443,7 +1443,7 @@ deserialize client state"
 				before_hash,
 				SearchIn::IBC,
 			)
-			.await;
+			.await?;
 			before_hash = Some(
 				anchor_client::solana_sdk::signature::Signature::from_str(&last_searched_hash)
 					.unwrap(),
@@ -2104,7 +2104,7 @@ impl LightClientSync for SolanaClient {
 			self.solana_ibc_program_id,
 			height,
 		)
-		.await;
+		.await?;
 		let chain_account = self.get_chain_storage().await?;
 		let mut heights = Vec::new();
 		let updates: Vec<Any> = signatures
