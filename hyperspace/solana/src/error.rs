@@ -40,6 +40,9 @@ pub enum Error {
 	/// Anchor error
 	#[error("Anchor client error: {0}")]
 	AnchorError(#[from] anchor_client::ClientError),
+	/// Anchor error
+	#[error("Solana client client error: {0}")]
+	SolanaClientError(#[from] anchor_client::solana_client::client_error::ClientError),
 	/// Tonic Status error
 	#[error("Tonic status error: {0}")]
 	TonicStatusError(#[from] tonic_0_10::Status),

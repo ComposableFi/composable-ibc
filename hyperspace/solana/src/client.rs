@@ -253,7 +253,7 @@ impl SolanaClient {
 		&self,
 		at: u64,
 		require_proof: bool,
-	) -> (solana_trie::TrieAccount<Vec<u8>, ()>, bool) {
+	) -> Result<(solana_trie::TrieAccount<Vec<u8>, ()>, bool), Error> {
 		let connection = self.get_db();
 		if require_proof {
 			let row = connection.query_row("SELECT * FROM Trie WHERE height=?1", [at], |row| {
@@ -268,10 +268,10 @@ impl SolanaClient {
 			if let Ok(trie) = row {
 				log::info!("Does block state roots match {}", trie.match_block_state_root);
 				if trie.match_block_state_root {
-					return (
+					return Ok((
 						solana_trie::TrieAccount::new(trie.data).unwrap(),
 						trie.match_block_state_root,
-					);
+					));
 				}
 			}
 		}
@@ -279,12 +279,11 @@ impl SolanaClient {
 		let rpc_client = self.rpc_client();
 		let trie_account = rpc_client
 			.get_account_with_commitment(&trie_key, CommitmentConfig::processed())
-			.await
-			.unwrap()
+			.await?
 			.value
 			.unwrap();
 		let trie = solana_trie::TrieAccount::new(trie_account.data).unwrap();
-		(trie, false)
+		Ok((trie, false))
 	}
 
 	pub async fn get_ibc_storage(&self) -> Result<PrivateStorage, Error> {
