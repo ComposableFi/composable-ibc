@@ -252,8 +252,8 @@ async fn process_some_finality_event<A: Chain, B: Chain>(
 
 	process_updates(source, sink, metrics, mode, updates, &mut msgs, ready_packets.clone()).await?;
 	// if msgs.len() < 2 && !source.common_state().handshake_completed {
-	// 	log::info!("-------------------------------------------Skipping the update--------------------------------------------");
-	// 	msgs = vec![];
+	// 	log::info!("-------------------------------------------Skipping the
+	// update--------------------------------------------"); 	msgs = vec![];
 	// }
 
 	msgs.extend(ready_packets);
@@ -279,6 +279,7 @@ async fn process_some_finality_event<A: Chain, B: Chain>(
 				};
 				timeout_heights.push(timeout_msg.proofs.height().revision_height);
 			}
+			let mut n = 0;
 			loop {
 				let largest_height = timeout_heights.iter().max().unwrap();
 				let latest_height_on_solana = sink.latest_height_and_timestamp().await.unwrap().0;
@@ -288,6 +289,11 @@ async fn process_some_finality_event<A: Chain, B: Chain>(
 				}
 				log::info!("Waiting for next block {:?} to be finalized", latest_height_on_solana);
 				core::time::Duration::from_secs(1);
+				n += 1;
+				if n == 20 {
+					log::info!("Breaking out of loop");
+					break
+				}
 			}
 			let (updates, heights) = sink.fetch_mandatory_updates(source).await.unwrap();
 			let updates_to_be_sent: Vec<Any> = heights
@@ -377,6 +383,7 @@ async fn process_updates<A: Chain, B: Chain>(
 			.any(|height| height.revision_height > latest_update_height);
 
 		if height_is_greater {
+			let mut n = 0;
 			loop {
 				let largest_height = timeout_heights.iter().max().unwrap();
 				let latest_height_on_solana = source.latest_height_and_timestamp().await?.0;
@@ -390,8 +397,16 @@ async fn process_updates<A: Chain, B: Chain>(
 					std::thread::sleep(core::time::Duration::from_secs(5));
 					break
 				}
-				log::info!("Waiting for next block {:?} to be finalized", latest_height_on_solana);
+				log::info!(
+					"Waiting for next block {:?} to be finalized (2)",
+					latest_height_on_solana
+				);
 				std::thread::sleep(core::time::Duration::from_secs(1));
+				n += 1;
+				if n == 10 {
+					log::info!("Breaking out of loop");
+					break
+				}
 			}
 			let (mandatory_updates, heights) = source.fetch_mandatory_updates(sink).await?;
 			// log::info!("Height is greater than timeout height {:?}", );
