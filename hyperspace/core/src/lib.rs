@@ -288,7 +288,7 @@ async fn process_some_finality_event<A: Chain, B: Chain>(
 					break
 				}
 				log::info!("Waiting for next block {:?} to be finalized", latest_height_on_solana);
-				core::time::Duration::from_secs(1);
+				std::thread::sleep(core::time::Duration::from_secs(1));
 				n += 1;
 				if n == 20 {
 					log::info!("Breaking out of loop");

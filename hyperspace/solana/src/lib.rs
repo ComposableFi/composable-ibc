@@ -103,11 +103,6 @@ use solana_ibc::events::Event;
 use std::{result::Result, sync::Arc};
 use tokio_stream::{Stream, StreamExt};
 
-use solana_ibc::storage::{SequenceKind, Serialised};
-use sqlx::Row;
-use tokio::time::timeout;
-use trie_ids::{ClientIdx, ConnectionIdx, PortChannelPK, Tag, TrieKey};
-
 use crate::{
 	client::TransactionSender,
 	events::{get_events_from_logs, SearchIn},
@@ -116,6 +111,12 @@ pub use crate::{
 	client::{DeliverIxType, SolanaClient, SolanaClientConfig},
 	events::convert_new_event_to_old,
 };
+use ibc::applications::transfer::packet::PacketData;
+use ibc_rpc::PacketInfo;
+use solana_ibc::storage::{SequenceKind, Serialised};
+use sqlx::Row;
+use tokio::time::timeout;
+use trie_ids::{ClientIdx, ConnectionIdx, PortChannelPK, Tag, TrieKey};
 
 pub mod client;
 mod client_state;
@@ -2044,6 +2045,17 @@ deserialize client state"
 			// No matching consensus state found
 			None
 		}
+	}
+
+	async fn should_ignore_packet(&self, packet: &PacketInfo) -> bool {
+		let Ok(result) = serde_json::from_slice::<PacketData>(packet.data.as_slice()) else {
+			return true;
+		};
+		let base_denom = result.token.denom.base_denom.as_str();
+		if Pubkey::from_str(base_denom).is_err() {
+			return true;
+		}
+		false
 	}
 }
 

@@ -60,6 +60,7 @@ use ibc_proto::{
 		connection::v1::{IdentifiedConnection, QueryConnectionResponse},
 	},
 };
+use ibc_rpc::PacketInfo;
 use ics08_wasm::Bytes;
 use pallet_ibc::light_clients::{AnyClientMessage, AnyClientState, AnyConsensusState};
 #[cfg(any(test, feature = "testing"))]

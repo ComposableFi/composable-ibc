@@ -208,6 +208,10 @@ pub async fn query_ready_and_timed_out_packets(
 		let acks_packets_count = Arc::new(AtomicUsize::new(0));
 		for send_packets in send_packets.chunks(PROCESS_PACKETS_BATCH_SIZE) {
 			for send_packet in send_packets.iter().cloned() {
+				if sink.should_ignore_packet(&send_packet).await {
+					log::debug!(target: "hyperspace", "Skipping packet as it should be ignored: {:?}", send_packet);
+					continue
+				}
 				let source_connection_end = source_connection_end.clone();
 				let sink_channel_end = sink_channel_end.clone();
 				let source_connection_end = source_connection_end.clone();
@@ -286,7 +290,7 @@ pub async fn query_ready_and_timed_out_packets(
 							next_sequence_recv.next_sequence_receive,
 							proof_height,
 						)
-							.await?;
+						.await?;
 						return Ok(Some(Left(msg)))
 					} else {
 						log::info!(target: "hyperspace", "The packet has not timed out yet: {:?}", packet);

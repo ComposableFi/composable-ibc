@@ -518,6 +518,10 @@ pub trait IbcProvider {
 	) -> Option<Height> {
 		None
 	}
+
+	async fn should_ignore_packet(&self, _packet: &PacketInfo) -> bool {
+		false
+	}
 }
 
 /// Provides an interface that allows us run the hyperspace-testsuite

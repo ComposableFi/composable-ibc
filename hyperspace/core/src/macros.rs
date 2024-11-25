@@ -660,6 +660,16 @@ macro_rules! chains {
 				}
 			}
 
+			async fn should_ignore_packet(&self, packet: &PacketInfo) -> bool {
+				match self {
+					$(
+						$(#[$($meta)*])*
+						Self::$name(chain) => chain.should_ignore_packet(packet).await,
+					)*
+					Self::Wasm(c) => c.inner.should_ignore_packet(packet).await,
+				}
+			}
+
 			async fn query_connection_id_from_tx_hash(
 				&self,
 				tx_id: Self::TransactionId,
