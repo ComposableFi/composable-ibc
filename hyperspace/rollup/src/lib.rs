@@ -144,7 +144,7 @@ pub const SIGNATURE_ACCOUNT_SEED: &[u8] = b"signature";
 
 pub const BLOCK_ENGINE_URL: &str = "https://mainnet.block-engine.jito.wtf";
 
-pub const MIN_TIME_UNTIL_UPDATE: u64 = 30 * 60; // 30 mins
+pub const MIN_TIME_UNTIL_UPDATE_SECS: u64 = 30 * 60; // 30 mins
 
 pub struct InnerAny {
 	pub type_url: String,
@@ -271,12 +271,14 @@ impl IbcProvider for RollupClient {
 			signer: counterparty.account_id(),
 		};
 
-		let has_init_event = block_events
-			.iter()
-			.find(|eve| matches!(eve, IbcEvent::OpenConfirmConnection(_)));
-
-		let update_type =
-			if (block_events.len() > 0) { UpdateType::Mandatory } else { UpdateType::Optional };
+		let update_interval_blocks = MIN_TIME_UNTIL_UPDATE_SECS * 1000 /
+			self.expected_block_time().as_millis().max(400) as u64; // 4500
+		let diff = header_height.saturating_sub(latest_cp_client_height);
+		let update_type = if diff >= update_interval_blocks {
+			UpdateType::Mandatory
+		} else {
+			UpdateType::Optional
+		};
 
 		let update = (msg.to_any(), Height::new(1, header_height), block_events, update_type);
 
