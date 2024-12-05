@@ -1,3 +1,4 @@
+use anchor_client::solana_sdk::signature::ParseSignatureError;
 use ibc::timestamp::ParseTimestampError;
 use prost::DecodeError;
 
@@ -46,6 +47,9 @@ pub enum Error {
 	/// Tonic Status error
 	#[error("Tonic status error: {0}")]
 	TonicStatusError(#[from] tonic_0_10::Status),
+	/// Parse signature error
+	#[error("Parse signature error: {0}")]
+	ParseSignatureError(#[from] ParseSignatureError),
 }
 
 impl From<String> for Error {

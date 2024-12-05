@@ -1093,10 +1093,9 @@ deserialize client state"
 				SearchIn::IBC,
 			)
 			.await?;
-			before_hash = Some(
-				anchor_client::solana_sdk::signature::Signature::from_str(&last_searched_hash)
-					.unwrap(),
-			);
+			before_hash = Some(anchor_client::solana_sdk::signature::Signature::from_str(
+				&last_searched_hash,
+			)?);
 			let send_packet_events: Vec<_> =
 				transactions
 					.iter()
@@ -1206,10 +1205,9 @@ deserialize client state"
 				SearchIn::IBC,
 			)
 			.await?;
-			before_hash = Some(
-				anchor_client::solana_sdk::signature::Signature::from_str(&last_searched_hash)
-					.unwrap(),
-			);
+			before_hash = Some(anchor_client::solana_sdk::signature::Signature::from_str(
+				&last_searched_hash,
+			)?);
 			let mut is_sequence_greater = false;
 			let mut is_maximum_seq_found = false;
 			let recv_packet_events: Vec<_> = transactions

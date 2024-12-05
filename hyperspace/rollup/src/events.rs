@@ -413,7 +413,7 @@ pub async fn get_client_state_at_height(
 			break;
 		}
 		before_hash = Some(
-			anchor_client::solana_sdk::signature::Signature::from_str(&last_searched_hash).unwrap(),
+			anchor_client::solana_sdk::signature::Signature::from_str(&last_searched_hash).ok()?,
 		);
 		for tx in transactions {
 			let logs = match tx.result.transaction.meta.clone().unwrap().log_messages {
@@ -556,7 +556,7 @@ pub async fn get_header_from_height(
 			break;
 		}
 		before_hash = Some(
-			anchor_client::solana_sdk::signature::Signature::from_str(&last_searched_hash).unwrap(),
+			anchor_client::solana_sdk::signature::Signature::from_str(&last_searched_hash).ok()?,
 		);
 		log::info!("THis is before hash {:?} {:?}", before_hash, last_searched_hash);
 		for tx in transactions {
@@ -617,9 +617,8 @@ pub async fn get_signatures_upto_height(
 		if transactions.is_empty() {
 			break;
 		}
-		before_hash = Some(
-			anchor_client::solana_sdk::signature::Signature::from_str(&last_searched_hash).unwrap(),
-		);
+		before_hash =
+			Some(anchor_client::solana_sdk::signature::Signature::from_str(&last_searched_hash)?);
 		for tx in transactions {
 			let transaction_err = tx.result.transaction.meta.clone().unwrap().err;
 			if transaction_err.is_some() {
@@ -710,9 +709,8 @@ pub async fn get_events_upto_height(
 		if transactions.is_empty() {
 			break;
 		}
-		before_hash = Some(
-			anchor_client::solana_sdk::signature::Signature::from_str(&last_searched_hash).unwrap(),
-		);
+		before_hash =
+			Some(anchor_client::solana_sdk::signature::Signature::from_str(&last_searched_hash)?);
 		for tx in transactions {
 			current_height = tx.result.slot;
 			if current_height < upto_height {
