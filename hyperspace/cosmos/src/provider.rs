@@ -95,6 +95,9 @@ use tendermint_rpc::Paging;
 // TODO: make it configurable
 // pub const NUMBER_OF_BLOCKS_TO_PROCESS_PER_ITER: u64 = 500;
 
+// These are the sequences which have an issue but have infinite timeout so we skip them
+pub const SEQUENCES_TO_SKIP: [u64; 5] = [2545, 2546, 2555, 2556, 2557];
+
 #[derive(Clone, Debug)]
 pub enum FinalityEvent {
 	Tendermint { from: TmHeight, to: TmHeight },
@@ -729,6 +732,9 @@ where
 			"query_send_packets: channel_id: {}, port_id: {}, seqs: {:?}", channel_id, port_id, seqs
 		);
 		let mut block_events = HashMap::<u64, PacketInfo>::new();
+
+		let filtered_seqs = seqs.iter().filter(|seq| !SEQUENCES_TO_SKIP.contains(seq)).collect();
+		log::info!(target: "hyperspace_cosmos", "Filtered seqs: {:?}", filtered_seqs);
 
 		for seq in seqs.iter() {
 			if block_events.contains_key(seq) {
