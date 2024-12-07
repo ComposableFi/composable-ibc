@@ -733,7 +733,7 @@ where
 		);
 		let mut block_events = HashMap::<u64, PacketInfo>::new();
 
-		let filtered_seqs: Vec<u64> = seqs.iter().filter(|seq| !SEQUENCES_TO_SKIP.contains(seq)).collect();
+		let filtered_seqs = seqs.iter().filter(|&seq| !SEQUENCES_TO_SKIP.contains(seq)).copied().collect::<Vec<_>>();
 		log::info!(target: "hyperspace_cosmos", "Filtered seqs: {:?}", filtered_seqs);
 
 		for seq in filtered_seqs.iter() {
