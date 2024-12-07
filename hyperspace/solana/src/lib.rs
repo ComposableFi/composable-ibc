@@ -135,6 +135,7 @@ pub const SIGNATURE_ACCOUNT_SEED: &[u8] = b"signature";
 pub const BLOCK_ENGINE_URL: &str = "https://mainnet.block-engine.jito.wtf";
 
 pub const MIN_TIME_UNTIL_UPDATE: u64 = 30 * 60; // 30 mins
+pub const MAX_PROOF_HEIGHT_DIFF: u64 = 10;
 
 pub struct InnerAny {
 	pub type_url: String,
@@ -1230,11 +1231,13 @@ deserialize client state"
 									}).expect("No height found while fetching send packet event");
 											log::info!("This is height_str {:?}", height_str);
 											// If proof height is too far away from the latest
-											// height, we use the latest height - 100
+											// height, we use the latest height -
+											// MAX_PROOF_HEIGHT_DIFF
 											let proof_height = height_str.parse::<u64>().unwrap();
-											let proof_height = if latest_height - proof_height > 100
+											let proof_height = if latest_height - proof_height >
+												MAX_PROOF_HEIGHT_DIFF
 											{
-												latest_height - 100
+												latest_height - MAX_PROOF_HEIGHT_DIFF
 											} else {
 												proof_height + 1
 											};
@@ -1329,9 +1332,10 @@ deserialize client state"
 									.is_some()
 							{
 								log::info!("Found receive packet");
-								// If proof height is too far away from the latest height, we use the latest height - 100
-								let proof_height = if latest_height - proof_height > 100 {
-									latest_height - 100
+								// If proof height is too far away from the latest height, we use the latest height - MAX_PROOF_HEIGHT_DIFF
+								let proof_height = if latest_height - proof_height > MAX_PROOF_HEIGHT_DIFF
+								{
+									latest_height - MAX_PROOF_HEIGHT_DIFF
 								} else {
 									proof_height + 1
 								};
