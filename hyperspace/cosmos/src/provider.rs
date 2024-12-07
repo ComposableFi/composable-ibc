@@ -587,7 +587,18 @@ where
 
 		let commitment_sequences: Vec<u64> =
 			response.commitments.into_iter().map(|v| v.sequence).collect();
-		Ok(commitment_sequences)
+
+		// Filtering out the sequences that are not in the SEQUENCES_TO_SKIP list
+		// 
+		// These sequences have infinite timeout and are failing on solana due to an issue with
+		// the hook.
+		let filtered_seqs = commitment_sequences
+			.iter()
+			.filter(|&seq| !SEQUENCES_TO_SKIP.contains(seq))
+			.copied()
+			.collect::<Vec<_>>();
+
+		Ok(filtered_seqs)
 	}
 
 	async fn query_packet_acknowledgements(
@@ -736,14 +747,7 @@ where
 		);
 		let mut block_events = HashMap::<u64, PacketInfo>::new();
 
-		let filtered_seqs = seqs
-			.iter()
-			.filter(|&seq| !SEQUENCES_TO_SKIP.contains(seq))
-			.copied()
-			.collect::<Vec<_>>();
-		log::info!(target: "hyperspace_cosmos", "Filtered seqs: {:?}", filtered_seqs);
-
-		for seq in filtered_seqs.iter() {
+		for seq in seqs.iter() {
 			if block_events.contains_key(seq) {
 				continue
 			}
