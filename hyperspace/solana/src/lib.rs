@@ -1296,7 +1296,7 @@ deserialize client state"
 		if seqs.is_empty() {
 			return Ok(Vec::new());
 		}
-		let maximum_sequence_number = seqs.iter().max().unwrap();
+		// let maximum_sequence_number = seqs.iter().max().unwrap();
 		let mut before_hash = None;
 		let mut total_packets = Vec::new();
 		while total_packets.len() < seqs.len() {
@@ -1311,8 +1311,8 @@ deserialize client state"
 				anchor_client::solana_sdk::signature::Signature::from_str(&last_searched_hash)
 					.unwrap(),
 			);
-			let mut is_sequence_greater = false;
-			let mut is_maximum_seq_found = false;
+			// let mut is_sequence_greater = false;
+			// let mut is_maximum_seq_found = false;
 			let recv_packet_events: Vec<_> = transactions
 			.iter()
 			.filter_map(|tx| {
@@ -1336,15 +1336,15 @@ deserialize client state"
 									.find(|&&seq| packet.seq_on_a().value() == seq)
 									.is_some()
 							{
-								if *maximum_sequence_number == packet.seq_on_a().value() {
-									is_maximum_seq_found = true;
-								}
+								// if *maximum_sequence_number == packet.seq_on_a().value() {
+								// 	is_maximum_seq_found = true;
+								// }
 								log::info!("Found receive packet");
 								Some((e.clone(), proof_height + 1))
 							} else {
-								if *maximum_sequence_number > packet.seq_on_a().value() {
-									is_sequence_greater = true;
-								}
+								// if *maximum_sequence_number > packet.seq_on_a().value() {
+								// 	is_sequence_greater = true;
+								// }
 								log::info!("Receive Ids dont match expected channel id: {:?} got channel id: {:?} expect port id: {:?} got port id: {:?} expected seq: {:?} got seq: {:?}", packet.chan_id_on_b(), channel_id, packet.port_id_on_b(), port_id, seqs, packet.seq_on_a().value());
 								None
 							},
@@ -1354,10 +1354,10 @@ deserialize client state"
 				}
 			})
 			.collect();
-			if is_sequence_greater && !is_maximum_seq_found {
-				log::info!("Sequence number found in logs is lesser than the set of sequence which we are looking for");
-				return Ok(Vec::new());
-			}
+			// if is_sequence_greater && !is_maximum_seq_found {
+			// 	log::info!("Sequence number found in logs is lesser than the set of sequence which we are looking for");
+			// 	return Ok(Vec::new());
+			// }
 			let packets: Vec<_> = recv_packet_events
 				.iter()
 				.map(|(recv_packet, height)| match recv_packet {
