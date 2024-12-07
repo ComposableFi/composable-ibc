@@ -1337,7 +1337,7 @@ deserialize client state"
 				.map(|(recv_packet, height)| match recv_packet {
 					ibc_core_handler_types::events::IbcEvent::WriteAcknowledgement(packet) => {
 						ibc_rpc::PacketInfo {
-							height: Some(*latest_proof_height),
+							height: Some(latest_proof_height),
 							sequence: packet.seq_on_a().value(),
 							source_port: packet.port_id_on_a().to_string(),
 							source_channel: packet.chan_id_on_a().to_string(),
