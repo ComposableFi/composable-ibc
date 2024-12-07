@@ -908,8 +908,8 @@ pub fn filter_events_by_ids(
 		.collect::<Vec<_>>();
 
 	let filter_packet = |packet: &Packet| {
-		channel_and_port_ids.contains(&(packet.source_channel.clone(), packet.source_port.clone()))
-			|| channel_and_port_ids
+		channel_and_port_ids.contains(&(packet.source_channel.clone(), packet.source_port.clone())) ||
+			channel_and_port_ids
 				.contains(&(packet.destination_channel.clone(), packet.destination_port.clone()))
 	};
 	let filter_client_attributes =
@@ -919,16 +919,16 @@ pub fn filter_events_by_ids(
 			.connection_id
 			.as_ref()
 			.map(|id| connection_ids.contains(&id))
-			.unwrap_or(false)
-			|| packet
+			.unwrap_or(false) ||
+			packet
 				.counterparty_connection_id
 				.as_ref()
 				.map(|id| connection_ids.contains(&id))
 				.unwrap_or(false)
 	};
 	let filter_channel_attributes = |packet: &ChannelAttributes| {
-		packet.channel_id.as_ref().map(|id| channel_ids.contains(&id)).unwrap_or(false)
-			|| packet
+		packet.channel_id.as_ref().map(|id| channel_ids.contains(&id)).unwrap_or(false) ||
+			packet
 				.counterparty_channel_id
 				.as_ref()
 				.map(|id| channel_ids.contains(&id))
@@ -950,29 +950,23 @@ pub fn filter_events_by_ids(
 		IbcEvent::OpenTryConnection(e) => filter_connection_attributes(&e.0),
 		IbcEvent::OpenAckConnection(e) => filter_connection_attributes(&e.0),
 		IbcEvent::OpenConfirmConnection(e) => filter_connection_attributes(&e.0),
-		IbcEvent::OpenInitChannel(e) => {
-			filter_channel_attributes(&ChannelAttributes::from(e.clone()))
-		},
-		IbcEvent::OpenTryChannel(e) => {
-			filter_channel_attributes(&ChannelAttributes::from(e.clone()))
-		},
-		IbcEvent::OpenAckChannel(e) => {
-			filter_channel_attributes(&ChannelAttributes::from(e.clone()))
-		},
-		IbcEvent::OpenConfirmChannel(e) => {
-			filter_channel_attributes(&ChannelAttributes::from(e.clone()))
-		},
-		IbcEvent::CloseInitChannel(e) => {
-			filter_channel_attributes(&ChannelAttributes::from(e.clone()))
-		},
-		IbcEvent::CloseConfirmChannel(e) => {
-			filter_channel_attributes(&ChannelAttributes::from(e.clone()))
-		},
+		IbcEvent::OpenInitChannel(e) =>
+			filter_channel_attributes(&ChannelAttributes::from(e.clone())),
+		IbcEvent::OpenTryChannel(e) =>
+			filter_channel_attributes(&ChannelAttributes::from(e.clone())),
+		IbcEvent::OpenAckChannel(e) =>
+			filter_channel_attributes(&ChannelAttributes::from(e.clone())),
+		IbcEvent::OpenConfirmChannel(e) =>
+			filter_channel_attributes(&ChannelAttributes::from(e.clone())),
+		IbcEvent::CloseInitChannel(e) =>
+			filter_channel_attributes(&ChannelAttributes::from(e.clone())),
+		IbcEvent::CloseConfirmChannel(e) =>
+			filter_channel_attributes(&ChannelAttributes::from(e.clone())),
 		IbcEvent::PushWasmCode(_) => true,
-		IbcEvent::NewBlock(_)
-		| IbcEvent::AppModule(_)
-		| IbcEvent::Empty(_)
-		| IbcEvent::ChainError(_) => true,
+		IbcEvent::NewBlock(_) |
+		IbcEvent::AppModule(_) |
+		IbcEvent::Empty(_) |
+		IbcEvent::ChainError(_) => true,
 	};
 	if !v {
 		log::debug!(target: "hyperspace", "Filtered out event: {:?}", ev);

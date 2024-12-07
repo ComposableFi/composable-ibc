@@ -237,9 +237,8 @@ pub fn convert_new_event_to_old(
 					destination_channel: ChannelId::from_str(e.chan_id_on_b().as_str()).unwrap(),
 					data: e.packet_data().to_vec(),
 					timeout_height: match e.timeout_height_on_b() {
-						ibc_core_channel_types::timeout::TimeoutHeight::Never => {
-							Height { revision_height: 0, revision_number: 0 }
-						},
+						ibc_core_channel_types::timeout::TimeoutHeight::Never =>
+							Height { revision_height: 0, revision_number: 0 },
 						ibc_core_channel_types::timeout::TimeoutHeight::At(h) => Height {
 							revision_height: h.revision_height(),
 							revision_number: h.revision_number(),
@@ -264,9 +263,8 @@ pub fn convert_new_event_to_old(
 					destination_channel: ChannelId::from_str(e.chan_id_on_b().as_str()).unwrap(),
 					data: e.packet_data().to_vec(),
 					timeout_height: match e.timeout_height_on_b() {
-						ibc_core_channel_types::timeout::TimeoutHeight::Never => {
-							Height { revision_height: 0, revision_number: 0 }
-						},
+						ibc_core_channel_types::timeout::TimeoutHeight::Never =>
+							Height { revision_height: 0, revision_number: 0 },
 						ibc_core_channel_types::timeout::TimeoutHeight::At(h) => Height {
 							revision_height: h.revision_height(),
 							revision_number: h.revision_number(),
@@ -291,9 +289,8 @@ pub fn convert_new_event_to_old(
 					destination_channel: ChannelId::from_str(e.chan_id_on_b().as_str()).unwrap(),
 					data: e.packet_data().to_vec(),
 					timeout_height: match e.timeout_height_on_b() {
-						ibc_core_channel_types::timeout::TimeoutHeight::Never => {
-							Height { revision_height: 0, revision_number: 0 }
-						},
+						ibc_core_channel_types::timeout::TimeoutHeight::Never =>
+							Height { revision_height: 0, revision_number: 0 },
 						ibc_core_channel_types::timeout::TimeoutHeight::At(h) => Height {
 							revision_height: h.revision_height(),
 							revision_number: h.revision_number(),
@@ -319,9 +316,8 @@ pub fn convert_new_event_to_old(
 					destination_channel: ChannelId::from_str(e.chan_id_on_b().as_str()).unwrap(),
 					data: Vec::new(),
 					timeout_height: match e.timeout_height_on_b() {
-						ibc_core_channel_types::timeout::TimeoutHeight::Never => {
-							Height { revision_height: 0, revision_number: 0 }
-						},
+						ibc_core_channel_types::timeout::TimeoutHeight::Never =>
+							Height { revision_height: 0, revision_number: 0 },
 						ibc_core_channel_types::timeout::TimeoutHeight::At(h) => Height {
 							revision_height: h.revision_height(),
 							revision_number: h.revision_number(),
@@ -346,9 +342,8 @@ pub fn convert_new_event_to_old(
 					destination_channel: ChannelId::from_str(e.chan_id_on_b().as_str()).unwrap(),
 					data: Vec::new(), // Not sure about this
 					timeout_height: match e.timeout_height_on_b() {
-						ibc_core_channel_types::timeout::TimeoutHeight::Never => {
-							Height { revision_height: 0, revision_number: 0 }
-						},
+						ibc_core_channel_types::timeout::TimeoutHeight::Never =>
+							Height { revision_height: 0, revision_number: 0 },
 						ibc_core_channel_types::timeout::TimeoutHeight::At(h) => Height {
 							revision_height: h.revision_height(),
 							revision_number: h.revision_number(),
@@ -846,17 +841,16 @@ pub fn testing_events() {
 		.iter()
 		.filter_map(|tx| match tx {
 			solana_ibc::events::Event::IbcEvent(e) => match e {
-				ibc_core_handler_types::events::IbcEvent::WriteAcknowledgement(packet) => {
-					if packet.chan_id_on_a().as_str() == &channel_id.to_string()
-						&& packet.port_id_on_a().as_str() == port_id.as_str()
-						&& seqs.iter().find(|&&seq| packet.seq_on_a().value() == seq).is_some()
+				ibc_core_handler_types::events::IbcEvent::WriteAcknowledgement(packet) =>
+					if packet.chan_id_on_a().as_str() == &channel_id.to_string() &&
+						packet.port_id_on_a().as_str() == port_id.as_str() &&
+						seqs.iter().find(|&&seq| packet.seq_on_a().value() == seq).is_some()
 					{
 						println!("We found packet");
 						Some(packet)
 					} else {
 						None
-					}
-				},
+					},
 				_ => None,
 			},
 			_ => None,

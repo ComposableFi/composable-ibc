@@ -95,17 +95,15 @@ where
 	let (mut chain_a_client_updates, mut chain_b_client_updates) = (
 		chain_a.ibc_events().await.filter_map(|ev| {
 			ready(match ev {
-				IbcEvent::UpdateClient(update) if chain_b.client_id() == *update.client_id() => {
-					Some(update)
-				},
+				IbcEvent::UpdateClient(update) if chain_b.client_id() == *update.client_id() =>
+					Some(update),
 				_ => None,
 			})
 		}),
 		chain_b.ibc_events().await.filter_map(|ev| {
 			ready(match ev {
-				IbcEvent::UpdateClient(update) if chain_a.client_id() == *update.client_id() => {
-					Some(update)
-				},
+				IbcEvent::UpdateClient(update) if chain_a.client_id() == *update.client_id() =>
+					Some(update),
 				_ => None,
 			})
 		}),
@@ -268,12 +266,11 @@ async fn process_some_finality_event<A: Chain, B: Chain>(
 				>::try_from(msg.clone())
 				.unwrap();
 				let timeout_msg = match my_message {
-					ibc::core::ics26_routing::msgs::Ics26Envelope::Ics4PacketMsg(packet_msg) => {
+					ibc::core::ics26_routing::msgs::Ics26Envelope::Ics4PacketMsg(packet_msg) =>
 						match packet_msg {
 							ibc::core::ics04_channel::msgs::PacketMsg::ToPacket(msg) => msg,
 							_ => continue,
-						}
-					},
+						},
 					_ => continue,
 				};
 				timeout_heights.push(timeout_msg.proofs.height().revision_height);
@@ -329,9 +326,9 @@ async fn process_updates<A: Chain, B: Chain>(
 	timeout_msgs: Vec<Any>,
 ) -> anyhow::Result<()> {
 	// for timeouts we need both chains to be up to date
-	let sink_has_undelivered_acks = sink.has_undelivered_sequences(UndeliveredType::Recvs)
-		|| sink.has_undelivered_sequences(UndeliveredType::Acks)
-		|| sink.has_undelivered_sequences(UndeliveredType::Timeouts);
+	let sink_has_undelivered_acks = sink.has_undelivered_sequences(UndeliveredType::Recvs) ||
+		sink.has_undelivered_sequences(UndeliveredType::Acks) ||
+		sink.has_undelivered_sequences(UndeliveredType::Timeouts);
 	let source_has_undelivered_acks = source.has_undelivered_sequences(UndeliveredType::Timeouts);
 
 	let mandatory_heights_for_undelivered_seqs =
@@ -463,9 +460,9 @@ async fn process_updates<A: Chain, B: Chain>(
 			messages.len(), update_type.is_optional(),
 		);
 
-		let need_to_send_proofs_for_sequences = (sink_has_undelivered_acks
-			|| source_has_undelivered_acks)
-			&& mandatory_heights_for_undelivered_seqs.contains(&height.revision_height);
+		let need_to_send_proofs_for_sequences = (sink_has_undelivered_acks ||
+			source_has_undelivered_acks) &&
+			mandatory_heights_for_undelivered_seqs.contains(&height.revision_height);
 		let common_state = source.common_state();
 		let skip_optional_updates = common_state.skip_optional_client_updates;
 
@@ -480,10 +477,10 @@ async fn process_updates<A: Chain, B: Chain>(
 			// not when we have *any* undelivered packets. But this requires rewriting
 			// `find_suitable_proof_height_for_client` function, that uses binary
 			// search, which won't work in this case
-			skip_optional_updates
-				&& update_type.is_optional()
-				&& !need_to_send_proofs_for_sequences
-				&& !timeout_heights.contains(&height),
+			skip_optional_updates &&
+				update_type.is_optional() &&
+				!need_to_send_proofs_for_sequences &&
+				!timeout_heights.contains(&height),
 			has_packet_events(&event_types),
 			messages.is_empty(),
 		) {
@@ -492,7 +489,7 @@ async fn process_updates<A: Chain, B: Chain>(
 				log::info!("Skipping finality notification for {}", sink.name());
 				continue;
 			},
-			(false, _, true) => {
+			(false, _, true) =>
 				if update_type.is_optional() && need_to_send_proofs_for_sequences {
 					log::info!("Sending an optional update because source ({}) chain has undelivered sequences at height{}", sink.name(), height.revision_height);
 				} else {
@@ -501,8 +498,7 @@ async fn process_updates<A: Chain, B: Chain>(
 						sink.name(),
 						height.revision_height
 					)
-				}
-			},
+				},
 			_ => log::info!(
 				"Received finalized events from: {} at height {} {event_types:#?}",
 				source.name(),
@@ -515,9 +511,9 @@ async fn process_updates<A: Chain, B: Chain>(
 			msg_update_client.type_url,
 			msg_update_client.value.len()
 		);
-		if (height.revision_height != update_max_height.revision_height
-			&& messages.is_empty()
-			&& update_type.is_optional())
+		if (height.revision_height != update_max_height.revision_height &&
+			messages.is_empty() &&
+			update_type.is_optional())
 		{
 			log::info!(
 				"Skipping update for {} at height {} because it is not the latest update",

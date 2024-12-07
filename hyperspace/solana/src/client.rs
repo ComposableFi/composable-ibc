@@ -1155,12 +1155,11 @@ fn parse_intent_memo_accounts(memo: &str) -> Option<Vec<AccountMeta>> {
 		.iter()
 		.take(count)
 		.map(|key| {
-			Pubkey::from_str(key).ok().map(|pubkey| {
-				AccountMeta {
+			Pubkey::from_str(key).ok().map(|pubkey| AccountMeta {
 				pubkey,
 				is_signer: false,
 				is_writable: true,
-			}})
+			})
 		})
 		.collect()
 }

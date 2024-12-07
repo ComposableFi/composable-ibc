@@ -396,7 +396,7 @@ pub async fn parse_events(
 					messages.push(msg)
 				}
 			},
-			IbcEvent::OpenTryChannel(open_try) => {
+			IbcEvent::OpenTryChannel(open_try) =>
 				if let Some(channel_id) = open_try.channel_id {
 					let channel_response = source
 						.query_channel_end(open_try.height(), channel_id, open_try.port_id.clone())
@@ -431,9 +431,8 @@ pub async fn parse_events(
 					let value = msg.encode_vec()?;
 					let msg = Any { value, type_url: msg.type_url() };
 					messages.push(msg)
-				}
-			},
-			IbcEvent::OpenAckChannel(open_ack) => {
+				},
+			IbcEvent::OpenAckChannel(open_ack) =>
 				if let Some(channel_id) = open_ack.channel_id {
 					let channel_response = source
 						.query_channel_end(open_ack.height(), channel_id, open_ack.port_id.clone())
@@ -464,8 +463,7 @@ pub async fn parse_events(
 					let value = msg.encode_vec()?;
 					let msg = Any { value, type_url: msg.type_url() };
 					messages.push(msg)
-				}
-			},
+				},
 			IbcEvent::CloseInitChannel(close_init) => {
 				let channel_id = close_init.channel_id;
 				let channel_response = source

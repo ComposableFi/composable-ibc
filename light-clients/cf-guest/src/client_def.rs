@@ -441,7 +441,7 @@ impl<Ctx: ReaderContext, PK: PubKey> cf_guest_upstream::CommonContext<PK>
 	) -> NewResult {
 		unimplemented!("delete_consensus_state_and_metadata")
 	}
-	
+
 	fn earliest_consensus_state(
 		&self,
 		_client_id: &ibc_core_host_types::identifiers::ClientId,

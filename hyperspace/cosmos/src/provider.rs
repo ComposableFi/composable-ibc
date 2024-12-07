@@ -171,7 +171,10 @@ where
 			(latest_height.revision_height - trusted_latest_h.revision_height) *
 				self.expected_block_time().as_secs(),
 		);
-		log::info!("Time passed since last update on cosmos {:?}", time_passed_since_last_update.as_secs());
+		log::info!(
+			"Time passed since last update on cosmos {:?}",
+			time_passed_since_last_update.as_secs()
+		);
 		let mut force_update_at = None;
 		// Force update if the finality event height is reached and the client was not
 		// updated for the trusting period / 2 to avoid client expiration
@@ -733,7 +736,11 @@ where
 		);
 		let mut block_events = HashMap::<u64, PacketInfo>::new();
 
-		let filtered_seqs = seqs.iter().filter(|&seq| !SEQUENCES_TO_SKIP.contains(seq)).copied().collect::<Vec<_>>();
+		let filtered_seqs = seqs
+			.iter()
+			.filter(|&seq| !SEQUENCES_TO_SKIP.contains(seq))
+			.copied()
+			.collect::<Vec<_>>();
 		log::info!(target: "hyperspace_cosmos", "Filtered seqs: {:?}", filtered_seqs);
 
 		for seq in filtered_seqs.iter() {
@@ -767,8 +774,8 @@ where
 					match ev {
 						Ok(IbcEvent::SendPacket(p))
 							if seqs.contains(&p.packet.sequence.0) &&
-								p.packet.source_port == port_id && p.packet.source_channel ==
-								channel_id =>
+								p.packet.source_port == port_id &&
+								p.packet.source_channel == channel_id =>
 						{
 							let seq = p.packet.sequence.0;
 							let mut info = PacketInfo::try_from(IbcPacketInfo::from(p.packet))

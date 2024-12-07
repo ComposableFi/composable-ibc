@@ -20,10 +20,9 @@ use crate::{
 	ics23::ReadonlyProcessedStates,
 	msg::{
 		CheckForMisbehaviourMsg, ContractResult, ExecuteMsg, ExportMetadataMsg, InstantiateMsg,
-		QueryMsg, QueryResponse, StatusMsg, UpdateStateMsg, UpdateStateOnMisbehaviourMsg,
-		VerifyClientMessage, VerifyMembershipMsg, VerifyNonMembershipMsg,
-		VerifyUpgradeAndUpdateStateMsg,
-		MigrateMsg
+		MigrateMsg, QueryMsg, QueryResponse, StatusMsg, UpdateStateMsg,
+		UpdateStateOnMisbehaviourMsg, VerifyClientMessage, VerifyMembershipMsg,
+		VerifyNonMembershipMsg, VerifyUpgradeAndUpdateStateMsg,
 	},
 	state::{get_client_state, get_consensus_state},
 };
@@ -46,8 +45,8 @@ use std::str::FromStr;
 
 #[entry_point]
 pub fn migrate(_deps: DepsMut, _env: Env, _msg: MigrateMsg) -> Result<Response, ContractError> {
-    // No state migrations performed, just returned a Response
-    Ok(Response::default())
+	// No state migrations performed, just returned a Response
+	Ok(Response::default())
 }
 
 #[cfg_attr(not(feature = "library"), entry_point)]
