@@ -1182,6 +1182,7 @@ deserialize client state"
 		}
 		let mut total_packets = Vec::new();
 		let mut before_hash = None;
+		let latest_height = u64::from(self.get_chain_storage().await.head().unwrap().block_height);
 		while total_packets.len() < seqs.len() {
 			let (transactions, last_searched_hash) = events::get_previous_transactions(
 				&rpc_client,
@@ -1230,6 +1231,7 @@ deserialize client state"
 											log::info!("This is height_str {:?}", height_str);
 											// If proof height is too far away from the latest
 											// height, we use the latest height - 100
+											let proof_height = height_str.parse::<u64>().unwrap();
 											let proof_height = if latest_height - proof_height > 100
 											{
 												latest_height - 100
