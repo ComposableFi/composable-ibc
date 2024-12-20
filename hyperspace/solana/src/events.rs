@@ -754,8 +754,6 @@ pub async fn get_previous_transactions(
 		for _ in 0..5 {
 			let response = reqwest::blocking::Client::new().post(url.clone()).json(&body).send();
 			let response = skip_fail!(response);
-			let response: std::result::Result<Vec<Response>, reqwest::Error> = response.json();
-			let transactions = skip_fail!(response);
 			let json_response: std::result::Result<Vec<Response>, reqwest::Error> = response.json();
 			if json_response.is_err() {
 				log::info!("Sleeping for 1 second to get response in text");
