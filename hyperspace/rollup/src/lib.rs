@@ -1093,6 +1093,11 @@ deserialize client state"
 				SearchIn::IBC,
 			)
 			.await?;
+			if transactions.is_empty() {
+				log::warn!("No more transactions found");
+				break;
+			}
+
 			before_hash = Some(anchor_client::solana_sdk::signature::Signature::from_str(
 				&last_searched_hash,
 			)?);
@@ -1205,6 +1210,10 @@ deserialize client state"
 				SearchIn::IBC,
 			)
 			.await?;
+			if transactions.is_empty() {
+				log::warn!("No more transactions found");
+				break;
+			}
 			before_hash = Some(anchor_client::solana_sdk::signature::Signature::from_str(
 				&last_searched_hash,
 			)?);

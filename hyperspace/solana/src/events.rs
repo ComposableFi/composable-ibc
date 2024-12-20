@@ -43,6 +43,7 @@ use ibc::{
 	timestamp::Timestamp,
 	Height,
 };
+use log::info;
 use pallet_ibc::light_clients::Signature;
 
 pub fn convert_new_event_to_old(
@@ -755,6 +756,17 @@ pub async fn get_previous_transactions(
 			let response = skip_fail!(response);
 			let response: std::result::Result<Vec<Response>, reqwest::Error> = response.json();
 			let transactions = skip_fail!(response);
+			let json_response: std::result::Result<Vec<Response>, reqwest::Error> = response.json();
+			if json_response.is_err() {
+				log::info!("Sleeping for 1 second to get response in text");
+				//sleep(Duration::from_secs(1));
+				let response =
+					reqwest::blocking::Client::new().post(url.clone()).json(&body).send();
+				let response = skip_fail!(response);
+				let res_str = response.text();
+				log::info!("Response in string\n {:?}", res_str);
+			}
+			let transactions = skip_fail!(json_response);
 			return (transactions, last_searched_hash);
 		}
 		log::error!("Couldnt get transactions after 5 retries");
